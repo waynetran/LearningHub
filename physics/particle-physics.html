@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Particle Physics — Deep Dive</title>
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError: false});"></script>
+</head>
+<body>
+<div id="tooltip"></div>
+
+<nav class="topic-nav">
+  <a class="back" href="./index.html">← Physics Track</a>
+  <div class="crumb">Physics / <span class="topic-name">Particle Physics</span></div>
+</nav>
+
+<div class="topic-layout">
+  <aside class="topic-toc">
+    <h4>ON THIS PAGE</h4>
+    <ul>
+      <li><a href="#why">1. Why this model exists</a></li>
+      <li><a href="#vocab">2. Vocabulary cheat sheet</a></li>
+      <li><a href="#tour">3. The Standard Model tour</a></li>
+      <li><a href="#demo">4. Interactive: the particle zoo</a></li>
+      <li><a href="#symmetry">5. Symmetry and conservation</a></li>
+      <li><a href="#qcd">6. Strong force and QCD</a></li>
+      <li><a href="#electroweak">7. Electroweak and the Higgs</a></li>
+      <li><a href="#neutrinos">8. Neutrinos and oscillation</a></li>
+      <li><a href="#bsm">9. Beyond the Standard Model</a></li>
+      <li><a href="#experiments">10. Experimental landscape</a></li>
+      <li><a href="#code">11. A toy calculation</a></li>
+      <li><a href="#summary">12. Cheat sheet</a></li>
+    </ul>
+  </aside>
+
+  <article class="topic-content">
+    <h1>Particle Physics: the Standard Model</h1>
+    <p class="subtitle">A single-page catalogue of what matter is actually made of, how the forces bind it together, and what the most expensive experiments on Earth have taught us over the past fifty years. The Standard Model is a triumph and an embarrassment at the same time: it fits essentially every measurement, but clearly leaves out dark matter, quantum gravity, and the reason why there is more matter than antimatter.</p>
+    <div class="meta-tags">
+      <span>Prereq: <a href="./quantum-field-theory.html">QFT</a>, <a href="../math/linear-algebra.html">linear algebra</a></span>
+      <span>Read time: ~35 min</span>
+      <span>Interactive figures: 1</span>
+      <span>Code: Python</span>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="why">1. Why we have one and only one "Standard Model"</h2>
+
+    <p>By the 1950s, cosmic-ray and accelerator experiments had uncovered a zoo of "elementary" particles: pions, kaons, muons, hyperons, and a growing list of short-lived resonances. Physicists called it "the particle zoo" and meant it as an insult. Nobody understood the organizing principle.</p>
+
+    <p>Over the next two decades, three threads converged. First, Murray Gell-Mann and George Zweig proposed (independently, in 1964) that the zoo of strongly interacting particles was built from just three "quarks" — then "up, down, strange" — held together by a new force. Second, Sheldon Glashow, Abdus Salam, and Steven Weinberg worked out in the 1960s how to unify electromagnetism with the weak nuclear force into a single "electroweak" theory, using a spontaneously broken gauge symmetry and a new scalar boson (now called the Higgs). Third, David Gross, Frank Wilczek, and David Politzer showed in 1973 that the theory of quarks and gluons — Quantum Chromodynamics (QCD) — has <em>asymptotic freedom</em>: the coupling gets weaker at short distances, so perturbation theory works there, even though it fails at the low energies where hadrons form.</p>
+
+    <p>By around 1978, the combined theory — $SU(3) \times SU(2) \times U(1)$ gauge symmetry, three generations of quarks and leptons, spontaneously broken by a Higgs doublet — was in place. It was christened "the Standard Model," almost pejoratively, as if to say "we know it's incomplete but we can't do better right now." That name has stuck for nearly five decades, because the Standard Model has been astonishingly hard to break. The 2012 discovery of the Higgs boson at the LHC closed its last predicted door.</p>
+
+    <div class="callout">
+      <div class="label">THE PUNCHLINE</div>
+      <p>Matter is built from 12 fermions (6 quarks + 6 leptons), arranged in three "generations" that differ only by mass. Three forces — strong, weak, electromagnetic — are mediated by gauge bosons (gluons, $W$ and $Z$, photons). A single scalar field, the Higgs, gives mass to the weak bosons and to the fermions via its vacuum expectation value. Gravity is conspicuously not in this picture. Neutrinos have small masses that are not captured by the original Standard Model either.</p>
+    </div>
+
+    <p>Why should anyone outside of the field care? Three reasons. First, the Standard Model is the best-tested scientific theory in history, and its tests are a worked example of "how do you know if a physical theory is right?" Second, collider experiments like the LHC are now engineering projects on the scale of moonshots, and their every result constrains hypothetical new physics that might fix inflation, dark matter, or the matter-antimatter asymmetry. Third, some of the cleanest exotic dynamics in the model — the Higgs mechanism, asymptotic freedom, neutrino oscillation — show up in completely different fields, from superconductivity to cosmology.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="vocab">2. Vocabulary cheat sheet</h2>
+
+    <p>Symbols and names you'll see constantly. Return here whenever the notation feels opaque.</p>
+
+    <table class="rank-table">
+      <thead><tr><th>Symbol</th><th>Read as</th><th>Means</th></tr></thead>
+      <tbody>
+        <tr><td>$u, d, s, c, b, t$</td><td>"up, down, strange, charm, bottom, top"</td><td>The six quark flavors, ordered by mass from 2 MeV (up) to 173 GeV (top).</td></tr>
+        <tr><td>$e, \mu, \tau$</td><td>"electron, muon, tau"</td><td>The three charged leptons. Muon is $\approx 207$ times heavier than the electron; tau is $\approx 17$ times heavier than the muon.</td></tr>
+        <tr><td>$\nu_e, \nu_\mu, \nu_\tau$</td><td>"electron/muon/tau neutrino"</td><td>The three neutrino flavors. Tiny but nonzero masses.</td></tr>
+        <tr><td>$W^\pm, Z$</td><td>"W-plus/minus, Z"</td><td>Weak gauge bosons. $W$ has charge $\pm 1$, mass $\approx 80.4$ GeV; $Z$ is neutral, mass $\approx 91.2$ GeV.</td></tr>
+        <tr><td>$g$ (as a particle)</td><td>"gluon"</td><td>The strong-force gauge boson. Eight of them, carrying combinations of color and anticolor.</td></tr>
+        <tr><td>$\gamma$</td><td>"photon"</td><td>The electromagnetic gauge boson. Massless.</td></tr>
+        <tr><td>$H$</td><td>"Higgs boson"</td><td>Scalar boson, mass $\approx 125$ GeV, discovered 2012.</td></tr>
+        <tr><td>$SU(3)_c$</td><td>"SU-three color"</td><td>The gauge group of QCD. Three "colors" (red, green, blue) plus eight gluons.</td></tr>
+        <tr><td>$SU(2)_L \times U(1)_Y$</td><td>"SU-two L, U-one Y"</td><td>Electroweak gauge group. "L" means it only acts on left-handed fermions; "Y" is hypercharge.</td></tr>
+        <tr><td>$V_{\text{CKM}}$</td><td>"CKM matrix"</td><td>$3\times 3$ unitary matrix parametrizing quark mixing. Encodes CP violation.</td></tr>
+      </tbody>
+    </table>
+
+    <p>A word on units: particle physicists measure masses and energies in eV (electron-volts) and its multiples. $1\,\text{GeV} = 10^9\,\text{eV}$; the proton mass is about $0.938\,\text{GeV}$; the Higgs is $125\,\text{GeV}$. Cross-sections are given in barns: $1\,\text{b} = 10^{-24}\,\text{cm}^2$. A nucleon-nucleon collision has a total cross-section of roughly $40\,\text{mb}$ at LHC energies.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="tour">3. The Standard Model tour</h2>
+
+    <p>Matter splits into <strong>quarks</strong> (which feel the strong force) and <strong>leptons</strong> (which don't). Each comes in three "generations," each generation a heavier copy of the previous. The three generations together give twelve fermion species.</p>
+
+    <div class="grid">
+      <div class="card">
+        <h4>First generation</h4>
+        <p>Up quark ($u$, 2.2 MeV), down quark ($d$, 4.7 MeV), electron ($e$, 0.511 MeV), electron neutrino ($\nu_e$, $\lesssim 1\,\text{eV}$).</p>
+        <p class="meta">Stable matter is built from these four.</p>
+      </div>
+      <div class="card">
+        <h4>Second generation</h4>
+        <p>Charm ($c$, 1.27 GeV), strange ($s$, 93 MeV), muon ($\mu$, 105.7 MeV), muon neutrino ($\nu_\mu$).</p>
+        <p class="meta">Produced copiously in cosmic rays and at colliders, decays to first-generation particles.</p>
+      </div>
+      <div class="card">
+        <h4>Third generation</h4>
+        <p>Top ($t$, 173 GeV), bottom ($b$, 4.18 GeV), tau ($\tau$, 1.777 GeV), tau neutrino ($\nu_\tau$).</p>
+        <p class="meta">The top quark is the heaviest known elementary particle. It decays before forming a hadron.</p>
+      </div>
+      <div class="card">
+        <h4>Gauge bosons (forces)</h4>
+        <p>Photon (EM, massless), $W^\pm$ (weak, 80.4 GeV), $Z$ (weak, 91.2 GeV), 8 gluons (strong, massless).</p>
+        <p class="meta">Each mediates a force by being exchanged between matter particles.</p>
+      </div>
+      <div class="card">
+        <h4>Higgs boson</h4>
+        <p>$H$, 125.25 GeV, spin 0, neutral. Its nonzero vacuum value gives every other massive particle its mass.</p>
+        <p class="meta">Found July 2012 by ATLAS and CMS.</p>
+      </div>
+    </div>
+
+    <p>Why three generations? Nobody knows. The masses span 11 orders of magnitude from the lightest neutrino to the top quark, and the Standard Model has no organizing principle that predicts them — they are input parameters. That pattern, plus the fact that the third generation is heavy enough to be only marginally stable, is one of the nagging mysteries the Standard Model does not answer.</p>
+
+    <div class="problem-set" data-topic="phys-pp-sm"></div>
+
+    <!-- ========================================================== -->
+    <h2 id="demo">4. Interactive: hover the particle zoo</h2>
+
+    <p>Below is a schematic periodic table of the Standard Model. Each tile is one particle species. Hover (or tap) to see its mass, charge, spin, and how it interacts. The colors group the fundamental particle classes: fermions (quarks in cyan, leptons in pink), gauge bosons (violet), and the Higgs (yellow).</p>
+
+    <div class="viz-3d">
+      <div class="v3-controls">
+        <span class="v3-label">Hover a particle to see its properties.</span>
+      </div>
+      <svg id="ppSvg" viewBox="0 0 720 380" style="width:100%;height:auto;background:#0a0d12;border-radius:6px;"></svg>
+      <p class="v3-caption" id="ppCaption">Hover a tile to see details. Three columns of fermions are the three generations; the fourth column holds the gauge bosons and the Higgs.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="symmetry">5. Symmetry and conservation laws</h2>
+
+    <p>Emmy Noether's 1918 theorem is the scaffolding of modern physics: every continuous symmetry of the action implies a conserved quantity. Time translation implies energy conservation. Spatial translation implies momentum conservation. Rotational symmetry implies angular momentum. In quantum field theory, internal symmetries (phase rotations on fields) imply charge-like conservation laws: electric charge, baryon number, lepton number, and more.</p>
+
+    <div class="math-display">$$\partial_\mu J^\mu = 0 \quad \Leftrightarrow \quad \text{(associated symmetry)}.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Noether's theorem in one line</p>
+      <dl>
+        <dt>$J^\mu$</dt><dd>A four-vector current. Its time component is a charge density; its spatial components give the flow of that charge.</dd>
+        <dt>$\partial_\mu J^\mu = 0$</dt><dd>Continuity equation. Means "what flows in equals what flows out plus what accumulates" — the total charge inside any region changes only via the boundary.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Analogy.</strong> Think of water in a swimming pool. If water neither appears from nowhere nor vanishes, the amount inside can only change by flowing across the boundary. Noether says: for every smooth symmetry of the physics, there is an invisible "water" that is conserved the same way.</p>
+    </div>
+
+    <p>The conservation laws of the Standard Model read off its symmetries:</p>
+
+    <ul>
+      <li><strong>Electric charge</strong> is conserved exactly. $U(1)_{\text{EM}}$ is unbroken at all energies.</li>
+      <li><strong>Baryon number</strong> (quarks count $+1/3$, antiquarks $-1/3$) is conserved in every Standard Model interaction, at least perturbatively. Non-perturbative "sphaleron" processes can violate it at high temperature.</li>
+      <li><strong>Lepton number</strong> is similarly conserved perturbatively, with caveats for neutrino oscillation and possible Majorana masses.</li>
+      <li><strong>Color charge</strong> is always a $SU(3)$ singlet in observable states — all hadrons are "colorless."</li>
+      <li><strong>Energy-momentum and angular momentum</strong> are conserved because spacetime is Minkowskian at experimental scales.</li>
+    </ul>
+
+    <p>Discrete symmetries are subtler. The Standard Model violates parity ($P$) maximally in the weak sector — the weak force only couples to left-handed fermions and right-handed antifermions. It violates charge conjugation ($C$) for the same reason. The combination $CP$ is also violated, at about the $10^{-3}$ level, in quark mixing via the CKM matrix, and that violation is one (small) ingredient in the cosmic matter-antimatter asymmetry. The combination $CPT$ is believed to be exact for any local, Lorentz-invariant QFT; experimentally, tests of $CPT$ on kaons and neutral $B$ mesons agree to extraordinary precision.</p>
+
+    <div class="problem-set" data-topic="phys-pp-symmetry"></div>
+
+    <!-- ========================================================== -->
+    <h2 id="qcd">6. The strong force and QCD</h2>
+
+    <p>QCD is the theory of quarks (which carry one of three "color" charges) and gluons (which carry one color and one anticolor, for eight independent combinations). Its gauge group is $SU(3)$ — non-abelian, which means gluons interact directly with each other, not just with quarks. That gluon self-interaction is the source of QCD's two most important features.</p>
+
+    <div class="callout math">
+      <div class="label">ASYMPTOTIC FREEDOM</div>
+      <p>At short distances (high energies), the effective strong coupling $\alpha_s(Q)$ becomes small. Quarks inside a proton look almost free when probed with a hard photon. That is why deep inelastic scattering experiments (SLAC, HERA) see "Bjorken scaling" — the proton's internal structure behaves as if it contains point-like constituents.</p>
+    </div>
+
+    <div class="callout math">
+      <div class="label">CONFINEMENT</div>
+      <p>At long distances, the coupling grows. The force between two quarks behaves like a stretching rubber band: as you pull them apart, the energy rises linearly with separation. Eventually it becomes energetically favorable to pop a new quark-antiquark pair out of the vacuum, so the "free" quark you tried to isolate becomes part of a new meson. Quarks are permanently bound inside color-singlet hadrons. No free quarks have ever been observed.</p>
+    </div>
+
+    <p>The beta function of QCD, at one loop, is</p>
+
+    <div class="math-display">$$\beta(\alpha_s) = -\frac{\alpha_s^2}{2\pi}\left(11 - \frac{2}{3}\, n_f\right),$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">QCD beta function, one loop</p>
+      <dl>
+        <dt>$\alpha_s$</dt><dd>The strong coupling constant. About 0.12 at the $Z$ mass, growing at lower energies.</dd>
+        <dt>$\beta(\alpha_s)$</dt><dd>$d\alpha_s/d\ln\mu$ — the rate at which the coupling changes as you change the renormalization scale $\mu$.</dd>
+        <dt>$n_f$</dt><dd>The number of quark flavors light enough to be active at the scale under consideration. Six overall, but effectively five below the top threshold.</dd>
+        <dt>$11 - \tfrac{2}{3} n_f$</dt><dd>The "11" comes from gluon self-interactions; the "$-\tfrac23 n_f$" from quark loops screening the coupling. As long as $n_f \le 16$, the overall sign is negative and the theory is asymptotically free.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Take-home.</strong> QCD would not work if gluons did not interact with each other. Remove the gluon self-coupling and the "11" vanishes; the beta function flips sign and you lose asymptotic freedom. The self-interaction is the reason quarks can be calculated at all.</p>
+    </div>
+
+    <p>At low energies, you cannot do QCD perturbatively. Instead you use either chiral effective theory (for low-energy pions and kaons) or <strong>lattice QCD</strong>, a computer simulation that discretizes spacetime, samples the path integral via Monte Carlo, and gives hadron masses from first principles. Modern lattice calculations reproduce the proton mass to about 1% — not as a check but as an input to precision Standard Model tests.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="electroweak">7. Electroweak unification and the Higgs mechanism</h2>
+
+    <p>Weak interactions are weird in two ways. First, they are weak at low energies but not intrinsically weak. The "Fermi constant" $G_F \approx 10^{-5}/\text{GeV}^2$ is small because the mediators $W, Z$ are heavy, not because the underlying coupling is. Once you cross the $W$ threshold, weak couplings are comparable to electromagnetic ones. Second, weak interactions violate parity maximally — they only couple to left-handed fermions.</p>
+
+    <p>The resolution: the weak and electromagnetic forces are two faces of a single $SU(2)_L \times U(1)_Y$ gauge theory. At high energies, you have four massless gauge bosons and a complex scalar doublet, the Higgs field. At low energies, the Higgs acquires a vacuum expectation value $v \approx 246\,\text{GeV}$, breaking $SU(2)_L \times U(1)_Y$ down to the single $U(1)_{\text{EM}}$ of electromagnetism. Three of the four gauge bosons "eat" would-be Goldstone modes of the Higgs and become massive ($W^\pm$ and $Z$). The fourth remains massless — the photon.</p>
+
+    <div class="math-display">$$M_W = \tfrac{1}{2} g\, v, \qquad M_Z = \tfrac{1}{2} v\sqrt{g^2 + g'^2}, \qquad M_\gamma = 0.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Electroweak gauge boson masses</p>
+      <dl>
+        <dt>$g$</dt><dd>The $SU(2)_L$ gauge coupling.</dd>
+        <dt>$g'$</dt><dd>The $U(1)_Y$ gauge coupling.</dd>
+        <dt>$v$</dt><dd>Higgs vacuum expectation value, $\approx 246\,\text{GeV}$. Measured directly by muon decay, via the Fermi constant.</dd>
+        <dt>$M_W, M_Z$</dt><dd>Measured masses of the $W$ and $Z$ bosons. These relations are Standard Model <em>predictions</em> that agree with experiment to fractions of a percent.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why this is beautiful.</strong> You write down a theory with four massless bosons and a scalar field. Quantum mechanics forces the scalar to "condense" in a particular direction, and that choice of direction is what gives the $W$ and $Z$ their masses. It is the same mechanism that gives photons in a superconductor an effective mass. The Higgs was the last predicted piece, found in 2012 at the LHC.</p>
+    </div>
+
+    <p>Fermion masses come from <strong>Yukawa couplings</strong>: a term $y_f \bar\psi_L H \psi_R$ that couples the Higgs to left- and right-handed fermions. When $H$ gets its vacuum value, the Yukawa term becomes a mass $m_f = y_f v/\sqrt{2}$. The Yukawa couplings are all free parameters — they are how the Standard Model parametrizes the observed fermion masses rather than explaining them. The top quark has $y_t \approx 1$ (large), the electron has $y_e \approx 3 \times 10^{-6}$ (small), and nobody knows why.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="neutrinos">8. Neutrinos and oscillation</h2>
+
+    <p>Neutrinos get their own section because they are the one place where the original 1970s Standard Model is empirically wrong. The original theory had massless neutrinos; experiments since 1998 (Super-Kamiokande, SNO, KamLAND, Daya Bay) have shown that neutrinos oscillate between flavors as they travel, which requires them to have mass and to mix.</p>
+
+    <p>Here is how it works. A neutrino produced in a pion decay is in a definite flavor eigenstate, say $\nu_\mu$. But the flavor eigenstates are not the same as the mass eigenstates $\nu_1, \nu_2, \nu_3$ that propagate freely. A $\nu_\mu$ is a quantum superposition of the three mass eigenstates:</p>
+
+    <div class="math-display">$$|\nu_\alpha\rangle = \sum_{i=1}^{3} U_{\alpha i}\, |\nu_i\rangle,$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Neutrino mixing</p>
+      <dl>
+        <dt>$|\nu_\alpha\rangle$</dt><dd>A neutrino in flavor eigenstate $\alpha \in \{e, \mu, \tau\}$, as produced or detected via charged-current weak interactions.</dd>
+        <dt>$|\nu_i\rangle$</dt><dd>A mass eigenstate with definite mass $m_i$. These propagate with phases $e^{-i E_i t}$ where $E_i \approx |\vec p| + m_i^2/(2|\vec p|)$ for relativistic neutrinos.</dd>
+        <dt>$U_{\alpha i}$</dt><dd>The Pontecorvo-Maki-Nakagawa-Sakata (PMNS) matrix. A $3\times 3$ unitary matrix that relates the two bases. Parametrized by three mixing angles and one CP-violating phase.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>What you see.</strong> Produce a $\nu_\mu$ at time $0$. The three mass components propagate with slightly different phases. At time $t$, the state is no longer a pure $\nu_\mu$ — it has picked up $\nu_e$ and $\nu_\tau$ components. The probability of detecting a different flavor oscillates in $t$ with a period set by the mass differences. Measuring the oscillation gives you $\Delta m_{ij}^2 = m_i^2 - m_j^2$ and the mixing angles, but not the absolute neutrino masses.</p>
+    </div>
+
+    <p>The two-flavor oscillation probability — good enough for most intuition — is</p>
+
+    <div class="math-display">$$P(\nu_\alpha \to \nu_\beta) = \sin^2(2\theta)\, \sin^2\!\left(\frac{\Delta m^2\, L}{4 E}\right).$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Two-flavor oscillation probability</p>
+      <dl>
+        <dt>$\theta$</dt><dd>The mixing angle between the two flavors considered.</dd>
+        <dt>$\Delta m^2$</dt><dd>Difference of the squared masses, in eV$^2$.</dd>
+        <dt>$L$</dt><dd>Distance from source to detector, in km.</dd>
+        <dt>$E$</dt><dd>Neutrino energy, in GeV.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Handy formula.</strong> In convenient units, $\Delta m^2 L/(4E) \approx 1.27 \cdot \Delta m^2 [\text{eV}^2] \cdot L[\text{km}] / E[\text{GeV}]$. For atmospheric neutrinos travelling through the Earth, that number hits order unity for MeV-GeV energies and Earth-radius baselines, which is why the effect was first caught there.</p>
+    </div>
+
+    <p>The measured mass-squared differences are $\Delta m_{21}^2 \approx 7.5 \times 10^{-5}\,\text{eV}^2$ and $|\Delta m_{31}^2| \approx 2.5 \times 10^{-3}\,\text{eV}^2$. The sign of the latter is still being nailed down ("normal" or "inverted" ordering), and the CP-violating phase $\delta_{CP}$ is consistent with several values — DUNE and Hyper-Kamiokande, both coming online in the late 2020s, are designed to pin it down.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="bsm">9. Beyond the Standard Model</h2>
+
+    <p>The Standard Model fits essentially every collider experiment. It also leaves several enormous questions unanswered:</p>
+
+    <ul>
+      <li><strong>Dark matter.</strong> Galactic rotation curves, gravitational lensing, the CMB power spectrum, and the growth of cosmic structure all demand about 5 times more mass than is accounted for by baryons. No Standard Model particle fits — dark matter is either new. Favored candidates: weakly interacting massive particles (WIMPs), axions, sterile neutrinos, primordial black holes.</li>
+      <li><strong>Matter-antimatter asymmetry.</strong> Why is there any matter at all? Equal-initial-amount cosmologies predict annihilation leaves essentially nothing. The Sakharov conditions (baryon number violation, $C$ and $CP$ violation, out-of-equilibrium) are all individually compatible with the Standard Model, but the measured $CP$ violation is too small by several orders of magnitude.</li>
+      <li><strong>Hierarchy problem.</strong> Why is the Higgs mass 125 GeV and not Planck-scale? Quantum corrections ought to drag it up to $M_{\text{Pl}}$ unless something cancels. Supersymmetry was invented partly as a solution; the LHC has not (yet) found it.</li>
+      <li><strong>Neutrino masses.</strong> Where do they come from? Left- or right-handed neutrinos? Dirac or Majorana? Double beta decay experiments (KATRIN, KamLAND-Zen, LEGEND) are the primary tests.</li>
+      <li><strong>Quantum gravity.</strong> Not in the Standard Model at all. See <a href="./frontier.html">frontier physics</a>.</li>
+    </ul>
+
+    <p>The leading BSM frameworks under active investigation are:</p>
+
+    <ul>
+      <li><strong>Supersymmetry (SUSY).</strong> Every Standard Model particle gets a "superpartner" differing by spin $\tfrac12$. The lightest superpartner is stable and could be dark matter; loop corrections cancel naturally. The LHC has pushed the simplest versions to squeezed parameter space.</li>
+      <li><strong>Grand Unified Theories (GUTs).</strong> Embed $SU(3)\times SU(2)\times U(1)$ in a larger simple group ($SU(5), SO(10), E_6$) that unifies the couplings at $\sim 10^{16}$ GeV. Predicts proton decay at a rate still consistent with limits.</li>
+      <li><strong>Axions.</strong> Originally proposed to solve the "strong CP problem" (why QCD does not visibly violate CP). Natural dark matter candidate. Searched for in ADMX, MADMAX, and haloscope experiments.</li>
+      <li><strong>Extra dimensions, composite Higgs, little Higgs, etc.</strong> Various attempts to stabilize the electroweak scale without full SUSY.</li>
+    </ul>
+
+    <div class="problem-set" data-topic="phys-pp-beyond"></div>
+
+    <!-- ========================================================== -->
+    <h2 id="experiments">10. The experimental landscape</h2>
+
+    <p>Particle physics is dominated by a few large facilities and a growing suite of smaller, highly specialized experiments.</p>
+
+    <ul>
+      <li><strong>LHC (CERN).</strong> Proton-proton collider at 13.6 TeV center-of-mass energy. ATLAS and CMS are general-purpose 4$\pi$ detectors. LHCb studies heavy-flavor physics and CP violation. ALICE studies the quark-gluon plasma. Running through 2025, upgraded to High Luminosity LHC (HL-LHC) from 2030.</li>
+      <li><strong>Belle II (KEK).</strong> Asymmetric $e^+ e^-$ collider at the $\Upsilon(4S)$ resonance. Precision measurement of CKM parameters, rare $B$ decays, and tests of lepton flavor universality. Running since 2019.</li>
+      <li><strong>Neutrino experiments.</strong> NOvA and T2K (long-baseline); Super-K (atmospheric); KamLAND (reactor); IceCube (astrophysical). DUNE (Fermilab to Sanford, first data expected late 2020s) and Hyper-K (Japan, first data ~2027) are the next flagships.</li>
+      <li><strong>Dark matter direct detection.</strong> XENONnT, LUX-ZEPLIN (LZ), and PandaX are xenon-based. Smaller silicon and germanium detectors handle low-mass candidates. Axion haloscopes (ADMX) cover a very different parameter space.</li>
+      <li><strong>Precision atomic and low-energy experiments.</strong> Muon g-2 at Fermilab (final results in 2025 sharpened the muon anomaly to about 5 sigma, though the hadronic-vacuum-polarization input is contested). Electric dipole moment experiments on electrons (JILA, ACME) constrain CP violation at orders of magnitude below LHC reach.</li>
+    </ul>
+
+    <p>Results over the past decade: Higgs discovery (2012), observation of the pentaquark at LHCb (2015), first $B_s \to \mu^+ \mu^-$ measurement matching Standard Model rate, $W$-boson mass measurement controversies between CDF and ATLAS/CMS (2022-2024), and persistent 4-5 sigma anomalies in $R(D^{(*)})$, $b \to s \ell\ell$, and muon g-2. None so far is unambiguous, but the tensions together have driven much of the current BSM theory landscape.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="code">11. A toy calculation: neutrino oscillation probability</h2>
+
+    <p>Here is a short program that computes two-flavor neutrino oscillation probabilities as a function of baseline. Using the measured atmospheric mass splitting, you will see the characteristic oscillation that Super-Kamiokande first caught in 1998.</p>
+
+    <div class="code-tabs" id="ct-pp">
+      <div class="ct-header">
+        <button class="ct-tab active" data-tab="np">NumPy</button>
+        <button class="ct-tab" data-tab="py">Plain Python</button>
+        <span class="ct-label">two-flavor neutrino oscillation</span>
+      </div>
+
+      <div class="ct-panel active" data-tab="np"><pre><code><span class="kw">import</span> numpy <span class="kw">as</span> np
+
+<span class="cmt"># Atmospheric mass splitting and mixing (approximate 2024 values)</span>
+dm2   = <span class="num">2.5e-3</span>      <span class="cmt"># eV^2 (|Delta m_{31}^2|)</span>
+theta = <span class="num">0.84</span>        <span class="cmt"># mixing angle in radians (close to maximal)</span>
+
+<span class="kw">def</span> <span class="fn">P_mu_to_tau</span>(L_km, E_GeV):
+    <span class="cmt"># Standard two-flavor formula</span>
+    arg = <span class="num">1.27</span> * dm2 * L_km / E_GeV
+    <span class="kw">return</span> np.sin(<span class="num">2</span> * theta) ** <span class="num">2</span> * np.sin(arg) ** <span class="num">2</span>
+
+<span class="cmt"># Plot the oscillation as a function of baseline for fixed energy</span>
+E = <span class="num">1.0</span>                            <span class="cmt"># GeV</span>
+L = np.linspace(<span class="num">1</span>, <span class="num">13000</span>, <span class="num">200</span>)         <span class="cmt"># km, up to Earth diameter</span>
+P = <span class="fn">P_mu_to_tau</span>(L, E)
+
+<span class="fn">print</span>(<span class="str">f"Peak oscillation at L ~ {L[np.argmax(P)]:.0f} km"</span>)
+<span class="fn">print</span>(<span class="str">f"Max probability:       {P.max():.3f}"</span>)
+<span class="fn">print</span>(<span class="str">f"Half-oscillation L:    {np.pi / (2 * 1.27 * dm2 / E):.1f} km"</span>)
+
+<span class="cmt"># Compare to Super-Kamiokande atmospheric neutrino geometry:</span>
+<span class="cmt"># downward-going neutrinos travel ~15 km, upward-going ~13000 km.</span>
+<span class="fn">print</span>(<span class="str">f"P at 15 km (downward):    {P_mu_to_tau(15, E):.4f}"</span>)
+<span class="fn">print</span>(<span class="str">f"P at 13000 km (upward):   {P_mu_to_tau(13000, E):.4f}"</span>)
+</code></pre></div>
+
+      <div class="ct-panel" data-tab="py"><pre><code><span class="kw">import</span> math
+
+dm2   = <span class="num">2.5e-3</span>
+theta = <span class="num">0.84</span>
+
+<span class="kw">def</span> <span class="fn">P_mu_to_tau</span>(L_km, E_GeV):
+    arg = <span class="num">1.27</span> * dm2 * L_km / E_GeV
+    <span class="kw">return</span> math.sin(<span class="num">2</span> * theta) ** <span class="num">2</span> * math.sin(arg) ** <span class="num">2</span>
+
+E = <span class="num">1.0</span>
+<span class="kw">for</span> L <span class="kw">in</span> [<span class="num">15</span>, <span class="num">500</span>, <span class="num">1000</span>, <span class="num">5000</span>, <span class="num">13000</span>]:
+    <span class="fn">print</span>(<span class="str">f"L={L:6d} km  P={P_mu_to_tau(L, E):.4f}"</span>)
+</code></pre></div>
+    </div>
+
+    <p>Things worth noting:</p>
+
+    <ul>
+      <li><strong>Downward-going atmospheric neutrinos</strong> (15 km of air above Super-K) do not oscillate appreciably. Upward-going ones (13,000 km through the Earth) oscillate strongly. That asymmetry was the smoking gun for $\nu_\mu$ oscillation, announced 1998.</li>
+      <li><strong>The "peak" oscillation length</strong> depends on energy: longer baselines are needed at higher energies. This lets experiments like DUNE target specific $L/E$ by placing detectors at a fixed distance and selecting neutrino energies.</li>
+      <li><strong>Three-flavor oscillation is richer.</strong> The full calculation uses the PMNS matrix and includes CP violation. For $\delta_{CP} \ne 0$, $P(\nu_\alpha \to \nu_\beta) \ne P(\bar\nu_\alpha \to \bar\nu_\beta)$, and that difference is what DUNE aims to measure.</li>
+    </ul>
+
+    <!-- ========================================================== -->
+    <h2 id="summary">12. Cheat sheet</h2>
+
+    <div class="grid">
+      <div class="card">
+        <h4>Fermion census</h4>
+        <p>12 species: 6 quarks + 6 leptons, in 3 generations.</p>
+        <p class="meta">Each generation heavier than the last. Reasons unknown.</p>
+      </div>
+      <div class="card">
+        <h4>Gauge group</h4>
+        <p>$SU(3)_c \times SU(2)_L \times U(1)_Y$</p>
+        <p class="meta">Strong × weak × hypercharge. Broken at $v = 246$ GeV to $SU(3)_c \times U(1)_{\text{EM}}$.</p>
+      </div>
+      <div class="card">
+        <h4>Higgs</h4>
+        <p>$M_H = 125$ GeV, spin 0, discovered 2012.</p>
+        <p class="meta">Vacuum value gives mass via $m_f = y_f v/\sqrt{2}$.</p>
+      </div>
+      <div class="card">
+        <h4>QCD beta</h4>
+        <p>$\beta \propto -(11 - \tfrac{2}{3} n_f)$</p>
+        <p class="meta">Asymptotic freedom for $n_f \le 16$.</p>
+      </div>
+      <div class="card">
+        <h4>Oscillation</h4>
+        <p>$P(\nu_\alpha \to \nu_\beta) = \sin^2 2\theta \sin^2(\Delta m^2 L/4E)$</p>
+        <p class="meta">Two-flavor formula. Full version uses the PMNS matrix.</p>
+      </div>
+      <div class="card">
+        <h4>Gauge boson masses</h4>
+        <p>$M_W = 80.4$ GeV, $M_Z = 91.2$ GeV, $M_\gamma = 0$</p>
+        <p class="meta">EW symmetry breaking via the Higgs.</p>
+      </div>
+      <div class="card">
+        <h4>Open questions</h4>
+        <p>Dark matter, $\nu$ masses, baryogenesis, hierarchy, quantum gravity.</p>
+        <p class="meta">All active experimental programs.</p>
+      </div>
+      <div class="card">
+        <h4>Proton mass</h4>
+        <p>$m_p \approx 0.938$ GeV</p>
+        <p class="meta">Mostly from gluon field energy, not quark masses.</p>
+      </div>
+    </div>
+
+    <h3>See also</h3>
+    <div class="see-also">
+      <div class="card">
+        <h4><a href="./quantum-field-theory.html">Quantum field theory</a></h4>
+        <p>The mathematical language the Standard Model is written in. Read it first for the mechanics of creation operators, Feynman diagrams, and renormalization.</p>
+      </div>
+      <div class="card">
+        <h4><a href="./cosmology.html">Cosmology</a></h4>
+        <p>Big-Bang nucleosynthesis constrains the number of neutrino species. The CMB constrains the sum of neutrino masses. Dark matter and dark energy live in cosmology.</p>
+      </div>
+      <div class="card">
+        <h4><a href="./frontier.html">Frontier physics</a></h4>
+        <p>Where you go once the Standard Model has been absorbed. GUTs, quantum gravity, the information paradox, and the string landscape.</p>
+      </div>
+      <div class="card">
+        <h4><a href="../math/probability.html">Probability</a></h4>
+        <p>Every cross-section is a probability. Every exclusion limit is a hypothesis test. Statistics on rare events is a working tool, not a side topic.</p>
+      </div>
+      <div class="card">
+        <h4><a href="../math/linear-algebra.html">Linear algebra</a></h4>
+        <p>Unitary matrices are the core of quark/lepton mixing. Eigenvalues, diagonalization, and $SU(N)$ group representations all live here.</p>
+      </div>
+      <div class="card">
+        <h4><a href="../cs/algorithms.html">Algorithms</a></h4>
+        <p>LHC event reconstruction, neutrino-interaction tagging, and anomaly detection are all algorithmic problems at scale. Particle physics is a heavy consumer of computing.</p>
+      </div>
+    </div>
+
+    <div class="bib">
+      <h4>Further reading</h4>
+      <ul>
+        <li>Francis Halzen and Alan Martin — <em>Quarks and Leptons</em> (1984). Still the gentlest undergraduate-level introduction. Perfect for filling in the physics behind this page.</li>
+        <li>David Griffiths — <em>Introduction to Elementary Particles</em> (2nd ed., 2008). Clean, a bit more modern, covers the electroweak sector carefully.</li>
+        <li>Donald Perkins — <em>Introduction to High Energy Physics</em> (4th ed., 2000). Experimentally oriented; great for cross-section calculations and detector physics.</li>
+        <li>Particle Data Group — <em>Review of Particle Physics</em>, <a href="https://pdg.lbl.gov/">pdg.lbl.gov</a>. The reference for every measured particle, every mass, every decay mode. Updated annually.</li>
+        <li>Frank Close — <em>The Infinity Puzzle</em> (2011). A readable history of how renormalization, gauge theories, and the Standard Model came together, written for a general audience.</li>
+        <li>Matthew Schwartz — <em>Quantum Field Theory and the Standard Model</em> (2014). The Standard Model chapters are the cleanest derivation available, without bogging you down in formalism.</li>
+        <li>Wikipedia, <a href="https://en.wikipedia.org/wiki/Standard_Model">Standard Model</a>. Surprisingly well-maintained; good for quick disambiguation.</li>
+      </ul>
+    </div>
+
+    <div class="next-card">
+      <div class="label">NEXT UP</div>
+      <a href="./cosmology.html">→ Cosmology</a>
+      <p>The Standard Model is tested at colliders. The universe is the biggest accelerator ever built, and its history — from the first microsecond to today — is written in the CMB, in nucleosynthesis, and in the large-scale structure. Let us look at the sky as a physics experiment.</p>
+    </div>
+
+  </article>
+</div>
+
+<script>
+// =========================================================
+// Code tabs
+document.querySelectorAll('.code-tabs').forEach(root => {
+  const tabs = root.querySelectorAll('.ct-tab');
+  const panels = root.querySelectorAll('.ct-panel');
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const target = tab.getAttribute('data-tab');
+      tabs.forEach(t => t.classList.toggle('active', t === tab));
+      panels.forEach(p => p.classList.toggle('active', p.getAttribute('data-tab') === target));
+    });
+  });
+});
+
+// =========================================================
+// Particle zoo hover visualization
+(function(){
+  const svg = document.getElementById('ppSvg');
+  if (!svg) return;
+  const NS = 'http://www.w3.org/2000/svg';
+  const caption = document.getElementById('ppCaption');
+
+  // Data: rows x columns grid
+  // Columns 0,1,2 = three fermion generations. Column 3 = bosons.
+  // Rows: 0=up-type quarks, 1=down-type quarks, 2=charged leptons, 3=neutrinos
+  //       plus boson column populated separately.
+  const PARTICLES = [
+    // Quarks up-type
+    {col:0,row:0,name:'u',full:'up quark',mass:'2.2 MeV',charge:'+2/3',spin:'1/2',kind:'quark',notes:'Lightest quark. Inside every proton and neutron.'},
+    {col:1,row:0,name:'c',full:'charm quark',mass:'1.27 GeV',charge:'+2/3',spin:'1/2',kind:'quark',notes:'Predicted by GIM mechanism (1970), found 1974.'},
+    {col:2,row:0,name:'t',full:'top quark',mass:'173 GeV',charge:'+2/3',spin:'1/2',kind:'quark',notes:'Heaviest elementary particle. Decays before hadronizing.'},
+    // Quarks down-type
+    {col:0,row:1,name:'d',full:'down quark',mass:'4.7 MeV',charge:'-1/3',spin:'1/2',kind:'quark',notes:'Inside every nucleon. Heavier than u.'},
+    {col:1,row:1,name:'s',full:'strange quark',mass:'93 MeV',charge:'-1/3',spin:'1/2',kind:'quark',notes:'Named from the "strange" kaons of the 1950s.'},
+    {col:2,row:1,name:'b',full:'bottom quark',mass:'4.18 GeV',charge:'-1/3',spin:'1/2',kind:'quark',notes:'Long-lived heavy flavor, key to B-physics at LHCb and Belle II.'},
+    // Charged leptons
+    {col:0,row:2,name:'e',full:'electron',mass:'0.511 MeV',charge:'-1',spin:'1/2',kind:'lepton',notes:'The lepton you know. Atomic shells, electricity.'},
+    {col:1,row:2,name:'mu',full:'muon',mass:'105.7 MeV',charge:'-1',spin:'1/2',kind:'lepton',notes:'~207x heavier electron. Cosmic-ray abundant. g-2 anomaly source.'},
+    {col:2,row:2,name:'tau',full:'tau',mass:'1.777 GeV',charge:'-1',spin:'1/2',kind:'lepton',notes:'Short-lived. Decays to hadrons or lighter leptons.'},
+    // Neutrinos
+    {col:0,row:3,name:'nu_e',full:'electron neutrino',mass:'< 1 eV',charge:'0',spin:'1/2',kind:'lepton',notes:'Emitted in beta decay. Oscillates into the other flavors.'},
+    {col:1,row:3,name:'nu_mu',full:'muon neutrino',mass:'< 1 eV',charge:'0',spin:'1/2',kind:'lepton',notes:'Produced in pion decay. Dominant atmospheric neutrino flavor.'},
+    {col:2,row:3,name:'nu_tau',full:'tau neutrino',mass:'< 1 eV',charge:'0',spin:'1/2',kind:'lepton',notes:'Last to be directly observed (DONUT, 2000).'},
+    // Bosons column
+    {col:3,row:0,name:'gamma',full:'photon',mass:'0',charge:'0',spin:'1',kind:'boson',notes:'Electromagnetic force carrier. Massless. Unbroken U(1)_EM.'},
+    {col:3,row:1,name:'g',full:'gluon',mass:'0',charge:'0',spin:'1',kind:'boson',notes:'Strong force. 8 types, carrying color-anticolor. Self-interacting.'},
+    {col:3,row:2,name:'W/Z',full:'W and Z',mass:'80.4 / 91.2 GeV',charge:'±1 / 0',spin:'1',kind:'boson',notes:'Weak force carriers. Massive because the Higgs broke SU(2)xU(1).'},
+    {col:3,row:3,name:'H',full:'Higgs boson',mass:'125.25 GeV',charge:'0',spin:'0',kind:'higgs',notes:'Scalar. VEV gives mass to everything else massive. Found 2012.'},
+  ];
+
+  const tileW = 110, tileH = 60, gapX = 20, gapY = 12;
+  const startX = 60, startY = 60;
+
+  function mk(tag, attrs){
+    const el = document.createElementNS(NS, tag);
+    for (const k in attrs) el.setAttribute(k, attrs[k]);
+    return el;
+  }
+  function mkText(x, y, txt, color, size, anchor){
+    const t = mk('text', {x:x, y:y, fill: color||'#b4c4d4', 'font-size': size||11, 'font-family':'ui-monospace, monospace'});
+    if (anchor) t.setAttribute('text-anchor', anchor);
+    t.textContent = txt;
+    return t;
+  }
+
+  // Header labels
+  svg.appendChild(mkText(startX + tileW/2, 36, 'Gen I', '#7a8a9a', 12, 'middle'));
+  svg.appendChild(mkText(startX + tileW + gapX + tileW/2, 36, 'Gen II', '#7a8a9a', 12, 'middle'));
+  svg.appendChild(mkText(startX + 2*(tileW + gapX) + tileW/2, 36, 'Gen III', '#7a8a9a', 12, 'middle'));
+  svg.appendChild(mkText(startX + 3*(tileW + gapX) + tileW/2, 36, 'Bosons', '#7a8a9a', 12, 'middle'));
+
+  function tileColor(kind){
+    if (kind === 'quark')  return '#22d3ee';
+    if (kind === 'lepton') return '#f472b6';
+    if (kind === 'boson')  return '#7c5cff';
+    if (kind === 'higgs')  return '#facc15';
+    return '#b4c4d4';
+  }
+
+  PARTICLES.forEach(p => {
+    const x = startX + p.col * (tileW + gapX);
+    const y = startY + p.row * (tileH + gapY);
+    const fill = tileColor(p.kind);
+    const g = mk('g', {});
+    const rect = mk('rect', {x:x, y:y, width:tileW, height:tileH, rx:6, ry:6,
+      fill: '#111821', stroke: fill, 'stroke-width':2});
+    const label = mkText(x + tileW/2, y + 24, p.name, fill, 16, 'middle');
+    const sub = mkText(x + tileW/2, y + 42, p.mass, '#7a8a9a', 10, 'middle');
+    g.appendChild(rect); g.appendChild(label); g.appendChild(sub);
+    g.addEventListener('mouseenter', () => {
+      rect.setAttribute('fill', '#1a2536');
+      caption.textContent = p.full + ' (' + p.name + ')  |  mass = ' + p.mass +
+        '  |  charge = ' + p.charge + '  |  spin = ' + p.spin + '  |  ' + p.notes;
+    });
+    g.addEventListener('mouseleave', () => {
+      rect.setAttribute('fill', '#111821');
+      caption.textContent = 'Hover a tile to see details. Three columns of fermions are the three generations; the fourth column holds the gauge bosons and the Higgs.';
+    });
+    svg.appendChild(g);
+  });
+
+  // Row labels on the left
+  const rowNames = ['up-type','down-type','charged lep.','neutrinos'];
+  for (let i = 0; i < 4; i++) {
+    svg.appendChild(mkText(startX - 10, startY + i*(tileH+gapY) + tileH/2 + 3,
+      rowNames[i], '#7a8a9a', 10, 'end'));
+  }
+})();
+</script>
+<script defer src="../problem-set.js"></script>
+<script defer src="particle-physics-problems.js"></script>
+</body>
+</html>

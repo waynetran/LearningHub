@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kinetics — Deep Dive</title>
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError: false});"></script>
+</head>
+<body>
+<div id="tooltip"></div>
+
+<nav class="topic-nav">
+  <a class="back" href="./index.html">← Chemistry Hub</a>
+  <div class="crumb">Chemistry / <span class="topic-name">Kinetics</span></div>
+</nav>
+
+<div class="topic-layout">
+  <aside class="topic-toc">
+    <h4>ON THIS PAGE</h4>
+    <ul>
+      <li><a href="#why">1. Why kinetics matters</a></li>
+      <li><a href="#vocab">2. Vocabulary cheat sheet</a></li>
+      <li><a href="#rate-laws">3. Rate laws and reaction order</a></li>
+      <li><a href="#integrated">4. Integrated rate laws and half-lives</a></li>
+      <li><a href="#arrhenius">5. Arrhenius and activation energy</a></li>
+      <li><a href="#tst">6. Collision and transition state theory</a></li>
+      <li><a href="#mechanisms">7. Mechanisms and the steady-state approximation</a></li>
+      <li><a href="#catalysis">8. Catalysis and enzyme kinetics</a></li>
+      <li><a href="#demo">9. Interactive: Arrhenius explorer</a></li>
+      <li><a href="#code">10. Source code</a></li>
+      <li><a href="#summary">11. Cheat sheet</a></li>
+    </ul>
+  </aside>
+
+  <article class="topic-content">
+    <h1>Kinetics</h1>
+    <p class="subtitle">Thermochemistry tells you whether a reaction <em>can</em> happen. Kinetics tells you <em>how fast</em>. Rate laws, the Arrhenius equation, and mechanistic analysis are the tools chemists and engineers use to design reactors, tune catalysts, model the atmosphere, and understand why a thermodynamically favorable reaction can still take geological ages.</p>
+    <div class="meta-tags">
+      <span>Prereq: <a href="./thermochemistry.html">thermochemistry</a>, a little <a href="../math/calculus.html">calculus</a></span>
+      <span>Read time: ~35 min</span>
+      <span>Interactive figures: 1</span>
+      <span>Code: NumPy / Plain Python</span>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="why">1. Why kinetics matters</h2>
+
+    <p>Diamond is thermodynamically unstable. At room temperature and pressure, graphite has a lower free energy, so every diamond in every ring on every hand is slowly turning into pencil lead. The catch is that "slowly" here means on the order of $10^{80}$ years. Thermochemistry said yes. Kinetics said "not in any useful sense." That gap — between "allowed" and "actually happens" — is the entire subject of kinetics.</p>
+
+    <p>The gap matters because almost every reaction of practical importance sits somewhere in the middle of the "in principle allowed but practically slow" spectrum, and the job of the chemist or engineer is to push it toward useful speeds without burning the reactor down. Every catalyst, every temperature setpoint, every solvent choice, and every enzyme in your body is a kinetic intervention.</p>
+
+    <ul>
+      <li><strong>Industrial chemistry.</strong> The Haber-Bosch process runs nitrogen fixation ($\text{N}_2 + 3\text{H}_2 \to 2\text{NH}_3$) at 400–500°C and 200 bar over an iron catalyst. The thermodynamics actually prefer lower temperature; the kinetics force high temperature. The entire recipe is a compromise, and that compromise fixes half of the nitrogen in the global food supply.</li>
+      <li><strong>Pharma.</strong> Drug half-life in the body is first-order kinetics on a grand scale. Dosing schedules, therapeutic windows, and "take twice a day" instructions all come from kinetic modeling of absorption, distribution, metabolism, and excretion.</li>
+      <li><strong>Atmospheric and climate chemistry.</strong> Ozone destruction in the stratosphere is a catalytic radical chain — one chlorine atom can destroy $\sim 10^5$ ozone molecules before it's removed. That multiplier is why a small amount of CFC does so much damage, and it's pure chain kinetics.</li>
+      <li><strong>Batteries and fuel cells.</strong> Charge-transfer at the electrode is rate-limiting for most cells. The Butler-Volmer equation is Arrhenius with an extra knob (overpotential), and optimizing it is most of what electrochemical engineers do.</li>
+      <li><strong>Biology.</strong> Enzymes don't change the equilibrium of the reaction they catalyze — they only change the rate. The Michaelis-Menten equation is first-year biochemistry precisely because every metabolic step is describable by it.</li>
+    </ul>
+
+    <div class="callout">
+      <div class="label">THE PUNCHLINE</div>
+      <p>A reaction rate almost always has the form $r = k [\text{A}]^m [\text{B}]^n$, where the exponents $m, n$ are measured (not guessed from stoichiometry) and $k$ is the rate constant. The rate constant depends exponentially on temperature through the Arrhenius equation $k = A e^{-E_a/RT}$, which sits underneath why warmer reactions are faster, why catalysts help (they lower $E_a$), and why enzymes boost rates by factors of $10^{10}$ or more. Above that microscopic picture, kinetics lets you compose elementary steps into mechanisms and extract overall rate laws using the steady-state or pre-equilibrium approximation.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="vocab">2. Vocabulary cheat sheet</h2>
+
+    <table class="rank-table">
+      <thead><tr><th>Symbol</th><th>Read as</th><th>Means</th></tr></thead>
+      <tbody>
+        <tr><td>$r$</td><td>"rate"</td><td>Reaction rate, usually in mol/(L·s). For $a\text{A} + b\text{B} \to c\text{C}$, $r = -\tfrac{1}{a}\tfrac{d[\text{A}]}{dt} = \tfrac{1}{c}\tfrac{d[\text{C}]}{dt}$.</td></tr>
+        <tr><td>$k$</td><td>"rate constant"</td><td>Proportionality between rate and concentrations. Units depend on overall order: s$^{-1}$ for first order, L/(mol·s) for second, etc.</td></tr>
+        <tr><td>$m, n$</td><td>"partial orders"</td><td>Exponents in the rate law, determined experimentally. Not necessarily integers, not tied to stoichiometry.</td></tr>
+        <tr><td>$E_a$</td><td>"activation energy"</td><td>Height of the energy barrier between reactants and products. Units: kJ/mol. Bigger $E_a$ means a steeper temperature dependence and a slower reaction at fixed $T$.</td></tr>
+        <tr><td>$A$</td><td>"pre-exponential factor"</td><td>The "attempt frequency" in Arrhenius. Roughly the rate the reaction would have if every collision had enough energy.</td></tr>
+        <tr><td>$t_{1/2}$</td><td>"half-life"</td><td>Time for a reactant to drop to half its initial concentration. Only constant for first-order reactions.</td></tr>
+        <tr><td>$\Delta G^\ddagger$</td><td>"delta G double dagger"</td><td>Free energy of activation — the transition-state analogue of $\Delta G$. Drives the Eyring equation.</td></tr>
+        <tr><td>$K_M$</td><td>"K-M" (Michaelis constant)</td><td>Substrate concentration at which an enzyme runs at half its maximum velocity. Has units of concentration.</td></tr>
+        <tr><td>$V_\text{max}$</td><td>"V-max"</td><td>Maximum velocity of an enzyme-catalyzed reaction — reached when all enzyme is saturated with substrate.</td></tr>
+        <tr><td>$k_\text{cat}$</td><td>"k-cat" (turnover number)</td><td>How many substrate molecules one enzyme active site processes per second at saturation. $V_\text{max} = k_\text{cat} [\text{E}]_0$.</td></tr>
+      </tbody>
+    </table>
+
+    <!-- ========================================================== -->
+    <h2 id="rate-laws">3. Rate laws and reaction order</h2>
+
+    <p>For a generic reaction $a\text{A} + b\text{B} \to \text{products}$, experiment almost always finds a rate law of the form</p>
+
+    <div class="math-display">$$r = -\frac{1}{a}\frac{d[\text{A}]}{dt} = k\,[\text{A}]^m\,[\text{B}]^n.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">The general rate law</p>
+      <dl>
+        <dt>$r$</dt><dd>Reaction rate, in mol·L$^{-1}$·s$^{-1}$. The minus sign makes $r$ positive because reactants disappear.</dd>
+        <dt>$k$</dt><dd>Rate constant. Depends on temperature (strongly) and on the presence of catalysts, but not on concentration. Its units are whatever makes $r$ come out in mol·L$^{-1}$·s$^{-1}$.</dd>
+        <dt>$[\text{A}], [\text{B}]$</dt><dd>Molar concentrations of reactants.</dd>
+        <dt>$m, n$</dt><dd>Partial reaction orders — the exponents in the rate law. Determined by experiment, not by looking at the balanced equation. The overall order is $m + n$.</dd>
+      </dl>
+      <p class="mg-warn"><strong>Crucial warning.</strong> The orders $m, n$ are <em>not</em> the stoichiometric coefficients $a, b$. You cannot read a rate law off a balanced equation. You have to measure it. The only exception is when the reaction really is a single elementary step — and you usually don't know that in advance.</p>
+    </div>
+
+    <h3>How to measure reaction order</h3>
+
+    <p>The cleanest experimental method is the <strong>method of initial rates</strong>. You run the reaction at several initial concentrations of one reactant while holding the others fixed, and watch how the initial rate changes. If doubling $[\text{A}]_0$ doubles the rate, the order in A is 1; if it quadruples, the order is 2; if it does nothing, the order is 0.</p>
+
+    <p>A worked example: for the reaction $2\text{NO}(g) + \text{O}_2(g) \to 2\text{NO}_2(g)$, experimental initial rates give</p>
+
+    <table class="rank-table">
+      <thead><tr><th>Run</th><th>[NO]$_0$ (M)</th><th>[O$_2$]$_0$ (M)</th><th>$r_0$ (M/s)</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>0.010</td><td>0.010</td><td>$2.5\times 10^{-5}$</td></tr>
+        <tr><td>2</td><td>0.020</td><td>0.010</td><td>$1.0\times 10^{-4}$</td></tr>
+        <tr><td>3</td><td>0.010</td><td>0.020</td><td>$5.0\times 10^{-5}$</td></tr>
+      </tbody>
+    </table>
+
+    <p>Runs 1→2 double [NO] and the rate goes up by $4\times$, so the order in NO is 2. Runs 1→3 double [O$_2$] and the rate doubles, so the order in O$_2$ is 1. Overall order: 3. The rate law is $r = k[\text{NO}]^2[\text{O}_2]$, and $k$ can be back-solved from any run: $k = 2.5\times 10^{-5}/(0.010^2 \cdot 0.010) = 25\ \text{M}^{-2}\text{s}^{-1}$.</p>
+
+    <div class="problem-set" data-topic="chem-kin-rate-laws"></div>
+
+    <!-- ========================================================== -->
+    <h2 id="integrated">4. Integrated rate laws and half-lives</h2>
+
+    <p>Rate laws in their raw form are differential equations. Integrating them gives you the concentration-versus-time profile and lets you fit experimental data directly. Three cases cover almost everything you meet in practice.</p>
+
+    <h3>Zero order</h3>
+
+    <div class="math-display">$$-\frac{d[\text{A}]}{dt} = k \quad\Longrightarrow\quad [\text{A}]_t = [\text{A}]_0 - kt.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Zero-order integrated rate law</p>
+      <dl>
+        <dt>$[\text{A}]_0$</dt><dd>Initial concentration of A at $t = 0$.</dd>
+        <dt>$[\text{A}]_t$</dt><dd>Concentration at time $t$.</dd>
+        <dt>$k$</dt><dd>Rate constant in M/s (mol·L$^{-1}$·s$^{-1}$). Same units as the rate itself, because the rate is literally just $k$.</dd>
+        <dt>shape</dt><dd>Linear in $t$. Concentration drops at a constant rate until the reactant is gone.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>When it happens.</strong> Zero-order kinetics show up when a surface or enzyme is saturated — the rate is limited by the catalyst, not the substrate. Alcohol metabolism in the liver is roughly zero-order because alcohol dehydrogenase is saturated at typical blood alcohol levels. That's why blood alcohol drops linearly, not exponentially, after you stop drinking.</p>
+    </div>
+
+    <h3>First order</h3>
+
+    <div class="math-display">$$-\frac{d[\text{A}]}{dt} = k[\text{A}] \quad\Longrightarrow\quad [\text{A}]_t = [\text{A}]_0\, e^{-kt}.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">First-order integrated rate law</p>
+      <dl>
+        <dt>$k$</dt><dd>Rate constant with units of inverse time (s$^{-1}$, min$^{-1}$, etc.).</dd>
+        <dt>$e^{-kt}$</dt><dd>Exponential decay. A straight line when you plot $\ln[\text{A}]_t$ against $t$, with slope $-k$.</dd>
+        <dt>half-life</dt><dd>$t_{1/2} = \ln 2 / k \approx 0.693/k$. Independent of starting concentration — the defining feature of first-order kinetics.</dd>
+      </dl>
+      <p class="mg-why"><strong>Where it's everywhere.</strong> Radioactive decay. First-order drug elimination from the bloodstream (which is why pharmacology lives on half-life tables). SN1 reactions. Unimolecular gas-phase isomerizations. Any process where molecules decide independently whether to react in each small time interval.</p>
+    </div>
+
+    <h3>Second order</h3>
+
+    <div class="math-display">$$-\frac{d[\text{A}]}{dt} = k[\text{A}]^2 \quad\Longrightarrow\quad \frac{1}{[\text{A}]_t} = \frac{1}{[\text{A}]_0} + kt.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Second-order integrated rate law (one reactant)</p>
+      <dl>
+        <dt>$k$</dt><dd>Units of M$^{-1}$·s$^{-1}$ — inverse molarity per second.</dd>
+        <dt>plotting</dt><dd>$1/[\text{A}]_t$ vs $t$ is a straight line of slope $k$. Not $\ln$, not raw concentration.</dd>
+        <dt>half-life</dt><dd>$t_{1/2} = 1/(k[\text{A}]_0)$. <em>Depends on starting concentration</em> — each successive half-life is longer than the last, because as A gets dilute the collisions get rarer.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Bimolecular collisions.</strong> Second-order kinetics come from reactions where two molecules of A have to find each other (like dimerizations, or some radical recombinations). Because the concentration enters twice, the rate falls off faster as A is consumed than a first-order reaction would.</p>
+    </div>
+
+    <h3>How to tell them apart from data</h3>
+
+    <p>A good first step with any kinetic data set is to plot the concentration three ways and see which one gives you a straight line:</p>
+
+    <ul>
+      <li>$[\text{A}]$ vs $t$ — linear means zero order.</li>
+      <li>$\ln[\text{A}]$ vs $t$ — linear means first order.</li>
+      <li>$1/[\text{A}]$ vs $t$ — linear means second order.</li>
+    </ul>
+
+    <p>The slope of the linear plot gives $k$ directly (up to a sign). This "try all three" recipe is how undergraduates are supposed to do it, and it still works in research, because real reactions overwhelmingly fit one of these three to within experimental error.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="arrhenius">5. Arrhenius and activation energy</h2>
+
+    <p>The rate constant $k$ itself isn't a constant — it depends strongly on temperature. Arrhenius (1889) proposed the now-universal empirical form:</p>
+
+    <div class="math-display">$$k(T) = A\, e^{-E_a / (RT)}.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Arrhenius equation</p>
+      <dl>
+        <dt>$A$</dt><dd>Pre-exponential factor (or "frequency factor"). Same units as $k$. Physically: the rate the reaction would have if <em>every</em> collision had enough energy.</dd>
+        <dt>$E_a$</dt><dd>Activation energy — the minimum energy a collision must carry in order to convert reactants into products. Units: kJ/mol.</dd>
+        <dt>$R$</dt><dd>Gas constant, $8.314$ J·mol$^{-1}$·K$^{-1}$.</dd>
+        <dt>$T$</dt><dd>Absolute temperature, in kelvin. Never celsius.</dd>
+      </dl>
+      <p class="mg-why"><strong>Why exponential.</strong> At temperature $T$, the Maxwell-Boltzmann distribution says the fraction of molecules with kinetic energy above $E_a$ goes like $e^{-E_a/RT}$. The Arrhenius form is exactly this Boltzmann factor out front. Bigger $E_a$ means a steeper temperature dependence and a more dramatic speed-up with heating.</p>
+    </div>
+
+    <p>Taking logs gives the form you actually plot:</p>
+
+    <div class="math-display">$$\ln k = \ln A - \frac{E_a}{R}\cdot\frac{1}{T}.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">The Arrhenius plot</p>
+      <dl>
+        <dt>$\ln k$ vs $1/T$</dt><dd>A straight line. Slope: $-E_a/R$. Intercept: $\ln A$. This is the workhorse plot of experimental kinetics.</dd>
+        <dt>two-point form</dt><dd>If you only measure $k$ at two temperatures, $\ln(k_2/k_1) = -(E_a/R)(1/T_2 - 1/T_1)$. Extracts $E_a$ in one line.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Rule of thumb.</strong> For "typical" activation energies around 50 kJ/mol, the rate roughly doubles for every 10 K increase in temperature near room temperature. That "reactions go twice as fast every ten degrees" heuristic is Arrhenius-derived and useful when scaling from lab to reactor.</p>
+    </div>
+
+    <h3>Worked example: extracting E<sub>a</sub> from two measurements</h3>
+
+    <p>A reaction has $k_1 = 1.5\times 10^{-3}$ s$^{-1}$ at 300 K and $k_2 = 1.2\times 10^{-2}$ s$^{-1}$ at 350 K. Find $E_a$.</p>
+
+    <div class="math-display">$$\ln\!\frac{k_2}{k_1} = -\frac{E_a}{R}\!\left(\frac{1}{T_2} - \frac{1}{T_1}\right).$$</div>
+
+    <p>$\ln(1.2\times 10^{-2}/1.5\times 10^{-3}) = \ln 8 \approx 2.08$. The temperature term is $(1/350 - 1/300) = -4.76\times 10^{-4}$ K$^{-1}$. So</p>
+
+    <div class="math-display">$$E_a = -\frac{R \ln(k_2/k_1)}{(1/T_2 - 1/T_1)} = -\frac{(8.314)(2.08)}{-4.76\times 10^{-4}} \approx 3.63\times 10^4\ \text{J/mol} \approx 36\ \text{kJ/mol}.$$</div>
+
+    <p>A modest activation energy for a gas-phase reaction. The rate increased by a factor of 8 over 50 K, which Arrhenius correctly captures.</p>
+
+    <div class="problem-set" data-topic="chem-kin-arrhenius"></div>
+
+    <!-- ========================================================== -->
+    <h2 id="tst">6. Collision and transition state theory</h2>
+
+    <p>Arrhenius is an empirical fit. Two slightly more mechanistic theories try to <em>derive</em> the same form from what molecules are actually doing.</p>
+
+    <h3>Collision theory</h3>
+
+    <p>The simplest picture: two molecules react only if they collide, and only if the collision carries at least $E_a$ of energy along the line of approach, and only if they are oriented correctly. Putting these three factors together:</p>
+
+    <div class="math-display">$$k = p\, Z\, e^{-E_a/RT},$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Collision-theory rate constant</p>
+      <dl>
+        <dt>$Z$</dt><dd>Collision frequency — number of collisions per unit volume per unit time per unit concentration product. Comes from kinetic theory of gases, goes like $T^{1/2}$.</dd>
+        <dt>$p$</dt><dd>Steric factor — fraction of collisions with the right orientation. For simple molecules $\sim 1$; for complex ones $p$ can be $10^{-4}$ or smaller.</dd>
+        <dt>$e^{-E_a/RT}$</dt><dd>Fraction of collisions energetic enough to react — the Boltzmann factor.</dd>
+      </dl>
+      <p class="mg-why"><strong>What collision theory explains.</strong> Why gas-phase rate constants plateau at very high temperature (collisions can't happen any faster than they're happening). Why big floppy molecules react slower than simple ones with the same $E_a$ (the steric factor penalty). Why pressure matters in gas-phase reactors (more collisions).</p>
+    </div>
+
+    <h3>Transition state theory (Eyring)</h3>
+
+    <p>A more sophisticated picture: reactants don't just collide, they climb a potential energy surface up to a saddle point — the <strong>transition state</strong> — and then slide down the other side into products. The rate is set by how fast molecules pass over the top of the barrier, and Eyring derived</p>
+
+    <div class="math-display">$$k = \frac{k_B T}{h}\, e^{-\Delta G^\ddagger / RT} = \frac{k_B T}{h}\, e^{\Delta S^\ddagger / R}\, e^{-\Delta H^\ddagger / RT}.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Eyring equation</p>
+      <dl>
+        <dt>$k_B T / h$</dt><dd>The "universal frequency" at which transition-state complexes fall apart. At 298 K, this equals $6.2\times 10^{12}$ s$^{-1}$.</dd>
+        <dt>$\Delta G^\ddagger$</dt><dd>Free energy of activation: the free-energy difference between reactants and the transition state.</dd>
+        <dt>$\Delta H^\ddagger, \Delta S^\ddagger$</dt><dd>The enthalpy and entropy of activation. $\Delta S^\ddagger$ is usually negative for bimolecular reactions (two molecules becoming one transition state loses translational entropy) and near zero for unimolecular.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Eyring vs. Arrhenius.</strong> To first approximation, $\Delta H^\ddagger \approx E_a$ and the Eyring $k_B T/h$ prefactor plays the role of the Arrhenius $A$. Eyring's big advantage is that it gives you $\Delta S^\ddagger$ as well — the activation entropy tells you about the tightness of the transition state and whether the reaction is bimolecular or unimolecular in its microscopic step.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="mechanisms">7. Mechanisms and the steady-state approximation</h2>
+
+    <p>Most real reactions are not elementary. They proceed through a sequence of steps, each of which is elementary, and the observed rate law is a function of the rate constants of all those steps. Deriving that overall rate law from a proposed mechanism is the central technical skill of kinetics.</p>
+
+    <h3>Elementary steps and molecularity</h3>
+
+    <p>An <strong>elementary step</strong> is one the reaction actually performs in a single collision or unimolecular event. Its rate law <em>is</em> given by its stoichiometry (unlike the overall reaction). A unimolecular step A $\to$ B has rate $k[\text{A}]$; a bimolecular step A + B $\to$ C has rate $k[\text{A}][\text{B}]$; termolecular steps exist but are rare because three-body collisions are rare.</p>
+
+    <p>A mechanism is a set of elementary steps whose sum is the overall reaction. Kinetics can disprove a mechanism (by showing the derived rate law doesn't match experiment) but it can't prove one — two different mechanisms can give the same overall rate law.</p>
+
+    <h3>The rate-determining step</h3>
+
+    <p>If one step is much slower than all the others, the reaction rate is set entirely by that slow step, and everything before it can be treated as a fast pre-equilibrium. This is the easiest case. Example: nucleophilic substitution at a tertiary carbon (SN1) goes via a slow ionization to a carbocation followed by fast attack of the nucleophile. The observed rate law is first-order in substrate and zeroth-order in nucleophile — which tells you the nucleophile isn't in the rate-determining step.</p>
+
+    <h3>The steady-state approximation</h3>
+
+    <p>When no single step is obviously rate-determining, the standard trick is to assume that the concentration of each reactive intermediate stays approximately constant — its production rate equals its consumption rate. For the Lindemann mechanism of unimolecular gas-phase reactions,</p>
+
+    <div class="math-display">$$\text{A} + \text{M} \underset{k_{-1}}{\overset{k_1}{\rightleftharpoons}} \text{A}^* + \text{M}, \qquad \text{A}^* \xrightarrow{k_2} \text{products},$$</div>
+
+    <p>applying $d[\text{A}^*]/dt = 0$ gives $[\text{A}^*]_\text{ss} = k_1[\text{A}][\text{M}]/(k_{-1}[\text{M}] + k_2)$, and the overall rate is</p>
+
+    <div class="math-display">$$r = k_2[\text{A}^*]_\text{ss} = \frac{k_1 k_2 [\text{A}][\text{M}]}{k_{-1}[\text{M}] + k_2}.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Lindemann-Hinshelwood rate law</p>
+      <dl>
+        <dt>A$^*$</dt><dd>Energized version of A — has enough internal energy to react but hasn't reacted yet.</dd>
+        <dt>M</dt><dd>A "bath molecule" (any molecule, often an inert gas) that supplies energy to A through collision.</dd>
+        <dt>high-pressure limit</dt><dd>If $k_{-1}[\text{M}] \gg k_2$, the rate reduces to $(k_1 k_2 / k_{-1})[\text{A}]$ — cleanly first-order in A.</dd>
+        <dt>low-pressure limit</dt><dd>If $k_{-1}[\text{M}] \ll k_2$, the rate becomes $k_1 [\text{A}][\text{M}]$ — second-order, dependent on bath gas pressure.</dd>
+      </dl>
+      <p class="mg-why"><strong>Why this is a classic.</strong> Before Lindemann, unimolecular gas-phase reactions were puzzling: how does a single molecule just decide to decompose? The answer is that it has to be energized first by a collision, and that collisional activation can become rate-limiting at low pressure — hence the pressure dependence. Every decent kinetics textbook derives this because it's the simplest non-trivial application of the SSA.</p>
+    </div>
+
+    <p>The same machinery handles enzyme kinetics, radical chain reactions, and atmospheric photochemistry — you write down the elementary steps, apply the steady-state approximation to every intermediate, and out pops a closed-form rate law.</p>
+
+    <div class="problem-set" data-topic="chem-kin-mechanisms"></div>
+
+    <!-- ========================================================== -->
+    <h2 id="catalysis">8. Catalysis and enzyme kinetics</h2>
+
+    <p>A <strong>catalyst</strong> is a species that speeds up a reaction without being consumed. It works by providing a lower-energy path — a different transition state — from reactants to products. The thermodynamics are unchanged (a catalyst doesn't move equilibrium); only the activation barrier is.</p>
+
+    <p>Three flavors:</p>
+
+    <ul>
+      <li><strong>Homogeneous catalysis.</strong> Catalyst and reactants in the same phase (usually solution). Transition-metal complexes doing cross-couplings, acid or base catalysis of ester hydrolysis, etc.</li>
+      <li><strong>Heterogeneous catalysis.</strong> Catalyst is a solid, reactants are gas or liquid. Industrially dominant — platinum catalytic converters, iron for Haber-Bosch, zeolites in petroleum cracking. Rate laws are typically derived from the Langmuir-Hinshelwood adsorption model.</li>
+      <li><strong>Enzymatic catalysis.</strong> Biology's version. Rate enhancements up to $10^{17}$ over the uncatalyzed reaction, with exquisite substrate specificity.</li>
+    </ul>
+
+    <h3>Michaelis-Menten</h3>
+
+    <p>The workhorse model of enzyme kinetics. An enzyme E binds substrate S reversibly to form a complex ES, which breaks down to product P and free enzyme:</p>
+
+    <div class="math-display">$$\text{E} + \text{S} \underset{k_{-1}}{\overset{k_1}{\rightleftharpoons}} \text{ES} \xrightarrow{k_\text{cat}} \text{E} + \text{P}.$$</div>
+
+    <p>Applying the steady-state approximation to [ES] and using $[\text{E}]_0 = [\text{E}] + [\text{ES}]$ gives the Michaelis-Menten rate law:</p>
+
+    <div class="math-display">$$v = \frac{V_\text{max}\,[\text{S}]}{K_M + [\text{S}]}, \qquad V_\text{max} = k_\text{cat} [\text{E}]_0, \qquad K_M = \frac{k_{-1} + k_\text{cat}}{k_1}.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Michaelis-Menten kinetics</p>
+      <dl>
+        <dt>$v$</dt><dd>Initial velocity of product formation. Units: M/s.</dd>
+        <dt>$V_\text{max}$</dt><dd>Maximum velocity — reached when substrate saturates the enzyme. Proportional to total enzyme concentration.</dd>
+        <dt>$K_M$</dt><dd>Michaelis constant. The substrate concentration at which $v = V_\text{max}/2$. Units: molarity. Smaller $K_M$ means tighter binding.</dd>
+        <dt>$k_\text{cat}$</dt><dd>Turnover number. Molecules of substrate converted per enzyme active site per second at saturation.</dd>
+        <dt>$k_\text{cat}/K_M$</dt><dd>Specificity constant — the effective second-order rate constant at low substrate. Enzymes that have reached "catalytic perfection" have $k_\text{cat}/K_M \approx 10^8{-}10^9$ M$^{-1}$s$^{-1}$, the diffusion limit. Triosephosphate isomerase is the canonical example.</dd>
+      </dl>
+      <p class="mg-why"><strong>Two regimes.</strong> When $[\text{S}] \ll K_M$, the rate is linear in substrate: $v \approx (V_\text{max}/K_M)[\text{S}]$, first-order. When $[\text{S}] \gg K_M$, the rate saturates at $V_\text{max}$, zero-order in substrate. Every enzyme-catalyzed reaction lives somewhere on this curve, and the location (relative to $K_M$) determines how the reaction responds to metabolic regulation.</p>
+    </div>
+
+    <h3>Lineweaver-Burk and modern fitting</h3>
+
+    <p>For decades, biochemists extracted $K_M$ and $V_\text{max}$ by plotting $1/v$ vs $1/[\text{S}]$ — a Lineweaver-Burk plot — which turns the hyperbola into a straight line with slope $K_M/V_\text{max}$ and intercept $1/V_\text{max}$. This is pedagogically nice but statistically terrible (it weights low-substrate points much more than it should). Modern practice is to fit the hyperbola directly with nonlinear least squares, which is one line of <code>scipy.optimize.curve_fit</code>.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="demo">9. Interactive: Arrhenius explorer</h2>
+
+    <p>Drag $E_a$ and $A$ to see how $\ln k$ depends on $1/T$. Below is the standard Arrhenius plot ($\ln k$ vs $1000/T$). The slope is $-E_a/R$ — steeper slope, bigger $E_a$, more temperature-sensitive reaction.</p>
+
+    <div class="viz-3d">
+      <svg id="arrSvg" viewBox="0 0 720 360" width="100%" preserveAspectRatio="xMidYMid meet" style="background:#0a0d12;border-radius:8px;"></svg>
+      <div class="viz-controls">
+        <label>$E_a$ (kJ/mol): <input id="eaSlider" type="range" min="10" max="200" step="5" value="60"> <span id="eaLabel">60 kJ/mol</span></label>
+        <label>$\ln A$: <input id="lnaSlider" type="range" min="10" max="35" step="0.5" value="25"> <span id="lnaLabel">25</span></label>
+      </div>
+      <p class="caption">The Arrhenius plot. The cyan line is $\ln k(T)$ over $T \in [250, 600]$ K. Changing $E_a$ rotates the line (steeper for bigger barriers). Changing $\ln A$ slides it up and down. The dashed horizontal line marks $\ln k = 0$, i.e. $k = 1$ s$^{-1}$ — where that line intersects the Arrhenius line is where the reaction has a "1/second" timescale.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="code">10. Source code</h2>
+
+    <p>Fitting a first-order decay and an Arrhenius plot in three-dozen lines of Python. Everything you need to analyze a real kinetic data set in a lab notebook.</p>
+
+    <div class="code-tabs">
+      <div class="ct-tabs">
+        <button class="ct-tab active" data-tab="py-fit">First-order fit</button>
+        <button class="ct-tab" data-tab="py-arr">Arrhenius fit</button>
+      </div>
+      <pre class="ct-panel active" data-tab="py-fit"><code>import numpy as np
+from scipy.optimize import curve_fit
+
+# synthetic data: [A] vs t, first-order decay with k = 0.05 s^-1 and noise
+t = np.linspace(0, 60, 13)
+A0 = 1.0
+k_true = 0.05
+A = A0 * np.exp(-k_true * t) + 0.01 * np.random.randn(len(t))
+
+# option 1: linearize and fit ln[A] vs t
+mask = A &gt; 0
+slope, intercept = np.polyfit(t[mask], np.log(A[mask]), 1)
+k_fit_linear = -slope
+print(f"linear fit k = {k_fit_linear:.4f} s^-1")
+
+# option 2: nonlinear fit of the full exponential (preferred)
+def model(t, A0, k):
+    return A0 * np.exp(-k * t)
+
+(A0_fit, k_fit_nl), _ = curve_fit(model, t, A, p0=[1.0, 0.05])
+print(f"nonlinear fit k = {k_fit_nl:.4f} s^-1, A0 = {A0_fit:.4f}")
+print(f"half-life = {np.log(2)/k_fit_nl:.2f} s")
+</code></pre>
+      <pre class="ct-panel" data-tab="py-arr"><code>import numpy as np
+from scipy.optimize import curve_fit
+
+R = 8.314  # J/(mol K)
+
+# measured rate constants at different temperatures
+T = np.array([280, 300, 320, 340, 360, 380])         # K
+k = np.array([1.2e-4, 1.5e-3, 1.3e-2, 8.5e-2, 0.42, 1.8])  # s^-1
+
+# linearized Arrhenius: ln k = ln A - Ea / (R T)
+slope, intercept = np.polyfit(1.0 / T, np.log(k), 1)
+Ea_lin = -slope * R                 # J/mol
+A_lin = np.exp(intercept)            # s^-1
+print(f"linear Ea = {Ea_lin/1000:.1f} kJ/mol,  A = {A_lin:.2e} s^-1")
+
+# nonlinear fit (better if you have many decades of k)
+def arr(T, A, Ea):
+    return A * np.exp(-Ea / (R * T))
+
+(A_nl, Ea_nl), _ = curve_fit(arr, T, k, p0=[A_lin, Ea_lin])
+print(f"nonlinear Ea = {Ea_nl/1000:.1f} kJ/mol,  A = {A_nl:.2e} s^-1")
+
+# predict the rate constant at 310 K
+k_310 = arr(310.0, A_nl, Ea_nl)
+print(f"k(310 K) = {k_310:.3e} s^-1")
+</code></pre>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="summary">11. Cheat sheet</h2>
+
+    <div class="callout">
+      <div class="label">THE WHOLE SUBJECT ON ONE PAGE</div>
+      <ul>
+        <li><strong>Rate law.</strong> $r = k[\text{A}]^m[\text{B}]^n$. Orders $m, n$ are <em>measured</em>, not read from stoichiometry. Overall order $= m + n$.</li>
+        <li><strong>Zero / first / second order.</strong> Integrated forms: $[\text{A}] = [\text{A}]_0 - kt$, $[\text{A}] = [\text{A}]_0 e^{-kt}$, $1/[\text{A}] = 1/[\text{A}]_0 + kt$. Plot concentration three ways; whichever is linear gives the order and $k$.</li>
+        <li><strong>Half-lives.</strong> First-order: $t_{1/2} = \ln 2 / k$ (constant). Second-order: $t_{1/2} = 1/(k[\text{A}]_0)$ (grows as A is consumed). Zero-order: $t_{1/2} = [\text{A}]_0 / (2k)$.</li>
+        <li><strong>Arrhenius.</strong> $k = A e^{-E_a/RT}$. Plot $\ln k$ vs $1/T$; slope is $-E_a/R$. Two-point: $\ln(k_2/k_1) = -(E_a/R)(1/T_2 - 1/T_1)$.</li>
+        <li><strong>Eyring.</strong> $k = (k_B T/h)\, e^{-\Delta G^\ddagger/RT}$. Decomposes $\Delta G^\ddagger$ into $\Delta H^\ddagger - T\Delta S^\ddagger$. Bimolecular steps usually have $\Delta S^\ddagger &lt; 0$.</li>
+        <li><strong>Mechanisms.</strong> Break the overall reaction into elementary steps; apply the steady-state approximation to intermediates; watch for fast pre-equilibria; the slowest step can dominate the overall rate.</li>
+        <li><strong>Catalysis.</strong> Lowers $E_a$, does <em>not</em> shift equilibrium. Heterogeneous catalysis is Langmuir-Hinshelwood; enzyme catalysis is Michaelis-Menten: $v = V_\text{max}[\text{S}]/(K_M + [\text{S}])$.</li>
+        <li><strong>Diffusion limit.</strong> No bimolecular reaction in solution can go faster than $\sim 10^9$ M$^{-1}$s$^{-1}$ — the rate at which molecules can find each other by diffusion. Enzymes that approach this are "catalytically perfect."</li>
+      </ul>
+    </div>
+
+    <h3>See also</h3>
+
+    <div class="grid">
+      <div class="card">
+        <h4><a href="./thermochemistry.html">Thermochemistry</a></h4>
+        <p>The prerequisite. Thermochemistry tells you whether a reaction can happen; kinetics tells you how fast. A reaction with $\Delta G &lt; 0$ and $E_a = 200$ kJ/mol is allowed but dead.</p>
+      </div>
+      <div class="card">
+        <h4><a href="./equilibrium.html">Equilibrium</a></h4>
+        <p>At equilibrium the forward and reverse rates are equal. The ratio of rate constants equals the equilibrium constant: $K_\text{eq} = k_\text{fwd}/k_\text{rev}$. That link is where detailed balance comes from.</p>
+      </div>
+      <div class="card">
+        <h4><a href="./biochemistry.html">Biochemistry</a></h4>
+        <p>Michaelis-Menten is first-year biochemistry because every metabolic step uses it. Enzyme regulation is kinetics in disguise.</p>
+      </div>
+      <div class="card">
+        <h4><a href="../physics/thermodynamics.html">Physics: Thermodynamics</a></h4>
+        <p>The physical origin of the Boltzmann factor that sits inside Arrhenius. Fraction of molecules with energy above a barrier is an equilibrium-statistical fact.</p>
+      </div>
+      <div class="card">
+        <h4><a href="../math/calculus.html">Math: Calculus</a></h4>
+        <p>Integrated rate laws are ODE solutions. The steady-state approximation is a separation-of-timescales argument on a system of coupled ODEs.</p>
+      </div>
+      <div class="card">
+        <h4><a href="../math/probability.html">Math: Probability</a></h4>
+        <p>First-order decay is memoryless — each molecule independently has rate $k$ of reacting in the next instant, exactly like a Poisson process.</p>
+      </div>
+    </div>
+
+    <div class="bib">
+      <h4>Further reading</h4>
+      <ul>
+        <li>Peter Atkins and Julio de Paula — <em>Physical Chemistry</em>. The canonical treatment of rate laws, Arrhenius, transition state theory, and enzyme kinetics, with careful derivations.</li>
+        <li>Keith Laidler — <em>Chemical Kinetics</em> (3rd ed., 1987). A full-length book dedicated to kinetics; still the most detailed single reference.</li>
+        <li>Robert Silbey, Robert Alberty, Moungi Bawendi — <em>Physical Chemistry</em>. Clean chapters on both formal kinetics and enzyme kinetics.</li>
+        <li>Athel Cornish-Bowden — <em>Fundamentals of Enzyme Kinetics</em>. The modern reference for enzyme kinetics and nonlinear fitting of Michaelis-Menten data.</li>
+        <li>Wikipedia — <a href="https://en.wikipedia.org/wiki/Chemical_kinetics">Chemical kinetics</a> and <a href="https://en.wikipedia.org/wiki/Arrhenius_equation">Arrhenius equation</a>. Solid overviews with references.</li>
+      </ul>
+    </div>
+
+    <div class="next-card">
+      <div class="label">NEXT UP</div>
+      <a href="./equilibrium.html">→ Equilibrium</a>
+      <p>When a reversible reaction's forward and reverse rates become equal, the net concentrations stop changing. That's equilibrium — the resting state that every kinetic process eventually asymptotes to. The law of mass action, acid-base chemistry, buffers, and solubility are all waiting on the next page.</p>
+    </div>
+
+  </article>
+</div>
+
+<script>
+// =========================================================
+// Code tabs
+document.querySelectorAll('.code-tabs').forEach(root => {
+  const tabs = root.querySelectorAll('.ct-tab');
+  const panels = root.querySelectorAll('.ct-panel');
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const target = tab.getAttribute('data-tab');
+      tabs.forEach(t => t.classList.toggle('active', t === tab));
+      panels.forEach(p => p.classList.toggle('active', p.getAttribute('data-tab') === target));
+    });
+  });
+});
+
+// =========================================================
+// Arrhenius plot
+(function () {
+  const svg = document.getElementById('arrSvg');
+  if (!svg) return;
+  const NS = 'http://www.w3.org/2000/svg';
+  const eaS = document.getElementById('eaSlider');
+  const lnaS = document.getElementById('lnaSlider');
+  const eaL = document.getElementById('eaLabel');
+  const lnaL = document.getElementById('lnaLabel');
+
+  const W = 720, H = 360;
+  const pad = 55;
+  const R = 8.314;
+
+  function draw() {
+    const Ea = parseFloat(eaS.value) * 1000;  // J/mol
+    const lnA = parseFloat(lnaS.value);
+    eaL.textContent = (Ea / 1000).toFixed(0) + ' kJ/mol';
+    lnaL.textContent = lnA.toFixed(1);
+
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+
+    const bg = document.createElementNS(NS, 'rect');
+    bg.setAttribute('x', 0); bg.setAttribute('y', 0);
+    bg.setAttribute('width', W); bg.setAttribute('height', H);
+    bg.setAttribute('fill', '#0a0d12');
+    svg.appendChild(bg);
+
+    // T range: 250..600 K. x-axis is 1000/T.
+    const Tmin = 250, Tmax = 600;
+    const xMin = 1000 / Tmax;  // smaller
+    const xMax = 1000 / Tmin;  // larger
+
+    // compute y range from ln k over the temp range
+    const ks = [];
+    for (let t = Tmin; t <= Tmax; t += 2) {
+      ks.push(lnA - Ea / (R * t));
+    }
+    const yMin = Math.min(...ks, -5) - 2;
+    const yMax = Math.max(...ks, 5) + 2;
+
+    const x = v => pad + (W - 2 * pad) * (v - xMin) / (xMax - xMin);
+    const y = v => pad + (H - 2 * pad) * (yMax - v) / (yMax - yMin);
+
+    // grid: x ticks
+    for (let xv = Math.ceil(xMin * 10) / 10; xv <= xMax; xv += 0.5) {
+      const ln = document.createElementNS(NS, 'line');
+      ln.setAttribute('x1', x(xv)); ln.setAttribute('y1', pad);
+      ln.setAttribute('x2', x(xv)); ln.setAttribute('y2', H - pad);
+      ln.setAttribute('stroke', '#1a2030'); ln.setAttribute('stroke-width', 1);
+      svg.appendChild(ln);
+      const lbl = document.createElementNS(NS, 'text');
+      lbl.setAttribute('x', x(xv));
+      lbl.setAttribute('y', H - pad + 16);
+      lbl.setAttribute('text-anchor', 'middle');
+      lbl.setAttribute('fill', '#7a8699');
+      lbl.setAttribute('font-family', 'ui-monospace,monospace');
+      lbl.setAttribute('font-size', 11);
+      lbl.textContent = xv.toFixed(1);
+      svg.appendChild(lbl);
+    }
+
+    // grid: y ticks (integer ln k)
+    const yStep = Math.max(1, Math.round((yMax - yMin) / 8));
+    for (let yv = Math.ceil(yMin); yv <= yMax; yv += yStep) {
+      const ln = document.createElementNS(NS, 'line');
+      ln.setAttribute('x1', pad); ln.setAttribute('y1', y(yv));
+      ln.setAttribute('x2', W - pad); ln.setAttribute('y2', y(yv));
+      ln.setAttribute('stroke', '#1a2030'); ln.setAttribute('stroke-width', 1);
+      svg.appendChild(ln);
+      const lbl = document.createElementNS(NS, 'text');
+      lbl.setAttribute('x', pad - 6);
+      lbl.setAttribute('y', y(yv) + 4);
+      lbl.setAttribute('text-anchor', 'end');
+      lbl.setAttribute('fill', '#7a8699');
+      lbl.setAttribute('font-family', 'ui-monospace,monospace');
+      lbl.setAttribute('font-size', 11);
+      lbl.textContent = yv;
+      svg.appendChild(lbl);
+    }
+
+    // dashed line at ln k = 0 (k = 1/s)
+    if (0 >= yMin && 0 <= yMax) {
+      const zero = document.createElementNS(NS, 'line');
+      zero.setAttribute('x1', pad); zero.setAttribute('y1', y(0));
+      zero.setAttribute('x2', W - pad); zero.setAttribute('y2', y(0));
+      zero.setAttribute('stroke', '#7c5cff');
+      zero.setAttribute('stroke-width', 1.5);
+      zero.setAttribute('stroke-dasharray', '4 4');
+      svg.appendChild(zero);
+      const lbl = document.createElementNS(NS, 'text');
+      lbl.setAttribute('x', W - pad - 6);
+      lbl.setAttribute('y', y(0) - 6);
+      lbl.setAttribute('text-anchor', 'end');
+      lbl.setAttribute('fill', '#7c5cff');
+      lbl.setAttribute('font-family', 'ui-monospace,monospace');
+      lbl.setAttribute('font-size', 11);
+      lbl.textContent = 'k = 1 s⁻¹';
+      svg.appendChild(lbl);
+    }
+
+    // Arrhenius line
+    const pts = [];
+    for (let t = Tmin; t <= Tmax; t += 2) {
+      const xv = 1000 / t;
+      const yv = lnA - Ea / (R * t);
+      pts.push(x(xv) + ',' + y(yv));
+    }
+    const path = document.createElementNS(NS, 'polyline');
+    path.setAttribute('points', pts.join(' '));
+    path.setAttribute('fill', 'none');
+    path.setAttribute('stroke', '#22d3ee');
+    path.setAttribute('stroke-width', 2.5);
+    svg.appendChild(path);
+
+    // temperature markers
+    [300, 400, 500].forEach(t => {
+      if (t < Tmin || t > Tmax) return;
+      const xv = 1000 / t;
+      const yv = lnA - Ea / (R * t);
+      const c = document.createElementNS(NS, 'circle');
+      c.setAttribute('cx', x(xv));
+      c.setAttribute('cy', y(yv));
+      c.setAttribute('r', 4);
+      c.setAttribute('fill', '#fbbf24');
+      svg.appendChild(c);
+      const lbl = document.createElementNS(NS, 'text');
+      lbl.setAttribute('x', x(xv) + 8);
+      lbl.setAttribute('y', y(yv) - 6);
+      lbl.setAttribute('fill', '#fbbf24');
+      lbl.setAttribute('font-family', 'ui-monospace,monospace');
+      lbl.setAttribute('font-size', 11);
+      lbl.textContent = t + ' K';
+      svg.appendChild(lbl);
+    });
+
+    // axis labels
+    const xl = document.createElementNS(NS, 'text');
+    xl.setAttribute('x', W / 2); xl.setAttribute('y', H - 8);
+    xl.setAttribute('text-anchor', 'middle');
+    xl.setAttribute('fill', '#a4b0c2');
+    xl.setAttribute('font-family', 'ui-monospace,monospace');
+    xl.setAttribute('font-size', 12);
+    xl.textContent = '1000 / T  (K⁻¹)';
+    svg.appendChild(xl);
+
+    const yl = document.createElementNS(NS, 'text');
+    yl.setAttribute('x', 14); yl.setAttribute('y', H / 2);
+    yl.setAttribute('text-anchor', 'middle');
+    yl.setAttribute('fill', '#a4b0c2');
+    yl.setAttribute('font-family', 'ui-monospace,monospace');
+    yl.setAttribute('font-size', 12);
+    yl.setAttribute('transform', 'rotate(-90 14 ' + (H / 2) + ')');
+    yl.textContent = 'ln k';
+    svg.appendChild(yl);
+  }
+
+  eaS.addEventListener('input', draw);
+  lnaS.addEventListener('input', draw);
+  draw();
+})();
+</script>
+<script defer src="../problem-set.js"></script>
+<script defer src="kinetics-problems.js"></script>
+<script defer src="../search-index.js"></script>
+<script defer src="../search.js"></script>
+</body>
+</html>
+</content>
+</invoke>

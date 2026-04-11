@@ -301,6 +301,8 @@
 
     <p>Ill-conditioned matrices come up more than you would expect. Vandermonde matrices (from polynomial interpolation at evenly spaced points) have $\kappa \sim 10^{10}$ at size 20. The Hilbert matrix $H_{ij} = 1/(i+j-1)$ has $\kappa$ that grows like $\sim (1+\sqrt{2})^{4n}$ — the $10 \times 10$ Hilbert matrix has $\kappa \approx 10^{13}$. Any matrix close to singular is ill-conditioned. Any design matrix in a regression with nearly-collinear features is ill-conditioned. This is why ridge regression (Tikhonov regularization) works — it artificially inflates the small singular values, trading bias for conditioning.</p>
 
+    <div class="problem-set" data-topic="na-fp-cond"></div>
+
     <!-- ========================================================== -->
     <h2 id="root">7. Root-finding</h2>
 
@@ -382,6 +384,8 @@
       <svg id="newtSvg" viewBox="0 0 720 360" style="width:100%;height:auto;background:#0a0d12;border-radius:6px;cursor:crosshair;"></svg>
       <p class="v3-caption" id="newtCaption">Click anywhere to set an initial guess. Orange segments show the tangent at each iterate and where it crosses zero.</p>
     </div>
+
+    <div class="problem-set" data-topic="na-roots"></div>
 
     <!-- ========================================================== -->
     <h2 id="linsys">9. Linear systems — direct methods</h2>
@@ -471,6 +475,8 @@
     <p>For symmetric positive definite $A$, the gold standard is conjugate gradient (CG), introduced by Hestenes and Stiefel in 1952. CG builds up the solution in a Krylov subspace — each iteration is $\mathcal{O}(\text{nnz}(A))$ (cost of one sparse matvec), and it is guaranteed to converge in at most $n$ steps in exact arithmetic (and usually far fewer in practice). Preconditioned CG is what solves the linear systems inside finite-element simulations, and it is the direct ancestor of the trust-region methods at the heart of optimization libraries.</p>
 
     <p>Rule of thumb: use direct methods when $n &lt; 10^4$ or $A$ is dense. Use iterative methods when $n &gt; 10^5$ or $A$ is sparse. Between those, profile.</p>
+
+    <div class="problem-set" data-topic="na-linsys"></div>
 
     <!-- ========================================================== -->
     <h2 id="interp">11. Interpolation</h2>
@@ -579,6 +585,8 @@
     <h3>Gaussian quadrature (brief)</h3>
 
     <p>Newton–Cotes uses equally spaced sample points. What if you get to <em>choose</em> where to sample? Gauss showed in 1814 that by picking $n$ optimally-placed points (the roots of Legendre polynomials) with optimally-chosen weights, you can exactly integrate polynomials up to degree $2n - 1$. That is a factor of two better than any equally-spaced rule, and for smooth functions the error converges exponentially in $n$. This is what SciPy's <code>quad</code> uses internally when it adapts to a region. You almost never need to implement this yourself — just know the name.</p>
+
+    <div class="problem-set" data-topic="na-interp"></div>
 
     <!-- ========================================================== -->
     <h2 id="diff">13. Numerical differentiation</h2>
@@ -1139,6 +1147,8 @@ document.querySelectorAll('.code-tabs').forEach(root => {
   draw();
 })();
 </script>
+<script defer src="../problem-set.js"></script>
+<script defer src="numerical-analysis-problems.js"></script>
 <script defer src="../search-index.js"></script>
 <script defer src="../search.js"></script>
 </body>

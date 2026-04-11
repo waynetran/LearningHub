@@ -281,6 +281,8 @@
 
     <p>A second, almost-free corollary: the gradient is <em>perpendicular</em> to the level curve passing through $\mathbf{x}$. Because along the level curve, $f$ doesn't change, so $\nabla f \cdot \mathbf{v} = 0$ for any tangent step $\mathbf{v}$ — and "dot product zero" means "perpendicular." Look at the concentric circles in §2 and imagine little arrows pointing straight out from the center. That's the gradient field of $x^2 + y^2$.</p>
 
+    <div class="problem-set" data-topic="mvcalc-partials-gradients"></div>
+
     <!-- ========================================================== -->
     <h2 id="s5">5. Directional derivatives</h2>
 
@@ -366,6 +368,8 @@
     </div>
 
     <p>Every time you see a chain-rule sum in a paper, remind yourself: that sum is a sum over edges in a graph, and it's there because your function is a composition of simpler functions. The "multivariable" part is purely about branching — when one variable affects multiple downstream things, you add.</p>
+
+    <div class="problem-set" data-topic="mvcalc-chain-directional"></div>
 
     <!-- ========================================================== -->
     <h2 id="s7">7. The Jacobian matrix</h2>
@@ -578,6 +582,8 @@
 
     <p>This same construction shows up in probability theory as the change-of-variables formula for densities, and in normalizing-flow generative models: a bijective neural network $\mathbf{g}$ transforms a simple density into a complex one, and the Jacobian determinant of $\mathbf{g}$ is what lets you compute the transformed density exactly.</p>
 
+    <div class="problem-set" data-topic="mvcalc-multiple-integrals"></div>
+
     <!-- ========================================================== -->
     <h2 id="s12">12. Lagrange multipliers</h2>
 
@@ -731,6 +737,8 @@ z = x * y + x.<span class="fn">sin</span>()
     </div>
 
     <p>Three points about that autodiff sketch. First, each primitive op (add, mul, sin) <em>locally</em> knows its own derivative — that's the local gradient in §6's chain rule. Second, the backward pass computes one sum per edge (each "$p.\text{grad} \mathrel{+}= n.\text{grad} \cdot \text{local}$") — that's the chain-rule sum, with the "$+{=}$" handling the case where one node has multiple parents. Third, the whole thing costs roughly one forward pass plus one backward pass — not one forward pass per input. That's the efficiency gain that makes training real networks feasible.</p>
+
+    <div class="problem-set" data-topic="mvcalc-optimization"></div>
 
     <!-- ========================================================== -->
     <h2 id="s14">14. Back to machine learning</h2>
@@ -1069,6 +1077,8 @@ document.querySelectorAll('.code-tabs').forEach(root => {
   draw();
 })();
 </script>
+<script defer src="../problem-set.js"></script>
+<script defer src="multivariable-calculus-problems.js"></script>
 <script defer src="../search-index.js"></script>
 <script defer src="../search.js"></script>
 </body>

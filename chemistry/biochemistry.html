@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Biochemistry — Deep Dive</title>
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError: false});"></script>
+</head>
+<body>
+<div id="tooltip"></div>
+
+<nav class="topic-nav">
+  <a class="back" href="../index.html">← Learning Hub</a>
+  <div class="crumb">Chemistry / <span class="topic-name">Biochemistry</span></div>
+</nav>
+
+<div class="topic-layout">
+  <aside class="topic-toc">
+    <h4>ON THIS PAGE</h4>
+    <ul>
+      <li><a href="#why">1. Why biochemistry matters</a></li>
+      <li><a href="#vocab">2. Vocabulary cheat sheet</a></li>
+      <li><a href="#aa">3. Amino acids</a></li>
+      <li><a href="#protein">4. Protein structure (1°-4°)</a></li>
+      <li><a href="#mm">5. Enzymes and Michaelis-Menten</a></li>
+      <li><a href="#demo">6. Interactive: Michaelis-Menten plotter</a></li>
+      <li><a href="#dna">7. DNA, RNA, and the central dogma</a></li>
+      <li><a href="#metab">8. Metabolism: glycolysis → TCA → OxPhos</a></li>
+      <li><a href="#atp">9. ATP, NADH, and cofactors</a></li>
+      <li><a href="#code">10. Biochemistry in code</a></li>
+      <li><a href="#summary">11. Cheat sheet</a></li>
+    </ul>
+  </aside>
+
+  <article class="topic-content">
+    <h1>Biochemistry</h1>
+    <p class="subtitle">Biochemistry is organic chemistry running inside a cell, at body temperature, catalyzed by machines that can hit $10^{17}$-fold rate accelerations and single-molecule selectivity. Once you know the twenty amino acids, how they fold into proteins, what enzymes do to rate constants, and how electrons flow from food to ATP, every headline about gene therapy, cancer metabolism, GLP-1 agonists, or synthetic biology stops being jargon and starts being chemistry you can follow.</p>
+    <div class="meta-tags">
+      <span>Prereq: <a href="./organic-chemistry.html">organic chemistry</a>, <a href="./equilibrium.html">equilibrium</a>, <a href="./kinetics.html">kinetics</a></span>
+      <span>Read time: ~50 min</span>
+      <span>Interactive figures: 1</span>
+      <span>Code: NumPy / BioPython</span>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="why">1. Why biochemistry matters — and why you should care</h2>
+
+    <p>Everything in a cell is an organic molecule doing organic chemistry. The twist is that a cell runs thousands of reactions at once, each one tuned, each one talking to the others, and each one so selective that the organic chemist in the lab can only dream of matching it. A single enzyme molecule in your liver can break down 40 million hydrogen peroxides per second without breaking a sweat. A ribosome can pick the correct amino acid out of a cytoplasmic soup of twenty choices with an error rate below 1 in 10,000. Your mitochondria pull electrons off sugar and nudge them down a chain of four protein complexes to make a proton gradient that drives a rotary turbine, and that turbine spits out ATP at tens of rotations per second per molecule.</p>
+
+    <p>This is chemistry, and it is astonishing chemistry. It is also the chemistry that every modern medicine touches in some way. GLP-1 agonists (Ozempic, Wegovy) are peptide drugs that mimic a human hormone. Imatinib/Gleevec is a small-molecule kinase inhibitor that revolutionized chronic myeloid leukemia treatment. PCSK9 inhibitors that lower LDL cholesterol are antibodies. Cas9 gene editors are RNA-guided DNA endonucleases. mRNA vaccines are an IVT-synthesized nucleic acid wrapped in a lipid shell. Every one of those products only makes sense if you understand the biochemistry underneath.</p>
+
+    <div class="callout">
+      <div class="label">THE PUNCHLINE</div>
+      <p>Biochemistry is built on three layers. First, <strong>molecules</strong>: proteins, nucleic acids, carbohydrates, lipids, and small-molecule metabolites. Second, <strong>catalysis</strong>: enzymes that accelerate reactions by $10^6$ to $10^{17}$ and choose one substrate out of many. Third, <strong>networks</strong>: the metabolic pathways and regulatory circuits that connect it all. If you learn the vocabulary of each layer and the rules that connect them, the whole subject becomes coherent.</p>
+    </div>
+
+    <p>Concrete reasons to care, whether you are a clinician, a drug designer, a synthetic biologist, a data scientist working on biology, or an investor trying to read a biotech prospectus:</p>
+
+    <ul>
+      <li><strong>Drug discovery.</strong> Most drugs target an enzyme, a receptor, or a transporter. Understanding $K_m$, $V_{max}$, competitive vs non-competitive inhibition is the minimum to read a kinetics paper.</li>
+      <li><strong>Clinical medicine.</strong> Almost every disease is a metabolic or signaling dysfunction. Diabetes is a glucose-handling failure. Cancer is, among other things, a metabolic rewiring. Inborn errors of metabolism are missing enzymes. Cardiovascular disease is lipid biochemistry.</li>
+      <li><strong>Genomics and RNA biology.</strong> Sequencing, CRISPR editing, and mRNA therapeutics are all chemistry on nucleic acids.</li>
+      <li><strong>Environmental and industrial biotech.</strong> Fermentations, biofuels, bioplastics, and enzymatic manufacturing of pharmaceuticals all run on metabolic engineering.</li>
+      <li><strong>AI for biology.</strong> AlphaFold, RFdiffusion, and ESM all learn from protein sequence and structure data. The better your biochemistry intuition, the better you can interpret their outputs.</li>
+    </ul>
+
+    <p>This page teaches biochemistry from zero. You need the <a href="./organic-chemistry.html">organic</a> basics (functional groups, hydrogen bonds, acids/bases) and a feel for <a href="./equilibrium.html">equilibrium</a>. We build the rest.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="vocab">2. Vocabulary cheat sheet</h2>
+
+    <p>Skim. Every term gets a fuller treatment below.</p>
+
+    <table class="rank-table">
+      <thead><tr><th>Symbol / term</th><th>Read as</th><th>Means</th></tr></thead>
+      <tbody>
+        <tr><td>$K_m$</td><td>"K-m" or Michaelis constant</td><td>Substrate concentration at which an enzyme works at half its maximum rate. A proxy for binding affinity.</td></tr>
+        <tr><td>$V_{max}$</td><td>"V-max"</td><td>Maximum rate the enzyme can achieve when saturated with substrate.</td></tr>
+        <tr><td>$k_{cat}$</td><td>"k-cat" or turnover number</td><td>Number of substrate molecules converted per active site per second at saturation.</td></tr>
+        <tr><td>$k_{cat}/K_m$</td><td>"catalytic efficiency"</td><td>How good the enzyme is at <em>finding and processing</em> substrate. Diffusion limit $\approx 10^8$-$10^9$ M$^{-1}$s$^{-1}$.</td></tr>
+        <tr><td>1°, 2°, 3°, 4°</td><td>"primary through quaternary"</td><td>Four levels of protein structure: sequence, local folds, 3D tertiary, and multi-chain assembly.</td></tr>
+        <tr><td>mRNA, tRNA, rRNA</td><td>"messenger, transfer, ribosomal RNA"</td><td>Three RNA families that do the heavy lifting of translation.</td></tr>
+        <tr><td>ATP, NADH, NADPH, FADH$_2$</td><td>"A-T-P, N-A-D-H, etc."</td><td>Currency molecules — energy and electrons that every pathway trades in.</td></tr>
+        <tr><td>Central dogma</td><td>"central dogma"</td><td>DNA → RNA → protein. Information flows forward (with some exceptions).</td></tr>
+        <tr><td>Glycolysis, TCA, OxPhos</td><td>—</td><td>The three stages of oxidative fuel metabolism.</td></tr>
+        <tr><td>$\Delta G^{\circ\prime}$</td><td>"delta-G-standard-prime"</td><td>Standard free energy change at biological conditions (pH 7, 1 M, 25°C).</td></tr>
+      </tbody>
+    </table>
+
+    <!-- ========================================================== -->
+    <h2 id="aa">3. Amino acids — the building blocks</h2>
+
+    <p>All proteins are built from the same twenty amino acids. Every amino acid shares the same backbone — an $\alpha$-carbon with an $-NH_3^+$ (at physiological pH), a $-COO^-$, an H, and a side chain $R$ — and differs only in $R$.</p>
+
+    <div class="math-display">$$ \underset{\text{amine}}{H_3N^+}\!-\!\overset{\displaystyle R}{\underset{\displaystyle H}{C}}\!-\!\underset{\text{carboxylate}}{COO^-}. $$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">The amino acid zwitterion</p>
+      <dl>
+        <dt>$H_3N^+$</dt><dd>Protonated amino group. At pH 7 the amine is protonated ($pK_a \approx 9$) and the acid is deprotonated ($pK_a \approx 2$).</dd>
+        <dt>$COO^-$</dt><dd>Deprotonated carboxylate.</dd>
+        <dt>$R$</dt><dd>The <em>side chain</em>. Twenty common choices, from a simple H (glycine) to complex aromatic rings (tryptophan).</dd>
+        <dt>$\alpha$-C</dt><dd>The central carbon. Except in glycine, it is a stereocenter. All natural amino acids in proteins are L (equivalent to S for most).</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why the zwitterion.</strong> At physiological pH (7.4), every amino acid is a dipolar ion with a positive and a negative group. That makes them very water-soluble and gives them a high melting point — they behave more like inorganic salts than like typical organic molecules of similar size.</p>
+    </div>
+
+    <p>The twenty side chains are usually grouped by chemistry:</p>
+
+    <ul>
+      <li><strong>Hydrophobic aliphatic</strong>: Gly, Ala, Val, Leu, Ile, Met, Pro. These go to the interior of folded proteins.</li>
+      <li><strong>Aromatic</strong>: Phe, Tyr, Trp. Tyr and Trp absorb UV at 280 nm — used to quantify proteins.</li>
+      <li><strong>Polar uncharged</strong>: Ser, Thr, Cys, Asn, Gln. Hydrogen-bonding. Cys can form disulfide bridges.</li>
+      <li><strong>Positively charged (basic)</strong>: Lys, Arg, His. His has a $pK_a$ near 6, crucial for acid-base catalysis.</li>
+      <li><strong>Negatively charged (acidic)</strong>: Asp, Glu. Carboxylate side chains; often in enzyme active sites.</li>
+    </ul>
+
+    <p>When two amino acids join, the carboxyl of one attacks the amine of the next, water leaves, and a <strong>peptide bond</strong> (an amide) forms. A chain of peptide-linked amino acids is a polypeptide; once it folds into a defined 3D shape with a job to do, it's a protein. Peptide bonds are planar, trans-biased, and rigid — the backbone can only rotate around two angles per residue, $\phi$ and $\psi$, which makes Ramachandran plots such a useful analytical tool.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="protein">4. Protein structure — four levels</h2>
+
+    <p>A folded protein is described at four nested levels:</p>
+
+    <ol>
+      <li><strong>Primary (1°)</strong> — the linear sequence of amino acids, N-terminus to C-terminus. A protein of $N$ residues has $20^N$ possible sequences; insulin has 51 residues, hemoglobin has 574, titin has ~34,000.</li>
+      <li><strong>Secondary (2°)</strong> — local regular structures stabilized by backbone H-bonds. The two main patterns are the $\alpha$-helix (every residue H-bonds to the one four positions away, 3.6 residues per turn) and the $\beta$-sheet (adjacent strands H-bond to each other, either parallel or antiparallel).</li>
+      <li><strong>Tertiary (3°)</strong> — the full 3D fold of a single polypeptide chain, driven by hydrophobic collapse (nonpolar side chains bury inside), H-bonds, salt bridges, and occasionally disulfide bonds.</li>
+      <li><strong>Quaternary (4°)</strong> — the assembly of two or more folded chains into a larger complex. Hemoglobin is a tetramer (2$\alpha$ + 2$\beta$). GroEL is a 14-mer. The ribosome is a 50+ subunit assembly of RNA and proteins.</li>
+    </ol>
+
+    <div class="defn">
+      <strong>Anfinsen's principle.</strong> For many small proteins, the native fold is determined entirely by the primary sequence — denature in urea, remove the urea, and the protein refolds correctly. Folding is a thermodynamic search for a global minimum, not a choreographed program. Anfinsen won the 1972 Nobel for showing this with ribonuclease A.
+    </div>
+
+    <h3>How folding works (the paradox that wasn't)</h3>
+
+    <p>A polypeptide with 100 residues and 3 choices per $\phi/\psi$ has $3^{200} \approx 10^{95}$ possible conformations. If it visited each one for a picosecond, it would take longer than the age of the universe to find the native state. Yet real proteins fold in milliseconds. This is Levinthal's paradox, and the resolution is that folding is not a random search — the energy landscape is a funnel that biases the chain toward the native state at every step.</p>
+
+    <p>Modern structure prediction, led by <strong>AlphaFold 2</strong> (2020) and its successors, has essentially solved the single-chain protein structure problem for proteins with evolutionary relatives in the database. A multiple sequence alignment plus a transformer is enough. Co-evolving residue pairs leak 3D information that the model exploits. For novel proteins without homologs, <strong>RFdiffusion</strong> and <strong>ESM2/ESMFold</strong> now fill in, and de novo protein design has become routine.</p>
+
+    <div class="problem-set" data-topic="chem-bio-aa-protein"></div>
+
+    <!-- ========================================================== -->
+    <h2 id="mm">5. Enzymes and Michaelis-Menten kinetics</h2>
+
+    <p>An enzyme is a biological catalyst — almost always a folded protein, occasionally an RNA. It speeds a specific reaction without being consumed, and it often selects one substrate out of a large pool. Rate accelerations routinely reach $10^6$-$10^{12}$ and in extreme cases ($OMP$ decarboxylase) $10^{17}$.</p>
+
+    <p>The standard model of enzyme kinetics was written down by Leonor Michaelis and Maud Menten in 1913:</p>
+
+    <div class="math-display">$$ E + S \;\underset{k_{-1}}{\overset{k_1}{\rightleftharpoons}}\; ES \;\overset{k_{\text{cat}}}{\to}\; E + P. $$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">The Michaelis-Menten mechanism</p>
+      <dl>
+        <dt>$E$</dt><dd>Free enzyme.</dd>
+        <dt>$S$</dt><dd>Substrate — what the enzyme will transform.</dd>
+        <dt>$ES$</dt><dd>Enzyme-substrate complex. The substrate is bound in the active site, pre-positioned for reaction.</dd>
+        <dt>$P$</dt><dd>Product. Released after the chemistry happens.</dd>
+        <dt>$k_1, k_{-1}$</dt><dd>Forward and reverse rate constants for binding. Fast on the timescale of catalysis for most enzymes.</dd>
+        <dt>$k_{\text{cat}}$</dt><dd>Turnover number — rate constant for the chemistry step once the substrate is bound.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why this minimal mechanism is enough.</strong> Real enzymes have many steps (binding, induced fit, chemistry, product release). But on the rapid-equilibrium or steady-state approximation, every one of them reduces to a two-parameter rate law with a $K_m$ and a $V_{\max}$.</p>
+    </div>
+
+    <p>Assume a steady state: $[ES]$ is constant after a short initial transient. Set formation equal to decay, solve for $[ES]$, plug into $v = k_{\text{cat}}[ES]$, and you get the Michaelis-Menten equation:</p>
+
+    <div class="math-display">$$ v \;=\; \frac{V_{\max}\,[S]}{K_m + [S]},  \qquad V_{\max} = k_{\text{cat}}[E]_T, \qquad K_m = \frac{k_{-1} + k_{\text{cat}}}{k_1}. $$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">The Michaelis-Menten equation</p>
+      <dl>
+        <dt>$v$</dt><dd>Initial rate of product formation, in M/s.</dd>
+        <dt>$V_{\max}$</dt><dd>Maximum rate when every enzyme molecule is saturated with substrate.</dd>
+        <dt>$K_m$</dt><dd>Michaelis constant — the substrate concentration at which $v = V_{\max}/2$. Units of molarity.</dd>
+        <dt>$[S]$</dt><dd>Current substrate concentration.</dd>
+        <dt>$[E]_T$</dt><dd>Total enzyme concentration (bound + free).</dd>
+        <dt>$k_{\text{cat}}$</dt><dd>Turnover number — how many reactions each active site performs per second at saturation. Catalase: $\sim 4 \times 10^7$. Carbonic anhydrase: $\sim 10^6$.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Shape of the curve.</strong> At low $[S] \ll K_m$, $v \approx (V_{\max}/K_m)[S]$ — linear in substrate, as if the enzyme were a second-order catalyst. At high $[S] \gg K_m$, $v \approx V_{\max}$ — the enzyme is saturated and no matter how much more substrate you add, nothing happens faster. The crossover between the two regimes sits at $[S] = K_m$. A low $K_m$ means the enzyme is saturated even at very dilute substrate — common for high-affinity enzymes like hexokinase ($K_m \sim 0.1$ mM for glucose).</p>
+    </div>
+
+    <p>The quantity $k_{\text{cat}}/K_m$ is the <strong>catalytic efficiency</strong> — how good the enzyme is at finding substrate, binding it, and converting it. The diffusion limit is about $10^8$-$10^9$ M$^{-1}$s$^{-1}$: beyond that, the substrate and enzyme can't collide any faster in water. A handful of enzymes (catalase, triose phosphate isomerase, fumarase) are at or near this limit. They are as fast as physics allows.</p>
+
+    <h3>Inhibition</h3>
+
+    <p>Drugs that target enzymes work by inhibiting them. Three classic patterns:</p>
+    <ul>
+      <li><strong>Competitive</strong> — inhibitor binds the same site as the substrate. Raises apparent $K_m$, leaves $V_{\max}$ unchanged (enough substrate still wins). Statins are competitive inhibitors of HMG-CoA reductase.</li>
+      <li><strong>Non-competitive</strong> — inhibitor binds an allosteric site and lowers apparent $V_{\max}$ without changing $K_m$. You lose active enzyme no matter how much substrate you pile on.</li>
+      <li><strong>Uncompetitive</strong> — inhibitor binds only the $ES$ complex. Lowers both $K_m$ and $V_{\max}$. Lithium (in treating bipolar disorder) is thought to work partly this way on IMPase.</li>
+    </ul>
+
+    <div class="problem-set" data-topic="chem-bio-mm"></div>
+
+    <!-- ========================================================== -->
+    <h2 id="demo">6. Interactive: Michaelis-Menten plotter</h2>
+
+    <p>Slide $K_m$ and $V_{\max}$ and watch the rate-vs-substrate curve. Compare the standard MM plot with a Lineweaver-Burk (double reciprocal) plot, where the curve becomes a straight line — historically how experimentalists extracted parameters, before nonlinear fitting was cheap.</p>
+
+    <div class="viz-3d">
+      <div class="v3-controls">
+        <span class="v3-label">$V_{\max}$ (μM/s):</span>
+        <input id="bVmax" type="range" min="0.1" max="10" value="5" step="0.1" style="flex:1;max-width:240px;">
+        <span id="bVmaxLabel" style="min-width:60px;color:#22d3ee;font-family:ui-monospace,monospace;">5.0</span>
+        <span class="v3-label">$K_m$ (μM):</span>
+        <input id="bKm" type="range" min="0.5" max="50" value="10" step="0.5" style="flex:1;max-width:240px;">
+        <span id="bKmLabel" style="min-width:60px;color:#22d3ee;font-family:ui-monospace,monospace;">10.0</span>
+      </div>
+      <svg id="mmSvg" viewBox="0 0 720 360" style="width:100%;height:auto;background:#0a0d12;border-radius:6px;"></svg>
+      <p class="v3-caption" id="mmCaption">Michaelis-Menten curve. Dashed line = $V_{\max}$. Pink dot = ($K_m$, $V_{\max}/2$).</p>
+    </div>
+
+    <p>Things to try:</p>
+    <ul>
+      <li>Drop $K_m$ to 1 μM — the curve is now nearly saturated at a few μM, characteristic of a high-affinity enzyme.</li>
+      <li>Raise $K_m$ to 50 μM — linear behavior persists well into the plot.</li>
+      <li>Double $V_{\max}$ — the curve scales vertically without changing its shape. Doubling enzyme concentration has exactly this effect.</li>
+    </ul>
+
+    <!-- ========================================================== -->
+    <h2 id="dna">7. DNA, RNA, and the central dogma</h2>
+
+    <p>DNA and RNA are polymers of nucleotides. A nucleotide has three pieces: a five-carbon sugar (deoxyribose in DNA, ribose in RNA), a phosphate group, and one of four nitrogenous bases. DNA uses A, T, G, C. RNA uses A, U (instead of T), G, C. The bases stack on the inside of a double helix, pairing A–T (or A–U) via two hydrogen bonds and G–C via three. The sugar-phosphate backbone runs on the outside, polyanionic.</p>
+
+    <div class="math-display">$$ \underbrace{\text{DNA}}_{\text{storage}} \;\overset{\text{transcription}}{\longrightarrow}\; \underbrace{\text{mRNA}}_{\text{working copy}} \;\overset{\text{translation}}{\longrightarrow}\; \underbrace{\text{protein}}_{\text{machine}}. $$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">The central dogma</p>
+      <dl>
+        <dt>DNA</dt><dd>Long-term information storage. Double-stranded, stable, heritable.</dd>
+        <dt>Transcription</dt><dd>RNA polymerase reads one DNA strand and synthesizes a complementary RNA copy.</dd>
+        <dt>mRNA</dt><dd>Single-stranded message carrying the protein-coding sequence. Short-lived.</dd>
+        <dt>Translation</dt><dd>The ribosome reads the mRNA three bases at a time (a codon) and attaches the corresponding amino acid to a growing polypeptide.</dd>
+        <dt>Protein</dt><dd>The machine that folds, moves, catalyzes, and builds — the doer of cellular work.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why the dogma is "almost" universal.</strong> Retroviruses like HIV run DNA ← RNA via reverse transcriptase. Prions replicate in a protein-only cycle. Some RNA viruses replicate without ever going through DNA. The core flow DNA → RNA → protein holds in every organism, but information can also go backward (RT) or stay as RNA.</p>
+    </div>
+
+    <p>Three practical consequences for the modern medicine you care about:</p>
+
+    <ul>
+      <li><strong>Sequencing.</strong> Modern short-read (Illumina) and long-read (PacBio, Nanopore) sequencing decode DNA and RNA with base-level accuracy. A human genome now costs under $1000 and assembles overnight.</li>
+      <li><strong>mRNA therapeutics.</strong> COVID-19 vaccines are mRNA encoding the spike protein, wrapped in a lipid nanoparticle, injected into muscle, taken up by cells, translated into spike antigen — and then the mRNA is degraded. It is short-lived by design.</li>
+      <li><strong>CRISPR-Cas9.</strong> A bacterial RNA-guided DNA nuclease repurposed to cut any target sequence in any genome. The guide RNA binds the DNA; Cas9 cleaves. Base editing (no cut) and prime editing (rewrite) are refinements.</li>
+    </ul>
+
+    <!-- ========================================================== -->
+    <h2 id="metab">8. Metabolism — glycolysis, TCA, oxidative phosphorylation</h2>
+
+    <p>Food has chemical energy stored in C–H and C–C bonds. Metabolism is the orderly process of extracting that energy and converting it into ATP. For glucose, the pathway has three stages:</p>
+
+    <ol>
+      <li><strong>Glycolysis</strong> — cytosolic. Glucose ($C_6$) is split into two pyruvates ($C_3$). Net yield: 2 ATP and 2 NADH per glucose. Works aerobically or anaerobically.</li>
+      <li><strong>TCA cycle (Krebs / citric acid cycle)</strong> — mitochondrial matrix. Pyruvate is decarboxylated and handed to acetyl-CoA. Each acetyl group is fed into a cycle that releases 2 CO$_2$, 3 NADH, 1 FADH$_2$, and 1 GTP per cycle.</li>
+      <li><strong>Oxidative phosphorylation</strong> — inner mitochondrial membrane. NADH and FADH$_2$ deliver electrons to a chain of four protein complexes. Complexes I, III, and IV pump protons across the membrane, building an electrochemical gradient. ATP synthase (Complex V) lets the protons flow back through a rotor, coupling flow to ATP synthesis.</li>
+    </ol>
+
+    <p>Net from one glucose (aerobic): ~30 ATP. Anaerobic (fermentation): just 2 ATP. Which is why you can sprint without breathing but not for long — you accumulate lactate, pH drops, and the machine stalls.</p>
+
+    <div class="math-display">$$ C_6H_{12}O_6 + 6\,O_2 \;\to\; 6\,CO_2 + 6\,H_2O, \qquad \Delta G^{\circ\prime} = -2870 \text{ kJ/mol}. $$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Total combustion of glucose (biochemical standard)</p>
+      <dl>
+        <dt>$C_6H_{12}O_6$</dt><dd>Glucose, the universal fuel molecule.</dd>
+        <dt>$6 O_2$</dt><dd>Oxygen — the terminal electron acceptor in aerobic metabolism.</dd>
+        <dt>$6 CO_2$</dt><dd>Carbon dioxide — the oxidized carbon waste.</dd>
+        <dt>$6 H_2O$</dt><dd>Water.</dd>
+        <dt>$\Delta G^{\circ\prime}$</dt><dd>Biochemical standard free energy change at pH 7, 25°C, 1 M reactants. Roughly -686 kcal/mol.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Energy budget.</strong> ATP hydrolysis releases about $-30$ kJ/mol under cellular conditions. So the ~2870 kJ/mol from glucose combustion could in principle make about 95 ATP per glucose. Real cells capture ~30, a 32% efficiency — on par with a good car engine. The rest becomes heat, which is partly why animals stay warm.</p>
+    </div>
+
+    <h3>Why the machinery is built this way</h3>
+
+    <p>Two design principles explain most of metabolism. First, <strong>stepwise oxidation</strong>: burning glucose in one step would release 2870 kJ of heat and make no ATP. Chopping it into dozens of small steps, each releasing a manageable amount of energy, lets enzymes couple those steps to ATP synthesis and capture the energy chemically. Second, <strong>redox currencies</strong>: NADH and FADH$_2$ act as portable electron carriers, ferrying reducing equivalents from many catabolic reactions to a single, dedicated machinery (the electron transport chain) that does the final oxidation to water.</p>
+
+    <div class="problem-set" data-topic="chem-bio-metabolism"></div>
+
+    <!-- ========================================================== -->
+    <h2 id="atp">9. ATP, NADH, and the cofactors</h2>
+
+    <p>A handful of small molecules do most of the cell's chemical work. They are called <strong>cofactors</strong> or <strong>coenzymes</strong>, and they are the currencies every metabolic pathway trades in:</p>
+
+    <ul>
+      <li><strong>ATP (adenosine triphosphate)</strong> — the energy currency. Hydrolysis of the terminal phosphate releases ~$-30$ kJ/mol under cellular conditions, enough to drive many reactions that are otherwise uphill.</li>
+      <li><strong>NAD$^+$ / NADH</strong> — two-electron redox carrier. NADH carries hydride equivalents from catabolism to the electron transport chain.</li>
+      <li><strong>NADP$^+$ / NADPH</strong> — chemically identical to NAD$^+$ with one extra phosphate, but used in biosynthesis (reductive anabolism) rather than catabolism.</li>
+      <li><strong>FAD / FADH$_2$</strong> — two-electron redox carrier tightly bound to many enzymes (flavoproteins).</li>
+      <li><strong>Coenzyme A (CoA)</strong> — carries acyl groups, especially acetyl. Acetyl-CoA is the central hub of carbon metabolism.</li>
+      <li><strong>Pyridoxal phosphate (PLP, vitamin B6)</strong> — shuttles amino groups in transaminases via imine chemistry.</li>
+      <li><strong>Thiamine pyrophosphate (TPP, vitamin B1)</strong> — catalyzes decarboxylation of $\alpha$-keto acids.</li>
+      <li><strong>Biotin (vitamin B7)</strong> — carries carboxyl groups in carboxylation reactions.</li>
+    </ul>
+
+    <p>Almost every vitamin is the precursor of a cofactor. Vitamin deficiencies are cofactor deficiencies, which are metabolic stalls at specific steps. Scurvy is deficiency of vitamin C (needed for collagen hydroxylation). Beriberi is deficiency of thiamine (TCA cycle stalls). Pellagra is deficiency of niacin (NAD$^+$ falls). Pernicious anemia is B12 deficiency (methionine synthase and methylmalonyl-CoA mutase fail).</p>
+
+    <h3>Why ATP is "energy currency"</h3>
+
+    <p>The $\Delta G^{\circ\prime}$ for ATP → ADP + P$_i$ is about $-30$ kJ/mol. That is enough to drive an otherwise unfavorable reaction if the two are coupled through a shared intermediate. Classic example: phosphorylating glucose to glucose-6-phosphate has $\Delta G^{\circ\prime} = +14$ kJ/mol on its own. Couple it to ATP hydrolysis and the net is $-16$ kJ/mol — spontaneous. Hexokinase catalyzes the coupled reaction so no free phosphate intermediate ever exists; the reaction goes through a single-transition-state enzymatic step.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="code">10. Biochemistry in code</h2>
+
+    <p>Two things: a Michaelis-Menten fit using nonlinear least squares and a simple translation routine that converts an mRNA sequence into amino acids.</p>
+
+    <div class="code-tabs" id="ct-bio">
+      <div class="ct-header">
+        <button class="ct-tab active" data-tab="np">NumPy / SciPy</button>
+        <button class="ct-tab" data-tab="py">Plain Python</button>
+        <span class="ct-label">biochemistry primitives</span>
+      </div>
+
+      <div class="ct-panel active" data-tab="np"><pre><code><span class="kw">import</span> numpy <span class="kw">as</span> np
+<span class="kw">from</span> scipy.optimize <span class="kw">import</span> curve_fit
+
+<span class="cmt"># ---------- Michaelis-Menten fit ----------</span>
+<span class="kw">def</span> <span class="fn">mm</span>(S, Vmax, Km):
+    <span class="kw">return</span> Vmax * S / (Km + S)
+
+<span class="cmt"># Synthetic data from a fictional enzyme assay</span>
+S_obs = np.array([<span class="num">0.5</span>, <span class="num">1</span>, <span class="num">2</span>, <span class="num">5</span>, <span class="num">10</span>, <span class="num">20</span>, <span class="num">50</span>, <span class="num">100</span>])   <span class="cmt"># uM</span>
+v_obs = np.array([<span class="num">0.31</span>, <span class="num">0.56</span>, <span class="num">0.93</span>, <span class="num">1.75</span>, <span class="num">2.45</span>, <span class="num">3.12</span>, <span class="num">3.65</span>, <span class="num">3.85</span>])  <span class="cmt"># uM/s</span>
+
+popt, _ = <span class="fn">curve_fit</span>(mm, S_obs, v_obs, p0=[<span class="num">4</span>, <span class="num">5</span>])
+Vmax_fit, Km_fit = popt
+<span class="fn">print</span>(<span class="str">f"Vmax ≈ {Vmax_fit:.2f} uM/s,  Km ≈ {Km_fit:.2f} uM"</span>)
+<span class="fn">print</span>(<span class="str">f"kcat/Km (assuming [E]_T = 10 nM) ≈ {Vmax_fit/10e-3/Km_fit:.2e} / (M·s)"</span>)
+
+<span class="cmt"># ---------- mRNA translation ----------</span>
+<span class="cmt"># Codon table abbreviated to the 64 entries.</span>
+CODON = {
+    <span class="str">"UUU"</span>:<span class="str">"F"</span>,<span class="str">"UUC"</span>:<span class="str">"F"</span>,<span class="str">"UUA"</span>:<span class="str">"L"</span>,<span class="str">"UUG"</span>:<span class="str">"L"</span>,
+    <span class="str">"CUU"</span>:<span class="str">"L"</span>,<span class="str">"CUC"</span>:<span class="str">"L"</span>,<span class="str">"CUA"</span>:<span class="str">"L"</span>,<span class="str">"CUG"</span>:<span class="str">"L"</span>,
+    <span class="str">"AUU"</span>:<span class="str">"I"</span>,<span class="str">"AUC"</span>:<span class="str">"I"</span>,<span class="str">"AUA"</span>:<span class="str">"I"</span>,<span class="str">"AUG"</span>:<span class="str">"M"</span>,
+    <span class="str">"GUU"</span>:<span class="str">"V"</span>,<span class="str">"GUC"</span>:<span class="str">"V"</span>,<span class="str">"GUA"</span>:<span class="str">"V"</span>,<span class="str">"GUG"</span>:<span class="str">"V"</span>,
+    <span class="cmt"># ... (55 more entries; UAA/UAG/UGA are stop)</span>
+}
+
+<span class="kw">def</span> <span class="fn">translate</span>(mrna):
+    protein = []
+    <span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(<span class="num">0</span>, <span class="fn">len</span>(mrna) - <span class="num">2</span>, <span class="num">3</span>):
+        codon = mrna[i:i+<span class="num">3</span>]
+        aa = CODON.<span class="fn">get</span>(codon, <span class="str">"?"</span>)
+        <span class="kw">if</span> aa == <span class="str">"*"</span>: <span class="kw">break</span>
+        protein.<span class="fn">append</span>(aa)
+    <span class="kw">return</span> <span class="str">""</span>.<span class="fn">join</span>(protein)
+
+<span class="fn">print</span>(<span class="fn">translate</span>(<span class="str">"AUGUUUGUG"</span>))  <span class="cmt"># M F V</span>
+</code></pre></div>
+
+      <div class="ct-panel" data-tab="py"><pre><code><span class="kw">import</span> math
+
+<span class="cmt"># Same MM curve, no dependencies.</span>
+<span class="kw">def</span> <span class="fn">mm_rate</span>(S, Vmax, Km):
+    <span class="kw">return</span> Vmax * S / (Km + S)
+
+<span class="kw">def</span> <span class="fn">iptg_induction_profile</span>(t, K, n=<span class="num">2</span>):
+    <span class="cmt"># Hill function for inducer-driven gene expression</span>
+    <span class="kw">return</span> (t ** n) / (K ** n + t ** n)
+
+<span class="kw">def</span> <span class="fn">gibbs_from_K</span>(K, T=<span class="num">310</span>):
+    <span class="cmt"># Biological T: 37 C = 310 K</span>
+    <span class="kw">return</span> -<span class="num">8.314e-3</span> * T * math.<span class="fn">log</span>(K)   <span class="cmt"># kJ/mol</span>
+
+<span class="cmt"># Example: a reaction with Keq = 1000 under cellular conditions</span>
+<span class="fn">print</span>(<span class="str">f"dG = {gibbs_from_K(1000):.1f} kJ/mol"</span>)  <span class="cmt"># ~ -17.8</span>
+<span class="fn">print</span>(<span class="str">f"v at S=Km: {mm_rate(10, 5, 10):.2f}"</span>)         <span class="cmt"># Vmax/2 = 2.5</span>
+</code></pre></div>
+    </div>
+
+    <p>Two practical notes:</p>
+    <ul>
+      <li><strong>Lineweaver-Burk is a historical crutch.</strong> The double-reciprocal plot $1/v$ vs $1/[S]$ gives a straight line whose intercepts encode $V_{\max}$ and $K_m$, but it distorts errors at low $[S]$. Modern practice is nonlinear least squares directly on the raw data.</li>
+      <li><strong>BioPython</strong> (<code>pip install biopython</code>) has full codon tables, sequence alignment, and structure parsers built in. Use it for anything involving real sequences.</li>
+    </ul>
+
+    <!-- ========================================================== -->
+    <h2 id="summary">11. Cheat sheet</h2>
+
+    <div class="grid">
+      <div class="card">
+        <h4>Amino acid backbone</h4>
+        <p>$H_3N^+$-C(R)(H)-$COO^-$</p>
+        <p class="meta">Zwitterion at pH 7. R is the side chain.</p>
+      </div>
+      <div class="card">
+        <h4>Protein levels</h4>
+        <p>1° sequence → 2° helix/sheet → 3° fold → 4° assembly</p>
+        <p class="meta">Anfinsen: 1° → 3° is deterministic (for most small proteins).</p>
+      </div>
+      <div class="card">
+        <h4>Michaelis-Menten</h4>
+        <p>$v = V_{\max}[S]/(K_m + [S])$</p>
+        <p class="meta">Rectangular hyperbola. $K_m$ is the half-saturation $[S]$.</p>
+      </div>
+      <div class="card">
+        <h4>Catalytic efficiency</h4>
+        <p>$k_{\text{cat}}/K_m$</p>
+        <p class="meta">Diffusion limit ~$10^8$-$10^9$ M$^{-1}$s$^{-1}$.</p>
+      </div>
+      <div class="card">
+        <h4>Central dogma</h4>
+        <p>DNA → RNA → protein</p>
+        <p class="meta">With RT exceptions, and prion/RNA corner cases.</p>
+      </div>
+      <div class="card">
+        <h4>Glucose yield</h4>
+        <p>~30 ATP aerobic / 2 ATP anaerobic</p>
+        <p class="meta">Glycolysis + TCA + OxPhos vs fermentation.</p>
+      </div>
+      <div class="card">
+        <h4>ATP hydrolysis</h4>
+        <p>$\Delta G^{\circ\prime} \approx -30$ kJ/mol</p>
+        <p class="meta">Couples uphill reactions to make them spontaneous.</p>
+      </div>
+      <div class="card">
+        <h4>Redox carriers</h4>
+        <p>NADH / NADPH / FADH$_2$</p>
+        <p class="meta">Catabolism / biosynthesis / flavoenzymes.</p>
+      </div>
+      <div class="card">
+        <h4>Hemoglobin</h4>
+        <p>Tetramer ($\alpha_2\beta_2$), cooperative $O_2$ binding</p>
+        <p class="meta">Canonical quaternary structure example.</p>
+      </div>
+      <div class="card">
+        <h4>Codon</h4>
+        <p>Three bases → one amino acid</p>
+        <p class="meta">64 codons, 20 amino acids + 3 stops. Degenerate.</p>
+      </div>
+    </div>
+
+    <h3>See also</h3>
+    <div class="see-also">
+      <div class="card">
+        <h4><a href="./organic-chemistry.html">Organic chemistry</a></h4>
+        <p>Every biomolecule is a bag of functional groups. Imines, esters, amides, and thioesters run the cell's chemistry.</p>
+      </div>
+      <div class="card">
+        <h4><a href="./equilibrium.html">Chemical equilibrium</a></h4>
+        <p>Protein folding, substrate binding, and hemoglobin-O$_2$ cooperativity are all equilibrium problems with a biological flavor.</p>
+      </div>
+      <div class="card">
+        <h4><a href="./kinetics.html">Kinetics</a></h4>
+        <p>Michaelis-Menten is kinetics with a bound-complex twist. Enzyme inhibition is kinetics with a drug in the mix.</p>
+      </div>
+      <div class="card">
+        <h4><a href="./quantum-chemistry.html">Quantum chemistry</a></h4>
+        <p>Computational chemists use DFT and QM/MM to predict enzyme transition states and inhibitor binding energies.</p>
+      </div>
+      <div class="card">
+        <h4><a href="../topics/foundation-models.html">AI: Foundation models for biology</a></h4>
+        <p>AlphaFold, ESM, and RFdiffusion are protein-structure prediction and design systems trained on the same data you just learned to read.</p>
+      </div>
+    </div>
+
+    <div class="bib">
+      <h4>Further reading</h4>
+      <ul>
+        <li>Jeremy M. Berg, John L. Tymoczko, and Lubert Stryer — <em>Biochemistry</em> (9th ed., W.H. Freeman, 2019). The modern standard textbook; Chapter 8 on enzymes is the clearest MM treatment in print.</li>
+        <li>David L. Nelson and Michael M. Cox — <em>Lehninger Principles of Biochemistry</em> (8th ed., 2021). An alternative standard, with more metabolism detail.</li>
+        <li>Bruce Alberts et al. — <em>Molecular Biology of the Cell</em> (7th ed., Garland, 2022). The cell-biology companion. Structure, signaling, trafficking.</li>
+        <li>Athel Cornish-Bowden — <em>Fundamentals of Enzyme Kinetics</em> (4th ed., Wiley, 2012). The deep dive on Michaelis-Menten and its many refinements.</li>
+        <li>John Jumper et al. — "Highly accurate protein structure prediction with AlphaFold." <em>Nature</em> 596, 583-589 (2021). The paper that changed protein structural biology.</li>
+        <li>Protein Data Bank — <a href="https://www.rcsb.org/">rcsb.org</a>. The worldwide archive of experimentally determined biomolecular structures.</li>
+      </ul>
+    </div>
+
+    <div class="next-card">
+      <div class="label">NEXT UP</div>
+      <a href="./quantum-chemistry.html">→ Quantum Chemistry</a>
+      <p>Now that you have seen how biomolecules react under enzymatic catalysis, the natural next question is "how do we predict the electronic structure and reaction energetics from first principles?" That is what quantum chemistry delivers.</p>
+    </div>
+
+  </article>
+</div>
+
+<script>
+// =========================================================
+// Code tabs
+document.querySelectorAll('.code-tabs').forEach(root => {
+  const tabs = root.querySelectorAll('.ct-tab');
+  const panels = root.querySelectorAll('.ct-panel');
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const target = tab.getAttribute('data-tab');
+      tabs.forEach(t => t.classList.toggle('active', t === tab));
+      panels.forEach(p => p.classList.toggle('active', p.getAttribute('data-tab') === target));
+    });
+  });
+});
+
+// =========================================================
+// Michaelis-Menten interactive plotter
+(function() {
+  const svg = document.getElementById('mmSvg');
+  if (!svg) return;
+  const NS = 'http://www.w3.org/2000/svg';
+  const sVmax = document.getElementById('bVmax');
+  const lVmax = document.getElementById('bVmaxLabel');
+  const sKm = document.getElementById('bKm');
+  const lKm = document.getElementById('bKmLabel');
+  const caption = document.getElementById('mmCaption');
+
+  const W = 720, H = 360;
+  const ml = 70, mr = 30, mt = 28, mb = 46;
+  const plotW = W - ml - mr;
+  const plotH = H - mt - mb;
+  const Smax = 100;
+
+  function mkText(x, y, txt, color, size, anchor) {
+    const t = document.createElementNS(NS, 'text');
+    t.setAttribute('x', x); t.setAttribute('y', y);
+    t.setAttribute('fill', color || '#7a8a9a');
+    t.setAttribute('font-size', size || 11);
+    t.setAttribute('font-family', 'ui-monospace, monospace');
+    if (anchor) t.setAttribute('text-anchor', anchor);
+    t.textContent = txt;
+    return t;
+  }
+  function mkLine(x1, y1, x2, y2, stroke, w, dash) {
+    const l = document.createElementNS(NS, 'line');
+    l.setAttribute('x1', x1); l.setAttribute('y1', y1);
+    l.setAttribute('x2', x2); l.setAttribute('y2', y2);
+    l.setAttribute('stroke', stroke);
+    l.setAttribute('stroke-width', w || 1);
+    if (dash) l.setAttribute('stroke-dasharray', dash);
+    return l;
+  }
+  function mkRect(x, y, w, h, fill, stroke) {
+    const r = document.createElementNS(NS, 'rect');
+    r.setAttribute('x', x); r.setAttribute('y', y);
+    r.setAttribute('width', w); r.setAttribute('height', h);
+    r.setAttribute('fill', fill);
+    if (stroke) { r.setAttribute('stroke', stroke); r.setAttribute('stroke-width', 1); }
+    return r;
+  }
+  function mkCircle(cx, cy, r, fill, stroke) {
+    const c = document.createElementNS(NS, 'circle');
+    c.setAttribute('cx', cx); c.setAttribute('cy', cy); c.setAttribute('r', r);
+    c.setAttribute('fill', fill);
+    if (stroke) { c.setAttribute('stroke', stroke); c.setAttribute('stroke-width', 1.5); }
+    return c;
+  }
+  function mkPath(d, stroke, w) {
+    const p = document.createElementNS(NS, 'path');
+    p.setAttribute('d', d);
+    p.setAttribute('stroke', stroke);
+    p.setAttribute('stroke-width', w || 2);
+    p.setAttribute('fill', 'none');
+    p.setAttribute('stroke-linejoin', 'round');
+    return p;
+  }
+
+  function draw() {
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+    const Vmax = parseFloat(sVmax.value);
+    const Km   = parseFloat(sKm.value);
+    lVmax.textContent = Vmax.toFixed(1);
+    lKm.textContent   = Km.toFixed(1);
+
+    const Vscale = 12;   // max of Y axis
+    const xOf = s => ml + (s / Smax) * plotW;
+    const yOf = v => mt + plotH - (v / Vscale) * plotH;
+
+    svg.appendChild(mkRect(ml, mt, plotW, plotH, '#0f131a', '#2a3446'));
+
+    // grid (Y every 2)
+    for (let v = 0; v <= Vscale; v += 2) {
+      const y = yOf(v);
+      svg.appendChild(mkLine(ml, y, ml + plotW, y, '#1a212e', 1));
+      svg.appendChild(mkText(ml - 6, y + 3, v.toFixed(0), '#7a8a9a', 10, 'end'));
+    }
+    // X every 20
+    for (let s = 0; s <= Smax; s += 20) {
+      const x = xOf(s);
+      svg.appendChild(mkLine(x, mt, x, mt + plotH, '#1a212e', 1));
+      svg.appendChild(mkText(x, mt + plotH + 14, s.toString(), '#7a8a9a', 10, 'middle'));
+    }
+
+    // Vmax asymptote
+    svg.appendChild(mkLine(ml, yOf(Vmax), ml + plotW, yOf(Vmax), '#7c5cff', 1, '4,4'));
+    svg.appendChild(mkText(ml + plotW - 4, yOf(Vmax) - 4, 'V_max', '#7c5cff', 11, 'end'));
+
+    // MM curve
+    const N = 200;
+    let d = '';
+    for (let i = 0; i <= N; i++) {
+      const s = (i / N) * Smax;
+      const v = Vmax * s / (Km + s);
+      d += (i === 0 ? 'M' : 'L') + xOf(s).toFixed(2) + ',' + yOf(Math.min(v, Vscale)).toFixed(2) + ' ';
+    }
+    svg.appendChild(mkPath(d, '#22d3ee', 2.5));
+
+    // Km marker (pink dot at S = Km, v = Vmax/2)
+    if (Km <= Smax && Vmax/2 <= Vscale) {
+      svg.appendChild(mkLine(xOf(Km), mt + plotH, xOf(Km), yOf(Vmax/2), '#f472b6', 1, '2,3'));
+      svg.appendChild(mkCircle(xOf(Km), yOf(Vmax/2), 5, '#f472b6', '#fff'));
+      svg.appendChild(mkText(xOf(Km) + 8, yOf(Vmax/2) - 8, 'K_m', '#f472b6', 11));
+    }
+
+    // axis labels
+    svg.appendChild(mkText(ml + plotW / 2, H - 10, '[S] (uM)', '#b4c4d4', 11, 'middle'));
+    svg.appendChild(mkText(16, mt + plotH / 2, 'rate (uM/s)', '#b4c4d4', 11));
+
+    // Title
+    svg.appendChild(mkText(ml + 8, mt - 12,
+      'v = V_max · [S] / (K_m + [S])',
+      '#b4c4d4', 12));
+
+    caption.textContent =
+      'V_max = ' + Vmax.toFixed(2) + ' uM/s, K_m = ' + Km.toFixed(2) +
+      ' uM. At [S] = K_m, rate = V_max/2 = ' + (Vmax/2).toFixed(2) + ' uM/s.';
+  }
+
+  sVmax.addEventListener('input', draw);
+  sKm.addEventListener('input', draw);
+  draw();
+})();
+</script>
+<script defer src="../problem-set.js"></script>
+<script defer src="biochemistry-problems.js"></script>
+</body>
+</html>

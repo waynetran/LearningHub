@@ -800,6 +800,32 @@ main {
 }
 .track-banner.tb-ai .tb-arrow { color: var(--accent-3); }
 
+.track-banner.tb-phys {
+  border-color: rgba(52, 211, 153, 0.45);
+}
+.track-banner.tb-phys::before {
+  background: linear-gradient(135deg, rgba(52, 211, 153, 0.20), rgba(52, 211, 153, 0.04) 55%, transparent 90%);
+}
+.track-banner.tb-phys:hover { border-color: var(--good); }
+.track-banner.tb-phys .tb-label {
+  color: var(--good);
+  border-color: rgba(52, 211, 153, 0.5);
+}
+.track-banner.tb-phys .tb-arrow { color: var(--good); }
+
+.track-banner.tb-chem {
+  border-color: rgba(251, 191, 36, 0.45);
+}
+.track-banner.tb-chem::before {
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.20), rgba(251, 191, 36, 0.04) 55%, transparent 90%);
+}
+.track-banner.tb-chem:hover { border-color: var(--warn); }
+.track-banner.tb-chem .tb-label {
+  color: var(--warn);
+  border-color: rgba(251, 191, 36, 0.5);
+}
+.track-banner.tb-chem .tb-arrow { color: var(--warn); }
+
 @media (max-width: 700px) {
   .track-banner {
     padding: 20px 18px;

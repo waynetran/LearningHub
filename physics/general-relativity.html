@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>General Relativity — Deep Dive</title>
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError: false});"></script>
+</head>
+<body>
+<div id="tooltip"></div>
+
+<nav class="topic-nav">
+  <a class="back" href="./index.html">← Physics</a>
+  <div class="crumb">Physics / <span class="topic-name">General Relativity</span></div>
+</nav>
+
+<div class="topic-layout">
+  <aside class="topic-toc">
+    <h4>ON THIS PAGE</h4>
+    <ul>
+      <li><a href="#why">1. Why general relativity exists</a></li>
+      <li><a href="#vocab">2. Vocabulary cheat sheet</a></li>
+      <li><a href="#eqp">3. The equivalence principle</a></li>
+      <li><a href="#curv">4. Gravity as curvature</a></li>
+      <li><a href="#metric">5. The metric and geodesics</a></li>
+      <li><a href="#efe">6. Einstein's field equations</a></li>
+      <li><a href="#schwarz">7. Schwarzschild and black holes</a></li>
+      <li><a href="#demo">8. Interactive: photon orbit</a></li>
+      <li><a href="#tests">9. Observational tests</a></li>
+      <li><a href="#code">10. General relativity in code</a></li>
+      <li><a href="#summary">11. Cheat sheet</a></li>
+    </ul>
+  </aside>
+
+  <article class="topic-content">
+    <h1>General Relativity</h1>
+    <p class="subtitle">Gravity is not a force. It is the shape of spacetime. Mass and energy bend the geometry; freely falling bodies follow the straightest paths available in the bent geometry. That one move — "gravity is curvature" — explains falling apples, the orbit of Mercury, the bending of starlight, the ticking of GPS clocks, and the collision of black holes LIGO now hears routinely.</p>
+    <div class="meta-tags">
+      <span>Prereq: <a href="./special-relativity.html">special relativity</a>, <a href="../math/linear-algebra.html">linear algebra</a>, <a href="../math/calculus.html">calculus</a></span>
+      <span>Read time: ~40 min</span>
+      <span>Interactive figures: 1</span>
+      <span>Code: NumPy, Python</span>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="why">1. Why general relativity exists</h2>
+
+    <p>After 1905, Einstein had a problem. Special relativity forbade anything — information, particles, effects — from traveling faster than light. But Newton's theory of gravity was instantaneous. Move the Sun, and the Earth's orbit shifts at the same instant, no matter how far apart they are. That could not be right.</p>
+
+    <p>Einstein spent the next decade looking for a relativistic theory of gravity. The breakthrough came from a thought experiment he later called "the happiest thought of my life." A person falling off a roof feels weightless. Not "a little lighter." Completely weightless — locally indistinguishable from floating in deep space. An accelerating rocket, far from any mass, feels exactly like a room in a gravitational field. Gravity and acceleration are not just related; they are locally <em>the same thing</em>.</p>
+
+    <p>If that is true, then gravity cannot be an ordinary force. Forces act the same way on every kind of test particle, of course — that's how they distinguish themselves in experiments. But gravity doesn't. Gravity is what you get when you move along the straightest available path in a <em>curved</em> geometry. Curve the geometry, and even moving in a "straight line" makes your orbit a circle, or a parabola, or a hyperbola. This was a radical reconception of what gravity is.</p>
+
+    <p>The math took Einstein from 1907 to 1915. He had to learn differential geometry from scratch, with help from his friend Marcel Grossmann. The final equations were published in November 1915. Within weeks they explained the long-standing anomaly in Mercury's orbit. Within four years, Arthur Eddington photographed starlight bending around the Sun during a total eclipse and the theory was on the front page of <em>The Times</em>.</p>
+
+    <div class="callout">
+      <div class="label">THE PUNCHLINE</div>
+      <p>Matter and energy tell spacetime how to curve. Curved spacetime tells matter and energy how to move. Those two sentences, written as one equation per component, are Einstein's field equations. Everything else — Newtonian gravity, black holes, gravitational waves, the expansion of the universe — is a solution, a limit, or a consequence.</p>
+    </div>
+
+    <p>Why should you care in 2026?</p>
+
+    <ul>
+      <li><strong>GPS, again.</strong> The satellites orbit high enough that clocks there run faster by about $45 \ \mu\text{s}$ per day due to reduced gravity. Combined with the special-relativistic slowdown of $7 \ \mu\text{s}$, the net is $+38 \ \mu\text{s}/\text{day}$. Not correcting for that would cost 11 km of positioning accuracy per day.</li>
+      <li><strong>Gravitational waves.</strong> LIGO's first detection in 2015 — two black holes spiraling together, 1.3 billion light-years away — was pure general relativity. The signal matched Einstein's predictions to within a percent. Since then, LIGO/Virgo has cataloged roughly 100 events.</li>
+      <li><strong>Cosmology.</strong> The expansion history of the universe, the cosmic microwave background, the Hubble tension, dark energy — all of this is the Einstein field equations applied at the largest scales.</li>
+    </ul>
+
+    <p>We are going to stay at an intuitive level. You will see the equations, and we will explain what each symbol means, but we are not going to derive the Riemann tensor from scratch. That is a semester of graduate school. What you will get is the picture.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="vocab">2. Vocabulary cheat sheet</h2>
+
+    <p>Some symbols. Glance at them now; the sections below define each carefully.</p>
+
+    <table class="rank-table">
+      <thead><tr><th>Symbol</th><th>Read as</th><th>Means</th></tr></thead>
+      <tbody>
+        <tr><td>$g_{\mu\nu}$</td><td>"g mu nu"</td><td>The <em>metric tensor</em>. A 4x4 symmetric matrix at each point of spacetime that tells you how to compute distances and times locally.</td></tr>
+        <tr><td>$G_{\mu\nu}$</td><td>"big G mu nu"</td><td>The <em>Einstein tensor</em>. Built from derivatives of the metric; encodes how spacetime is curved.</td></tr>
+        <tr><td>$R_{\mu\nu}$</td><td>"R mu nu"</td><td>The Ricci curvature tensor. A contraction of the full Riemann curvature tensor.</td></tr>
+        <tr><td>$R$</td><td>"Ricci scalar"</td><td>A single number per point: the trace of $R_{\mu\nu}$ using the metric.</td></tr>
+        <tr><td>$T_{\mu\nu}$</td><td>"T mu nu"</td><td>The stress-energy tensor. Encodes the density and flow of energy, momentum, and pressure.</td></tr>
+        <tr><td>$\Lambda$</td><td>"Lambda"</td><td>The cosmological constant. A uniform "energy of empty space" term.</td></tr>
+        <tr><td>$G$</td><td>"big G"</td><td>Newton's gravitational constant. $6.674 \times 10^{-11} \ \text{N m}^2/\text{kg}^2$.</td></tr>
+        <tr><td>$r_s$</td><td>"Schwarzschild radius"</td><td>$r_s = 2GM/c^2$. The radius of the event horizon of a non-rotating black hole of mass $M$.</td></tr>
+        <tr><td>geodesic</td><td>—</td><td>The straightest possible line in a curved space. Free-fall trajectories are geodesics.</td></tr>
+      </tbody>
+    </table>
+
+    <p>Indices $\mu, \nu$ run over $0, 1, 2, 3$: zero for time, one through three for space. When an index appears twice in a product (once up, once down), you sum over it. This is the Einstein summation convention; Einstein invented it because he got tired of writing sigmas.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="eqp">3. The equivalence principle</h2>
+
+    <p>Newton, in <em>Principia</em>, quietly used two different kinds of mass. <em>Inertial mass</em> is the $m$ in $F = m a$ — the resistance to acceleration. <em>Gravitational mass</em> is the $m$ in $F = G M m / r^2$ — the charge that couples to gravity. There is no logical reason they should be the same number. But Galileo, dropping weights off the Leaning Tower of Pisa (or more reliably, rolling them down ramps), found that every object falls with the same acceleration regardless of mass. The two $m$'s cancel. This equality has since been tested to one part in $10^{15}$ by experiments like the MICROSCOPE satellite (2017).</p>
+
+    <div class="defn">
+      <strong>Weak equivalence principle.</strong> In a small region of spacetime, the effects of a uniform gravitational field are indistinguishable from those of uniform acceleration in flat space. Equivalently, free-fall trajectories are universal — every object, regardless of composition, follows the same path in a gravitational field.
+    </div>
+
+    <p>Einstein pushed this further. He claimed that <em>no local experiment</em> can tell the difference between gravity and acceleration — not just mechanics, but electromagnetism, nuclear physics, anything. This stronger claim is the <strong>Einstein equivalence principle</strong>. It has big consequences. Here are two quick ones.</p>
+
+    <p><strong>Gravitational redshift.</strong> Imagine a rocket of height $h$ accelerating upward at $g$. A photon emitted from the floor with frequency $f$ hits a detector on the ceiling. By the time the photon arrives, the ceiling has moved and is traveling slightly faster than the floor was when the photon left. The Doppler shift gives a frequency at the ceiling of $f(1 - gh/c^2)$ — a redshift by a factor of $gh/c^2$. By the equivalence principle, the same thing must happen in a real gravitational field: a photon climbing "up" out of a potential well loses energy.</p>
+
+    <div class="math-display">$$\frac{\Delta f}{f} = -\frac{g h}{c^2} = -\frac{\Delta \Phi}{c^2},$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Gravitational redshift (weak field)</p>
+      <dl>
+        <dt>$\Delta f / f$</dt><dd>The fractional frequency shift of the photon as it climbs to higher potential. Negative means lower frequency (redshift).</dd>
+        <dt>$g$</dt><dd>Local gravitational acceleration — equivalently, the rocket's acceleration in Einstein's thought experiment.</dd>
+        <dt>$h$</dt><dd>The height the photon climbs.</dd>
+        <dt>$\Delta \Phi = g h$</dt><dd>Change in Newtonian gravitational potential between emitter and detector.</dd>
+        <dt>$c^2$</dt><dd>Speed of light squared — puts the potential shift in dimensionless units.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Pound and Rebka.</strong> In 1959, Pound and Rebka fired gamma rays 22.5 m up the tower of Harvard's Jefferson Lab. The predicted fractional shift is $g h/c^2 \approx 2.45 \times 10^{-15}$. They measured it. Shortly thereafter, atomic clocks on airplanes (Hafele and Keating, 1971) measured exactly this effect. Every GPS receiver does the same correction every second of every day.</p>
+    </div>
+
+    <p><strong>Light bends in a gravitational field.</strong> A photon crossing an accelerating rocket moves in a straight line in the outside frame, but the rocket's floor accelerates up during the traversal, so inside the rocket the photon appears to curve downward. By equivalence, the same curvature must happen in real gravity. Eddington's 1919 eclipse measured this deflection of starlight by the Sun and found it matched Einstein's prediction, not Newton's half-sized prediction.</p>
+
+    <div class="problem-set" data-topic="phys-gr-equivalence"></div>
+
+    <!-- ========================================================== -->
+    <h2 id="curv">4. Gravity as curvature — and the rubber sheet caveat</h2>
+
+    <p>You have probably seen the "rubber sheet" picture of general relativity: a stretched two-dimensional membrane with heavy balls sitting on it, making dips that smaller balls roll into. It is a useful image, and it has two fatal flaws.</p>
+
+    <p>The first flaw is that it uses gravity to explain gravity. The balls roll into the dips because of <em>Earth's</em> gravity pulling them down onto the sheet. If you tried to do the experiment in orbit, nothing would roll anywhere. Circular reasoning.</p>
+
+    <p>The second flaw is that the rubber sheet is a picture of a spatial slice. But in general relativity, what curves is <em>spacetime</em>, not space. If you're holding an apple stationary in your hand, a clock near your hand ticks slightly slower than a clock six feet up, and that's where the apple-fall comes from: the apple's worldline, if you let go, is a straight line in spacetime, but "straight" in curved spacetime generally means "accelerating toward the Earth in the Newtonian picture." Most of the curvature relevant to everyday gravity is curvature of <em>time</em>, not space.</p>
+
+    <p>A cleaner way to say it: in flat spacetime, particles at rest stay at rest because straight lines in time-only geometry are "stay here." In curved spacetime near a mass, "straight" lines in the curved geometry tilt toward the mass as time progresses. That tilt, accumulated, is the falling apple.</p>
+
+    <p>Here is a better picture, though still imperfect. Imagine drawing a grid on an orange. The grid is flat on each small patch, but globally it curves. Great circles on the orange are the "straight lines" of the orange's geometry; two of them that start parallel will eventually meet. That meeting is not because of a force. It is a feature of the geometry. Replace "orange" with "spacetime" and "great circles" with "free-fall trajectories," and you have a better analogy than the rubber sheet.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="metric">5. The metric tensor and geodesics</h2>
+
+    <p>To do calculations in a curved geometry you need a <strong>metric</strong>. The metric is a rule that tells you the "distance" between nearby points. In flat Minkowski spacetime it's</p>
+
+    <div class="math-display">$$ds^2 = -c^2 \, dt^2 + dx^2 + dy^2 + dz^2.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Minkowski line element</p>
+      <dl>
+        <dt>$ds^2$</dt><dd>The infinitesimal spacetime interval between two neighboring events. In general relativity, this is the fundamental quantity.</dd>
+        <dt>$dt, dx, dy, dz$</dt><dd>Infinitesimal coordinate differences — the tiny steps in time and space between the two events.</dd>
+        <dt>$-c^2 dt^2$</dt><dd>The time part. The minus sign (with this sign convention) is what makes spacetime Lorentzian rather than Euclidean. Some books put the minus on the spatial part; it's a convention.</dd>
+        <dt>$dx^2 + dy^2 + dz^2$</dt><dd>Standard Pythagorean spatial distance squared.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>What a metric is.</strong> Think of it as a ruler. At each point of spacetime, the metric tells you how to convert coordinate changes $dx^\mu$ into honest-to-goodness physical intervals $ds$. In flat spacetime one ruler works everywhere. In curved spacetime, the ruler changes from point to point.</p>
+    </div>
+
+    <p>In general, the metric is an object $g_{\mu\nu}$ that depends on position, and the line element is</p>
+
+    <div class="math-display">$$ds^2 = \sum_{\mu,\nu} g_{\mu\nu}(x) \, dx^\mu \, dx^\nu.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">General line element</p>
+      <dl>
+        <dt>$g_{\mu\nu}(x)$</dt><dd>The metric tensor at the spacetime point $x$. A symmetric 4x4 matrix whose entries are functions of position.</dd>
+        <dt>$dx^\mu$</dt><dd>Infinitesimal change in the $\mu$-th coordinate. $\mu$ runs over $0, 1, 2, 3$.</dd>
+        <dt>$\sum_{\mu,\nu}$</dt><dd>Sum over both indices. In Einstein summation this is usually written without the explicit sigma: $g_{\mu\nu} dx^\mu dx^\nu$.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Example.</strong> On a sphere of radius $R$ with latitude $\theta$ and longitude $\phi$, the metric is $ds^2 = R^2 d\theta^2 + R^2 \sin^2\theta \, d\phi^2$. Same coordinate step $d\phi$ gives a different distance depending on $\theta$ — longitude lines are farther apart at the equator than at the pole. The metric handles that automatically.</p>
+    </div>
+
+    <p>A <strong>geodesic</strong> is the extremal path of $\int ds$ between two points — the curved-geometry generalization of a straight line. In flat space a geodesic is a line. On a sphere a geodesic is a great circle. In Schwarzschild spacetime (we'll meet it below) geodesics are what Mercury's orbit follows. Einstein's geodesic equation is</p>
+
+    <div class="math-display">$$\frac{d^2 x^\mu}{d\tau^2} + \Gamma^\mu_{\alpha\beta} \frac{dx^\alpha}{d\tau} \frac{dx^\beta}{d\tau} = 0.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">The geodesic equation</p>
+      <dl>
+        <dt>$x^\mu(\tau)$</dt><dd>The trajectory of a particle, parameterized by its proper time $\tau$.</dd>
+        <dt>$\tau$</dt><dd>Proper time — the time measured on the particle's own wristwatch.</dd>
+        <dt>$\Gamma^\mu_{\alpha\beta}$</dt><dd>The <em>Christoffel symbols</em>. They are built from first derivatives of the metric: $\Gamma^\mu_{\alpha\beta} = \tfrac{1}{2} g^{\mu\sigma}(\partial_\alpha g_{\sigma\beta} + \partial_\beta g_{\sigma\alpha} - \partial_\sigma g_{\alpha\beta})$.</dd>
+        <dt>$d x^\alpha / d\tau$</dt><dd>The four-velocity. The particle's velocity in spacetime.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>What it says.</strong> The particle's acceleration, as measured in the curved geometry, equals zero. The Christoffel term is a correction for the fact that coordinates are bent. In flat Cartesian coordinates it vanishes and you recover Newton's "an object in motion stays in motion." In curved coordinates (even in flat space — think polar coordinates) it does not vanish, and the extra term is what bends trajectories.</p>
+    </div>
+
+    <p>The key idea: free-fall is <em>not</em> accelerated motion in general relativity. A freely falling particle experiences zero proper acceleration. What we <em>call</em> gravitational acceleration in Newtonian language is the Christoffel-symbol contribution from the curved metric. Gravity is a coordinate effect, made real by the geometry.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="efe">6. Einstein's field equations</h2>
+
+    <p>Now for the sentence that Einstein spent ten years deriving. The geometry of spacetime is determined by its matter and energy content via</p>
+
+    <div class="math-display">$$G_{\mu\nu} + \Lambda g_{\mu\nu} = \frac{8 \pi G}{c^4} T_{\mu\nu}.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Einstein's field equations</p>
+      <dl>
+        <dt>$G_{\mu\nu}$</dt><dd>The <em>Einstein tensor</em>: $G_{\mu\nu} = R_{\mu\nu} - \tfrac{1}{2} g_{\mu\nu} R$. A carefully chosen combination of curvature quantities so the equation is automatically consistent with conservation of energy.</dd>
+        <dt>$R_{\mu\nu}$</dt><dd>Ricci tensor — a measure of how volumes distort as you follow geodesics. Built from second derivatives of the metric.</dd>
+        <dt>$R$</dt><dd>Ricci scalar — the trace of the Ricci tensor against the metric.</dd>
+        <dt>$\Lambda$</dt><dd>Cosmological constant — a term Einstein added to keep the universe static, then called his greatest blunder. Now used to describe dark energy.</dd>
+        <dt>$T_{\mu\nu}$</dt><dd>Stress-energy tensor — the source. $T_{00}$ is energy density, $T_{0i}$ is momentum density, $T_{ij}$ is stress (pressure and shear).</dd>
+        <dt>$\dfrac{8 \pi G}{c^4}$</dt><dd>The coupling constant. Numerically tiny in SI units, which is why gravity is so weak — but the universe is big, so integrated over cosmic scales, it dominates.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>How to read it.</strong> Left side: geometry. Right side: stuff. The equation says "the curvature of spacetime at a point is determined by the energy, momentum, and pressure of whatever is there." It is 10 coupled nonlinear partial differential equations in 4 variables. Exact solutions are rare; the few that exist (Schwarzschild, Kerr, Friedmann–Lemaitre–Robertson–Walker) are famous by name because they are the ones we have.</p>
+    </div>
+
+    <p>The equations are simultaneously local (they relate quantities at the same spacetime point) and global (via the tangled web of second derivatives, a change here can affect the geometry elsewhere once you solve the PDE). They are extraordinarily hard to solve in general. Most of modern general relativity is either (a) finding new exact solutions under simplifying symmetries, (b) perturbing around known solutions — e.g., gravitational waves are small perturbations of flat space — or (c) numerical relativity: putting the field equations on a supercomputer and evolving them forward in time. LIGO's predictions of black-hole merger waveforms come from method (c).</p>
+
+    <!-- ========================================================== -->
+    <h2 id="schwarz">7. The Schwarzschild solution and black holes</h2>
+
+    <p>In early 1916, while serving on the Eastern Front, Karl Schwarzschild solved the Einstein field equations in vacuum with spherical symmetry. He found a unique answer:</p>
+
+    <div class="math-display">$$ds^2 = -\left(1 - \frac{r_s}{r}\right) c^2 \, dt^2 + \left(1 - \frac{r_s}{r}\right)^{-1} dr^2 + r^2 \, d\Omega^2,$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Schwarzschild metric</p>
+      <dl>
+        <dt>$ds^2$</dt><dd>Invariant line element around a non-rotating spherical mass.</dd>
+        <dt>$r$</dt><dd>The "areal" radial coordinate: a sphere at coordinate $r$ has surface area $4 \pi r^2$. It is <em>not</em> the proper radial distance from the center.</dd>
+        <dt>$t$</dt><dd>The coordinate time, the time kept by a clock at rest infinitely far from the mass.</dd>
+        <dt>$r_s = 2GM/c^2$</dt><dd>The <em>Schwarzschild radius</em>. For a one-solar-mass object, $r_s \approx 2.95$ km. For the Earth, about 8.87 mm. For a supermassive black hole of $10^8$ solar masses, about $3 \times 10^{11}$ m — comparable to the orbit of Mercury.</dd>
+        <dt>$d\Omega^2 = d\theta^2 + \sin^2\theta \, d\phi^2$</dt><dd>The angular part — the metric on a unit sphere.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>What it tells you.</strong> The $(1 - r_s/r)$ factor in front of $dt^2$ governs gravitational time dilation: clocks closer to the mass run slower. The same factor inverted in front of $dr^2$ stretches radial distances near the mass. Far from the mass ($r \gg r_s$) you recover flat Minkowski space. At $r = r_s$, something strange happens — the $g_{tt}$ coefficient vanishes and the $g_{rr}$ coefficient blows up. That is the <strong>event horizon</strong>.</p>
+    </div>
+
+    <p>The Schwarzschild radius is the size of the event horizon of a non-rotating black hole of mass $M$. At $r < r_s$, no timelike or lightlike path can escape to infinity. The coordinate singularity at $r = r_s$ is not a real singularity — you can transform it away by choosing different coordinates (Kruskal–Szekeres, Eddington–Finkelstein, Painlevé–Gullstrand, etc.). The real singularity is at $r = 0$, where the curvature blows up in an invariant way.</p>
+
+    <p>For a star like the Sun, $r_s$ is inside the Sun's volume, so you never actually get to that horizon unless the star collapses. When a massive star's core collapses at the end of its life and its radius shrinks below $r_s$, a black hole forms. Sagittarius A*, the supermassive black hole at the center of the Milky Way, has $r_s \approx 1.2 \times 10^{10}$ m, about 17 times the radius of the Sun. The Event Horizon Telescope imaged its shadow in 2022, and a larger shadow — the one at the center of M87 — in 2019.</p>
+
+    <h3>Worked example — a solar-mass black hole</h3>
+
+    <p>Take $M = 1 M_\odot = 1.989 \times 10^{30}$ kg. Compute $r_s = 2 G M / c^2 = 2 \times (6.674 \times 10^{-11}) \times (1.989 \times 10^{30}) / (3 \times 10^{8})^2 \approx 2.95 \times 10^3$ m, about 3 km. The area of the horizon is $4 \pi r_s^2 \approx 1.09 \times 10^8 \ \text{m}^2 = 109 \ \text{km}^2$. Its Hawking temperature (a semiclassical effect we don't cover here) is about $6.17 \times 10^{-8}$ K. The thing is colder than empty space, so it grows rather than evaporates in any realistic environment.</p>
+
+    <div class="problem-set" data-topic="phys-gr-schwarzschild"></div>
+
+    <!-- ========================================================== -->
+    <h2 id="demo">8. Interactive: photon orbit around a black hole</h2>
+
+    <p>Drag the slider to change the <em>impact parameter</em> $b$ — the perpendicular distance from the center at which the photon would pass if there were no black hole. The visualization integrates a photon's geodesic in the Schwarzschild geometry and shows its actual path. Three regimes:</p>
+
+    <ul>
+      <li>$b \gg r_s$: gentle deflection, close to the straight line.</li>
+      <li>$b \to b_{\text{crit}} = 3\sqrt{3}\,r_s/2 \approx 2.598 \ r_s$: the photon can loop around the hole many times before escaping. This is the <em>photon sphere</em> at $r = 1.5\,r_s$.</li>
+      <li>$b < b_{\text{crit}}$: the photon is captured and spirals into the horizon.</li>
+    </ul>
+
+    <div class="viz-3d">
+      <svg id="grSvg" viewBox="0 0 720 400" preserveAspectRatio="xMidYMid meet"></svg>
+      <div class="v3-controls">
+        <label>impact parameter $b/r_s$: <input type="range" id="grB" min="0.5" max="8" step="0.02" value="3.0"></label>
+        <span class="v3-label">$b/r_s$ = <span id="grBLabel">3.00</span></span>
+      </div>
+      <div class="v3-caption" id="grCaption"></div>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="tests">9. Observational tests</h2>
+
+    <h3>Perihelion of Mercury</h3>
+
+    <p>Newton predicts that each planet orbits the Sun in an ellipse that stays in place. Mercury's ellipse actually rotates (its perihelion advances) by $574 \ \text{arcseconds per century}$. Most of that, $532''$, is explained by perturbations from the other planets. A residual $43''$ was unaccounted for and had been a scandal since Le Verrier found it in 1859. General relativity predicts exactly this extra precession, from the non-Newtonian terms in the Schwarzschild geodesic equation:</p>
+
+    <div class="math-display">$$\Delta \phi \approx \frac{6 \pi G M}{c^2 a (1 - e^2)} \text{ per orbit}.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">GR perihelion precession</p>
+      <dl>
+        <dt>$\Delta \phi$</dt><dd>Extra angle (beyond $2\pi$) that the orbit rotates per revolution due to GR.</dd>
+        <dt>$M$</dt><dd>Mass of the central body (the Sun here).</dd>
+        <dt>$a$</dt><dd>Semi-major axis of the orbit.</dd>
+        <dt>$e$</dt><dd>Eccentricity of the orbit.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why it works.</strong> In Newton gravity, the inverse-square law has a quirk: closed elliptical orbits are a special cancellation. Any deviation from pure $1/r^2$ breaks the cancellation and makes the orbit precess. GR's extra "curved time" contribution is exactly such a deviation. For Mercury, plug in the numbers and you get 43 arcseconds per century. Einstein, on computing this in November 1915, wrote that he "was beside myself with ecstasy for days."</p>
+    </div>
+
+    <h3>Bending of starlight</h3>
+
+    <p>A light ray grazing the Sun bends by</p>
+
+    <div class="math-display">$$\delta = \frac{4 G M}{c^2 R_\odot} \approx 1.75 \text{ arcseconds},$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Gravitational lensing by the Sun</p>
+      <dl>
+        <dt>$\delta$</dt><dd>Angular deflection of the light ray as it passes the Sun.</dd>
+        <dt>$M$</dt><dd>Mass of the Sun, $1.989 \times 10^{30}$ kg.</dd>
+        <dt>$R_\odot$</dt><dd>Radius of the Sun, $6.96 \times 10^8$ m. The closest approach of a grazing ray.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Newton's half.</strong> A naive Newtonian "photons have mass, so they fall" calculation gives $2GM/(c^2 R_\odot)$ — half the GR answer. Eddington's 1919 eclipse saw $1.61 \pm 0.3$, consistent with Einstein's full prediction, not Newton's half. Modern radio measurements using quasars agree with Einstein to one part in $10^4$.</p>
+    </div>
+
+    <h3>Gravitational redshift</h3>
+
+    <p>For two clocks at radii $r_1 < r_2$ around a mass, the frequency ratio of a photon emitted at $r_1$ and received at $r_2$ is, to leading order,</p>
+
+    <div class="math-display">$$\frac{f_2}{f_1} \approx 1 - \frac{G M}{c^2} \left( \frac{1}{r_1} - \frac{1}{r_2} \right).$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Gravitational redshift (Schwarzschild)</p>
+      <dl>
+        <dt>$f_1, f_2$</dt><dd>Emitted frequency at $r_1$ and received frequency at $r_2$ respectively.</dd>
+        <dt>$r_1$</dt><dd>Radius where the photon is emitted (deeper in the potential well).</dd>
+        <dt>$r_2$</dt><dd>Radius where the photon is received (shallower).</dd>
+        <dt>$GM/c^2$</dt><dd>Half the Schwarzschild radius. Sets the scale of the effect.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>GPS numbers.</strong> With $r_1 = 6371$ km (Earth's surface) and $r_2 = 26600$ km (GPS orbit), the GR shift makes the orbiting clocks gain about $45 \ \mu\text{s}$ per day. Combined with the SR loss of $7 \ \mu\text{s}$/day, the net is $+38 \ \mu\text{s}$/day. The GPS engineers offset the clock oscillator by a matching amount before launch so that, once in orbit, the satellite clocks tick at the expected ground rate.</p>
+    </div>
+
+    <h3>Gravitational waves and LIGO</h3>
+
+    <p>General relativity predicts that accelerating masses radiate ripples in spacetime itself. Binary systems of compact objects (neutron stars, black holes) slowly lose energy to these waves and spiral together. The waveform of the merger is encoded in the Einstein equations, and LIGO's detectors are laser interferometers tuned to measure strains as small as $10^{-21}$. On September 14, 2015, LIGO heard two black holes of about 29 and 36 solar masses merge at a distance of 1.3 billion light-years. The final black hole was about 62 solar masses; the missing 3 solar masses were radiated away as gravitational waves — a peak power output briefly exceeding the combined light output of every star in the visible universe. The match to GR's numerical-relativity predictions was within a few percent.</p>
+
+    <div class="problem-set" data-topic="phys-gr-tests"></div>
+
+    <h3>See also</h3>
+    <div class="see-also">
+      <div class="card">
+        <h4><a href="./special-relativity.html">Special Relativity</a></h4>
+        <p>The local limit of general relativity. In any small neighborhood of any spacetime point, GR reduces to SR. You need to know SR before any of this can work.</p>
+      </div>
+      <div class="card">
+        <h4><a href="./quantum-mechanics.html">Quantum Mechanics</a></h4>
+        <p>GR and QM disagree at high curvatures (black hole singularities, the first $10^{-43}$ s of the Big Bang). Reconciling them is the goal of quantum gravity — a problem that is still open.</p>
+      </div>
+      <div class="card">
+        <h4><a href="../math/linear-algebra.html">Linear Algebra</a></h4>
+        <p>The metric is a matrix at each point. Tensor calculus is "linear algebra that changes with position." Being comfortable with matrix indices makes the GR notation less painful.</p>
+      </div>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="code">10. General relativity in code</h2>
+
+    <p>Two small primitives: the Schwarzschild radius function, and a rough gravitational-time-dilation factor between two radii.</p>
+
+    <div class="code-tabs" id="ct-gr">
+      <div class="ct-header">
+        <button class="ct-tab active" data-tab="np">NumPy</button>
+        <button class="ct-tab" data-tab="py">Plain Python</button>
+        <span class="ct-label">general-relativity primitives</span>
+      </div>
+
+      <div class="ct-panel active" data-tab="np"><pre><code><span class="kw">import</span> numpy <span class="kw">as</span> np
+
+G = <span class="num">6.67430e-11</span>           <span class="cmt"># N m^2 / kg^2</span>
+C = <span class="num">299792458.0</span>           <span class="cmt"># m/s</span>
+M_SUN = <span class="num">1.98892e30</span>        <span class="cmt"># kg</span>
+
+<span class="kw">def</span> <span class="fn">schwarzschild_radius</span>(M_kg):
+    <span class="kw">return</span> <span class="num">2.0</span> * G * M_kg / (C * C)
+
+<span class="kw">def</span> <span class="fn">time_dilation_factor</span>(M_kg, r_m):
+    <span class="cmt"># Clock tick rate at r relative to infinity, in Schwarzschild.</span>
+    rs = <span class="fn">schwarzschild_radius</span>(M_kg)
+    <span class="kw">if</span> r_m &lt;= rs:
+        <span class="kw">return</span> <span class="num">0.0</span>           <span class="cmt"># inside the horizon; coordinates break down</span>
+    <span class="kw">return</span> np.<span class="fn">sqrt</span>(<span class="num">1.0</span> - rs / r_m)
+
+<span class="cmt"># Sun</span>
+<span class="fn">print</span>(<span class="str">f"r_s(Sun)   = {schwarzschild_radius(M_SUN):.3e} m"</span>)
+<span class="fn">print</span>(<span class="str">f"r_s(Earth) = {schwarzschild_radius(5.972e24):.3e} m"</span>)
+
+<span class="cmt"># GPS comparison: clock tick ratio, GPS orbit vs ground</span>
+r_ground = <span class="num">6371e3</span>
+r_gps    = <span class="num">26600e3</span>
+M_earth  = <span class="num">5.972e24</span>
+f_ground = <span class="fn">time_dilation_factor</span>(M_earth, r_ground)
+f_gps    = <span class="fn">time_dilation_factor</span>(M_earth, r_gps)
+ratio    = f_gps / f_ground
+drift_us = (ratio - <span class="num">1.0</span>) * <span class="num">86400e6</span>
+<span class="fn">print</span>(<span class="str">f"GR-only drift GPS vs ground: {drift_us:.1f} us / day"</span>)
+</code></pre></div>
+
+      <div class="ct-panel" data-tab="py"><pre><code><span class="kw">import</span> math
+
+G = <span class="num">6.67430e-11</span>
+C = <span class="num">299792458.0</span>
+
+<span class="kw">def</span> <span class="fn">schwarzschild_radius</span>(M_kg):
+    <span class="kw">return</span> <span class="num">2.0</span> * G * M_kg / (C * C)
+
+<span class="kw">def</span> <span class="fn">perihelion_advance</span>(M_kg, a_m, e):
+    <span class="cmt"># Extra radians per orbit from GR.</span>
+    <span class="kw">return</span> <span class="num">6.0</span> * math.pi * G * M_kg / (C * C * a_m * (<span class="num">1.0</span> - e * e))
+
+<span class="cmt"># Mercury</span>
+M_SUN = <span class="num">1.98892e30</span>
+a_mercury = <span class="num">5.791e10</span>                     <span class="cmt"># m</span>
+e_mercury = <span class="num">0.2056</span>
+T_mercury = <span class="num">87.97</span>                         <span class="cmt"># days</span>
+rad_per_orbit = <span class="fn">perihelion_advance</span>(M_SUN, a_mercury, e_mercury)
+arcsec_per_century = rad_per_orbit * (<span class="num">180</span> / math.pi) * <span class="num">3600</span> * (<span class="num">36525</span> / T_mercury)
+<span class="fn">print</span>(<span class="str">f"Mercury GR advance: {arcsec_per_century:.1f} arcsec/century"</span>)
+</code></pre></div>
+    </div>
+
+    <p>The perihelion calculation should print about 43 — the same 43 Einstein was ecstatic about in 1915.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="summary">11. Cheat sheet</h2>
+
+    <div class="grid">
+      <div class="card">
+        <h4>Field equations</h4>
+        <p>$G_{\mu\nu} + \Lambda g_{\mu\nu} = \dfrac{8\pi G}{c^4} T_{\mu\nu}$</p>
+        <p class="meta">Geometry = matter and energy, with a coupling constant.</p>
+      </div>
+      <div class="card">
+        <h4>Geodesic equation</h4>
+        <p>$\ddot{x}^\mu + \Gamma^\mu_{\alpha\beta}\dot{x}^\alpha\dot{x}^\beta = 0$</p>
+        <p class="meta">Straightest path in curved spacetime.</p>
+      </div>
+      <div class="card">
+        <h4>Minkowski metric</h4>
+        <p>$ds^2 = -c^2 dt^2 + dx^2 + dy^2 + dz^2$</p>
+        <p class="meta">The flat-space limit.</p>
+      </div>
+      <div class="card">
+        <h4>Schwarzschild radius</h4>
+        <p>$r_s = \dfrac{2 G M}{c^2}$</p>
+        <p class="meta">Event horizon of a non-rotating black hole.</p>
+      </div>
+      <div class="card">
+        <h4>Gravitational redshift</h4>
+        <p>$\dfrac{\Delta f}{f} \approx -\dfrac{\Delta \Phi}{c^2}$</p>
+        <p class="meta">Photons climbing out of a well lose energy.</p>
+      </div>
+      <div class="card">
+        <h4>Perihelion precession</h4>
+        <p>$\Delta\phi = \dfrac{6\pi G M}{c^2 a (1 - e^2)}$</p>
+        <p class="meta">Extra orbit rotation per revolution.</p>
+      </div>
+      <div class="card">
+        <h4>Light deflection</h4>
+        <p>$\delta = \dfrac{4 G M}{c^2 R}$</p>
+        <p class="meta">Bending angle for a grazing light ray.</p>
+      </div>
+      <div class="card">
+        <h4>Photon sphere</h4>
+        <p>$r_{\text{ph}} = \tfrac{3}{2} r_s$</p>
+        <p class="meta">Unstable circular orbit for light around Schwarzschild.</p>
+      </div>
+      <div class="card">
+        <h4>Equivalence principle</h4>
+        <p>Free-fall = no gravity locally</p>
+        <p class="meta">Universal. Tested to $10^{-15}$.</p>
+      </div>
+    </div>
+
+    <div class="bib">
+      <h4>Further reading</h4>
+      <ul>
+        <li>Charles Misner, Kip Thorne, John Wheeler — <em>Gravitation</em>. The thousand-page bible. Exhausting and essential.</li>
+        <li>Bernard Schutz — <em>A First Course in General Relativity</em>. The friendliest undergraduate text. If you read one book after this page, read Schutz.</li>
+        <li>Sean Carroll — <em>Spacetime and Geometry</em>. Modern graduate textbook; freely available as lecture notes at <a href="https://arxiv.org/abs/gr-qc/9712019">arxiv.org/abs/gr-qc/9712019</a>.</li>
+        <li>Albert Einstein — <em>Die Feldgleichungen der Gravitation</em> (1915). The original 4-page field-equation paper. Worth glancing at in translation to appreciate how stripped-down it is.</li>
+        <li>B. P. Abbott et al. — <em>Observation of Gravitational Waves from a Binary Black Hole Merger</em>, Phys. Rev. Lett. 116, 061102 (2016). The LIGO discovery paper.</li>
+        <li>Event Horizon Telescope Collaboration — <em>First M87 Event Horizon Telescope Results</em>, ApJL 875 (2019); Sgr A* results (2022). The first images of a black-hole shadow.</li>
+        <li>Neil Ashby — <em>Relativity in the Global Positioning System</em>, Living Reviews in Relativity 6 (2003). Clean walkthrough of GPS relativity corrections.</li>
+      </ul>
+    </div>
+
+    <div class="next-card">
+      <div class="label">NEXT UP</div>
+      <a href="./quantum-mechanics.html">→ Quantum Mechanics</a>
+      <p>General relativity is the physics of the very big. Quantum mechanics is the physics of the very small. They disagree at the smallest scales — that's the open frontier. First, learn what QM actually says.</p>
+    </div>
+
+  </article>
+</div>
+
+<script>
+// =========================================================
+// Code tabs
+document.querySelectorAll('.code-tabs').forEach(root => {
+  const tabs = root.querySelectorAll('.ct-tab');
+  const panels = root.querySelectorAll('.ct-panel');
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const target = tab.getAttribute('data-tab');
+      tabs.forEach(t => t.classList.toggle('active', t === tab));
+      panels.forEach(p => p.classList.toggle('active', p.getAttribute('data-tab') === target));
+    });
+  });
+});
+
+// =========================================================
+// Schwarzschild photon orbit visualization
+(function() {
+  const svg = document.getElementById('grSvg');
+  if (!svg) return;
+  const NS = 'http://www.w3.org/2000/svg';
+  const slider = document.getElementById('grB');
+  const bLabel = document.getElementById('grBLabel');
+  const caption = document.getElementById('grCaption');
+
+  const W = 720, H = 400;
+  const ml = 20, mr = 20, mt = 20, mb = 20;
+  const plotW = W - ml - mr;
+  const plotH = H - mt - mb;
+  const cx = ml + plotW / 2;
+  const cy = mt + plotH / 2;
+
+  // Pixels per unit of r_s
+  const scale = 22;
+
+  function mkCircle(cx, cy, r, fill, stroke) {
+    const c = document.createElementNS(NS, 'circle');
+    c.setAttribute('cx', cx); c.setAttribute('cy', cy); c.setAttribute('r', r);
+    c.setAttribute('fill', fill);
+    if (stroke) { c.setAttribute('stroke', stroke); c.setAttribute('stroke-width', 1.5); }
+    return c;
+  }
+  function mkText(x, y, txt, color, size, anchor) {
+    const t = document.createElementNS(NS, 'text');
+    t.setAttribute('x', x); t.setAttribute('y', y);
+    t.setAttribute('fill', color || '#7a8a9a');
+    t.setAttribute('font-size', size || 11);
+    t.setAttribute('font-family', 'ui-monospace, monospace');
+    if (anchor) t.setAttribute('text-anchor', anchor);
+    t.textContent = txt;
+    return t;
+  }
+  function mkRect(x, y, w, h, fill, stroke) {
+    const r = document.createElementNS(NS, 'rect');
+    r.setAttribute('x', x); r.setAttribute('y', y);
+    r.setAttribute('width', w); r.setAttribute('height', h);
+    r.setAttribute('fill', fill);
+    if (stroke) { r.setAttribute('stroke', stroke); r.setAttribute('stroke-width', 1); }
+    return r;
+  }
+  function mkPath(d, stroke, w, fill) {
+    const p = document.createElementNS(NS, 'path');
+    p.setAttribute('d', d);
+    p.setAttribute('stroke', stroke);
+    p.setAttribute('stroke-width', w || 2);
+    p.setAttribute('fill', fill || 'none');
+    p.setAttribute('stroke-linejoin', 'round');
+    p.setAttribute('stroke-linecap', 'round');
+    return p;
+  }
+
+  // Integrate photon geodesic in Schwarzschild with r_s = 1.
+  // Using u = 1/r, phi as independent: d^2 u / d phi^2 + u = (3/2) u^2 (r_s = 1).
+  // Start at r = 14, moving toward the hole with impact parameter b.
+  // u(phi0) = 1/14, du/dphi|_{phi0} from the geometry of straight-line approach at infinity.
+  // For an incoming ray with impact parameter b from infinity: u -> 0, u' = -1/b ... approximately.
+  // We instead integrate Cartesian-coordinate 2D rays with the effective force.
+  // Simpler: set up initial conditions at large r on a straight line, then integrate the ODE.
+  function integrate(b) {
+    // We use phi as param, start at phi = 0 with the photon at (x0, y0) = (-20, b),
+    // moving in +x direction. Convert to (r, phi) and evolve the u equation.
+    // r0 = sqrt(x0^2 + y0^2), phi0 = atan2(y0, x0).
+    // u(phi0) = 1/r0. du/dphi at phi0 from the instantaneous direction.
+    // From r^2 dphi/d(lambda) = L (conserved), dr/d(lambda), we get du/dphi.
+    // Simpler: use x(phi) parameterization? No — stick to u(phi).
+    // For a straight line x = const? No, we start at infinity moving in +x direction.
+    // Actually let's just integrate directly in (x,y) with the Schwarzschild-equivalent
+    // deflection ODE: for a photon, the "force" on the trajectory in Cartesian is:
+    //    d^2 x^i / d lambda^2 = -(3/2) r_s / r^5 * (L^2) * (x^i) ... too messy.
+    //
+    // Cleanest: in (r, phi), use u = 1/r:
+    //    d^2 u / d phi^2 + u = 3/2 * u^2  (with r_s = 1)
+    // Initial conditions: at phi0 = 0 (say), u0 = 0+ (photon comes from infinity),
+    // and the angular-momentum relationship says u'(phi)^2 + u^2 - u^3 = 1/b^2.
+    // For u -> 0, u' = -1/b (if motion is inward).
+    // Integrate phi from 0 outward. The photon reaches periastron, then escapes
+    // (or falls in if captured).
+
+    var pts = [];
+    var u = 1e-5;
+    var du = -1 / b;  // pointing inward (decreasing r)
+    var phi = 0;
+    var dphi = 0.01;
+    var maxSteps = 20000;
+    var captured = false;
+    for (var i = 0; i < maxSteps; i++) {
+      // Record Cartesian
+      var r = 1 / u;
+      if (r > 50) {
+        // Escaped to infinity; stop after we've seen the turnaround
+        if (pts.length > 200 && du > 0) break;
+      }
+      if (r < 0.5) { captured = true; break; }
+      var x = r * Math.cos(phi);
+      var y = r * Math.sin(phi);
+      pts.push([x, y]);
+
+      // RK4 on the second-order u'' + u = 1.5 u^2
+      function f(u) { return -u + 1.5 * u * u; }
+      var k1u = du;
+      var k1du = f(u);
+      var k2u = du + 0.5 * dphi * k1du;
+      var k2du = f(u + 0.5 * dphi * k1u);
+      var k3u = du + 0.5 * dphi * k2du;
+      var k3du = f(u + 0.5 * dphi * k2u);
+      var k4u = du + dphi * k3du;
+      var k4du = f(u + dphi * k3u);
+      u  += (dphi / 6) * (k1u + 2 * k2u + 2 * k3u + k4u);
+      du += (dphi / 6) * (k1du + 2 * k2du + 2 * k3du + k4du);
+      phi += dphi;
+      if (u <= 0) { u = 1e-6; du = Math.abs(du); } // left the region
+      if (phi > 100) break;
+    }
+    return { pts: pts, captured: captured };
+  }
+
+  function draw() {
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+    const b = parseFloat(slider.value);
+    bLabel.textContent = b.toFixed(2);
+
+    // Frame
+    svg.appendChild(mkRect(ml, mt, plotW, plotH, '#0a0d12', '#2a3446'));
+
+    // Concentric reference circles at r = 1, 2, 3, 5, 8 (in units of r_s)
+    [8, 5, 3, 2, 1.5].forEach(function (rr) {
+      svg.appendChild(mkCircle(cx, cy, rr * scale, 'none', '#1a2030'));
+    });
+
+    // Photon sphere at r = 1.5 r_s (dashed)
+    var ph = document.createElementNS(NS, 'circle');
+    ph.setAttribute('cx', cx); ph.setAttribute('cy', cy);
+    ph.setAttribute('r', 1.5 * scale);
+    ph.setAttribute('fill', 'none');
+    ph.setAttribute('stroke', '#f472b6');
+    ph.setAttribute('stroke-width', 1);
+    ph.setAttribute('stroke-dasharray', '3,4');
+    svg.appendChild(ph);
+
+    // Event horizon: filled disk at r = 1
+    svg.appendChild(mkCircle(cx, cy, scale, '#000', '#7c5cff'));
+
+    // Labels
+    svg.appendChild(mkText(cx, cy + 4, 'r_s', '#b4c4d4', 10, 'middle'));
+    svg.appendChild(mkText(cx + 1.5 * scale + 6, cy - 4, 'photon sphere', '#f472b6', 10));
+
+    // Trajectory
+    var res = integrate(b);
+    var pts = res.pts;
+    if (pts.length > 1) {
+      var d = '';
+      var seg = 0;
+      for (var i = 0; i < pts.length; i++) {
+        var px = cx + pts[i][0] * scale;
+        var py = cy - pts[i][1] * scale;
+        if (px < ml - 5 || px > W - mr + 5 || py < mt - 5 || py > H - mb + 5) {
+          // Off-screen: break path
+          if (seg > 0) { seg = 0; }
+          continue;
+        }
+        d += (seg === 0 ? 'M' : 'L') + px.toFixed(2) + ',' + py.toFixed(2) + ' ';
+        seg++;
+      }
+      svg.appendChild(mkPath(d, res.captured ? '#f472b6' : '#22d3ee', 2.2));
+    }
+
+    // Caption
+    var bcrit = 3 * Math.sqrt(3) / 2;
+    var status;
+    if (res.captured) status = 'captured (spirals into horizon)';
+    else if (Math.abs(b - bcrit) < 0.15) status = 'near critical b_crit ~ 2.598 r_s (grazing)';
+    else status = 'deflected, escapes to infinity';
+    caption.textContent =
+      'Impact parameter b = ' + b.toFixed(2) + ' r_s.  Status: ' + status +
+      '.  Photon sphere at r = 1.5 r_s (pink dashed), horizon at r = r_s (violet disk).';
+  }
+
+  slider.addEventListener('input', draw);
+  draw();
+})();
+</script>
+<script defer src="../problem-set.js"></script>
+<script defer src="general-relativity-problems.js"></script>
+<script defer src="../search-index.js"></script>
+<script defer src="../search.js"></script>
+</body>
+</html>

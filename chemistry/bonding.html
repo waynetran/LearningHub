@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bonding — Deep Dive</title>
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError: false});"></script>
+</head>
+<body>
+<div id="tooltip"></div>
+
+<nav class="topic-nav">
+  <a class="back" href="./index.html">← Chemistry Hub</a>
+  <div class="crumb">Chemistry / <span class="topic-name">Bonding</span></div>
+</nav>
+
+<div class="topic-layout">
+  <aside class="topic-toc">
+    <h4>ON THIS PAGE</h4>
+    <ul>
+      <li><a href="#why">1. Why bonding matters</a></li>
+      <li><a href="#vocab">2. Vocabulary cheat sheet</a></li>
+      <li><a href="#kinds">3. The three kinds of bond</a></li>
+      <li><a href="#lewis">4. Lewis structures and formal charge</a></li>
+      <li><a href="#vsepr">5. VSEPR geometry</a></li>
+      <li><a href="#demo">6. Interactive: shape explorer</a></li>
+      <li><a href="#hybrid">7. Hybridization and sigma/pi</a></li>
+      <li><a href="#polarity">8. Polarity and dipole moments</a></li>
+      <li><a href="#imf">9. Intermolecular forces</a></li>
+      <li><a href="#code">10. Source code</a></li>
+      <li><a href="#summary">11. Cheat sheet</a></li>
+    </ul>
+  </aside>
+
+  <article class="topic-content">
+    <h1>Chemical Bonding</h1>
+    <p class="subtitle">Orbitals from two or more atoms overlap and the electrons rearrange to minimize energy. Everything else — shape, polarity, boiling point, drug binding, the shape of water — is bookkeeping on that single idea.</p>
+    <div class="meta-tags">
+      <span>Prereq: <a href="./atomic-structure.html">atomic structure</a>, a touch of <a href="../physics/quantum-mechanics.html">quantum mechanics</a></span>
+      <span>Read time: ~35 min</span>
+      <span>Interactive figures: 1</span>
+      <span>Code: NumPy / Plain Python</span>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="why">1. Why bonding matters</h2>
+
+    <p>Atoms by themselves do almost nothing interesting. It's when they bond that chemistry begins. A bond is the energetically favorable sharing or transfer of electrons between two nuclei — it exists because the combined system (two nuclei plus the shared electrons) sits at a lower total energy than the two isolated atoms.</p>
+
+    <p>That's the whole story, physically. Everything else in this page is a practical consequence: which electrons get shared, what shape they prefer, how unequal the sharing is, how strong the resulting bond is, and how the molecules then interact with each other.</p>
+
+    <p>Why should you care?</p>
+
+    <ul>
+      <li><strong>Materials.</strong> Diamond and graphite are both pure carbon. One is the hardest natural material, the other is a soft lubricant you write with. The difference is 100% bonding geometry.</li>
+      <li><strong>Drugs and proteins.</strong> Drug-target binding is almost never a covalent event — it's a cloud of intermolecular forces (hydrogen bonds, van der Waals contacts, hydrophobic collapse) that turn a geometry match into a selective grip. Every drug designer works at this layer.</li>
+      <li><strong>Water.</strong> Water is liquid at room temperature because of hydrogen bonds, which come directly from O-H polarity. Without them, H$_2$O would boil near $-80$ $^\circ$C and life would never have started.</li>
+      <li><strong>Batteries and photovoltaics.</strong> Band gaps are the outputs of molecular-orbital theory scaled up to a crystal. Picking a cathode is picking a bonding pattern that holds a certain voltage.</li>
+    </ul>
+
+    <div class="callout">
+      <div class="label">THE PUNCHLINE</div>
+      <p>Every bond is atoms lowering their energy by sharing or transferring electrons. The three flavors — ionic, covalent, metallic — are three ways to do that, and most real bonds are a blend. Once you know the blend, you can predict shape (VSEPR), strength (bond enthalpy), polarity (electronegativity), and how the molecule will interact with its neighbors (intermolecular forces).</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="vocab">2. Vocabulary cheat sheet</h2>
+
+    <table class="rank-table">
+      <thead><tr><th>Symbol</th><th>Read as</th><th>Means</th></tr></thead>
+      <tbody>
+        <tr><td>$\chi$</td><td>"chi" (electronegativity)</td><td>Pauling-scale measure of how strongly an atom pulls shared bonding electrons. F is 3.98, Cs is 0.79.</td></tr>
+        <tr><td>$\Delta\chi$</td><td>"delta chi"</td><td>Electronegativity difference between two bonded atoms. Rough rule: $< 0.4$ covalent, $0.4$–$1.7$ polar, $> 1.7$ ionic.</td></tr>
+        <tr><td>$\mu$</td><td>"mu" (dipole moment)</td><td>A vector measuring charge separation in a polar bond or molecule, in debyes (D). $1\ \text{D} \approx 3.336\times 10^{-30}$ C·m.</td></tr>
+        <tr><td>$D_e$</td><td>"bond dissociation energy"</td><td>Energy needed to break a bond homolytically (each atom keeps one electron). Reported in kJ/mol.</td></tr>
+        <tr><td>$r_e$</td><td>"equilibrium bond length"</td><td>Distance between nuclei at the energy minimum of the two-atom potential.</td></tr>
+        <tr><td>$\sigma, \pi$</td><td>"sigma, pi"</td><td>Two kinds of bond by symmetry. $\sigma$ is cylindrically symmetric along the bond axis; $\pi$ has a nodal plane through the axis.</td></tr>
+        <tr><td>$sp^n$</td><td>"s-p-n hybrid"</td><td>Mixed orbital formed from one $s$ and $n$ $p$ orbitals. $sp$ gives linear, $sp^2$ trigonal planar, $sp^3$ tetrahedral.</td></tr>
+        <tr><td>FC</td><td>"formal charge"</td><td>Bookkeeping charge assigned to each atom in a Lewis structure to pick the best resonance form.</td></tr>
+        <tr><td>IMF</td><td>"intermolecular force"</td><td>Forces between whole molecules, not inside them. Much weaker than real bonds but dominant for phase behavior.</td></tr>
+      </tbody>
+    </table>
+
+    <!-- ========================================================== -->
+    <h2 id="kinds">3. The three kinds of bond</h2>
+
+    <p>Historically, chemists carved bonding into three pictures. They are caricatures — real bonds almost always blend them — but each one is clean enough to reason with.</p>
+
+    <h3>Ionic</h3>
+
+    <p>One atom is much more electronegative than the other. The less electronegative atom hands its valence electron(s) over and becomes a cation. The more electronegative atom keeps them and becomes an anion. The two resulting ions then hold together by plain Coulomb attraction. Sodium chloride is the textbook case: Na (Pauling 0.93) gives its $3s^1$ electron to Cl (3.16), becoming Na$^+$ and Cl$^-$, and the two ions stack into a rock-salt crystal.</p>
+
+    <p>The energy of an ion pair at distance $r$ is well approximated by the Coulomb law:</p>
+
+    <div class="math-display">$$U(r) = -\frac{1}{4\pi\epsilon_0}\frac{q_1 q_2}{r} + \frac{B}{r^n}.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Ion-pair potential</p>
+      <dl>
+        <dt>$U(r)$</dt><dd>Total potential energy of the two ions as a function of separation $r$.</dd>
+        <dt>$q_1, q_2$</dt><dd>The ionic charges (e.g. $+e$ and $-e$ for Na$^+$ Cl$^-$).</dd>
+        <dt>$\epsilon_0$</dt><dd>Vacuum permittivity, $8.854\times 10^{-12}$ F/m. Universal constant.</dd>
+        <dt>$-q_1 q_2/(4\pi\epsilon_0 r)$</dt><dd>The attractive Coulomb energy — negative because opposite charges pull in.</dd>
+        <dt>$B/r^n$</dt><dd>A short-range repulsion (Born repulsion). Electron clouds overlap at small $r$ and Pauli repulsion kicks in; $n \approx 8$–$12$ works empirically.</dd>
+      </dl>
+      <p class="mg-why"><strong>Why it matters.</strong> The minimum of $U(r)$ sits at the equilibrium bond length $r_e$ and its depth is roughly the bond enthalpy. For NaCl, $r_e \approx 236$ pm and the lattice energy is about 787 kJ/mol — which is a lot, and is why salt doesn't spontaneously fall apart at room temperature.</p>
+    </div>
+
+    <p>In a crystal, you don't just have one ion pair — you have a whole lattice. The total Coulomb energy per ion depends on the geometry through a dimensionless factor called the <strong>Madelung constant</strong>, typically $1.6$–$1.8$ for common ionic solids. The <a href="../physics/electromagnetism.html">electromagnetism</a> page covers the derivation.</p>
+
+    <h3>Covalent</h3>
+
+    <p>Two atoms of similar electronegativity share one or more pairs of electrons. The shared pair sits in a <strong>bonding molecular orbital</strong>, a new orbital formed by constructive interference between the two atomic orbitals. The competing <strong>antibonding</strong> combination sits at higher energy and stays empty in stable molecules.</p>
+
+    <p>For two hydrogen atoms forming H$_2$, the simplest MO picture writes the two-atom orbital as a linear combination of the individual $1s$ orbitals:</p>
+
+    <div class="math-display">$$\psi_{\pm} = \frac{1}{\sqrt{2(1 \pm S)}}\left(\phi_A \pm \phi_B\right).$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">LCAO for H$_2$</p>
+      <dl>
+        <dt>$\phi_A, \phi_B$</dt><dd>The $1s$ atomic orbitals on each hydrogen.</dd>
+        <dt>$\psi_+$</dt><dd>The bonding combination — constructive interference between the two wavefunctions, maximum density between the nuclei.</dd>
+        <dt>$\psi_-$</dt><dd>The antibonding combination — destructive interference with a node between the nuclei, density pushed to the outside.</dd>
+        <dt>$S$</dt><dd>The overlap integral $S = \int \phi_A \phi_B \,dV$, a dimensionless number between 0 and 1 that measures how much the two atomic orbitals overlap.</dd>
+        <dt>$1/\sqrt{2(1\pm S)}$</dt><dd>Normalization — keeps the total probability equal to 1.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Analogy.</strong> Two waves in the same pool. When crests line up (constructive), the water piles up — that's the bonding orbital, and the extra density between the nuclei is what glues them together. When crest meets trough (destructive), you get a flat spot between the nuclei and the two atoms are pushed apart — that's antibonding.</p>
+    </div>
+
+    <p>For H$_2$, both electrons pair up in $\psi_+$ (spins opposite, Pauli-allowed) and the molecule is stable at $r_e = 74$ pm with a bond energy of $436$ kJ/mol. That's the smallest covalent-bond calculation you can do, and it already captures the key ideas: bonding orbitals lower the electrons' energy, antibonding raise it, and the bond order is $(n_{\text{bonding}} - n_{\text{antibonding}})/2$.</p>
+
+    <h3>Metallic</h3>
+
+    <p>In a metal, many atoms contribute their valence electrons to a common pool — a <strong>sea of electrons</strong> that belongs to the whole crystal rather than to any individual bond. The positive ion cores sit at regular lattice sites, and the delocalized electrons fill a continuous set of bands up to the Fermi level.</p>
+
+    <p>That picture explains metallic properties in one sentence each:</p>
+
+    <ul>
+      <li><strong>Conductivity.</strong> The delocalized electrons respond to an electric field — no bond to break, just a drift.</li>
+      <li><strong>Malleability.</strong> The sea doesn't care if you slide one row of ions over another; the bonds don't have fixed partners.</li>
+      <li><strong>Opacity and reflectivity.</strong> The continuous band of electronic states absorbs photons across the visible spectrum and re-emits them, giving the shiny luster.</li>
+      <li><strong>Thermal conductivity.</strong> The same mobile electrons carry heat as well as charge, which is why metals are both electrical and thermal conductors.</li>
+    </ul>
+
+    <div class="callout warn">
+      <div class="label">THE REAL WORLD IS A BLEND</div>
+      <p>Pure ionic and pure covalent almost never happen. NaCl is $\approx 90\%$ ionic by any reasonable scale, not 100\%. HCl is $\approx 20\%$ ionic. C-O is polar covalent. C-C is essentially pure covalent. What you want from this taxonomy is the <em>dominant</em> flavor, which tells you what the structure, reactivity, and solubility will look like. The <a href="./quantum-chemistry.html">quantum chemistry</a> page does the full calculation.</p>
+    </div>
+
+    <div class="problem-set" data-topic="chem-bond-types"></div>
+
+    <!-- ========================================================== -->
+    <h2 id="lewis">4. Lewis structures and formal charge</h2>
+
+    <p>A Lewis structure is a back-of-envelope diagram of where the valence electrons live: which pairs are bonding, which are lone pairs, and which atoms are connected. It's 100 years old, coarse, and still the fastest way to predict the geometry and reactivity of a molecule you haven't seen before.</p>
+
+    <p>The recipe, which works for most small molecules:</p>
+
+    <ol>
+      <li>Count valence electrons. Add up group numbers for each atom, subtract for positive charge, add for negative charge.</li>
+      <li>Pick a skeleton. Usually the least electronegative atom (not H) goes in the center.</li>
+      <li>Put single bonds between the central atom and each terminal atom.</li>
+      <li>Distribute the remaining electrons as lone pairs, starting with the most electronegative terminals, until each has an octet (H gets 2).</li>
+      <li>If the central atom is short, form double or triple bonds by moving a terminal lone pair into the bond.</li>
+      <li>Check formal charges. If needed, reshape to minimize them.</li>
+    </ol>
+
+    <p>The <strong>formal charge</strong> on an atom in a Lewis structure is</p>
+
+    <div class="math-display">$$\text{FC} = V - L - \tfrac{1}{2} B.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Formal charge</p>
+      <dl>
+        <dt>$\text{FC}$</dt><dd>Formal charge on the atom. Zero is ideal; $\pm 1$ is fine; $\pm 2$ or worse signals a bad Lewis structure.</dd>
+        <dt>$V$</dt><dd>Valence electrons the neutral free atom would have (group number for main group).</dd>
+        <dt>$L$</dt><dd>Number of non-bonding (lone-pair) electrons on the atom in the structure.</dd>
+        <dt>$B$</dt><dd>Number of bonding electrons the atom shares (each single bond contributes 2, double bond 4, triple bond 6).</dd>
+        <dt>$\tfrac{1}{2} B$</dt><dd>Each shared pair is split 50/50 for counting, unlike oxidation state.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Rule of thumb.</strong> Among candidate structures, pick the one with formal charges closest to zero and — if some are nonzero — the most negative formal charge on the most electronegative atom. That rule alone resolves most of the tricky cases you'll meet.</p>
+    </div>
+
+    <h3>Worked example: CO$_2$</h3>
+
+    <p>Carbon dioxide has $4 + 2(6) = 16$ valence electrons. Carbon goes in the middle. With two double bonds (O=C=O), the structure uses all 16 electrons: four shared in each double bond (8 total), plus two lone pairs on each oxygen (8 total).</p>
+
+    <p>Check formal charges:</p>
+    <ul>
+      <li>Carbon: $V = 4$, $L = 0$, $B = 8$. FC $= 4 - 0 - 4 = 0$.</li>
+      <li>Each oxygen: $V = 6$, $L = 4$, $B = 4$. FC $= 6 - 4 - 2 = 0$.</li>
+    </ul>
+
+    <p>All zeros — this is the right Lewis structure. Alternatives like O-C$\equiv$O (single and triple) give nonzero formal charges and are worse.</p>
+
+    <h3>Resonance</h3>
+
+    <p>Sometimes no single Lewis structure fits. Ozone (O$_3$), for example, has two equivalent structures with the double bond on either side. The real molecule is neither — it is a superposition (<strong>resonance hybrid</strong>) in which both O-O bonds have identical length and strength, intermediate between a single and double bond. You draw both structures with a double-headed arrow between them and understand that the truth is the average.</p>
+
+    <p>Resonance is not "the molecule flickers between these forms." It means the wavefunction is not well-described by any one of them and the best single-reference description is the linear combination. Same idea as the bonding MO for H$_2$, scaled up to multi-site delocalization.</p>
+
+    <div class="problem-set" data-topic="chem-bond-lewis"></div>
+
+    <!-- ========================================================== -->
+    <h2 id="vsepr">5. VSEPR geometry</h2>
+
+    <p>Once you have a Lewis structure, the shape of the molecule follows from one principle: electron pairs around a central atom repel each other and arrange themselves as far apart as possible. That's the <strong>valence shell electron pair repulsion</strong> (VSEPR) model. It's not a physical law, but it's a startlingly accurate pattern-match for most main-group compounds.</p>
+
+    <p>Count the "electron domains" on the central atom — each bond (single, double, or triple counts as one domain) and each lone pair — then look up the geometry:</p>
+
+    <table class="rank-table">
+      <thead><tr><th>Domains</th><th>Shape</th><th>Angle</th><th>Example</th></tr></thead>
+      <tbody>
+        <tr><td>2</td><td>Linear</td><td>180°</td><td>CO$_2$, BeCl$_2$</td></tr>
+        <tr><td>3</td><td>Trigonal planar</td><td>120°</td><td>BF$_3$, SO$_3$</td></tr>
+        <tr><td>3 (1 lone)</td><td>Bent</td><td>$\approx 118°$</td><td>SO$_2$, O$_3$</td></tr>
+        <tr><td>4</td><td>Tetrahedral</td><td>109.5°</td><td>CH$_4$, NH$_4^+$</td></tr>
+        <tr><td>4 (1 lone)</td><td>Trigonal pyramidal</td><td>$\approx 107°$</td><td>NH$_3$</td></tr>
+        <tr><td>4 (2 lone)</td><td>Bent</td><td>$\approx 104.5°$</td><td>H$_2$O</td></tr>
+        <tr><td>5</td><td>Trigonal bipyramidal</td><td>90°/120°</td><td>PCl$_5$</td></tr>
+        <tr><td>6</td><td>Octahedral</td><td>90°</td><td>SF$_6$</td></tr>
+      </tbody>
+    </table>
+
+    <p>Two refinements that come up constantly:</p>
+
+    <ul>
+      <li><strong>Lone pairs take more space than bonding pairs.</strong> They're held by only one nucleus, so they fan out more. That's why H$_2$O (two lone pairs) has an H-O-H angle of $104.5°$ instead of the tetrahedral $109.5°$, and NH$_3$ (one lone pair) has $107°$.</li>
+      <li><strong>Double and triple bonds also take more space than single bonds</strong>, so geometries distort slightly around them. The effect is smaller than lone-pair effects but measurable in high-resolution crystal structures.</li>
+    </ul>
+
+    <p>VSEPR predicts shape but not bond angles to better than a degree or two. For quantitative work you need an actual electronic-structure calculation; see <a href="./quantum-chemistry.html">quantum chemistry</a>.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="demo">6. Interactive: molecular shape explorer</h2>
+
+    <p>Pick a molecule and the figure below draws its VSEPR geometry with the central atom at the origin. Bonds are drawn as lines; lone pairs as small pink clouds. The numbers show the approximate angle between neighboring bonds. Hover the control to see what VSEPR predicts vs. what experiment measures.</p>
+
+    <div class="viz-3d">
+      <div class="v3-controls">
+        <span class="v3-label">Molecule:</span>
+        <select id="molSel" style="flex:1;max-width:260px;background:#0a0d12;color:#e4ecf5;border:1px solid #2a3446;border-radius:4px;padding:4px 8px;font-family:ui-monospace,monospace;">
+          <option value="co2">CO₂ (linear)</option>
+          <option value="bf3">BF₃ (trigonal planar)</option>
+          <option value="so2">SO₂ (bent, 1 lone pair)</option>
+          <option value="ch4" selected>CH₄ (tetrahedral)</option>
+          <option value="nh3">NH₃ (pyramidal)</option>
+          <option value="h2o">H₂O (bent, 2 lone pairs)</option>
+          <option value="pcl5">PCl₅ (trigonal bipyramidal)</option>
+          <option value="sf6">SF₆ (octahedral)</option>
+        </select>
+        <span id="molLabel" style="min-width:80px;color:#22d3ee;font-family:ui-monospace,monospace;">CH₄</span>
+      </div>
+      <svg id="molSvg" viewBox="0 0 720 360" style="width:100%;height:auto;background:#0a0d12;border-radius:6px;"></svg>
+      <p class="v3-caption" id="molCaption">Central atom in cyan, bonded atoms in white, lone pairs in pink. Angles shown next to bonds are the standard VSEPR values, adjusted for lone-pair repulsion where applicable.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="hybrid">7. Hybridization and sigma/pi bonds</h2>
+
+    <p>Pure atomic orbitals almost never explain molecular geometry directly. Carbon's ground state is $1s^2\,2s^2\,2p^2$ — two unpaired $p$ electrons — but methane has four equivalent C-H bonds at the tetrahedral angle. That's not what two $p$ electrons should give you.</p>
+
+    <p>The fix is <strong>hybridization</strong>: mix the $2s$ and the three $2p$ orbitals on the carbon to make four equivalent <strong>$sp^3$ hybrid orbitals</strong>, each one a blend pointing at a tetrahedral corner. Then each hybrid overlaps with an H $1s$ to form a C-H bond. You get four equivalent bonds at 109.5° — exactly what methane has.</p>
+
+    <p>The three common hybridizations for main-group atoms:</p>
+
+    <ul>
+      <li><strong>$sp$</strong> — one $s$ + one $p$ gives two linear orbitals 180° apart. Leaves two unhybridized $p$ orbitals perpendicular to the bond axis. Used in triple bonds (C$\equiv$C in acetylene) and CO$_2$.</li>
+      <li><strong>$sp^2$</strong> — one $s$ + two $p$ gives three trigonal planar orbitals 120° apart. Leaves one unhybridized $p$ orbital perpendicular to the plane. Used in double bonds (C=C in ethene), benzene, and carbonyl groups.</li>
+      <li><strong>$sp^3$</strong> — one $s$ + three $p$ gives four tetrahedral orbitals 109.5° apart. No leftover $p$ orbitals. Used in saturated carbons (methane, ethane, diamond) and in ammonia and water (with lone pairs in some of the hybrids).</li>
+    </ul>
+
+    <p>When a hybrid orbital on atom $A$ points at and overlaps a hybrid on atom $B$, the bond is cylindrically symmetric around the line joining the nuclei. That's a <strong>$\sigma$ bond</strong>. It's the strong, "head-on" kind of overlap and you find one in every chemical bond.</p>
+
+    <p>When an unhybridized $p$ orbital on atom $A$ overlaps sideways with a $p$ orbital on atom $B$, the result has a nodal plane containing the bond axis. That's a <strong>$\pi$ bond</strong>. It's weaker than $\sigma$ because the overlap is smaller, and it locks the molecule against twisting around the $\sigma$ axis.</p>
+
+    <div class="callout math">
+      <div class="label">BOND INVENTORY</div>
+      <p>Single bond = one $\sigma$. Double bond = one $\sigma$ + one $\pi$. Triple bond = one $\sigma$ + two $\pi$. A C=C bond is not twice as strong as a C-C bond (you'd expect $\approx 700$ kJ/mol); it's about $614$ kJ/mol vs. $348$, because the $\pi$ contribution is smaller than the $\sigma$. This same inventory explains why benzene is flat (every carbon is $sp^2$, the six $\pi$ electrons delocalize over the ring) and why rotating around a C=C bond costs real energy (you'd have to break the $\pi$).</p>
+    </div>
+
+    <h3>Hybridization vs. domain count</h3>
+
+    <p>Quick map from VSEPR domains to hybridization:</p>
+
+    <ul>
+      <li>2 domains → $sp$ (linear)</li>
+      <li>3 domains → $sp^2$ (trigonal planar, including bent with one lone pair)</li>
+      <li>4 domains → $sp^3$ (tetrahedral, including pyramidal/bent)</li>
+      <li>5 or 6 domains → "hypervalent" territory, traditionally $sp^3d$ or $sp^3d^2$, but the $d$-orbital picture is out of favor; it's better to think of these as multicenter bonds. (See <a href="./quantum-chemistry.html">quantum chemistry</a>.)</li>
+    </ul>
+
+    <div class="problem-set" data-topic="chem-bond-geometry"></div>
+
+    <!-- ========================================================== -->
+    <h2 id="polarity">8. Bond polarity and dipole moments</h2>
+
+    <p>If the two atoms in a bond have different electronegativities, the shared electrons spend more time near the more electronegative one. That atom picks up a partial negative charge ($\delta^-$) and the other picks up a partial positive charge ($\delta^+$). The bond is <strong>polar covalent</strong>, and the separation of charge over the bond length creates a <strong>dipole moment</strong>.</p>
+
+    <div class="math-display">$$\vec\mu = q\, \vec r.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Bond dipole moment</p>
+      <dl>
+        <dt>$\vec\mu$</dt><dd>The dipole moment vector, pointing from the partial-positive end to the partial-negative end. Units: debyes (D), $1$ D $\approx 3.336\times 10^{-30}$ C·m.</dd>
+        <dt>$q$</dt><dd>Magnitude of the partial charge on each atom (a small fraction of $e$).</dd>
+        <dt>$\vec r$</dt><dd>The vector from positive to negative end. Its length is the bond length.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Convention wars.</strong> Physicists often take $\vec\mu$ from $-$ to $+$; chemists almost always take it from $+$ to $-$. Both give the same magnitude; signs differ. This page uses the chemistry convention.</p>
+    </div>
+
+    <p>For a polyatomic molecule, the total dipole moment is the vector sum of the individual bond dipoles. This is where geometry matters:</p>
+
+    <ul>
+      <li><strong>CO$_2$</strong> has two strongly polar C=O bonds but they point in opposite directions along the same line. They cancel, and CO$_2$ has $\mu = 0$ — it's a nonpolar molecule. That's why it's a poor greenhouse absorber at the symmetric stretch (IR-inactive) and only the bending and asymmetric-stretch modes catch infrared light.</li>
+      <li><strong>H$_2$O</strong> also has two polar O-H bonds, but the molecule is bent at 104.5°. The bond dipoles don't cancel; they add up to a substantial molecular dipole $\mu \approx 1.85$ D. That's why water is such a good solvent for ionic compounds.</li>
+      <li><strong>CH$_4$</strong> has four weakly polar C-H bonds pointed at tetrahedral corners. They cancel exactly by symmetry, so methane is nonpolar.</li>
+      <li><strong>NH$_3$</strong> has three polar N-H bonds in a pyramidal arrangement plus a lone pair on nitrogen; the dipole is $\mu \approx 1.47$ D, pointing away from the nitrogen along the pyramid axis.</li>
+    </ul>
+
+    <h3>Worked example: the polarity of HCl</h3>
+
+    <p>HCl has a bond length of $127.5$ pm and an experimental dipole moment of $1.08$ D. What fraction of an elementary charge is transferred?</p>
+
+    <ol>
+      <li>$1.08$ D $= 1.08 \times 3.336\times 10^{-30}$ C·m $= 3.60\times 10^{-30}$ C·m.</li>
+      <li>$q = \mu / r = 3.60\times 10^{-30} / 1.275\times 10^{-10} = 2.83\times 10^{-20}$ C.</li>
+      <li>In units of $e$: $q/e = 2.83\times 10^{-20} / 1.602\times 10^{-19} \approx 0.177$.</li>
+    </ol>
+
+    <p>So about 18% of a full charge is transferred — the bond is 18% ionic, 82% covalent in character. That single-digit percentage is the full story behind "polar covalent" and maps cleanly onto the Pauling $\Delta\chi = 3.16 - 2.20 = 0.96$ rule of thumb.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="imf">9. Intermolecular forces</h2>
+
+    <p>So far everything has been about what holds a single molecule together. Equally important: what holds a <em>collection</em> of molecules together. These are called <strong>intermolecular forces</strong> (IMFs), and they set the phase behavior of matter — whether something is a gas, liquid, or solid at a given temperature.</p>
+
+    <p>IMFs are a whole order of magnitude weaker than real bonds (think $1$–$40$ kJ/mol, compared to $200$–$1000$ for a covalent bond), but they're what makes water boil at 100°C instead of $-80$, what makes oil refuse to mix with water, and what makes a drug lodge in its target protein. In order of increasing strength:</p>
+
+    <h3>London dispersion (van der Waals)</h3>
+
+    <p>Every atom, even a noble gas, has an electron cloud that instantaneously fluctuates. Those instantaneous fluctuations induce correlated fluctuations in a nearby atom, and the two transient dipoles attract each other. The energy of this <strong>dispersion</strong> attraction falls off as $1/r^6$:</p>
+
+    <div class="math-display">$$U_{\text{disp}}(r) = -\frac{C_6}{r^6}.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">London dispersion energy</p>
+      <dl>
+        <dt>$U_\text{disp}$</dt><dd>Attractive energy between two neutral, non-polar particles separated by distance $r$.</dd>
+        <dt>$C_6$</dt><dd>A positive constant depending on the polarizability of each particle. Bigger atoms with more electrons have larger $C_6$, meaning stronger dispersion.</dd>
+        <dt>$r^{-6}$</dt><dd>Very short range — doubling the distance drops the energy by a factor of 64. Only nearest neighbors matter.</dd>
+      </dl>
+      <p class="mg-why"><strong>Why it matters.</strong> Dispersion is why liquid nitrogen exists at all, why geckos stick to walls (billions of tiny contacts), and why long alkanes boil at higher temperatures than short ones. Pentane is a liquid; methane is a gas; the only difference is more dispersion contacts in the bigger molecule.</p>
+    </div>
+
+    <h3>Dipole-dipole</h3>
+
+    <p>Two polar molecules orient their $\delta^+$ and $\delta^-$ ends toward each other. This dipole-dipole attraction is stronger than dispersion for molecules of similar size and falls off as $1/r^3$ between fixed dipoles. For freely rotating molecules, thermal averaging gives an effective $1/r^6$ dependence — still dispersion-like in range, but with a prefactor proportional to $\mu_1^2\mu_2^2$.</p>
+
+    <h3>Hydrogen bonding</h3>
+
+    <p>A special, extra-strong case of dipole-dipole. When hydrogen is bonded to a very electronegative atom (F, O, or N), the H bears a large $\delta^+$ and is small enough to get very close to the lone pairs of a neighboring F, O, or N. The result is a <strong>hydrogen bond</strong>: about $5$–$40$ kJ/mol, with a strong directionality preference (the H$\cdots$A angle likes to be near 180°).</p>
+
+    <p>Hydrogen bonds are why:</p>
+    <ul>
+      <li><strong>Water</strong> is liquid at room temperature. Each H$_2$O molecule can donate two and accept two H-bonds, building a three-dimensional network. The extra energy needed to break it out of the network is why water boils so high.</li>
+      <li><strong>Ice floats.</strong> The open hexagonal H-bonded lattice is <em>less</em> dense than liquid water, where molecules can tumble closer together.</li>
+      <li><strong>DNA has base pairing.</strong> Adenine-thymine is two H-bonds, guanine-cytosine is three. Those specific geometries are why the genetic code copies cleanly.</li>
+      <li><strong>Proteins fold.</strong> $\alpha$-helices and $\beta$-sheets are stabilized by the exact same H-bond between a backbone carbonyl oxygen and an amide N-H.</li>
+    </ul>
+
+    <h3>Ion-dipole</h3>
+
+    <p>When an ion sits next to a polar molecule, the ion attracts the appropriately oriented end of the dipole. Ion-dipole interactions are what dissolve salt in water: each Na$^+$ gets surrounded by water molecules pointed $\delta^-$ (oxygen) end toward it; each Cl$^-$ gets surrounded by water molecules pointed $\delta^+$ (hydrogen) end toward it. That "hydration shell" is strong enough to overcome the lattice energy of NaCl, and the entropy gain of dispersing the ions seals the deal.</p>
+
+    <div class="callout good">
+      <div class="label">THE IMF HIERARCHY</div>
+      <p>Ion-ion (covalent bond $\approx$ ion-ion crystal, hundreds of kJ/mol). Then ion-dipole ($\sim 40$ kJ/mol). Then hydrogen bonds ($5$–$40$). Then dipole-dipole ($\sim 5$–$25$). Then dispersion ($0.1$–$10$, but scales with molecule size). Boiling points, melting points, solubility, viscosity, and drug binding are all determined by which of these dominate.</p>
+    </div>
+
+    <div class="problem-set" data-topic="chem-bond-imf"></div>
+
+    <!-- ========================================================== -->
+    <h2 id="code">10. Bonding in code</h2>
+
+    <p>Three small calculations. The first computes formal charges from a Lewis-style inventory. The second computes a total dipole moment by adding bond-dipole vectors. The third compares boiling points of a family of compounds to their dispersion-force proxy (molecular mass or polarizability).</p>
+
+    <div class="code-tabs" id="ct-bond">
+      <div class="ct-header">
+        <button class="ct-tab active" data-tab="np">NumPy</button>
+        <button class="ct-tab" data-tab="py">Plain Python</button>
+        <span class="ct-label">bonding primitives</span>
+      </div>
+
+      <div class="ct-panel active" data-tab="np"><pre><code><span class="kw">import</span> numpy <span class="kw">as</span> np
+
+<span class="cmt"># ---------- 1. Formal charge from (V, L, B) ----------</span>
+<span class="kw">def</span> <span class="fn">formal_charge</span>(valence, lone, bonding):
+    <span class="cmt"># FC = V - L - B/2</span>
+    <span class="kw">return</span> valence - lone - bonding // <span class="num">2</span>
+
+<span class="cmt"># CO2: central C with two double bonds, no lone pairs</span>
+<span class="cmt">#   V=4, L=0, B=8 (four pairs, each double bond = 4 shared e-)</span>
+<span class="fn">print</span>(<span class="str">f"FC(C in CO2)  = {formal_charge(4, 0, 8)}"</span>)   <span class="cmt"># 0</span>
+<span class="cmt"># Each O: V=6, L=4 (two lone pairs), B=4</span>
+<span class="fn">print</span>(<span class="str">f"FC(O in CO2)  = {formal_charge(6, 4, 4)}"</span>)   <span class="cmt"># 0</span>
+
+<span class="cmt"># NH4+: central N with four single bonds, no lone pairs</span>
+<span class="cmt">#   V=5, L=0, B=8</span>
+<span class="fn">print</span>(<span class="str">f"FC(N in NH4+) = {formal_charge(5, 0, 8)}"</span>)   <span class="cmt"># +1</span>
+
+<span class="cmt"># ---------- 2. Total molecular dipole ----------</span>
+<span class="kw">def</span> <span class="fn">total_dipole</span>(bond_vectors_A, mu_per_bond_D):
+    <span class="cmt"># bond_vectors_A: (n, 3) unit vectors from central atom toward each bonded atom</span>
+    <span class="cmt"># mu_per_bond_D : scalar dipole magnitude of each bond in debyes</span>
+    v = np.<span class="fn">asarray</span>(bond_vectors_A, dtype=<span class="kw">float</span>)
+    v = v / np.<span class="fn">linalg</span>.<span class="fn">norm</span>(v, axis=<span class="num">1</span>, keepdims=<span class="kw">True</span>)
+    total = (mu_per_bond_D * v).<span class="fn">sum</span>(axis=<span class="num">0</span>)
+    <span class="kw">return</span> np.<span class="fn">linalg</span>.<span class="fn">norm</span>(total)
+
+<span class="cmt"># CO2: two C=O bonds pointing exactly opposite; should cancel.</span>
+co2 = [[<span class="num">1</span>,<span class="num">0</span>,<span class="num">0</span>], [-<span class="num">1</span>,<span class="num">0</span>,<span class="num">0</span>]]
+<span class="fn">print</span>(<span class="str">f"CO2 dipole  = {total_dipole(co2, 2.3):.2f} D"</span>)   <span class="cmt"># 0.00</span>
+
+<span class="cmt"># H2O: two O-H bonds at 104.5 degrees</span>
+a = np.<span class="fn">deg2rad</span>(<span class="num">104.5</span> / <span class="num">2</span>)
+oh = [[np.<span class="fn">sin</span>(a),  np.<span class="fn">cos</span>(a), <span class="num">0</span>],
+      [-np.<span class="fn">sin</span>(a), np.<span class="fn">cos</span>(a), <span class="num">0</span>]]
+<span class="fn">print</span>(<span class="str">f"H2O dipole  = {total_dipole(oh, 1.5):.2f} D"</span>)   <span class="cmt"># ~1.83</span>
+
+<span class="cmt"># ---------- 3. Boiling point vs. dispersion proxy ----------</span>
+<span class="cmt"># Noble gases: higher molar mass -> more polarizability -> higher bp</span>
+gases   = [<span class="str">"He"</span>, <span class="str">"Ne"</span>, <span class="str">"Ar"</span>, <span class="str">"Kr"</span>, <span class="str">"Xe"</span>]
+mmass   = [<span class="num">4.0</span>, <span class="num">20.2</span>, <span class="num">39.9</span>, <span class="num">83.8</span>, <span class="num">131.3</span>]      <span class="cmt"># g/mol</span>
+bp_K    = [<span class="num">4.2</span>, <span class="num">27.1</span>, <span class="num">87.3</span>, <span class="num">119.8</span>, <span class="num">165.0</span>]     <span class="cmt"># boiling point, K</span>
+<span class="cmt"># A crude log fit: bp ~ a * log(M) + b</span>
+coeffs = np.<span class="fn">polyfit</span>(np.<span class="fn">log</span>(mmass), bp_K, <span class="num">1</span>)
+<span class="fn">print</span>(<span class="str">f"fit slope = {coeffs[0]:.1f} K per log(M)"</span>)
+</code></pre></div>
+
+      <div class="ct-panel" data-tab="py"><pre><code><span class="kw">import</span> math
+
+<span class="cmt"># Formal charge without NumPy.</span>
+<span class="kw">def</span> <span class="fn">formal_charge</span>(V, L, B):
+    <span class="kw">return</span> V - L - B // <span class="num">2</span>
+
+<span class="cmt"># Ozone center O in O=O-O Lewis form: V=6, L=2, B=6 -> FC = +1</span>
+<span class="fn">print</span>(<span class="str">f"center O in O3 = {formal_charge(6, 2, 6):+d}"</span>)
+<span class="cmt"># Terminal single-bonded O: V=6, L=6, B=2 -> FC = -1</span>
+<span class="fn">print</span>(<span class="str">f"term   O in O3 = {formal_charge(6, 6, 2):+d}"</span>)
+
+<span class="cmt"># Bond angle from dot product of unit vectors</span>
+<span class="kw">def</span> <span class="fn">angle_deg</span>(u, v):
+    d = <span class="fn">sum</span>(a * b <span class="kw">for</span> a, b <span class="kw">in</span> <span class="fn">zip</span>(u, v))
+    <span class="kw">return</span> math.<span class="fn">degrees</span>(math.<span class="fn">acos</span>(<span class="fn">max</span>(-<span class="num">1.0</span>, <span class="fn">min</span>(<span class="num">1.0</span>, d))))
+
+<span class="cmt"># Tetrahedral H-C-H angle from methane coordinates:</span>
+<span class="cmt"># pick two of the four corners of a cube at (1,1,1),(1,-1,-1),(-1,1,-1),(-1,-1,1)</span>
+<span class="kw">def</span> <span class="fn">norm</span>(v):
+    m = math.<span class="fn">sqrt</span>(<span class="fn">sum</span>(x * x <span class="kw">for</span> x <span class="kw">in</span> v))
+    <span class="kw">return</span> [x / m <span class="kw">for</span> x <span class="kw">in</span> v]
+
+a = <span class="fn">norm</span>([ <span class="num">1</span>,  <span class="num">1</span>,  <span class="num">1</span>])
+b = <span class="fn">norm</span>([ <span class="num">1</span>, -<span class="num">1</span>, -<span class="num">1</span>])
+<span class="fn">print</span>(<span class="str">f"tetrahedral angle = {angle_deg(a, b):.2f} deg"</span>)  <span class="cmt"># 109.47</span>
+
+<span class="cmt"># Convert a dipole moment in debye to partial charge in units of e</span>
+<span class="kw">def</span> <span class="fn">partial_charge</span>(mu_D, bond_length_pm):
+    mu_SI = mu_D * <span class="num">3.336e-30</span>               <span class="cmt"># C*m</span>
+    r_m   = bond_length_pm * <span class="num">1e-12</span>
+    q_C   = mu_SI / r_m
+    <span class="kw">return</span> q_C / <span class="num">1.602e-19</span>              <span class="cmt"># in units of e</span>
+
+<span class="fn">print</span>(<span class="str">f"HCl partial q = {partial_charge(1.08, 127.5):.3f} e"</span>)  <span class="cmt"># ~0.177</span>
+<span class="fn">print</span>(<span class="str">f"HF  partial q = {partial_charge(1.83, 91.7):.3f} e"</span>)   <span class="cmt"># ~0.415</span>
+</code></pre></div>
+    </div>
+
+    <p>Three observations:</p>
+    <ul>
+      <li>Formal charges are a dirt-cheap check on a Lewis structure. Any atom with FC &gt; $|1|$ deserves a second look.</li>
+      <li>The dipole-vector sum is exactly the way you'd compute a net force, which is not an accident — a dipole in an external field is a force problem.</li>
+      <li>Boiling point correlates with polarizability, which in noble gases is a clean function of electron count. For more complex molecules, shape matters too, which is why $n$-pentane boils higher than neopentane even though they have the same formula.</li>
+    </ul>
+
+    <!-- ========================================================== -->
+    <h2 id="summary">11. Cheat sheet</h2>
+
+    <div class="grid">
+      <div class="card">
+        <h4>Formal charge</h4>
+        <p>$\text{FC} = V - L - \tfrac{1}{2} B$.</p>
+        <p class="meta">Pick the Lewis structure with FCs closest to 0.</p>
+      </div>
+      <div class="card">
+        <h4>VSEPR shapes</h4>
+        <p>2→linear, 3→planar, 4→tetrahedral, 5→TBP, 6→octahedral.</p>
+        <p class="meta">Lone pairs take extra space.</p>
+      </div>
+      <div class="card">
+        <h4>Hybridization</h4>
+        <p>$sp$ (linear), $sp^2$ (planar), $sp^3$ (tetrahedral).</p>
+        <p class="meta">Count domains on the central atom.</p>
+      </div>
+      <div class="card">
+        <h4>Sigma vs. pi</h4>
+        <p>Single = 1$\sigma$. Double = 1$\sigma$+1$\pi$. Triple = 1$\sigma$+2$\pi$.</p>
+        <p class="meta">$\pi$ bonds lock rotation.</p>
+      </div>
+      <div class="card">
+        <h4>Polarity rule</h4>
+        <p>$\Delta\chi < 0.4$: covalent. $0.4$–$1.7$: polar. $> 1.7$: ionic.</p>
+        <p class="meta">Rough and useful.</p>
+      </div>
+      <div class="card">
+        <h4>Dipole sum</h4>
+        <p>Net $\vec\mu$ = vector sum of bond dipoles.</p>
+        <p class="meta">Symmetry can cancel polar bonds (CO₂, CCl₄).</p>
+      </div>
+      <div class="card">
+        <h4>IMF hierarchy</h4>
+        <p>Ion-dipole &gt; H-bond &gt; dipole-dipole &gt; dispersion.</p>
+        <p class="meta">Sets boiling points and solubility.</p>
+      </div>
+      <div class="card">
+        <h4>Dispersion scaling</h4>
+        <p>$U \sim -C_6/r^6$; $C_6$ grows with polarizability.</p>
+        <p class="meta">Bigger atom → stronger dispersion.</p>
+      </div>
+      <div class="card">
+        <h4>H-bond donors</h4>
+        <p>O-H, N-H, F-H only.</p>
+        <p class="meta">H needs a small electronegative partner.</p>
+      </div>
+      <div class="card">
+        <h4>Bond strength</h4>
+        <p>Typical covalent: 150–1000 kJ/mol. IMFs: 1–40.</p>
+        <p class="meta">Two orders of magnitude separate them.</p>
+      </div>
+    </div>
+
+    <h3>See also</h3>
+    <div class="grid">
+      <div class="card">
+        <h4><a href="./atomic-structure.html">Atomic Structure</a></h4>
+        <p>The orbitals that bond to form molecules come from here. Periodic trends in electronegativity drive everything about polarity.</p>
+      </div>
+      <div class="card">
+        <h4><a href="./thermochemistry.html">Thermochemistry</a></h4>
+        <p>Bond enthalpies feed directly into reaction enthalpies via Hess's law. Breaking bonds costs energy; making them releases it.</p>
+      </div>
+      <div class="card">
+        <h4><a href="../physics/quantum-mechanics.html">Physics: Quantum Mechanics</a></h4>
+        <p>The molecular orbital picture is variational quantum mechanics applied to electrons in a two-center (or many-center) Coulomb potential.</p>
+      </div>
+      <div class="card">
+        <h4><a href="./quantum-chemistry.html">Quantum Chemistry</a></h4>
+        <p>Where the Lewis/VSEPR cartoons stop working and you need Hartree-Fock, DFT, or coupled-cluster methods to get right answers for polar, strained, or hypervalent molecules.</p>
+      </div>
+      <div class="card">
+        <h4><a href="../math/linear-algebra.html">Math: Linear Algebra</a></h4>
+        <p>LCAO is a linear-combination problem. Hybridization is a change of basis. Molecular orbitals are eigenvectors of a matrix Hamiltonian.</p>
+      </div>
+      <div class="card">
+        <h4><a href="./equilibrium.html">Equilibrium</a></h4>
+        <p>Acid strengths come straight from bond polarities and stabilization of conjugate bases — the same bonding ideas, viewed through free energy.</p>
+      </div>
+    </div>
+
+    <div class="bib">
+      <h4>Further reading</h4>
+      <ul>
+        <li>Linus Pauling — <em>The Nature of the Chemical Bond</em> (1939, 1960). The book that built the modern language of bonding, electronegativity, and hybridization. Still the best informal discussion even after 80 years.</li>
+        <li>Peter Atkins and Julio de Paula — <em>Physical Chemistry</em>. Rigorous MO theory, VSEPR, and IMFs with quantitative derivations.</li>
+        <li>Ronald Gillespie and Istvan Hargittai — <em>The VSEPR Model of Molecular Geometry</em> (1991). The definitive treatment of VSEPR and its edge cases.</li>
+        <li>NIST Computational Chemistry Comparison and Benchmark Database — <a href="https://cccbdb.nist.gov/">cccbdb.nist.gov</a>. Computed and experimental bond lengths, angles, and vibrational frequencies for thousands of small molecules.</li>
+        <li>Wikipedia — <a href="https://en.wikipedia.org/wiki/VSEPR_theory">VSEPR theory</a> and <a href="https://en.wikipedia.org/wiki/Hydrogen_bond">Hydrogen bond</a>. Solid, well-referenced overviews.</li>
+      </ul>
+    </div>
+
+    <div class="next-card">
+      <div class="label">NEXT UP</div>
+      <a href="./thermochemistry.html">→ Thermochemistry</a>
+      <p>You now know what bonds are and why they have the shapes and strengths they do. The next question is how much energy is released when they break and reform in a reaction — that's thermochemistry, built on bond enthalpies you can look up and Hess's law you can calculate with.</p>
+    </div>
+
+  </article>
+</div>
+
+<script>
+// =========================================================
+// Code tabs
+document.querySelectorAll('.code-tabs').forEach(root => {
+  const tabs = root.querySelectorAll('.ct-tab');
+  const panels = root.querySelectorAll('.ct-panel');
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const target = tab.getAttribute('data-tab');
+      tabs.forEach(t => t.classList.toggle('active', t === tab));
+      panels.forEach(p => p.classList.toggle('active', p.getAttribute('data-tab') === target));
+    });
+  });
+});
+
+// =========================================================
+// Molecular shape explorer
+(function () {
+  const svg = document.getElementById('molSvg');
+  if (!svg) return;
+  const NS = 'http://www.w3.org/2000/svg';
+  const sel = document.getElementById('molSel');
+  const label = document.getElementById('molLabel');
+  const caption = document.getElementById('molCaption');
+
+  const W = 720, H = 360;
+  const cx = W / 2, cy = H / 2;
+  const R = 110;
+
+  // Each entry: label, central atom symbol, array of {angle_deg, atom, dist_factor} bonds,
+  // array of lone-pair angles (in degrees on the same 2D projection),
+  // and a short caption explaining the shape.
+  const MOL = {
+    co2: {
+      name: 'CO₂',
+      center: 'C',
+      bonds: [
+        {ang:   0, atom: 'O'},
+        {ang: 180, atom: 'O'},
+      ],
+      lones: [],
+      caption: 'Linear, 180°. The two C=O bond dipoles cancel, so the molecule is nonpolar overall.',
+    },
+    bf3: {
+      name: 'BF₃',
+      center: 'B',
+      bonds: [
+        {ang:  90, atom: 'F'},
+        {ang: 210, atom: 'F'},
+        {ang: 330, atom: 'F'},
+      ],
+      lones: [],
+      caption: 'Trigonal planar, 120°. Three bond domains, no lone pairs. Molecule is flat and symmetric.',
+    },
+    so2: {
+      name: 'SO₂',
+      center: 'S',
+      bonds: [
+        {ang:  60, atom: 'O'},
+        {ang: 120, atom: 'O'},
+      ],
+      lones: [ {ang: 270} ],
+      caption: 'Bent, ~119°. Three domains (two O, one lone pair) give trigonal-planar electron geometry but a bent molecular shape.',
+    },
+    ch4: {
+      name: 'CH₄',
+      center: 'C',
+      bonds: [
+        {ang:  30, atom: 'H'},
+        {ang: 150, atom: 'H'},
+        {ang: 250, atom: 'H'},
+        {ang: 290, atom: 'H'},
+      ],
+      lones: [],
+      caption: 'Tetrahedral, 109.5°. Four equivalent C-H bonds at tetrahedral corners — methane, ammonium, the backbone of every alkane.',
+    },
+    nh3: {
+      name: 'NH₃',
+      center: 'N',
+      bonds: [
+        {ang:  60, atom: 'H'},
+        {ang: 120, atom: 'H'},
+        {ang: 270, atom: 'H'},
+      ],
+      lones: [ {ang: 330} ],
+      caption: 'Trigonal pyramidal, ~107°. The lone pair compresses the H-N-H angle below tetrahedral.',
+    },
+    h2o: {
+      name: 'H₂O',
+      center: 'O',
+      bonds: [
+        {ang:  60, atom: 'H'},
+        {ang: 120, atom: 'H'},
+      ],
+      lones: [ {ang: 240}, {ang: 300} ],
+      caption: 'Bent, 104.5°. Two lone pairs on oxygen push the O-H bonds together, driving the dipole and the hydrogen bonding that makes water water.',
+    },
+    pcl5: {
+      name: 'PCl₅',
+      center: 'P',
+      bonds: [
+        {ang:  90, atom: 'Cl'},
+        {ang: 270, atom: 'Cl'},
+        {ang:  30, atom: 'Cl'},
+        {ang: 150, atom: 'Cl'},
+        {ang: 210, atom: 'Cl'},
+      ],
+      lones: [],
+      caption: 'Trigonal bipyramidal. Two axial (90°/270°) and three equatorial (30°/150°/210°) positions, angles 90° and 120°.',
+    },
+    sf6: {
+      name: 'SF₆',
+      center: 'S',
+      bonds: [
+        {ang:   0, atom: 'F'},
+        {ang:  60, atom: 'F'},
+        {ang: 120, atom: 'F'},
+        {ang: 180, atom: 'F'},
+        {ang: 240, atom: 'F'},
+        {ang: 300, atom: 'F'},
+      ],
+      lones: [],
+      caption: 'Octahedral, all angles 90°. Six equivalent S-F bonds; projection shows them spread at 60° for visibility.',
+    },
+  };
+
+  function draw() {
+    const key = sel.value;
+    const m = MOL[key];
+    if (!m) return;
+    label.textContent = m.name;
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+
+    // background
+    const bg = document.createElementNS(NS, 'rect');
+    bg.setAttribute('x', 0); bg.setAttribute('y', 0);
+    bg.setAttribute('width', W); bg.setAttribute('height', H);
+    bg.setAttribute('fill', '#0a0d12');
+    svg.appendChild(bg);
+
+    // faint grid
+    for (let i = 0; i < W; i += 40) {
+      const ln = document.createElementNS(NS, 'line');
+      ln.setAttribute('x1', i); ln.setAttribute('y1', 0);
+      ln.setAttribute('x2', i); ln.setAttribute('y2', H);
+      ln.setAttribute('stroke', '#1a2030'); ln.setAttribute('stroke-width', 1);
+      svg.appendChild(ln);
+    }
+    for (let i = 0; i < H; i += 40) {
+      const ln = document.createElementNS(NS, 'line');
+      ln.setAttribute('x1', 0); ln.setAttribute('y1', i);
+      ln.setAttribute('x2', W); ln.setAttribute('y2', i);
+      ln.setAttribute('stroke', '#1a2030'); ln.setAttribute('stroke-width', 1);
+      svg.appendChild(ln);
+    }
+
+    // bonds first (under the atoms)
+    m.bonds.forEach(b => {
+      const th = b.ang * Math.PI / 180;
+      const x2 = cx + R * Math.cos(th);
+      const y2 = cy - R * Math.sin(th);
+      const ln = document.createElementNS(NS, 'line');
+      ln.setAttribute('x1', cx); ln.setAttribute('y1', cy);
+      ln.setAttribute('x2', x2); ln.setAttribute('y2', y2);
+      ln.setAttribute('stroke', '#22d3ee');
+      ln.setAttribute('stroke-width', 3);
+      ln.setAttribute('stroke-linecap', 'round');
+      svg.appendChild(ln);
+    });
+
+    // lone pairs as soft pink clouds
+    m.lones.forEach(lp => {
+      const th = lp.ang * Math.PI / 180;
+      const x2 = cx + 0.6 * R * Math.cos(th);
+      const y2 = cy - 0.6 * R * Math.sin(th);
+      const c = document.createElementNS(NS, 'circle');
+      c.setAttribute('cx', x2);
+      c.setAttribute('cy', y2);
+      c.setAttribute('r', 22);
+      c.setAttribute('fill', '#f472b6');
+      c.setAttribute('fill-opacity', 0.18);
+      c.setAttribute('stroke', '#f472b6');
+      c.setAttribute('stroke-width', 1.5);
+      c.setAttribute('stroke-dasharray', '3 3');
+      svg.appendChild(c);
+      // two small dots to hint at a lone pair
+      for (let k = -1; k <= 1; k += 2) {
+        const d = document.createElementNS(NS, 'circle');
+        d.setAttribute('cx', x2 + 4 * k);
+        d.setAttribute('cy', y2);
+        d.setAttribute('r', 2.5);
+        d.setAttribute('fill', '#f472b6');
+        svg.appendChild(d);
+      }
+    });
+
+    // central atom
+    const cc = document.createElementNS(NS, 'circle');
+    cc.setAttribute('cx', cx); cc.setAttribute('cy', cy);
+    cc.setAttribute('r', 26);
+    cc.setAttribute('fill', '#22d3ee');
+    cc.setAttribute('stroke', '#7c5cff');
+    cc.setAttribute('stroke-width', 2);
+    svg.appendChild(cc);
+    const ct = document.createElementNS(NS, 'text');
+    ct.setAttribute('x', cx); ct.setAttribute('y', cy + 5);
+    ct.setAttribute('text-anchor', 'middle');
+    ct.setAttribute('fill', '#0a0d12');
+    ct.setAttribute('font-family', 'ui-monospace,monospace');
+    ct.setAttribute('font-size', 16);
+    ct.setAttribute('font-weight', 700);
+    ct.textContent = m.center;
+    svg.appendChild(ct);
+
+    // bonded atoms
+    m.bonds.forEach(b => {
+      const th = b.ang * Math.PI / 180;
+      const x2 = cx + R * Math.cos(th);
+      const y2 = cy - R * Math.sin(th);
+      const c = document.createElementNS(NS, 'circle');
+      c.setAttribute('cx', x2); c.setAttribute('cy', y2);
+      c.setAttribute('r', 20);
+      c.setAttribute('fill', '#e4ecf5');
+      c.setAttribute('stroke', '#22d3ee');
+      c.setAttribute('stroke-width', 2);
+      svg.appendChild(c);
+      const t = document.createElementNS(NS, 'text');
+      t.setAttribute('x', x2); t.setAttribute('y', y2 + 4);
+      t.setAttribute('text-anchor', 'middle');
+      t.setAttribute('fill', '#0a0d12');
+      t.setAttribute('font-family', 'ui-monospace,monospace');
+      t.setAttribute('font-size', 14);
+      t.setAttribute('font-weight', 700);
+      t.textContent = b.atom;
+      svg.appendChild(t);
+    });
+
+    caption.textContent = m.caption;
+  }
+
+  sel.addEventListener('change', draw);
+  draw();
+})();
+</script>
+<script defer src="../problem-set.js"></script>
+<script defer src="bonding-problems.js"></script>
+<script defer src="../search-index.js"></script>
+<script defer src="../search.js"></script>
+</body>
+</html>

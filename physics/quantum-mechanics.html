@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quantum Mechanics — Deep Dive</title>
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError: false});"></script>
+</head>
+<body>
+<div id="tooltip"></div>
+
+<nav class="topic-nav">
+  <a class="back" href="./index.html">← Physics</a>
+  <div class="crumb">Physics / <span class="topic-name">Quantum Mechanics</span></div>
+</nav>
+
+<div class="topic-layout">
+  <aside class="topic-toc">
+    <h4>ON THIS PAGE</h4>
+    <ul>
+      <li><a href="#why">1. Why quantum mechanics exists</a></li>
+      <li><a href="#vocab">2. Vocabulary cheat sheet</a></li>
+      <li><a href="#state">3. State vectors and Dirac notation</a></li>
+      <li><a href="#ops">4. Operators, eigenvalues, measurement</a></li>
+      <li><a href="#schrod">5. The Schrödinger equation</a></li>
+      <li><a href="#canonical">6. Canonical systems</a></li>
+      <li><a href="#demo">7. Interactive: particle in a box</a></li>
+      <li><a href="#uncert">8. The uncertainty principle</a></li>
+      <li><a href="#spin">9. Spin and qubits</a></li>
+      <li><a href="#entangle">10. Entanglement and Bell's theorem</a></li>
+      <li><a href="#code">11. Quantum mechanics in code</a></li>
+      <li><a href="#summary">12. Cheat sheet</a></li>
+    </ul>
+  </aside>
+
+  <article class="topic-content">
+    <h1>Quantum Mechanics</h1>
+    <p class="subtitle">Nature, at small enough scales, does not run on knobs and positions. It runs on <em>amplitudes</em> — complex numbers whose squared magnitudes are probabilities. Getting comfortable with that shift is the whole job. Once you have it, everything from the hydrogen spectrum to qubits to the photons in your phone's camera snaps into focus.</p>
+    <div class="meta-tags">
+      <span>Prereq: <a href="../math/linear-algebra.html">linear algebra</a>, <a href="../math/calculus.html">calculus</a>, <a href="../math/complex-numbers.html">complex numbers</a></span>
+      <span>Read time: ~45 min</span>
+      <span>Interactive figures: 1</span>
+      <span>Code: NumPy, Python</span>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="why">1. Why quantum mechanics exists</h2>
+
+    <p>By 1900, classical physics was so complete that the University of Munich told young Max Planck not to study it because "all the important problems have been solved." Four problems, left unsolved, turned out to be the bitter ones. Each one, taken seriously, broke classical physics open.</p>
+
+    <p><strong>Blackbody radiation.</strong> Heat a chunk of iron in a forge. It glows — first dull red, then orange, then yellow-white. The spectrum of the glow depends only on temperature, not material. Classical physics predicted that hot objects should radiate infinite energy at high frequencies (the "ultraviolet catastrophe"). Planck, in 1900, fit the observed spectrum by assuming — reluctantly, and as "an act of despair" — that light comes off in discrete chunks of energy $E = h f$, where $h$ is a new constant he had to invent.</p>
+
+    <p><strong>The photoelectric effect.</strong> Shine light on a metal plate. Above a certain frequency threshold, electrons pop off. Below that threshold, nothing happens no matter how bright the light. Classical electromagnetism predicted that bright enough light should always eject electrons. Einstein, in 1905 (the same year as special relativity), explained the data by taking Planck's chunks literally: each photon is a <em>particle</em> with energy $h f$, and you need a single photon above threshold to kick out an electron. He won his Nobel for this, not for relativity.</p>
+
+    <p><strong>Atomic spectra.</strong> When you run an electric current through hydrogen gas, it emits light at very specific wavelengths — a few sharp lines, not a continuous spectrum. Every element has its own fingerprint of spectral lines. Classical mechanics had no way to explain why atoms should emit only at discrete frequencies. Bohr, in 1913, guessed that electrons live on discrete energy levels and jump between them, emitting a photon whose energy equals the gap. It was a guess, but the numerical fit for hydrogen was perfect.</p>
+
+    <p><strong>Electron diffraction.</strong> In 1927, Davisson and Germer bounced electrons off a nickel crystal and found interference patterns — electrons were behaving like waves. That clinched a weird hypothesis de Broglie had made in 1924: every particle has a wavelength $\lambda = h/p$, where $p$ is its momentum. Particles were waves. Waves were particles. The old categories did not survive.</p>
+
+    <p>Between 1925 and 1927, Heisenberg, Schrödinger, Born, Dirac, and Pauli put together a new theory — not a patchwork, an actual theory — that took the amplitude-and-probability picture seriously. By 1928 it had explained the hydrogen spectrum to astonishing precision. By the 1940s it had become the most accurately tested theory in physics. Today's prediction of the electron's magnetic moment from quantum electrodynamics agrees with experiment to about 12 decimal places.</p>
+
+    <div class="callout">
+      <div class="label">THE PUNCHLINE</div>
+      <p>The state of a quantum system is a vector in a complex vector space. Physical observables are Hermitian operators on that space. Measuring an observable gives you one of its eigenvalues, at random, with probabilities determined by the state vector. Between measurements, the state vector evolves smoothly and reversibly according to the Schrödinger equation. That list is unreasonably short, and unreasonably successful.</p>
+    </div>
+
+    <p>Why should you care in 2026? Three immediate reasons:</p>
+
+    <ul>
+      <li><strong>Semiconductors and lasers.</strong> Every transistor in every phone, every LED, every laser pointer works because electrons in solids live in bands with energy gaps that only quantum mechanics explains. A modern economy is built on band structures.</li>
+      <li><strong>Chemistry and materials.</strong> The shape of a protein, the strength of steel, the color of a dye — all of it is electron wave functions doing their thing. Drug design and battery engineering are applied quantum mechanics.</li>
+      <li><strong>Quantum computing.</strong> Qubits, entanglement, and superposition are the raw material of an industry that has gone from academic curiosity to Google, IBM, and dozens of startups building devices you can run code on.</li>
+    </ul>
+
+    <p>This page will teach you the conceptual core. We'll use a little linear algebra and a little calculus; we'll assume you know what complex numbers are; and we'll keep the philosophy to a minimum. The philosophy arguments are real, but the math is the same regardless of which camp you sit in.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="vocab">2. Vocabulary cheat sheet</h2>
+
+    <table class="rank-table">
+      <thead><tr><th>Symbol</th><th>Read as</th><th>Means</th></tr></thead>
+      <tbody>
+        <tr><td>$|\psi\rangle$</td><td>"ket psi"</td><td>A state vector — a column vector in a complex Hilbert space. Contains everything knowable about the system.</td></tr>
+        <tr><td>$\langle\phi|$</td><td>"bra phi"</td><td>The Hermitian conjugate of a ket. A row vector with complex-conjugated entries.</td></tr>
+        <tr><td>$\langle\phi|\psi\rangle$</td><td>"bracket phi psi"</td><td>The inner product — a complex number. Its magnitude squared is a probability amplitude.</td></tr>
+        <tr><td>$\hat{A}$</td><td>"A hat"</td><td>An operator (e.g. position, momentum, Hamiltonian). Observables are Hermitian: $\hat{A}^\dagger = \hat{A}$.</td></tr>
+        <tr><td>$\hat{H}$</td><td>"H hat"</td><td>The Hamiltonian — total-energy operator. Governs time evolution.</td></tr>
+        <tr><td>$\hbar$</td><td>"h-bar"</td><td>Reduced Planck constant: $h / (2\pi) \approx 1.055 \times 10^{-34} \ \text{J s}$.</td></tr>
+        <tr><td>$\psi(x)$</td><td>"wave function"</td><td>$\langle x | \psi \rangle$ — the amplitude to find the particle at position $x$.</td></tr>
+        <tr><td>$|\psi(x)|^2$</td><td>"probability density"</td><td>Probability per unit length (or volume) of finding the particle at $x$.</td></tr>
+        <tr><td>$[\hat A, \hat B]$</td><td>"commutator of A and B"</td><td>$\hat A \hat B - \hat B \hat A$. Zero if the operators commute; nonzero is where the weirdness lives.</td></tr>
+      </tbody>
+    </table>
+
+    <!-- ========================================================== -->
+    <h2 id="state">3. State vectors and Dirac notation</h2>
+
+    <p>Classical mechanics describes a particle by its position and momentum — six real numbers if it's in three dimensions. Quantum mechanics describes a system by a <strong>state vector</strong>, a unit-length vector in a complex vector space. Dirac introduced a notation that is a little weird the first time and a lot cleaner every time after that. A state is written</p>
+
+    <div class="math-display">$$|\psi\rangle \in \mathcal{H}.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">A quantum state is a vector</p>
+      <dl>
+        <dt>$|\psi\rangle$</dt><dd>Read "ket psi." It is a column vector whose entries are complex numbers. Think "arrow in a possibly infinite-dimensional space."</dd>
+        <dt>$\mathcal{H}$</dt><dd>A <em>Hilbert space</em> — a complex vector space with an inner product, in which distances converge. For a spin, $\mathcal{H}$ is just $\mathbb{C}^2$. For a particle on a line, it's the space of square-integrable functions on $\mathbb{R}$.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>The key move.</strong> You are not describing "the particle's position." You are describing <em>something</em> from which predicted probabilities can be computed. That something is the state vector. It may live in very high dimensions, and it may be outside your everyday geometric intuition, but the rules of linear algebra apply exactly.</p>
+    </div>
+
+    <p>Every ket $|\psi\rangle$ has a partner called a <strong>bra</strong>, written $\langle\psi|$. The bra is the Hermitian conjugate: transpose the vector and complex-conjugate the entries. Bras and kets combine to form the <strong>inner product</strong>:</p>
+
+    <div class="math-display">$$\langle \phi | \psi \rangle \in \mathbb{C}, \qquad \langle \phi | \psi \rangle = \overline{\langle \psi | \phi \rangle}.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Inner product (bracket)</p>
+      <dl>
+        <dt>$\langle \phi | \psi \rangle$</dt><dd>A complex number. The "overlap" between states $|\phi\rangle$ and $|\psi\rangle$. If the states are orthogonal, it is zero.</dd>
+        <dt>$\overline{\cdot}$</dt><dd>Complex conjugate. Flipping the order of a bracket complex-conjugates the value.</dd>
+        <dt>$\mathbb{C}$</dt><dd>The complex numbers. Amplitudes are complex, not just real.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Born rule preview.</strong> If $|\phi\rangle$ and $|\psi\rangle$ are normalized ($\langle\psi|\psi\rangle = 1$), then the probability of measuring the state $|\psi\rangle$ and finding it in state $|\phi\rangle$ is $|\langle\phi|\psi\rangle|^2$. Amplitudes add, but probabilities come from squared magnitudes — which is why quantum interference looks so weird.</p>
+    </div>
+
+    <p>States can be superposed. Given two states $|0\rangle$ and $|1\rangle$, any combination</p>
+
+    <div class="math-display">$$|\psi\rangle = \alpha |0\rangle + \beta |1\rangle, \qquad |\alpha|^2 + |\beta|^2 = 1,$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Superposition</p>
+      <dl>
+        <dt>$|0\rangle, |1\rangle$</dt><dd>Two basis states — for example, the two spin states of an electron, or the ground and first-excited state of an atom.</dd>
+        <dt>$\alpha, \beta$</dt><dd>Complex numbers, the <em>amplitudes</em>. Not probabilities themselves.</dd>
+        <dt>$|\alpha|^2 + |\beta|^2 = 1$</dt><dd>The normalization condition. It says the total probability of getting either outcome is $1$.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Not "both at once."</strong> Popular science likes to say a superposed qubit is "0 and 1 at the same time." That's misleading. It is in a state that is neither definitely 0 nor definitely 1, and whose measurement outcome is governed by the amplitudes. Closer to "the direction of this arrow in 2D points somewhere between the x and y axes."</p>
+    </div>
+
+    <p>Two more pieces of notation. An <strong>outer product</strong> $|\psi\rangle\langle\phi|$ is a linear operator — feed it a ket, get back a ket scaled by $\langle\phi|$ applied to the input. A <strong>projection operator</strong> $|\phi\rangle\langle\phi|$ projects onto the direction of $|\phi\rangle$. The identity operator on any Hilbert space can be written $\sum_n |n\rangle\langle n|$ for any orthonormal basis $\{|n\rangle\}$; this is the <em>completeness relation</em> and it is how sums and integrals get inserted in calculations.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="ops">4. Operators, eigenvalues, and measurement</h2>
+
+    <p>An <strong>observable</strong> — something you can measure — is represented by a <strong>Hermitian operator</strong> on the Hilbert space. Hermitian means $\hat A^\dagger = \hat A$: the operator equals its own conjugate transpose. Hermitian operators have real eigenvalues, which is exactly the property you want for things you can read off a voltmeter.</p>
+
+    <p>The measurement rules (collectively the <em>Born rules</em>) are these. Let $\hat A$ be an observable with eigenstates $|a_n\rangle$ and corresponding eigenvalues $a_n$: $\hat A |a_n\rangle = a_n |a_n\rangle$. Suppose the system is in state $|\psi\rangle$. Expand in the eigenbasis:</p>
+
+    <div class="math-display">$$|\psi\rangle = \sum_n c_n |a_n\rangle, \qquad c_n = \langle a_n | \psi \rangle.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Expanding a state in an eigenbasis</p>
+      <dl>
+        <dt>$|a_n\rangle$</dt><dd>An eigenstate of $\hat A$ with eigenvalue $a_n$.</dd>
+        <dt>$c_n$</dt><dd>The complex amplitude for finding the system in state $|a_n\rangle$. Computed by projecting $|\psi\rangle$ onto $|a_n\rangle$.</dd>
+        <dt>$\sum_n$</dt><dd>Sum over all eigenstates — or integral, if the spectrum is continuous.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why expand?</strong> Because in the eigenbasis, the operator's action is trivial: multiply each coefficient by its eigenvalue. Every computation becomes easier once you pick the right basis, and "the right basis" is usually the eigenbasis of whatever operator you want to apply.</p>
+    </div>
+
+    <p>Now measure $\hat A$. The rule is:</p>
+
+    <ul>
+      <li>The measurement yields one of the eigenvalues $a_n$ — never anything else.</li>
+      <li>The probability of getting $a_n$ is $|c_n|^2 = |\langle a_n | \psi \rangle|^2$.</li>
+      <li>After measurement, the state of the system <em>collapses</em> to $|a_n\rangle$ — the eigenstate corresponding to the outcome.</li>
+    </ul>
+
+    <p>The expected value of $\hat A$ in state $|\psi\rangle$ is</p>
+
+    <div class="math-display">$$\langle \hat A \rangle = \langle \psi | \hat A | \psi \rangle = \sum_n a_n \, |c_n|^2.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Expectation value</p>
+      <dl>
+        <dt>$\langle \hat A \rangle$</dt><dd>Mean value of the observable, averaged over many identical measurements of the same state.</dd>
+        <dt>$\langle \psi | \hat A | \psi \rangle$</dt><dd>Compute as $\sum_{m,n} c_m^* c_n \langle a_m | \hat A | a_n \rangle$; the matrix element $\langle a_m | \hat A | a_n \rangle$ is $a_n \delta_{mn}$ in the eigenbasis.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Not a prediction of a single outcome.</strong> The expectation value is a statistical average, not the result you'll get from one run. Quantum mechanics is fundamentally about <em>ensembles</em> of identically prepared systems.</p>
+    </div>
+
+    <p>Two observables <em>commute</em> if $\hat A \hat B = \hat B \hat A$, and they share an eigenbasis. Measuring one does not disturb the other. Two observables that <em>don't</em> commute do not share eigenstates; measuring one changes the state so that subsequent measurements of the other give different outcomes. The canonical non-commuting pair is position and momentum:</p>
+
+    <div class="math-display">$$[\hat x, \hat p] = \hat x \hat p - \hat p \hat x = i \hbar.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Canonical commutation relation</p>
+      <dl>
+        <dt>$\hat x$</dt><dd>Position operator. In the position representation, it is just "multiply by $x$."</dd>
+        <dt>$\hat p$</dt><dd>Momentum operator. In the position representation, $\hat p = -i\hbar \, d/dx$.</dd>
+        <dt>$[\hat x, \hat p]$</dt><dd>The commutator. Nonzero means position and momentum are incompatible.</dd>
+        <dt>$i$</dt><dd>The imaginary unit. Its appearance is a dead giveaway that something genuinely quantum is going on.</dd>
+        <dt>$\hbar$</dt><dd>Reduced Planck constant. Sets the scale of all quantum effects.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why it matters.</strong> This single relation is why the uncertainty principle exists, why quantum mechanics has a unique classical limit, and why a harmonic oscillator's zero-point energy exists. Everything downstream flows from this line.</p>
+    </div>
+
+    <div class="problem-set" data-topic="phys-qm-operators"></div>
+
+    <!-- ========================================================== -->
+    <h2 id="schrod">5. The Schrödinger equation</h2>
+
+    <p>Between measurements, the state vector evolves deterministically in time. The equation of motion was written down by Erwin Schrödinger in late 1925 and published in early 1926:</p>
+
+    <div class="math-display">$$i \hbar \, \frac{\partial}{\partial t} |\psi(t)\rangle = \hat H \, |\psi(t)\rangle.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Time-dependent Schrödinger equation</p>
+      <dl>
+        <dt>$|\psi(t)\rangle$</dt><dd>The state vector at time $t$.</dd>
+        <dt>$\hat H$</dt><dd>The Hamiltonian — the operator representing total energy. For a particle with mass $m$ in a potential $V(x)$, $\hat H = \hat p^2/(2m) + V(\hat x)$.</dd>
+        <dt>$i\hbar \, \partial_t$</dt><dd>Time derivative of the state, multiplied by $i\hbar$. The factor of $i$ is essential — it is why superpositions "rotate" in Hilbert space rather than just growing or decaying.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Classical analogy.</strong> In Hamiltonian classical mechanics, the Hamiltonian $H(x, p)$ generates time evolution through Poisson brackets. Replace Poisson brackets with $[\cdot, \cdot]/(i\hbar)$ — commutators — and you get the Schrödinger evolution. The structure is the same; only the vocabulary changes.</p>
+    </div>
+
+    <p>In the <strong>position representation</strong>, writing $\psi(x, t) = \langle x | \psi(t) \rangle$, the Schrödinger equation for a particle of mass $m$ in a potential $V(x)$ becomes a partial differential equation:</p>
+
+    <div class="math-display">$$i \hbar \, \frac{\partial \psi}{\partial t} = -\frac{\hbar^2}{2m} \, \frac{\partial^2 \psi}{\partial x^2} + V(x) \, \psi.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Schrödinger equation in position space</p>
+      <dl>
+        <dt>$\psi(x, t)$</dt><dd>The wave function. $|\psi(x, t)|^2$ is the probability density for the particle to be at position $x$ at time $t$.</dd>
+        <dt>$-\tfrac{\hbar^2}{2m} \partial_x^2 \psi$</dt><dd>The kinetic-energy term. Comes from $\hat p^2/(2m)$ with $\hat p = -i\hbar \partial_x$, so $\hat p^2 = -\hbar^2 \partial_x^2$.</dd>
+        <dt>$V(x) \psi$</dt><dd>Potential-energy term. The potential multiplies the wave function pointwise.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>It's a wave equation with a twist.</strong> Compare to the classical wave equation $\partial_t^2 \psi = c^2 \partial_x^2 \psi$: that one has two time derivatives. Schrödinger's has one time derivative and an $i$. That $i$ is what makes quantum evolution unitary (probability-preserving) instead of wave-like.</p>
+    </div>
+
+    <p>If $\hat H$ is time-independent, you can separate variables: $\psi(x, t) = \psi(x) e^{-iEt/\hbar}$. Plugging in gives the <strong>time-independent Schrödinger equation</strong>:</p>
+
+    <div class="math-display">$$-\frac{\hbar^2}{2m}\, \frac{d^2 \psi}{dx^2} + V(x) \, \psi(x) = E \, \psi(x).$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Time-independent Schrödinger equation</p>
+      <dl>
+        <dt>$\psi(x)$</dt><dd>A spatial wave function — the time-dependence has been peeled off.</dd>
+        <dt>$E$</dt><dd>The energy eigenvalue. For bound states, $E$ is one of a discrete set; for unbound states, continuous.</dd>
+        <dt>$V(x)$</dt><dd>Potential energy. The character of the solutions depends entirely on what $V$ looks like.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>An eigenvalue problem.</strong> This is "find the eigenfunctions of $\hat H$." The eigenvalues $E$ are the allowed energies; the eigenfunctions are the stationary states. Most of undergraduate quantum mechanics is: pick a potential $V$, solve this equation, interpret the answer.</p>
+    </div>
+
+    <div class="problem-set" data-topic="phys-qm-schrod"></div>
+
+    <!-- ========================================================== -->
+    <h2 id="canonical">6. Canonical systems</h2>
+
+    <h3>Particle in a box (infinite square well)</h3>
+
+    <p>The simplest bound-state problem. A particle lives in a one-dimensional region $0 \le x \le L$ with infinite potential walls: $V(x) = 0$ inside, $\infty$ outside. The wave function must vanish at $x = 0$ and $x = L$ (no penetration into infinite walls). Solve $-(\hbar^2/2m) \psi'' = E \psi$ with these boundary conditions, and you get sine waves that fit an integer number of half-wavelengths in the box.</p>
+
+    <div class="math-display">$$\psi_n(x) = \sqrt{\frac{2}{L}} \, \sin\!\left(\frac{n \pi x}{L}\right), \qquad E_n = \frac{n^2 \pi^2 \hbar^2}{2 m L^2}, \qquad n = 1, 2, 3, \dots$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Energy eigenstates of a 1D box</p>
+      <dl>
+        <dt>$\psi_n(x)$</dt><dd>The $n$-th stationary wave function. A sine with exactly $n$ antinodes in the box.</dd>
+        <dt>$\sqrt{2/L}$</dt><dd>Normalization constant — chosen so that $\int_0^L |\psi_n|^2 dx = 1$.</dd>
+        <dt>$E_n$</dt><dd>The energy of the $n$-th state. Scales as $n^2$, so levels spread out quadratically.</dd>
+        <dt>$n$</dt><dd>The <em>quantum number</em>. A positive integer labeling the state. There is no $n = 0$ state (that would be $\psi = 0$, no particle).</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why quantized?</strong> Only sine waves whose wavelength is a divisor of $2L$ vanish at both walls. That's literally a boundary condition: half-integer waves fit exactly. The "forbidden" energies between levels are the frequencies you simply cannot fit into the box.</p>
+    </div>
+
+    <p>The ground-state energy is not zero. Even in its lowest state, the particle has kinetic energy $E_1 = \pi^2 \hbar^2 / (2 m L^2)$. This is the <em>zero-point energy</em>, and it is a direct consequence of the uncertainty principle: a particle confined to a region of size $L$ has uncertain momentum of order $\hbar/L$, and therefore kinetic energy of order $\hbar^2/(2 m L^2)$.</p>
+
+    <h3>Harmonic oscillator</h3>
+
+    <p>The second canonical system. A particle in the potential $V(x) = \tfrac{1}{2} m \omega^2 x^2$ (a spring, essentially). The time-independent Schrödinger equation here can be solved by an algebraic trick (ladder operators) that is one of the cleanest calculations in physics. The result is</p>
+
+    <div class="math-display">$$E_n = \hbar \omega \, \left(n + \tfrac{1}{2}\right), \qquad n = 0, 1, 2, \dots$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Harmonic oscillator spectrum</p>
+      <dl>
+        <dt>$\omega$</dt><dd>Classical angular frequency of the oscillator: $\omega = \sqrt{k/m}$ for a spring constant $k$.</dd>
+        <dt>$E_n$</dt><dd>The $n$-th energy level, evenly spaced.</dd>
+        <dt>$n$</dt><dd>Non-negative integer, starting at zero. $n$ is the number of "quanta" in the oscillator.</dd>
+        <dt>$\tfrac{1}{2} \hbar \omega$</dt><dd>The ground-state energy — half a quantum, always present, impossible to remove. The zero-point energy of the vacuum, in the modern version of the calculation.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why this matters.</strong> Almost every system behaves like a harmonic oscillator near equilibrium — Taylor-expand the potential to second order and there you are. So harmonic-oscillator physics shows up in phonons, photons, molecular vibrations, quantum fields, and nearly every quantum-mechanical model you'll ever write down.</p>
+    </div>
+
+    <h3>Hydrogen atom</h3>
+
+    <p>The big result — the original reason anyone believed quantum mechanics. A single electron in the Coulomb potential of a proton, $V(r) = -k e^2/r$ where $k = 1/(4\pi\epsilon_0)$, has bound states with energies</p>
+
+    <div class="math-display">$$E_n = -\frac{13.6 \ \text{eV}}{n^2}, \qquad n = 1, 2, 3, \dots$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Hydrogen energy levels</p>
+      <dl>
+        <dt>$E_n$</dt><dd>Energy of the $n$-th bound state of hydrogen. Negative because these are bound (trapped) states; positive energy means the electron is free.</dd>
+        <dt>$n$</dt><dd>Principal quantum number. The ground state is $n = 1$.</dd>
+        <dt>$-13.6 \ \text{eV}$</dt><dd>The binding energy of the ground state. It equals $m_e e^4 k^2 / (2 \hbar^2)$ — an unlikely combination of constants that happens to come out to a number you can spell.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>What you can predict from this formula alone.</strong> A photon emitted when an electron drops from $n$ to $m$ carries energy $E_n - E_m = 13.6 (1/m^2 - 1/n^2)$ eV. For $m = 2$ and $n = 3, 4, 5, \dots$ you get the Balmer series — the visible-light emission lines of hydrogen, 656, 486, 434, 410 nm. These are the red, teal, and blue lines you see through a diffraction grating looking at a hydrogen lamp. Quantum mechanics predicted them to four decimal places on the first try.</p>
+    </div>
+
+    <p>The full solution has three quantum numbers: $n$ (energy), $\ell$ (angular momentum magnitude), and $m$ (angular momentum projection). With spin added, $n, \ell, m, m_s$ account for every state in the atom — and, via the Pauli exclusion principle, for the entire periodic table.</p>
+
+    <div class="problem-set" data-topic="phys-qm-box"></div>
+
+    <!-- ========================================================== -->
+    <h2 id="demo">7. Interactive: particle in a box</h2>
+
+    <p>Slide the quantum number $n$ to see the wave function $\psi_n(x)$ (cyan) and its probability density $|\psi_n(x)|^2$ (violet). Count the antinodes: state $n$ has exactly $n$ of them. The energy $E_n$ grows as $n^2$, and the probability density gets wavy with more and more peaks — until, for large $n$, it starts to look roughly uniform, which is the correspondence principle in action (classical particles in a box spend equal time everywhere).</p>
+
+    <div class="viz-3d">
+      <svg id="qmSvg" viewBox="0 0 720 400" preserveAspectRatio="xMidYMid meet"></svg>
+      <div class="v3-controls">
+        <label>quantum number $n$: <input type="range" id="qmN" min="1" max="12" step="1" value="1"></label>
+        <span class="v3-label">$n$ = <span id="qmNLabel">1</span>, $E_n / E_1$ = <span id="qmELabel">1</span></span>
+      </div>
+      <div class="v3-caption" id="qmCaption"></div>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="uncert">8. The uncertainty principle</h2>
+
+    <p>Heisenberg's uncertainty relation is not a statement about measurement error. It is a statement about what kinds of states exist. For any state $|\psi\rangle$, define</p>
+
+    <div class="math-display">$$\sigma_x^2 = \langle \hat x^2 \rangle - \langle \hat x \rangle^2, \qquad \sigma_p^2 = \langle \hat p^2 \rangle - \langle \hat p \rangle^2.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Variance of an observable</p>
+      <dl>
+        <dt>$\sigma_x^2$</dt><dd>The variance of position in the state $|\psi\rangle$ — the mean of $\hat x^2$ minus the square of the mean of $\hat x$. Standard statistics.</dd>
+        <dt>$\sigma_p^2$</dt><dd>The variance of momentum, defined the same way.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>What these measure.</strong> $\sigma_x$ tells you how spread out the wave function is in space. $\sigma_p$ tells you how spread out its Fourier transform is in momentum. A narrow, localized wave packet has small $\sigma_x$ and (necessarily) large $\sigma_p$.</p>
+    </div>
+
+    <p>Heisenberg's relation then says:</p>
+
+    <div class="math-display">$$\sigma_x \, \sigma_p \ge \frac{\hbar}{2}.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Heisenberg uncertainty principle</p>
+      <dl>
+        <dt>$\sigma_x \sigma_p$</dt><dd>Product of the standard deviations of position and momentum in a given state.</dd>
+        <dt>$\hbar/2$</dt><dd>The lower bound. No quantum state can beat it. The bound is saturated by Gaussian wave packets.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why it's inevitable.</strong> Pin down $x$ to within a small window $\Delta x$, and the wave function's Fourier transform — its momentum distribution — must have support of width at least $\hbar/(2 \Delta x)$. Squeezing one always stretches the other. This is the same mathematical fact that makes a short audio pulse span a wide frequency range; quantum mechanics just applies it to the amplitude that describes a particle. The general form, valid for any two observables: $\sigma_A \sigma_B \ge \tfrac{1}{2} |\langle [\hat A, \hat B] \rangle|$.</p>
+    </div>
+
+    <p>A consequence: the electron in a hydrogen atom cannot just "fall into the nucleus." If it did, $\Delta x$ would vanish, forcing $\Delta p$ (and hence kinetic energy) to infinity. The balance between kinetic uncertainty energy and the attractive Coulomb energy determines the size of the atom — the <em>Bohr radius</em> $a_0 \approx 5.29 \times 10^{-11}$ m. Atoms are big because of the uncertainty principle.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="spin">9. Spin and two-level systems (qubits)</h2>
+
+    <p>Classical angular momentum is a continuous three-vector. Quantum angular momentum — spin — has a discrete spectrum. An electron has spin $1/2$, which means its spin angular momentum along any chosen axis takes one of exactly two values: $+\hbar/2$ ("up") or $-\hbar/2$ ("down"). Not "anywhere in between." Just those two.</p>
+
+    <p>The state space for spin-$1/2$ is $\mathbb{C}^2$. You can write any state as</p>
+
+    <div class="math-display">$$|\psi\rangle = \alpha |0\rangle + \beta |1\rangle, \qquad |\alpha|^2 + |\beta|^2 = 1,$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">A qubit</p>
+      <dl>
+        <dt>$|0\rangle, |1\rangle$</dt><dd>The two basis states — conventionally "spin up" and "spin down" along the $z$-axis, or the computational basis of a qubit.</dd>
+        <dt>$\alpha, \beta$</dt><dd>Complex amplitudes, constrained by normalization.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Qubit = spin-1/2.</strong> A qubit is mathematically identical to the spin of an electron, or the polarization of a photon, or the superposition of two atomic energy levels. The hardware is different; the Hilbert space is the same.</p>
+    </div>
+
+    <p>The observables for spin are the <strong>Pauli matrices</strong>:</p>
+
+    <div class="math-display">$$\sigma_x = \begin{pmatrix} 0 & 1 \\ 1 & 0 \end{pmatrix}, \quad \sigma_y = \begin{pmatrix} 0 & -i \\ i & 0 \end{pmatrix}, \quad \sigma_z = \begin{pmatrix} 1 & 0 \\ 0 & -1 \end{pmatrix}.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Pauli matrices</p>
+      <dl>
+        <dt>$\sigma_x, \sigma_y, \sigma_z$</dt><dd>Three $2 \times 2$ Hermitian matrices, each with eigenvalues $+1$ and $-1$. The spin-1/2 operators are $\hat S_i = (\hbar/2) \sigma_i$.</dd>
+        <dt>$i$</dt><dd>The imaginary unit, showing up in $\sigma_y$.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>The three axes are incompatible.</strong> $[\sigma_x, \sigma_y] = 2 i \sigma_z$, and cyclic. You cannot simultaneously know a spin's $x$-component and its $y$-component. Measure $\sigma_z$ and find "up," and the next $\sigma_x$ measurement gives $+1$ or $-1$ with equal probability — measurement of one Pauli operator <em>randomizes</em> the others.</p>
+    </div>
+
+    <h3>Worked example — measuring a superposed qubit</h3>
+
+    <p>A qubit is in state $|\psi\rangle = \tfrac{1}{\sqrt{2}}(|0\rangle + |1\rangle)$. What happens when you measure $\sigma_z$? The outcomes are $+1$ (the $|0\rangle$ eigenvalue) with probability $|1/\sqrt{2}|^2 = 1/2$, and $-1$ with probability $1/2$. A 50-50 coin flip. Measure $\sigma_x$ instead, and the state $|\psi\rangle$ is already the $+1$ eigenstate of $\sigma_x$ — you get $+1$ with certainty. Same state, different basis, different outcomes. This is why the choice of measurement axis is part of the physics.</p>
+
+    <div class="problem-set" data-topic="phys-qm-spin"></div>
+
+    <!-- ========================================================== -->
+    <h2 id="entangle">10. Entanglement and Bell's theorem</h2>
+
+    <p>Two qubits live in $\mathbb{C}^2 \otimes \mathbb{C}^2 = \mathbb{C}^4$, spanned by $|00\rangle, |01\rangle, |10\rangle, |11\rangle$. A general two-qubit state is some complex combination of those four. Most of them cannot be written as a tensor product of single-qubit states. Those states are called <strong>entangled</strong>. The most famous one is</p>
+
+    <div class="math-display">$$|\Phi^+\rangle = \frac{1}{\sqrt{2}} \left( |00\rangle + |11\rangle \right).$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">A Bell state</p>
+      <dl>
+        <dt>$|\Phi^+\rangle$</dt><dd>One of the four maximally-entangled Bell states.</dd>
+        <dt>$|00\rangle$</dt><dd>Both qubits in state $|0\rangle$.</dd>
+        <dt>$|11\rangle$</dt><dd>Both qubits in state $|1\rangle$.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>The correlation, plain.</strong> Measure the first qubit in the $z$-basis. You get $|0\rangle$ or $|1\rangle$, 50-50. Measure the second qubit in the same basis. Always the same answer. Always. This would be easy to explain if each qubit had a "hidden" label assigned before the experiment. Bell's theorem says no such hidden label can reproduce all the correlations you actually observe when you switch between measurement axes.</p>
+    </div>
+
+    <p>Bell, in 1964, derived an inequality that any "local hidden variables" theory must satisfy. Then he showed that quantum mechanics <em>violates</em> the inequality for certain entangled states. Experiments starting with Alain Aspect in 1982 and culminating in loophole-free tests around 2015 have repeatedly verified the quantum prediction. No local classical story reproduces the data. The universe is non-classical in a provable, experimentally decided way. Aspect, Clauser, and Zeilinger shared the 2022 Nobel Prize in Physics for this line of work.</p>
+
+    <p>Entanglement is not "faster-than-light communication." You cannot use it to send a signal. But it is a genuine correlation that cannot be explained by any pre-measurement labeling. It is the physical resource that makes quantum computing, quantum cryptography, and quantum teleportation work. Most quantum information theory is, at the end of the day, bookkeeping about who has access to which part of an entangled state.</p>
+
+    <h3>See also</h3>
+    <div class="see-also">
+      <div class="card">
+        <h4><a href="./special-relativity.html">Special Relativity</a></h4>
+        <p>Merging quantum mechanics with special relativity gives quantum field theory, and the Dirac equation predicted antimatter before anyone knew such a thing existed.</p>
+      </div>
+      <div class="card">
+        <h4><a href="./general-relativity.html">General Relativity</a></h4>
+        <p>The one place GR and QM still don't agree — black hole interiors and the very early universe — is where quantum gravity lives. Unresolved.</p>
+      </div>
+      <div class="card">
+        <h4><a href="../math/linear-algebra.html">Linear Algebra</a></h4>
+        <p>Bras, kets, operators, and eigenvalues are pure linear algebra over the complex numbers. If this page feels hard, go there first.</p>
+      </div>
+      <div class="card">
+        <h4><a href="../cs/quantum-computing.html">Quantum Computing</a></h4>
+        <p>Gates, circuits, and algorithms built on qubits. The CS-side view of everything on this page, specialized to finite-dimensional Hilbert spaces.</p>
+      </div>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="code">11. Quantum mechanics in code</h2>
+
+    <p>A couple of short primitives: construct the Hamiltonian of a 1D particle in a box, diagonalize it with NumPy, and verify the $n^2$ spectrum. Then a qubit simulation — build a state, apply a gate, compute expectation values.</p>
+
+    <div class="code-tabs" id="ct-qm">
+      <div class="ct-header">
+        <button class="ct-tab active" data-tab="np">NumPy</button>
+        <button class="ct-tab" data-tab="py">Plain Python</button>
+        <span class="ct-label">quantum-mechanics primitives</span>
+      </div>
+
+      <div class="ct-panel active" data-tab="np"><pre><code><span class="kw">import</span> numpy <span class="kw">as</span> np
+
+<span class="cmt"># ---------- Particle in a box via finite-difference Hamiltonian ----------</span>
+<span class="kw">def</span> <span class="fn">box_spectrum</span>(N=<span class="num">400</span>, L=<span class="num">1.0</span>, hbar=<span class="num">1.0</span>, m=<span class="num">1.0</span>):
+    dx = L / (N + <span class="num">1</span>)
+    main = np.<span class="fn">full</span>(N, <span class="num">-2.0</span>)
+    off  = np.<span class="fn">full</span>(N - <span class="num">1</span>, <span class="num">1.0</span>)
+    T = np.<span class="fn">diag</span>(main) + np.<span class="fn">diag</span>(off, <span class="num">1</span>) + np.<span class="fn">diag</span>(off, <span class="num">-1</span>)
+    H = -(hbar * hbar) / (<span class="num">2</span> * m * dx * dx) * T
+    eigvals, eigvecs = np.linalg.<span class="fn">eigh</span>(H)
+    <span class="kw">return</span> eigvals, eigvecs, dx
+
+evals, _, dx = <span class="fn">box_spectrum</span>()
+<span class="cmt"># Exact: E_n = n^2 pi^2 / 2 for hbar=m=L=1</span>
+<span class="kw">for</span> n <span class="kw">in</span> <span class="fn">range</span>(<span class="num">5</span>):
+    exact = (n + <span class="num">1</span>) ** <span class="num">2</span> * np.pi ** <span class="num">2</span> / <span class="num">2</span>
+    <span class="fn">print</span>(<span class="str">f"n={n+1}: numeric={evals[n]:.4f}, exact={exact:.4f}"</span>)
+
+<span class="cmt"># ---------- Qubit state, Pauli operators, expectation values ----------</span>
+sx = np.<span class="fn">array</span>([[<span class="num">0</span>, <span class="num">1</span>], [<span class="num">1</span>, <span class="num">0</span>]], dtype=<span class="fn">complex</span>)
+sy = np.<span class="fn">array</span>([[<span class="num">0</span>, -<span class="num">1j</span>], [<span class="num">1j</span>, <span class="num">0</span>]], dtype=<span class="fn">complex</span>)
+sz = np.<span class="fn">array</span>([[<span class="num">1</span>, <span class="num">0</span>], [<span class="num">0</span>, -<span class="num">1</span>]], dtype=<span class="fn">complex</span>)
+
+<span class="cmt"># Equal superposition: (|0> + |1>) / sqrt(2)</span>
+psi = (<span class="num">1</span> / np.<span class="fn">sqrt</span>(<span class="num">2</span>)) * np.<span class="fn">array</span>([<span class="num">1</span>, <span class="num">1</span>], dtype=<span class="fn">complex</span>)
+<span class="fn">print</span>(<span class="str">f"&lt;sz&gt; = {np.real(psi.conj() @ sz @ psi):.3f}"</span>)  <span class="cmt"># 0</span>
+<span class="fn">print</span>(<span class="str">f"&lt;sx&gt; = {np.real(psi.conj() @ sx @ psi):.3f}"</span>)  <span class="cmt"># 1</span>
+
+<span class="cmt"># Bell state |Phi+&gt; = (|00&gt; + |11&gt;) / sqrt(2)</span>
+bell = np.<span class="fn">zeros</span>(<span class="num">4</span>, dtype=<span class="fn">complex</span>)
+bell[<span class="num">0</span>] = bell[<span class="num">3</span>] = <span class="num">1</span> / np.<span class="fn">sqrt</span>(<span class="num">2</span>)
+I = np.<span class="fn">eye</span>(<span class="num">2</span>, dtype=<span class="fn">complex</span>)
+Z1 = np.<span class="fn">kron</span>(sz, I)
+Z2 = np.<span class="fn">kron</span>(I, sz)
+<span class="fn">print</span>(<span class="str">f"&lt;Z1 Z2&gt; = {np.real(bell.conj() @ (Z1 @ Z2) @ bell):.3f}"</span>)  <span class="cmt"># 1</span>
+</code></pre></div>
+
+      <div class="ct-panel" data-tab="py"><pre><code><span class="kw">import</span> math
+
+<span class="cmt"># Hydrogen-level emission wavelengths (Balmer series), no NumPy needed.</span>
+R_eV = <span class="num">13.605693</span>                   <span class="cmt"># Rydberg constant in eV</span>
+hc_eV_nm = <span class="num">1239.84193</span>              <span class="cmt"># h*c in eV*nm</span>
+
+<span class="kw">def</span> <span class="fn">balmer_wavelength_nm</span>(n):
+    <span class="cmt"># Transition from n -&gt; 2</span>
+    dE = R_eV * (<span class="num">1</span> / <span class="num">4</span> - <span class="num">1</span> / (n * n))
+    <span class="kw">return</span> hc_eV_nm / dE
+
+<span class="kw">for</span> n <span class="kw">in</span> <span class="fn">range</span>(<span class="num">3</span>, <span class="num">7</span>):
+    <span class="fn">print</span>(<span class="str">f"Balmer n={n}-&gt;2: {balmer_wavelength_nm(n):7.2f} nm"</span>)
+<span class="cmt"># Should print ~656, 486, 434, 410 nm</span>
+</code></pre></div>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="summary">12. Cheat sheet</h2>
+
+    <div class="grid">
+      <div class="card">
+        <h4>Schrödinger (time-dep)</h4>
+        <p>$i\hbar\,\partial_t |\psi\rangle = \hat H |\psi\rangle$</p>
+        <p class="meta">State evolves unitarily between measurements.</p>
+      </div>
+      <div class="card">
+        <h4>Schrödinger (TISE)</h4>
+        <p>$\hat H \psi = E \psi$</p>
+        <p class="meta">Eigenvalue problem for stationary states.</p>
+      </div>
+      <div class="card">
+        <h4>Born rule</h4>
+        <p>$P(a_n) = |\langle a_n | \psi \rangle|^2$</p>
+        <p class="meta">Probability of measuring eigenvalue $a_n$.</p>
+      </div>
+      <div class="card">
+        <h4>Canonical commutator</h4>
+        <p>$[\hat x, \hat p] = i\hbar$</p>
+        <p class="meta">Why position and momentum are incompatible.</p>
+      </div>
+      <div class="card">
+        <h4>Uncertainty</h4>
+        <p>$\sigma_x \sigma_p \ge \dfrac{\hbar}{2}$</p>
+        <p class="meta">Saturated by Gaussian wave packets.</p>
+      </div>
+      <div class="card">
+        <h4>Box energy</h4>
+        <p>$E_n = \dfrac{n^2 \pi^2 \hbar^2}{2 m L^2}$</p>
+        <p class="meta">Quadratic in $n$; ground state is not zero.</p>
+      </div>
+      <div class="card">
+        <h4>Harmonic oscillator</h4>
+        <p>$E_n = \hbar\omega(n + \tfrac{1}{2})$</p>
+        <p class="meta">Evenly spaced; zero-point energy $\tfrac{1}{2}\hbar\omega$.</p>
+      </div>
+      <div class="card">
+        <h4>Hydrogen levels</h4>
+        <p>$E_n = -\dfrac{13.6 \ \text{eV}}{n^2}$</p>
+        <p class="meta">Explains Balmer and friends.</p>
+      </div>
+      <div class="card">
+        <h4>Pauli matrices</h4>
+        <p>$\sigma_x, \sigma_y, \sigma_z$; $[\sigma_x,\sigma_y] = 2i\sigma_z$</p>
+        <p class="meta">The spin-$1/2$ observables; qubit operators.</p>
+      </div>
+      <div class="card">
+        <h4>Bell state</h4>
+        <p>$|\Phi^+\rangle = \tfrac{1}{\sqrt{2}}(|00\rangle + |11\rangle)$</p>
+        <p class="meta">Maximally entangled two-qubit state.</p>
+      </div>
+    </div>
+
+    <div class="bib">
+      <h4>Further reading</h4>
+      <ul>
+        <li>Paul Dirac — <em>The Principles of Quantum Mechanics</em> (1930). The book that fixed the notation. Still the best place to feel why bras and kets are the right objects.</li>
+        <li>Richard Feynman, Robert Leighton, Matthew Sands — <em>The Feynman Lectures on Physics, Volume III</em>. Starts from two-slit experiments and builds the theory from the amplitude picture. Freely readable at <a href="https://www.feynmanlectures.caltech.edu/III_toc.html">feynmanlectures.caltech.edu/III</a>.</li>
+        <li>David Griffiths — <em>Introduction to Quantum Mechanics</em>. The standard undergraduate textbook. Problem-driven, readable, dependable.</li>
+        <li>J. J. Sakurai and Jim Napolitano — <em>Modern Quantum Mechanics</em>. Graduate level. Starts from Stern–Gerlach and spin before going to wave functions; a clean path for people who prefer abstraction first.</li>
+        <li>John Bell — <em>On the Einstein Podolsky Rosen Paradox</em>, Physics 1 (1964). The original Bell inequality paper. Four pages; famous for good reason.</li>
+        <li>Michael Nielsen and Isaac Chuang — <em>Quantum Computation and Quantum Information</em>. The bible of quantum information. Opens with a careful presentation of qubits, measurements, and entanglement.</li>
+        <li>Alain Aspect et al. — <em>Experimental Test of Bell's Inequalities Using Time-Varying Analyzers</em>, Phys. Rev. Lett. 49 (1982). The first decisive experimental violation.</li>
+      </ul>
+    </div>
+
+    <div class="next-card">
+      <div class="label">NEXT UP</div>
+      <a href="../cs/quantum-computing.html">→ Quantum Computing</a>
+      <p>Now that you speak Hilbert spaces and Pauli operators, you're ready to see what happens when you string together many qubits and ask them to run algorithms. Shor, Grover, variational circuits, error correction, and the rest.</p>
+    </div>
+
+  </article>
+</div>
+
+<script>
+// =========================================================
+// Code tabs
+document.querySelectorAll('.code-tabs').forEach(root => {
+  const tabs = root.querySelectorAll('.ct-tab');
+  const panels = root.querySelectorAll('.ct-panel');
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const target = tab.getAttribute('data-tab');
+      tabs.forEach(t => t.classList.toggle('active', t === tab));
+      panels.forEach(p => p.classList.toggle('active', p.getAttribute('data-tab') === target));
+    });
+  });
+});
+
+// =========================================================
+// Particle-in-a-box visualization
+(function() {
+  const svg = document.getElementById('qmSvg');
+  if (!svg) return;
+  const NS = 'http://www.w3.org/2000/svg';
+  const slider = document.getElementById('qmN');
+  const nLabel = document.getElementById('qmNLabel');
+  const eLabel = document.getElementById('qmELabel');
+  const caption = document.getElementById('qmCaption');
+
+  const W = 720, H = 400;
+  const ml = 50, mr = 30, mt = 20, mb = 40;
+  const plotW = W - ml - mr;
+  const plotH = H - mt - mb;
+  const midY = mt + plotH / 2;
+
+  function mkRect(x, y, w, h, fill, stroke) {
+    const r = document.createElementNS(NS, 'rect');
+    r.setAttribute('x', x); r.setAttribute('y', y);
+    r.setAttribute('width', w); r.setAttribute('height', h);
+    r.setAttribute('fill', fill);
+    if (stroke) { r.setAttribute('stroke', stroke); r.setAttribute('stroke-width', 1); }
+    return r;
+  }
+  function mkLine(x1, y1, x2, y2, stroke, w, dash) {
+    const l = document.createElementNS(NS, 'line');
+    l.setAttribute('x1', x1); l.setAttribute('y1', y1);
+    l.setAttribute('x2', x2); l.setAttribute('y2', y2);
+    l.setAttribute('stroke', stroke); l.setAttribute('stroke-width', w || 1);
+    if (dash) l.setAttribute('stroke-dasharray', dash);
+    return l;
+  }
+  function mkText(x, y, txt, color, size, anchor) {
+    const t = document.createElementNS(NS, 'text');
+    t.setAttribute('x', x); t.setAttribute('y', y);
+    t.setAttribute('fill', color || '#7a8a9a');
+    t.setAttribute('font-size', size || 11);
+    t.setAttribute('font-family', 'ui-monospace, monospace');
+    if (anchor) t.setAttribute('text-anchor', anchor);
+    t.textContent = txt;
+    return t;
+  }
+  function mkPath(d, stroke, w, fill) {
+    const p = document.createElementNS(NS, 'path');
+    p.setAttribute('d', d);
+    p.setAttribute('stroke', stroke);
+    p.setAttribute('stroke-width', w || 2);
+    p.setAttribute('fill', fill || 'none');
+    return p;
+  }
+
+  function draw() {
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+    const n = parseInt(slider.value, 10);
+    nLabel.textContent = n;
+    eLabel.textContent = (n * n).toString();
+
+    // Frame
+    svg.appendChild(mkRect(ml, mt, plotW, plotH, '#0a0d12', '#2a3446'));
+
+    // Top half: psi_n
+    // Bottom half: |psi_n|^2
+    // Zero line
+    svg.appendChild(mkLine(ml, midY, ml + plotW, midY, '#384050', 1));
+
+    // Walls (vertical bars at x=0 and x=L)
+    svg.appendChild(mkLine(ml + 4, mt + 10, ml + 4, mt + plotH - 10, '#f472b6', 2));
+    svg.appendChild(mkLine(ml + plotW - 4, mt + 10, ml + plotW - 4, mt + plotH - 10, '#f472b6', 2));
+
+    // Labels
+    svg.appendChild(mkText(ml + 4, mt + plotH + 14, 'x = 0', '#b4c4d4', 11, 'middle'));
+    svg.appendChild(mkText(ml + plotW - 4, mt + plotH + 14, 'x = L', '#b4c4d4', 11, 'middle'));
+    svg.appendChild(mkText(ml - 6, mt + plotH / 4, 'psi_n(x)', '#22d3ee', 11, 'end'));
+    svg.appendChild(mkText(ml - 6, mt + 3 * plotH / 4, '|psi_n(x)|^2', '#7c5cff', 11, 'end'));
+
+    // Curves
+    const innerW = plotW - 8;
+    const x0 = ml + 4;
+    const amp = (plotH / 2) * 0.85;
+    // psi_n: sqrt(2/L) sin(n pi x / L), scaled into the top half (above midY).
+    // Top half ranges y from mt to midY; plot around y = mt + plotH / 4.
+    const topCenter = mt + plotH / 4;
+    const botCenter = mt + 3 * plotH / 4;
+    const psiAmp = plotH / 4 * 0.85;
+    const denAmp = plotH / 4 * 0.85;
+
+    let d1 = '';
+    let d2 = '';
+    const N = 400;
+    for (let i = 0; i <= N; i++) {
+      const frac = i / N;
+      const px = x0 + frac * innerW;
+      const psi = Math.sin(n * Math.PI * frac);
+      // Normalized density magnitude: sin^2 peaks at 1; multiply by 2 so integral is 1 over [0,1].
+      const dens = 2 * psi * psi;
+      const py1 = topCenter - psi * psiAmp;
+      const py2 = botCenter - (dens - 1) * (denAmp / 1.1); // shift so mean ~0 in the plot
+      d1 += (i === 0 ? 'M' : 'L') + px.toFixed(2) + ',' + py1.toFixed(2) + ' ';
+      d2 += (i === 0 ? 'M' : 'L') + px.toFixed(2) + ',' + py2.toFixed(2) + ' ';
+    }
+    svg.appendChild(mkPath(d1, '#22d3ee', 2));
+    svg.appendChild(mkPath(d2, '#7c5cff', 2));
+
+    // Zero lines for each sub-plot
+    svg.appendChild(mkLine(ml, topCenter, ml + plotW, topCenter, '#1a2030', 1));
+    svg.appendChild(mkLine(ml, botCenter, ml + plotW, botCenter, '#1a2030', 1));
+
+    caption.textContent =
+      'n = ' + n + '.  Energy E_n = n^2 E_1 = ' + (n * n) + ' E_1.  ' +
+      'Wave function has ' + n + ' antinode(s); density has ' + n + ' peak(s). ' +
+      'Nodes: ' + (n - 1) + '.';
+  }
+
+  slider.addEventListener('input', draw);
+  draw();
+})();
+</script>
+<script defer src="../problem-set.js"></script>
+<script defer src="quantum-mechanics-problems.js"></script>
+<script defer src="../search-index.js"></script>
+<script defer src="../search.js"></script>
+</body>
+</html>

@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chemistry — How Atoms Combine, React, and Rearrange</title>
+<link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+<div id="tooltip"></div>
+
+<!-- ============================================================ -->
+<!-- Top bar: back to hub -->
+<!-- ============================================================ -->
+<div class="topbar">
+  <a class="topbar-back" href="../index.html">← Learning Hub</a>
+  <span class="topbar-crumb">Chemistry Track</span>
+  <span class="topbar-tracks">
+    <a href="../math/index.html">Math</a>
+    <a href="../physics/index.html">Physics</a>
+    <a href="../cs/index.html">CS</a>
+    <a href="../ai-ml.html">AI / ML</a>
+  </span>
+</div>
+
+<!-- ============================================================ -->
+<!-- Hero -->
+<!-- ============================================================ -->
+<div class="hero">
+  <div class="hero-inner">
+    <span class="chip">UPDATED APRIL 2026</span>
+    <h1>Chemistry — How Atoms Combine, React, and Rearrange</h1>
+    <p class="lede">The science of how atoms combine, react, and rearrange — applicable to materials, medicine, energy, climate, and life itself. Eight subjects cover the working vocabulary of a modern chemist: what atoms are, how they bond, how energy flows through reactions, how fast those reactions go, how far they proceed at equilibrium, how carbon chemistry powers synthesis and life, and how quantum mechanics sits underneath all of it. Each card opens a deep-dive page with worked examples, interactive figures, and practice problems. Every formula comes with a glossary that names every symbol.</p>
+  </div>
+</div>
+
+<main>
+  <div class="container">
+
+    <!-- ============================================================ -->
+    <section id="overview">
+      <h2>What chemistry is, and why it shows up everywhere <span class="era">// big picture</span></h2>
+      <p>Chemistry sits between physics and biology. Physicists hand it the rules of atoms and bonding; biologists hand it the molecules they need to understand and manipulate. In between is a working science that designs drugs, builds batteries, refines fuels, cleans the atmosphere, synthesizes polymers, and explains why the cell you're made of doesn't simply burn up in oxygen. Every material object you interact with has a chemical history. Every process that matters in energy, medicine, agriculture, or climate is at its core a chemistry problem.</p>
+
+      <p>The eight subjects below interlock. Atomic structure and bonding tell you what the pieces are and how they stick together. Thermochemistry and kinetics tell you whether a reaction will happen and how fast. Equilibrium tells you how far it goes. Organic chemistry is the vocabulary of carbon — the element that makes pharmaceuticals, plastics, fuels, and biology itself. Biochemistry is organic chemistry running inside a cell. Quantum chemistry is the microscopic theory underneath all of it, and the one that lets you compute properties of molecules that have never been made.</p>
+
+      <div class="callout">
+        <div class="label">The 60-second summary</div>
+        <p style="margin:6px 0">
+          <strong>Atomic structure</strong> — nuclei, electrons, orbitals, and the periodic trends that follow. Why lithium is soft and fluorine is hungry.<br>
+          <strong>Bonding</strong> — ionic, covalent, metallic, and intermolecular. Lewis structures, VSEPR geometry, hybridization, and molecular orbitals.<br>
+          <strong>Thermochemistry</strong> — enthalpy, entropy, and Gibbs free energy. Which reactions release heat, which absorb it, and which can happen at all.<br>
+          <strong>Kinetics</strong> — reaction rates, rate laws, activation energy, and catalysis. How quickly chemistry proceeds and what speeds it up.<br>
+          <strong>Equilibrium</strong> — acid-base, solubility, and the law of mass action. Where reversible reactions settle.<br>
+          <strong>Organic chemistry</strong> — carbon skeletons, functional groups, and reaction mechanisms. The language of drug design and synthesis.<br>
+          <strong>Biochemistry</strong> — proteins, enzymes, metabolism, and nucleic acids. Organic chemistry inside the cell.<br>
+          <strong>Quantum chemistry</strong> — the Schrödinger equation applied to molecules. Where bonding actually comes from, computed from first principles.
+        </p>
+      </div>
+
+      <p>You don't need to read these in order. If you know what you want, jump to a card below. If you're starting fresh, atomic structure and bonding come first because the rest of chemistry is built on them. Thermochemistry, kinetics, and equilibrium are the minimum working knowledge for anyone who designs reactions — pharma chemists, materials engineers, battery researchers, environmental scientists. Organic and biochemistry are where you go if your work touches molecules that carry information or do something inside cells. Quantum chemistry is where you go when you want to predict what a molecule will do before making it.</p>
+    </section>
+
+    <!-- ============================================================ -->
+    <section id="subjects">
+      <h2>The eight subjects <span class="era">// pick your entry point</span></h2>
+      <div class="grid">
+        <a class="card card-link" href="./atomic-structure.html">
+          <h4>Atomic Structure</h4>
+          <p class="meta">foundation · start here</p>
+          <p>Nuclei, isotopes, orbitals, quantum numbers, electron configurations, and the periodic trends. Why the periodic table looks the way it does, and how spectra encode energy levels.</p>
+          <span class="tag hot">start here</span>
+        </a>
+        <a class="card card-link" href="./bonding.html">
+          <h4>Bonding</h4>
+          <p class="meta">prereq: atomic structure</p>
+          <p>Ionic, covalent, metallic. Lewis structures, VSEPR geometry, hybridization, molecular orbital theory, and the intermolecular forces that set boiling points and solubility.</p>
+          <span class="tag hot">core</span>
+        </a>
+        <a class="card card-link" href="./thermochemistry.html">
+          <h4>Thermochemistry</h4>
+          <p class="meta">prereq: bonding</p>
+          <p>Enthalpy, Hess's law, entropy, and Gibbs free energy. The second-law criterion for spontaneous reactions, and the link to equilibrium constants.</p>
+          <span class="tag hot">core</span>
+        </a>
+        <a class="card card-link" href="./kinetics.html">
+          <h4>Kinetics</h4>
+          <p class="meta">prereq: thermochemistry</p>
+          <p>Rate laws, reaction order, half-lives, the Arrhenius equation, catalysis, and reaction mechanisms. Not whether a reaction happens, but how fast.</p>
+          <span class="tag hot">core</span>
+        </a>
+        <a class="card card-link" href="./equilibrium.html">
+          <h4>Equilibrium</h4>
+          <p class="meta">prereq: thermochemistry</p>
+          <p>The law of mass action, K<sub>eq</sub>, Le Chatelier's principle, acid-base chemistry, buffers, and solubility products. Where reversible reactions settle down.</p>
+          <span class="tag">core</span>
+        </a>
+        <a class="card card-link" href="./organic-chemistry.html">
+          <h4>Organic Chemistry</h4>
+          <p class="meta">prereq: bonding</p>
+          <p>Carbon skeletons, functional groups, stereochemistry, and the major reaction mechanisms (substitution, elimination, addition, carbonyl chemistry). The language of drug design.</p>
+          <span class="tag">core</span>
+        </a>
+        <a class="card card-link" href="./biochemistry.html">
+          <h4>Biochemistry</h4>
+          <p class="meta">prereq: organic chemistry</p>
+          <p>Amino acids and proteins, enzyme kinetics, nucleic acids, metabolism, and bioenergetics. The chemistry that runs inside every cell.</p>
+          <span class="tag">core</span>
+        </a>
+        <a class="card card-link" href="./quantum-chemistry.html">
+          <h4>Quantum Chemistry</h4>
+          <p class="meta">prereq: atomic structure, linear algebra</p>
+          <p>The Schrödinger equation for molecules, variational principle, Hartree-Fock, density functional theory, and what modern computational chemistry actually does.</p>
+          <span class="tag">advanced</span>
+        </a>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section id="paths">
+      <h2>Suggested paths <span class="era">// four goal-driven routes</span></h2>
+      <p>The eight subjects interlock, but if you have a specific goal in mind, here are the shortest paths through.</p>
+      <div class="grid">
+        <div class="card">
+          <h4>"I want to understand drug design."</h4>
+          <p class="meta">bonding → organic → biochem</p>
+          <p>Start with <a href="./bonding.html">Bonding</a> for geometry and intermolecular forces (drug-target binding is almost entirely about IMFs). Then <a href="./organic-chemistry.html">Organic Chemistry</a> for functional groups and reactions. Finish with <a href="./biochemistry.html">Biochemistry</a> for enzymes and metabolism.</p>
+          <span class="tag hot">pharma path</span>
+        </div>
+        <div class="card">
+          <h4>"I want to understand batteries and fuel cells."</h4>
+          <p class="meta">thermo → kinetics → equilibrium</p>
+          <p><a href="./thermochemistry.html">Thermochemistry</a> for free energy and cell potentials. <a href="./kinetics.html">Kinetics</a> for charge-transfer rates and catalysis on electrodes. <a href="./equilibrium.html">Equilibrium</a> for Nernst and concentration effects.</p>
+          <span class="tag hot">energy path</span>
+        </div>
+        <div class="card">
+          <h4>"I want climate chemistry to click."</h4>
+          <p class="meta">kinetics → equilibrium → thermo</p>
+          <p>Atmospheric chemistry is overwhelmingly <a href="./kinetics.html">Kinetics</a> (photolysis, radicals) plus <a href="./equilibrium.html">Equilibrium</a> (carbonate chemistry, Henry's law) and a dash of <a href="./thermochemistry.html">Thermochemistry</a>.</p>
+          <span class="tag">environmental path</span>
+        </div>
+        <div class="card">
+          <h4>"I care about materials and catalysts."</h4>
+          <p class="meta">atomic → bonding → quantum</p>
+          <p><a href="./atomic-structure.html">Atomic Structure</a> for periodic trends. <a href="./bonding.html">Bonding</a> for crystal structures and metallic vs. covalent solids. <a href="./quantum-chemistry.html">Quantum Chemistry</a> for DFT, band structure, and catalysis simulations.</p>
+          <span class="tag">materials path</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section id="crosslinks">
+      <h2>Where chemistry meets the rest of the site</h2>
+      <div class="grid">
+        <a class="card card-link" href="../physics/quantum-mechanics.html">
+          <h4>Physics: Quantum Mechanics</h4>
+          <p class="meta">the layer below chemistry</p>
+          <p>Chemistry is what quantum mechanics looks like above the atomic scale. Bonding, spectra, and reactivity all reduce to the Schrödinger equation applied to electrons and nuclei.</p>
+        </a>
+        <a class="card card-link" href="../physics/thermodynamics.html">
+          <h4>Physics: Thermodynamics</h4>
+          <p class="meta">parallel treatment</p>
+          <p>Physicists and chemists both use enthalpy, entropy, and free energy. The physics version emphasizes engines and phase transitions; the chemistry version emphasizes reactions.</p>
+        </a>
+        <a class="card card-link" href="../math/calculus.html">
+          <h4>Math: Calculus</h4>
+          <p class="meta">prereq for kinetics and thermo</p>
+          <p>Rate laws are differential equations. Integrated rate laws and temperature-dependent equilibrium constants are calculus exercises. Enthalpy changes are integrals of heat capacity.</p>
+        </a>
+        <a class="card card-link" href="../math/linear-algebra.html">
+          <h4>Math: Linear Algebra</h4>
+          <p class="meta">prereq for quantum chem</p>
+          <p>Molecular orbitals are eigenvectors. Hartree-Fock and DFT are large eigenvalue problems. Linear algebra is the operational language of quantum chemistry.</p>
+        </a>
+        <a class="card card-link" href="../math/probability.html">
+          <h4>Math: Probability</h4>
+          <p class="meta">prereq for stat mech and kinetics</p>
+          <p>Reaction rates come from Boltzmann-weighted collision probabilities. The Arrhenius factor is a probability of having enough energy to react.</p>
+        </a>
+        <a class="card card-link" href="../topics/diffusion.html">
+          <h4>AI: Diffusion Models</h4>
+          <p class="meta">named after molecular diffusion</p>
+          <p>Diffusion models in AI borrow their mathematics from physical diffusion — the same equations that describe how a drop of dye spreads in water describe how noise is added to and removed from an image.</p>
+        </a>
+      </div>
+    </section>
+
+    <div class="next-card">
+      <div class="label">START HERE</div>
+      <a href="./atomic-structure.html">→ Atomic Structure</a>
+      <p>The periodic table is not arbitrary. Once you understand how electrons fill orbitals and how nuclear charge pulls them in, every trend from ionization energy to reactivity stops being something to memorize and starts being something to predict.</p>
+    </div>
+
+  </div>
+</main>
+
+<script defer src="../search-index.js"></script>
+<script defer src="../search.js"></script>
+</body>
+</html>

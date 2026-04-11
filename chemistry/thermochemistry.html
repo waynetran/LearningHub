@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Thermochemistry — Deep Dive</title>
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError: false});"></script>
+</head>
+<body>
+<div id="tooltip"></div>
+
+<nav class="topic-nav">
+  <a class="back" href="./index.html">← Chemistry Hub</a>
+  <div class="crumb">Chemistry / <span class="topic-name">Thermochemistry</span></div>
+</nav>
+
+<div class="topic-layout">
+  <aside class="topic-toc">
+    <h4>ON THIS PAGE</h4>
+    <ul>
+      <li><a href="#why">1. Why thermochemistry matters</a></li>
+      <li><a href="#vocab">2. Vocabulary cheat sheet</a></li>
+      <li><a href="#enthalpy">3. Enthalpy and heat</a></li>
+      <li><a href="#calorimetry">4. Calorimetry</a></li>
+      <li><a href="#hess">5. Hess's law and ΔH of formation</a></li>
+      <li><a href="#bonds">6. Bond enthalpies</a></li>
+      <li><a href="#entropy">7. Entropy and the second law</a></li>
+      <li><a href="#gibbs">8. Gibbs free energy</a></li>
+      <li><a href="#demo">9. Interactive: spontaneity explorer</a></li>
+      <li><a href="#code">10. Source code</a></li>
+      <li><a href="#summary">11. Cheat sheet</a></li>
+    </ul>
+  </aside>
+
+  <article class="topic-content">
+    <h1>Thermochemistry</h1>
+    <p class="subtitle">Which reactions release energy, which absorb it, and — more importantly — which can actually happen. Two scalar quantities (enthalpy and entropy) combine into a third (Gibbs free energy) that answers "will this react?" for every reaction at every temperature.</p>
+    <div class="meta-tags">
+      <span>Prereq: <a href="./bonding.html">bonding</a>, a little <a href="../math/calculus.html">calculus</a></span>
+      <span>Read time: ~35 min</span>
+      <span>Interactive figures: 1</span>
+      <span>Code: NumPy / Plain Python</span>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="why">1. Why thermochemistry matters</h2>
+
+    <p>Chemistry has two big questions. "Will this reaction happen?" and "How fast?" Thermochemistry answers the first one. <a href="./kinetics.html">Kinetics</a> answers the second. You need both, but thermochemistry comes first because it tells you whether the reaction is worth waiting for in the first place.</p>
+
+    <p>At a higher level, thermochemistry is the chemistry version of classical <a href="../physics/classical-mechanics.html">thermodynamics</a>: energy, temperature, heat, and entropy. The physics track emphasizes engines and phase transitions. The chemistry track emphasizes reactions — energy changes when bonds break and form, enthalpies of solution, and the equilibrium constants that come out the other side.</p>
+
+    <p>Why should you care?</p>
+
+    <ul>
+      <li><strong>Energy technology.</strong> Every battery, fuel cell, and combustion engine is a controlled thermochemical process. You can't optimize what you can't calculate, and cell voltages come from $\Delta G$.</li>
+      <li><strong>Materials and metallurgy.</strong> Smelting, alloying, oxide reduction, phase stability — all of it is free-energy bookkeeping. The Ellingham diagram that metallurgists use to decide whether aluminum can reduce iron oxide is just $\Delta G$ vs. temperature.</li>
+      <li><strong>Biology.</strong> ATP hydrolysis releases $\approx 30$ kJ/mol and powers the cell. Every enzymatic reaction is coupled to a favorable free-energy change. Metabolism is literally thermochemistry on a conveyor belt.</li>
+      <li><strong>Environmental and climate.</strong> The atmospheric CO$_2$ uptake by the ocean is a thermochemical equilibrium that shifts with temperature. Global warming models need $\Delta H$ and $\Delta S$ for every relevant reaction.</li>
+    </ul>
+
+    <div class="callout">
+      <div class="label">THE PUNCHLINE</div>
+      <p>Every reaction changes two things: enthalpy ($\Delta H$, heat exchanged at constant pressure) and entropy ($\Delta S$, disorder). The combination $\Delta G = \Delta H - T \Delta S$ tells you whether the reaction is spontaneous: if $\Delta G < 0$, it can happen; if $\Delta G > 0$, it can't (and the reverse happens instead). The sign flip at critical temperatures is why reactions are reversible, why the Haber process needs high temperature, why ice melts at 0°C, and why life only exists in a narrow temperature window.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="vocab">2. Vocabulary cheat sheet</h2>
+
+    <table class="rank-table">
+      <thead><tr><th>Symbol</th><th>Read as</th><th>Means</th></tr></thead>
+      <tbody>
+        <tr><td>$H$</td><td>"enthalpy"</td><td>Heat content of a system at constant pressure. Units: kJ/mol for molar quantities. Not directly measurable — only changes $\Delta H$ are.</td></tr>
+        <tr><td>$\Delta H$</td><td>"delta H"</td><td>Enthalpy change. Negative = exothermic (releases heat). Positive = endothermic (absorbs heat).</td></tr>
+        <tr><td>$\Delta H_f^\circ$</td><td>"standard enthalpy of formation"</td><td>$\Delta H$ for forming 1 mol of a compound from its elements in their standard states at 1 bar, 298 K.</td></tr>
+        <tr><td>$q$</td><td>"q" (heat)</td><td>Energy transferred as heat between system and surroundings. Sign convention: $q > 0$ = system absorbs heat.</td></tr>
+        <tr><td>$C_p$</td><td>"heat capacity at constant pressure"</td><td>Energy needed per degree to raise the temperature at constant pressure. Units: J/(mol·K).</td></tr>
+        <tr><td>$S$</td><td>"entropy"</td><td>A state function measuring the number of accessible microstates. Bigger $S$ = more ways for the system to arrange itself. Units: J/(mol·K).</td></tr>
+        <tr><td>$\Delta S$</td><td>"delta S"</td><td>Entropy change. Positive when disorder increases — gases &gt; liquids &gt; solids, more particles &gt; fewer.</td></tr>
+        <tr><td>$G$</td><td>"Gibbs free energy"</td><td>$G = H - TS$. The thermodynamic potential whose minimum defines chemical equilibrium at constant $T$ and $P$.</td></tr>
+        <tr><td>$\Delta G$</td><td>"delta G"</td><td>The free energy change of a reaction. $< 0$ = spontaneous, $= 0$ = equilibrium, $> 0$ = non-spontaneous.</td></tr>
+        <tr><td>$T$</td><td>"temperature"</td><td>Absolute temperature, always in kelvin in thermochemistry equations. Never celsius.</td></tr>
+      </tbody>
+    </table>
+
+    <!-- ========================================================== -->
+    <h2 id="enthalpy">3. Enthalpy and heat</h2>
+
+    <p>When a reaction occurs, some energy is released or absorbed as heat. The amount of heat exchanged, at constant pressure, is called the <strong>enthalpy change</strong>:</p>
+
+    <div class="math-display">$$\Delta H = q_p.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Enthalpy and heat at constant pressure</p>
+      <dl>
+        <dt>$\Delta H$</dt><dd>Enthalpy change of the system, in kJ or kJ/mol. Defined as $H_\text{products} - H_\text{reactants}$.</dd>
+        <dt>$q_p$</dt><dd>Heat exchanged between system and surroundings at constant pressure. Subscript $p$ is essential — at constant volume you'd measure $\Delta U$ (internal energy) instead.</dd>
+        <dt>sign</dt><dd>Negative $\Delta H$ means the system loses heat to the surroundings: <strong>exothermic</strong>. Positive $\Delta H$ means the system absorbs heat: <strong>endothermic</strong>.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Analogy.</strong> Think of a balance. The reactants sit on one side at enthalpy $H_r$; the products sit on the other at $H_p$. If $H_p < H_r$, energy drops out the bottom as heat — that's $\Delta H < 0$. If $H_p > H_r$, you have to supply energy to push reactants up to products — $\Delta H > 0$.</p>
+    </div>
+
+    <p>Most combustion reactions are exothermic. Burning methane:</p>
+
+    <div class="math-display">$$\text{CH}_4(g) + 2\,\text{O}_2(g) \longrightarrow \text{CO}_2(g) + 2\,\text{H}_2\text{O}(l), \qquad \Delta H^\circ = -890\ \text{kJ/mol}.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Methane combustion enthalpy</p>
+      <dl>
+        <dt>$\Delta H^\circ$</dt><dd>The standard enthalpy change at 1 bar and (by convention) 298 K. The degree mark means "standard conditions."</dd>
+        <dt>$(g), (l)$</dt><dd>Phase labels: $g$ = gas, $l$ = liquid, $s$ = solid, $aq$ = aqueous. Phase matters — the enthalpy of liquid water is different from gaseous water because vaporization itself has a nonzero $\Delta H$.</dd>
+        <dt>$-890$ kJ/mol</dt><dd>This is "per mole of methane reacted." Burning one mole releases 890 kJ — more than enough to heat a liter of water from freezing to boiling.</dd>
+      </dl>
+      <p class="mg-why"><strong>Why care.</strong> Natural gas has a fuel density about 50 MJ/kg. Gasoline is similar (~45 MJ/kg). Lithium-ion batteries, by contrast, are about 0.5–1 MJ/kg. The gap between chemical combustion and rechargeable storage is the fundamental reason electric aviation is hard.</p>
+    </div>
+
+    <h3>Heat capacity</h3>
+
+    <p>If you put heat into a substance but no reaction occurs, the temperature rises. The constant of proportionality is the <strong>heat capacity</strong>:</p>
+
+    <div class="math-display">$$q = n C_p \Delta T.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Heat capacity relation</p>
+      <dl>
+        <dt>$q$</dt><dd>Heat added (or removed), in joules.</dd>
+        <dt>$n$</dt><dd>Number of moles (or mass if $C$ is a specific heat in J/(g·K)).</dd>
+        <dt>$C_p$</dt><dd>Molar heat capacity at constant pressure, in J/(mol·K). Larger for molecules with more degrees of freedom.</dd>
+        <dt>$\Delta T$</dt><dd>Temperature change, in kelvin or degrees Celsius (they have the same size).</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Water is weird.</strong> Liquid water has $C_p \approx 75$ J/(mol·K), or 4.18 J/(g·K) — about twice the heat capacity per gram of most other liquids. That's why it takes so much energy to warm up a pot of water, why the oceans act as a planetary thermal buffer, and why your body uses water as its working fluid for temperature regulation.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="calorimetry">4. Calorimetry</h2>
+
+    <p><strong>Calorimetry</strong> is the experimental technique for measuring $\Delta H$. You run a reaction in an insulated container and track the temperature change of the surroundings — usually a known mass of water. Conservation of energy does the rest:</p>
+
+    <div class="math-display">$$q_\text{reaction} = -q_\text{surroundings} = -(m_\text{H2O}\, c_{\text{H2O}}\, \Delta T + C_\text{cal}\, \Delta T).$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Calorimetry energy balance</p>
+      <dl>
+        <dt>$q_\text{reaction}$</dt><dd>Heat produced or absorbed by the reaction (what you want).</dd>
+        <dt>$q_\text{surroundings}$</dt><dd>Heat gained (or lost) by the water bath and calorimeter walls.</dd>
+        <dt>$m_\text{H2O}, c_\text{H2O}$</dt><dd>Mass of water in the calorimeter and its specific heat, 4.18 J/(g·K).</dd>
+        <dt>$C_\text{cal}$</dt><dd>The heat capacity of the calorimeter itself (walls, stirrer, thermometer). Calibrated separately by running a reaction of known $\Delta H$.</dd>
+        <dt>$\Delta T$</dt><dd>Measured temperature change of the water bath.</dd>
+      </dl>
+      <p class="mg-why"><strong>Two kinds of calorimeter.</strong> A <em>coffee-cup calorimeter</em> is a styrofoam cup — constant pressure, measures $\Delta H$ directly, good for solutions and dilute reactions. A <em>bomb calorimeter</em> is a sealed metal container — constant volume, measures $\Delta U$, and is used for combustion because you can pressurize it with oxygen. The $\Delta H$ you get from a bomb is slightly corrected for the $p\Delta V$ of gas changes.</p>
+    </div>
+
+    <h3>Worked example: coffee-cup calorimetry</h3>
+
+    <p>You dissolve 2.0 g of solid NaOH in 100.0 mL of water in a styrofoam cup. The temperature rises from 22.0°C to 26.6°C. Find $\Delta H$ per mole of NaOH.</p>
+
+    <ol>
+      <li>Heat absorbed by water: $q = m c \Delta T = 100 \cdot 4.18 \cdot 4.6 = 1923$ J.</li>
+      <li>That's heat gained by the surroundings, so $q_\text{rxn} = -1923$ J.</li>
+      <li>Moles of NaOH: $2.0 / 40.0 = 0.050$ mol.</li>
+      <li>$\Delta H = q_\text{rxn} / n = -1923 / 0.050 = -38\,460$ J/mol $= -38.5$ kJ/mol.</li>
+    </ol>
+
+    <p>The published value is $-44.5$ kJ/mol — off by ~15%, because a styrofoam cup is a lousy adiabatic boundary and loses heat. The method is right; the instrument is crude. That's why the bomb calorimeter exists.</p>
+
+    <div class="problem-set" data-topic="chem-thermo-calc"></div>
+
+    <!-- ========================================================== -->
+    <h2 id="hess">5. Hess's law and standard enthalpies of formation</h2>
+
+    <p>Enthalpy is a <strong>state function</strong>, meaning $\Delta H$ only depends on the initial and final states — not on the path between them. That simple fact has enormous practical consequences. It means you can compute $\Delta H$ for any reaction by adding and subtracting $\Delta H$ values from any other reactions that sum (algebraically) to the one you want. That's <strong>Hess's law</strong>.</p>
+
+    <p>In practice you tabulate $\Delta H_f^\circ$, the <strong>standard enthalpy of formation</strong>, for every compound, and compute any reaction's $\Delta H$ from the difference of sums:</p>
+
+    <div class="math-display">$$\Delta H^\circ_\text{rxn} = \sum_{\text{products}} \nu_i\, \Delta H^\circ_{f,i} - \sum_{\text{reactants}} \nu_j\, \Delta H^\circ_{f,j}.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Hess's law via formation enthalpies</p>
+      <dl>
+        <dt>$\Delta H^\circ_\text{rxn}$</dt><dd>The enthalpy change of the balanced reaction at standard conditions (1 bar, 298 K).</dd>
+        <dt>$\Delta H^\circ_{f,i}$</dt><dd>Standard enthalpy of formation of species $i$ — the heat released or absorbed when 1 mole of $i$ is formed from its elements in their standard states.</dd>
+        <dt>$\nu_i$</dt><dd>Stoichiometric coefficient of species $i$ in the balanced reaction. Dimensionless.</dd>
+        <dt>convention</dt><dd>$\Delta H^\circ_f$ for an element in its standard state is zero by definition. O$_2$(g), N$_2$(g), C(graphite), and so on all have $\Delta H^\circ_f = 0$.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why it works.</strong> You can mentally decompose any reaction into two legs: first tear all reactants down into elements (that costs $-\sum \nu_j \Delta H^\circ_{f,j}$), then reassemble the products from elements (that costs $+\sum \nu_i \Delta H^\circ_{f,i}$). Because $H$ is a state function, the loop gives the right answer regardless of whether any chemist actually ran it that way.</p>
+    </div>
+
+    <h3>Worked example: burning methane via formation enthalpies</h3>
+
+    <p>Compute $\Delta H^\circ$ for CH$_4$(g) + 2 O$_2$(g) $\to$ CO$_2$(g) + 2 H$_2$O(l).</p>
+
+    <p>From tables (kJ/mol): $\Delta H^\circ_f[\text{CH}_4(g)] = -74.8$; $\Delta H^\circ_f[\text{O}_2(g)] = 0$ (element); $\Delta H^\circ_f[\text{CO}_2(g)] = -393.5$; $\Delta H^\circ_f[\text{H}_2\text{O}(l)] = -285.8$.</p>
+
+    <div class="math-display">$$\Delta H^\circ = (-393.5) + 2(-285.8) - [(-74.8) + 2(0)] = -393.5 - 571.6 + 74.8 = -890.3\ \text{kJ/mol}.$$</div>
+
+    <p>Which matches the experimental value. Hess's law lets you calculate combustion, oxidation, and fuel energies for thousands of reactions from a compact table of a few hundred formation enthalpies.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="bonds">6. Bond enthalpies</h2>
+
+    <p>If you don't have formation data but you know a reaction's bond changes, you can estimate $\Delta H$ from <strong>bond enthalpies</strong> — average energies for breaking specific kinds of bonds:</p>
+
+    <div class="math-display">$$\Delta H_\text{rxn} \approx \sum \text{BE(bonds broken)} - \sum \text{BE(bonds formed)}.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Bond-enthalpy estimate</p>
+      <dl>
+        <dt>$\text{BE}$</dt><dd>Average bond enthalpy for a specific bond type (C-H, O-H, O=O, etc.). Tabulated in kJ/mol.</dd>
+        <dt>"broken"</dt><dd>Bonds in the reactants that disappear in the products. Counted with positive sign.</dd>
+        <dt>"formed"</dt><dd>Bonds in the products that weren't in the reactants. Counted with negative sign.</dd>
+      </dl>
+      <p class="mg-why"><strong>Limitation.</strong> Bond enthalpies are averages across many compounds, not exact values for any one molecule. The method is only accurate to about $\pm 20$ kJ/mol. For better than that, use Hess's law with $\Delta H_f^\circ$ data.</p>
+    </div>
+
+    <p>For the methane combustion above: break 4 C-H (413 kJ/mol each) and 2 O=O (498). Form 2 C=O (799 kJ/mol in CO$_2$) and 4 O-H (463). Estimate:</p>
+
+    <div class="math-display">$$\Delta H \approx 4(413) + 2(498) - 2(799) - 4(463) = 1652 + 996 - 1598 - 1852 = -802\ \text{kJ/mol}.$$</div>
+
+    <p>Compare with the tabulated value of $-890$ kJ/mol. An error of 88 kJ/mol is about 10% — reasonable for a method that requires no formation data. The systematic underestimate reflects the fact that bond enthalpies don't quite capture the stability of CO$_2$.</p>
+
+    <div class="problem-set" data-topic="chem-thermo-hess"></div>
+
+    <!-- ========================================================== -->
+    <h2 id="entropy">7. Entropy and the second law</h2>
+
+    <p>Exothermic reactions are common but not universal. Ammonium nitrate dissolves in water endothermically and instantly — the water gets <em>cold</em> and yet the reaction happens. Why?</p>
+
+    <p>The answer is entropy. The universe prefers states with more accessible microstates. A jumbled solution of ions has vastly more microstates than a single crystal, so even though dissolving absorbs energy, the resulting increase in disorder makes it worth doing. The formal statement is the <strong>second law of thermodynamics</strong>:</p>
+
+    <div class="math-display">$$\Delta S_\text{universe} = \Delta S_\text{system} + \Delta S_\text{surroundings} \geq 0.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Second law in two halves</p>
+      <dl>
+        <dt>$\Delta S_\text{universe}$</dt><dd>Total entropy change of everything — system plus its surroundings.</dd>
+        <dt>$\Delta S_\text{system}$</dt><dd>Entropy change of the reacting system itself (what most tables list).</dd>
+        <dt>$\Delta S_\text{surroundings}$</dt><dd>Entropy change of the rest of the universe, which at constant $T$ and $P$ is $-\Delta H/T$ (heat flowing into the surroundings adds entropy there).</dd>
+        <dt>$\geq 0$</dt><dd>The second law. Equality only at equilibrium; strict inequality for spontaneous change.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>The trade-off.</strong> A reaction can absorb heat from the surroundings (reducing $\Delta S_\text{surroundings}$) as long as it increases $\Delta S_\text{system}$ enough to more than compensate. That's how endothermic reactions can still happen spontaneously — ice melting at 0°C is a daily example.</p>
+    </div>
+
+    <h3>Where entropy comes from, informally</h3>
+
+    <p>Entropy counts the number of ways a system can arrange its microscopic degrees of freedom. More ways = more entropy. Some patterns:</p>
+
+    <ul>
+      <li><strong>Phase.</strong> Gas $\gg$ liquid $>$ solid. Gases have far more accessible positions and velocities than liquids, which are in turn more flexible than solids.</li>
+      <li><strong>Temperature.</strong> Hotter = more entropy. Adding heat gives molecules more kinetic energy and more accessible states.</li>
+      <li><strong>Mixing.</strong> Two separate pure substances have lower entropy than the mixed version. Mixing adds $\Delta S_\text{mix} = -R(x_1\ln x_1 + x_2\ln x_2)$.</li>
+      <li><strong>Molecule count.</strong> A reaction that produces more molecules than it consumes generally increases entropy, because more independent particles = more microstates.</li>
+      <li><strong>Complexity.</strong> A flexible linear molecule has higher entropy than a rigid ring. The pieces of a protein have higher entropy than the folded state; that's why protein folding is entropically costly.</li>
+    </ul>
+
+    <p>At absolute zero, a perfect crystal has exactly one microstate and $S = 0$. That's the third law of thermodynamics, and it lets you tabulate absolute entropies rather than just changes.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="gibbs">8. Gibbs free energy and spontaneity</h2>
+
+    <p>Keeping track of the universe is inconvenient. Fortunately, at constant $T$ and $P$, you can fold everything into a single <strong>system-only</strong> quantity that you can compute from tables:</p>
+
+    <div class="math-display">$$\Delta G = \Delta H - T\, \Delta S.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Gibbs free energy change</p>
+      <dl>
+        <dt>$\Delta G$</dt><dd>Change in Gibbs free energy of the system. Same units as enthalpy (kJ or kJ/mol).</dd>
+        <dt>$\Delta H$</dt><dd>System enthalpy change, as above. Signed.</dd>
+        <dt>$T$</dt><dd>Absolute temperature in kelvin. Always positive.</dd>
+        <dt>$\Delta S$</dt><dd>System entropy change. Signed.</dd>
+        <dt>sign of $\Delta G$</dt><dd>$\Delta G < 0$: reaction is spontaneous as written. $\Delta G = 0$: system is at equilibrium. $\Delta G > 0$: reverse reaction is spontaneous.</dd>
+      </dl>
+      <p class="mg-why"><strong>Why this form.</strong> Multiplying the second law by $-T$ gives $-T\Delta S_\text{univ} = -T\Delta S_\text{sys} + \Delta H_\text{sys}$, and the left side is $\Delta G$ by definition. Minimizing $G$ at fixed $T,P$ is equivalent to maximizing the total entropy of the universe. Everyone in physical chemistry computes $\Delta G$.</p>
+    </div>
+
+    <h3>The four quadrants of spontaneity</h3>
+
+    <p>Because $\Delta G = \Delta H - T\Delta S$ has two signed terms, there are four possibilities:</p>
+
+    <table class="rank-table">
+      <thead><tr><th>$\Delta H$</th><th>$\Delta S$</th><th>Spontaneous?</th><th>Example</th></tr></thead>
+      <tbody>
+        <tr><td>$-$</td><td>$+$</td><td>Always (all $T$)</td><td>Combustion of hydrocarbons</td></tr>
+        <tr><td>$-$</td><td>$-$</td><td>Only at low $T$</td><td>Water freezing (below 0°C)</td></tr>
+        <tr><td>$+$</td><td>$+$</td><td>Only at high $T$</td><td>Ice melting (above 0°C), decompositions</td></tr>
+        <tr><td>$+$</td><td>$-$</td><td>Never</td><td>Synthesizing ozone from O$_2$ at STP</td></tr>
+      </tbody>
+    </table>
+
+    <p>Two quadrants are temperature-sensitive, and the crossover temperature is exactly $T = \Delta H/\Delta S$. That's the boiling point of a liquid, the melting point of a solid, and the temperature at which a reaction switches from spontaneous to non-spontaneous.</p>
+
+    <h3>Worked example: when does water boil?</h3>
+
+    <p>For H$_2$O($l$) $\to$ H$_2$O($g$), $\Delta H = +40.7$ kJ/mol and $\Delta S = +109$ J/(mol·K).</p>
+
+    <ol>
+      <li>At $T = 298$ K: $\Delta G = 40700 - 298 \times 109 = 40700 - 32482 = +8218$ J/mol. Positive — water doesn't spontaneously boil at room temperature, as expected.</li>
+      <li>Set $\Delta G = 0$ and solve for $T$: $T = 40700 / 109 = 373$ K $= 100°$C. The boiling point.</li>
+      <li>At $T = 400$ K: $\Delta G = 40700 - 400 \times 109 = -2900$ J/mol. Negative — water does boil, as you'd expect on a stove.</li>
+    </ol>
+
+    <p>Notice the entropy change is what drives the transition at high temperature. The enthalpy says "don't boil"; the entropy says "boil if you can afford it." The temperature sets the exchange rate between these two votes, and 100°C is where they balance.</p>
+
+    <div class="callout math">
+      <div class="label">CONNECT TO EQUILIBRIUM</div>
+      <p>$\Delta G^\circ$ and the equilibrium constant are related by $\Delta G^\circ = -RT\ln K$. That single equation links thermochemistry to <a href="./equilibrium.html">equilibrium</a>: any reaction's $K$ is a direct function of its free energy change. A reaction with $\Delta G^\circ = -10$ kJ/mol has $K \approx 57$ at 298 K; one with $\Delta G^\circ = +10$ kJ/mol has $K \approx 0.018$. You can read equilibrium constants off a table of free energies.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="demo">9. Interactive: spontaneity explorer</h2>
+
+    <p>Pick $\Delta H$ and $\Delta S$ for a hypothetical reaction and slide the temperature to see $\Delta G$ change sign. The gray band marks the crossover temperature $T_\text{switch} = \Delta H/\Delta S$ where $\Delta G = 0$.</p>
+
+    <div class="viz-3d">
+      <div class="v3-controls">
+        <span class="v3-label">ΔH:</span>
+        <input type="range" id="dhSlider" min="-200" max="200" step="5" value="-50" style="flex:1;max-width:200px;">
+        <span id="dhLabel" style="min-width:100px;color:#22d3ee;font-family:ui-monospace,monospace;">-50 kJ/mol</span>
+      </div>
+      <div class="v3-controls">
+        <span class="v3-label">ΔS:</span>
+        <input type="range" id="dsSlider" min="-300" max="300" step="5" value="100" style="flex:1;max-width:200px;">
+        <span id="dsLabel" style="min-width:130px;color:#22d3ee;font-family:ui-monospace,monospace;">100 J/(mol·K)</span>
+      </div>
+      <svg id="gibbsSvg" viewBox="0 0 720 360" style="width:100%;height:auto;background:#0a0d12;border-radius:6px;"></svg>
+      <p class="v3-caption" id="gibbsCaption">Free energy ΔG (cyan) vs. temperature (K). The zero line is where ΔG = 0. Below the crossover, reactions with ΔS &gt; 0 are non-spontaneous; above, they are spontaneous. The Haber process, ammonia synthesis, and ice-water coexistence all live on similar curves.</p>
+    </div>
+
+    <div class="problem-set" data-topic="chem-thermo-gibbs"></div>
+
+    <!-- ========================================================== -->
+    <h2 id="code">10. Thermochemistry in code</h2>
+
+    <p>Three practical calculations. Hess's law from formation enthalpies, bond-enthalpy estimation, and Gibbs crossover.</p>
+
+    <div class="code-tabs" id="ct-thermo">
+      <div class="ct-header">
+        <button class="ct-tab active" data-tab="np">NumPy</button>
+        <button class="ct-tab" data-tab="py">Plain Python</button>
+        <span class="ct-label">thermochemistry primitives</span>
+      </div>
+
+      <div class="ct-panel active" data-tab="np"><pre><code><span class="kw">import</span> numpy <span class="kw">as</span> np
+
+<span class="cmt"># ---------- 1. Hess's law from formation enthalpies ----------</span>
+<span class="cmt"># dHf in kJ/mol; None for elements in their standard state (zero).</span>
+dHf = {
+    <span class="str">"CH4(g)"</span>:      -<span class="num">74.8</span>,
+    <span class="str">"O2(g)"</span>:        <span class="num">0.0</span>,
+    <span class="str">"CO2(g)"</span>:     -<span class="num">393.5</span>,
+    <span class="str">"H2O(l)"</span>:     -<span class="num">285.8</span>,
+    <span class="str">"H2O(g)"</span>:     -<span class="num">241.8</span>,
+}
+
+<span class="kw">def</span> <span class="fn">dH_rxn</span>(reactants, products):
+    <span class="cmt"># each argument is a list of (species, stoichiometric coefficient) tuples</span>
+    <span class="kw">return</span> (<span class="fn">sum</span>(n * dHf[sp] <span class="kw">for</span> sp, n <span class="kw">in</span> products)
+            - <span class="fn">sum</span>(n * dHf[sp] <span class="kw">for</span> sp, n <span class="kw">in</span> reactants))
+
+<span class="cmt"># Methane combustion: CH4 + 2 O2 -> CO2 + 2 H2O(l)</span>
+dH = <span class="fn">dH_rxn</span>([(<span class="str">"CH4(g)"</span>, <span class="num">1</span>), (<span class="str">"O2(g)"</span>, <span class="num">2</span>)],
+            [(<span class="str">"CO2(g)"</span>, <span class="num">1</span>), (<span class="str">"H2O(l)"</span>, <span class="num">2</span>)])
+<span class="fn">print</span>(<span class="str">f"methane combustion dH = {dH:.1f} kJ/mol"</span>)   <span class="cmt"># -890.3</span>
+
+<span class="cmt"># ---------- 2. Bond-enthalpy estimate ----------</span>
+<span class="cmt"># Average bond enthalpies in kJ/mol</span>
+BE = {
+    <span class="str">"C-H"</span>: <span class="num">413</span>, <span class="str">"O=O"</span>: <span class="num">498</span>,
+    <span class="str">"C=O"</span>: <span class="num">799</span>, <span class="str">"O-H"</span>: <span class="num">463</span>,
+}
+
+<span class="kw">def</span> <span class="fn">dH_bonds</span>(broken, formed):
+    <span class="kw">return</span> <span class="fn">sum</span>(n * BE[b] <span class="kw">for</span> b, n <span class="kw">in</span> broken) - <span class="fn">sum</span>(n * BE[b] <span class="kw">for</span> b, n <span class="kw">in</span> formed)
+
+<span class="cmt"># CH4 + 2 O2 -> CO2 + 2 H2O: break 4 C-H + 2 O=O, form 2 C=O + 4 O-H</span>
+dH_est = <span class="fn">dH_bonds</span>([(<span class="str">"C-H"</span>, <span class="num">4</span>), (<span class="str">"O=O"</span>, <span class="num">2</span>)],
+                   [(<span class="str">"C=O"</span>, <span class="num">2</span>), (<span class="str">"O-H"</span>, <span class="num">4</span>)])
+<span class="fn">print</span>(<span class="str">f"bond-enthalpy estimate dH = {dH_est} kJ/mol"</span>)   <span class="cmt"># -802</span>
+
+<span class="cmt"># ---------- 3. Gibbs free energy and crossover temperature ----------</span>
+<span class="kw">def</span> <span class="fn">dG</span>(dH_kJmol, dS_JmolK, T):
+    <span class="kw">return</span> dH_kJmol - T * dS_JmolK / <span class="num">1000.0</span>
+
+<span class="kw">def</span> <span class="fn">T_crossover</span>(dH_kJmol, dS_JmolK):
+    <span class="kw">return</span> dH_kJmol * <span class="num">1000.0</span> / dS_JmolK   <span class="cmt"># kelvin</span>
+
+<span class="cmt"># Water vaporization: dH = +40.7 kJ/mol, dS = +109 J/(mol K)</span>
+<span class="fn">print</span>(<span class="str">f"boiling point of water = {T_crossover(40.7, 109):.1f} K"</span>)  <span class="cmt"># ~373</span>
+<span class="fn">print</span>(<span class="str">f"dG at 298 K = {dG(40.7, 109, 298):.2f} kJ/mol"</span>)  <span class="cmt"># +8.22</span>
+<span class="fn">print</span>(<span class="str">f"dG at 400 K = {dG(40.7, 109, 400):.2f} kJ/mol"</span>)  <span class="cmt"># -2.90</span>
+</code></pre></div>
+
+      <div class="ct-panel" data-tab="py"><pre><code><span class="kw">import</span> math
+
+<span class="cmt"># Pure Python version.</span>
+
+R = <span class="num">8.314</span>  <span class="cmt"># J/(mol K)</span>
+
+<span class="kw">def</span> <span class="fn">dG</span>(dH, dS, T):
+    <span class="cmt"># dH in kJ/mol, dS in J/(mol K), T in K</span>
+    <span class="kw">return</span> dH - T * dS / <span class="num">1000.0</span>
+
+<span class="kw">def</span> <span class="fn">K_from_dG</span>(dG_kJmol, T):
+    <span class="cmt"># dG0 = -RT ln K  =>  K = exp(-dG0 / RT)</span>
+    <span class="kw">return</span> math.<span class="fn">exp</span>(-dG_kJmol * <span class="num">1000.0</span> / (R * T))
+
+<span class="cmt"># Simple check: water's boiling point</span>
+T_boil = <span class="num">40.7</span> * <span class="num">1000.0</span> / <span class="num">109.0</span>
+<span class="fn">print</span>(<span class="str">f"water bp = {T_boil:.1f} K"</span>)  <span class="cmt"># 373.4</span>
+
+<span class="cmt"># Haber process: N2 + 3 H2 -> 2 NH3</span>
+<span class="cmt">#   dH = -92 kJ/mol, dS = -199 J/(mol K)</span>
+<span class="fn">print</span>(<span class="str">f"Haber dG at 298 K = {dG(-92, -199, 298):.2f} kJ/mol"</span>)  <span class="cmt"># ~-33, favorable</span>
+<span class="fn">print</span>(<span class="str">f"Haber dG at 700 K = {dG(-92, -199, 700):.2f} kJ/mol"</span>)  <span class="cmt"># ~+47, unfavorable</span>
+
+<span class="cmt"># K at 298 K for Haber (dG0 = -33 kJ/mol)</span>
+<span class="fn">print</span>(<span class="str">f"K(298) = {K_from_dG(-33, 298):.2e}"</span>)  <span class="cmt"># ~6e5</span>
+
+<span class="cmt"># Calorimetry: dissolve NaOH and measure T rise</span>
+<span class="kw">def</span> <span class="fn">dH_calorimetry</span>(m_water_g, dT_C, n_moles):
+    <span class="cmt"># assume c_water = 4.18 J/(g K), ignore calorimeter heat cap</span>
+    q_water = m_water_g * <span class="num">4.18</span> * dT_C      <span class="cmt"># J absorbed by water</span>
+    q_rxn = -q_water                     <span class="cmt"># by conservation</span>
+    <span class="kw">return</span> q_rxn / n_moles / <span class="num">1000.0</span>        <span class="cmt"># kJ/mol</span>
+
+<span class="fn">print</span>(<span class="str">f"NaOH dH est = {dH_calorimetry(100, 4.6, 0.050):.1f} kJ/mol"</span>)  <span class="cmt"># ~-38.5</span>
+</code></pre></div>
+    </div>
+
+    <p>Three notes:</p>
+    <ul>
+      <li>Temperature in Gibbs formulas is <strong>always</strong> in kelvin. Using celsius is a common and painful mistake.</li>
+      <li>Be careful with units when $\Delta H$ is in kJ/mol but $\Delta S$ is in J/(mol·K) — the factor of 1000 trips people up constantly.</li>
+      <li>Both $\Delta H$ and $\Delta S$ vary weakly with temperature. For small temperature ranges (a few hundred K), treating them as constants is fine. For wider ranges, you need heat-capacity data and Kirchhoff's law.</li>
+    </ul>
+
+    <!-- ========================================================== -->
+    <h2 id="summary">11. Cheat sheet</h2>
+
+    <div class="grid">
+      <div class="card">
+        <h4>Enthalpy</h4>
+        <p>$\Delta H = q_p$ (heat at constant $P$).</p>
+        <p class="meta">Exothermic $<0$, endothermic $>0$.</p>
+      </div>
+      <div class="card">
+        <h4>Heat capacity</h4>
+        <p>$q = n C_p \Delta T$.</p>
+        <p class="meta">Water has unusually high $C_p$.</p>
+      </div>
+      <div class="card">
+        <h4>Hess's law</h4>
+        <p>$\Delta H_\text{rxn} = \sum \nu \Delta H^\circ_f(\text{products}) - \sum \nu \Delta H^\circ_f(\text{reactants})$.</p>
+        <p class="meta">Elements have $\Delta H^\circ_f = 0$.</p>
+      </div>
+      <div class="card">
+        <h4>Bond enthalpies</h4>
+        <p>$\Delta H \approx$ BE(broken) $-$ BE(formed).</p>
+        <p class="meta">Accurate to ~$\pm 20$ kJ/mol.</p>
+      </div>
+      <div class="card">
+        <h4>Second law</h4>
+        <p>$\Delta S_\text{universe} \geq 0$.</p>
+        <p class="meta">Universe always tends toward disorder.</p>
+      </div>
+      <div class="card">
+        <h4>Gibbs</h4>
+        <p>$\Delta G = \Delta H - T\Delta S$.</p>
+        <p class="meta">$<0$: spontaneous. $=0$: equilibrium.</p>
+      </div>
+      <div class="card">
+        <h4>Crossover $T$</h4>
+        <p>$T_\text{switch} = \Delta H / \Delta S$.</p>
+        <p class="meta">Where $\Delta G$ changes sign.</p>
+      </div>
+      <div class="card">
+        <h4>Link to $K$</h4>
+        <p>$\Delta G^\circ = -RT \ln K$.</p>
+        <p class="meta">Thermo → equilibrium in one equation.</p>
+      </div>
+      <div class="card">
+        <h4>Kelvin</h4>
+        <p>Always K, never °C in formulas.</p>
+        <p class="meta">$T_\text{K} = T_\text{°C} + 273.15$.</p>
+      </div>
+      <div class="card">
+        <h4>Phase changes</h4>
+        <p>Boiling: $\Delta G = 0$ at $T_b = \Delta H_\text{vap}/\Delta S_\text{vap}$.</p>
+        <p class="meta">For water, 373 K = 100°C.</p>
+      </div>
+    </div>
+
+    <h3>See also</h3>
+    <div class="grid">
+      <div class="card">
+        <h4><a href="./bonding.html">Bonding</a></h4>
+        <p>Bond enthalpies come from here. Every $\Delta H$ is ultimately a sum of energies to break and reform the bonds from the previous page.</p>
+      </div>
+      <div class="card">
+        <h4><a href="./kinetics.html">Kinetics</a></h4>
+        <p>Thermochemistry says whether a reaction can happen. Kinetics says how fast. The Arrhenius activation energy is independent of $\Delta H$ — thermodynamically favorable reactions can still be slow.</p>
+      </div>
+      <div class="card">
+        <h4><a href="./equilibrium.html">Equilibrium</a></h4>
+        <p>The relation $\Delta G^\circ = -RT\ln K$ is the bridge. Every equilibrium constant you compute comes from a free energy difference.</p>
+      </div>
+      <div class="card">
+        <h4><a href="../physics/classical-mechanics.html">Physics: Classical Mechanics</a></h4>
+        <p>Work-energy theorems and conservation of energy — the physics framework on which all of thermodynamics rests.</p>
+      </div>
+      <div class="card">
+        <h4><a href="../math/calculus.html">Math: Calculus</a></h4>
+        <p>Heat capacity integrals and temperature-dependent enthalpies use $\int C_p(T)\,dT$. The Clausius-Clapeyron equation is a differential equation for phase transitions.</p>
+      </div>
+      <div class="card">
+        <h4><a href="../math/probability.html">Math: Probability</a></h4>
+        <p>Entropy is the logarithm of the number of microstates — $S = k_B \ln W$. Boltzmann's bridge from combinatorics to thermodynamics.</p>
+      </div>
+    </div>
+
+    <div class="bib">
+      <h4>Further reading</h4>
+      <ul>
+        <li>Peter Atkins and Julio de Paula — <em>Physical Chemistry</em>. The canonical rigorous text, with careful treatment of the thermodynamic state functions and their derivations.</li>
+        <li>Ira Levine — <em>Physical Chemistry</em>. An alternative with more emphasis on worked numerical examples. Good second reference.</li>
+        <li>J. Willard Gibbs — <em>On the Equilibrium of Heterogeneous Substances</em> (1876–1878). The original derivation of the free energy, still worth skimming for the sheer clarity of the argument.</li>
+        <li>NIST WebBook — <a href="https://webbook.nist.gov/chemistry/">webbook.nist.gov/chemistry</a>. Authoritative tables of thermodynamic properties for thousands of compounds.</li>
+        <li>Wikipedia — <a href="https://en.wikipedia.org/wiki/Gibbs_free_energy">Gibbs free energy</a> and <a href="https://en.wikipedia.org/wiki/Standard_enthalpy_of_formation">Standard enthalpy of formation</a>. Solid overviews with references.</li>
+      </ul>
+    </div>
+
+    <div class="next-card">
+      <div class="label">NEXT UP</div>
+      <a href="./kinetics.html">→ Kinetics</a>
+      <p>You now know which reactions <em>can</em> happen. The next question is how fast they do. Kinetics covers rate laws, activation energies, catalysis, and mechanisms — and it turns out a thermodynamically favorable reaction can still take geological ages (diamond slowly turning into graphite, for example).</p>
+    </div>
+
+  </article>
+</div>
+
+<script>
+// =========================================================
+// Code tabs
+document.querySelectorAll('.code-tabs').forEach(root => {
+  const tabs = root.querySelectorAll('.ct-tab');
+  const panels = root.querySelectorAll('.ct-panel');
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const target = tab.getAttribute('data-tab');
+      tabs.forEach(t => t.classList.toggle('active', t === tab));
+      panels.forEach(p => p.classList.toggle('active', p.getAttribute('data-tab') === target));
+    });
+  });
+});
+
+// =========================================================
+// Gibbs free energy plot
+(function () {
+  const svg = document.getElementById('gibbsSvg');
+  if (!svg) return;
+  const NS = 'http://www.w3.org/2000/svg';
+  const dhS = document.getElementById('dhSlider');
+  const dsS = document.getElementById('dsSlider');
+  const dhL = document.getElementById('dhLabel');
+  const dsL = document.getElementById('dsLabel');
+
+  const W = 720, H = 360;
+  const pad = 50;
+
+  function draw() {
+    const dH = parseFloat(dhS.value);  // kJ/mol
+    const dS = parseFloat(dsS.value);  // J/(mol K)
+    dhL.textContent = dH + ' kJ/mol';
+    dsL.textContent = dS + ' J/(mol·K)';
+
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+
+    // background
+    const bg = document.createElementNS(NS, 'rect');
+    bg.setAttribute('x', 0); bg.setAttribute('y', 0);
+    bg.setAttribute('width', W); bg.setAttribute('height', H);
+    bg.setAttribute('fill', '#0a0d12');
+    svg.appendChild(bg);
+
+    // T range: 0 to 1200 K
+    const Tmin = 0, Tmax = 1200;
+    // dG(T) = dH - T * dS / 1000
+    // compute range
+    const gMin = Math.min(dH, dH - Tmax * dS / 1000);
+    const gMax = Math.max(dH, dH - Tmax * dS / 1000);
+    const yAbs = Math.max(Math.abs(gMin), Math.abs(gMax), 50);
+    const yLo = -yAbs * 1.1;
+    const yHi = yAbs * 1.1;
+
+    const x = t => pad + (W - 2 * pad) * (t - Tmin) / (Tmax - Tmin);
+    const y = g => pad + (H - 2 * pad) * (yHi - g) / (yHi - yLo);
+
+    // grid lines
+    for (let t = 0; t <= Tmax; t += 200) {
+      const ln = document.createElementNS(NS, 'line');
+      ln.setAttribute('x1', x(t)); ln.setAttribute('y1', pad);
+      ln.setAttribute('x2', x(t)); ln.setAttribute('y2', H - pad);
+      ln.setAttribute('stroke', '#1a2030'); ln.setAttribute('stroke-width', 1);
+      svg.appendChild(ln);
+      const lbl = document.createElementNS(NS, 'text');
+      lbl.setAttribute('x', x(t));
+      lbl.setAttribute('y', H - pad + 16);
+      lbl.setAttribute('text-anchor', 'middle');
+      lbl.setAttribute('fill', '#7a8699');
+      lbl.setAttribute('font-family', 'ui-monospace,monospace');
+      lbl.setAttribute('font-size', 11);
+      lbl.textContent = t + ' K';
+      svg.appendChild(lbl);
+    }
+    for (let k = -3; k <= 3; k++) {
+      const gv = yAbs * k / 3;
+      if (gv < yLo || gv > yHi) continue;
+      const ln = document.createElementNS(NS, 'line');
+      ln.setAttribute('x1', pad); ln.setAttribute('y1', y(gv));
+      ln.setAttribute('x2', W - pad); ln.setAttribute('y2', y(gv));
+      ln.setAttribute('stroke', '#1a2030'); ln.setAttribute('stroke-width', 1);
+      svg.appendChild(ln);
+      const lbl = document.createElementNS(NS, 'text');
+      lbl.setAttribute('x', pad - 6);
+      lbl.setAttribute('y', y(gv) + 4);
+      lbl.setAttribute('text-anchor', 'end');
+      lbl.setAttribute('fill', '#7a8699');
+      lbl.setAttribute('font-family', 'ui-monospace,monospace');
+      lbl.setAttribute('font-size', 11);
+      lbl.textContent = gv.toFixed(0);
+      svg.appendChild(lbl);
+    }
+
+    // zero line (emphasized)
+    const zero = document.createElementNS(NS, 'line');
+    zero.setAttribute('x1', pad); zero.setAttribute('y1', y(0));
+    zero.setAttribute('x2', W - pad); zero.setAttribute('y2', y(0));
+    zero.setAttribute('stroke', '#7c5cff');
+    zero.setAttribute('stroke-width', 1.5);
+    zero.setAttribute('stroke-dasharray', '4 4');
+    svg.appendChild(zero);
+
+    // crossover vertical line if exists inside range
+    if (Math.abs(dS) > 1e-6) {
+      const Tc = dH * 1000 / dS;
+      if (Tc >= Tmin && Tc <= Tmax) {
+        const ln = document.createElementNS(NS, 'line');
+        ln.setAttribute('x1', x(Tc)); ln.setAttribute('y1', pad);
+        ln.setAttribute('x2', x(Tc)); ln.setAttribute('y2', H - pad);
+        ln.setAttribute('stroke', '#f472b6');
+        ln.setAttribute('stroke-width', 1.2);
+        ln.setAttribute('stroke-dasharray', '2 4');
+        svg.appendChild(ln);
+        const lbl = document.createElementNS(NS, 'text');
+        lbl.setAttribute('x', x(Tc) + 6);
+        lbl.setAttribute('y', pad + 14);
+        lbl.setAttribute('fill', '#f472b6');
+        lbl.setAttribute('font-family', 'ui-monospace,monospace');
+        lbl.setAttribute('font-size', 12);
+        lbl.textContent = 'T = ' + Tc.toFixed(0) + ' K';
+        svg.appendChild(lbl);
+      }
+    }
+
+    // dG curve
+    const pts = [];
+    for (let t = Tmin; t <= Tmax; t += 5) {
+      const g = dH - t * dS / 1000;
+      pts.push(x(t) + ',' + y(g));
+    }
+    const path = document.createElementNS(NS, 'polyline');
+    path.setAttribute('points', pts.join(' '));
+    path.setAttribute('fill', 'none');
+    path.setAttribute('stroke', '#22d3ee');
+    path.setAttribute('stroke-width', 2.5);
+    svg.appendChild(path);
+
+    // axes labels
+    const xl = document.createElementNS(NS, 'text');
+    xl.setAttribute('x', W / 2); xl.setAttribute('y', H - 8);
+    xl.setAttribute('text-anchor', 'middle');
+    xl.setAttribute('fill', '#a4b0c2');
+    xl.setAttribute('font-family', 'ui-monospace,monospace');
+    xl.setAttribute('font-size', 12);
+    xl.textContent = 'Temperature (K)';
+    svg.appendChild(xl);
+
+    const yl = document.createElementNS(NS, 'text');
+    yl.setAttribute('x', 12); yl.setAttribute('y', H / 2);
+    yl.setAttribute('text-anchor', 'middle');
+    yl.setAttribute('fill', '#a4b0c2');
+    yl.setAttribute('font-family', 'ui-monospace,monospace');
+    yl.setAttribute('font-size', 12);
+    yl.setAttribute('transform', 'rotate(-90 12 ' + (H / 2) + ')');
+    yl.textContent = 'ΔG (kJ/mol)';
+    svg.appendChild(yl);
+  }
+
+  dhS.addEventListener('input', draw);
+  dsS.addEventListener('input', draw);
+  draw();
+})();
+</script>
+<script defer src="../problem-set.js"></script>
+<script defer src="thermochemistry-problems.js"></script>
+<script defer src="../search-index.js"></script>
+<script defer src="../search.js"></script>
+</body>
+</html>

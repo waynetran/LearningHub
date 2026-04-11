@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Physics — The Behavior of Matter and Energy at Every Scale</title>
+<link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+<div id="tooltip"></div>
+
+<!-- ============================================================ -->
+<!-- Top bar: back to hub -->
+<!-- ============================================================ -->
+<div class="topbar">
+  <a class="topbar-back" href="../index.html">← Learning Hub</a>
+  <span class="topbar-crumb">Physics Track</span>
+  <span class="topbar-tracks">
+    <a href="../math/index.html">Math</a>
+    <a href="../cs/index.html">CS</a>
+    <a href="../ai-ml.html">AI / ML</a>
+  </span>
+</div>
+
+<!-- ============================================================ -->
+<!-- Hero -->
+<!-- ============================================================ -->
+<div class="hero">
+  <div class="hero-inner">
+    <span class="chip">UPDATED APRIL 2026</span>
+    <h1>Physics — The Behavior of Matter and Energy at Every Scale</h1>
+    <p class="lede">A working tour of the ten subjects that describe how the universe runs, from quarks to galaxies. Classical mechanics for machines and vehicles, electromagnetism for chips and motors, thermodynamics for engines and data centers, relativity and quantum mechanics for the two revolutions that refuse to die. Each card opens a deep-dive page with worked examples, interactive figures, and practice problems. No formula appears without a glossary that names every symbol.</p>
+  </div>
+</div>
+
+<main>
+  <div class="container">
+
+    <!-- ============================================================ -->
+    <section id="overview">
+      <h2>What physics is, and why it shows up everywhere <span class="era">// big picture</span></h2>
+      <p>Physics is the study of how matter and energy behave at every scale — from quarks to galaxies — and it is the foundation underneath engineering, chemistry, and the hardware that runs modern AI. A transistor is quantum mechanics. A battery is thermodynamics and electrochemistry. A GPS satellite is general relativity. A data center is heat transfer, electromagnetism, and information theory glued together by the second law. The same dozen equations keep resurfacing because the universe reuses its own tricks.</p>
+
+      <p>The ten subjects below interlock. Classical mechanics and electromagnetism are the nineteenth-century foundations; thermodynamics is the bridge between microscopic and macroscopic; special and general relativity reconcile mechanics with the constant speed of light; quantum mechanics and quantum field theory describe the atomic and subatomic worlds; particle physics and cosmology are what happens when you push those tools to the extremes of small and large; and the frontier is where the current open questions live.</p>
+
+      <div class="callout">
+        <div class="label">The 60-second summary</div>
+        <p style="margin:6px 0">
+          <strong>Classical mechanics</strong> — Newton's laws, energy, momentum, rotation. The physics of everything you can touch.<br>
+          <strong>Electromagnetism</strong> — electric and magnetic fields, Maxwell's equations, light as a wave.<br>
+          <strong>Thermodynamics</strong> — heat, work, entropy, and the limits on what engines can do.<br>
+          <strong>Special relativity</strong> — space and time mix when you move fast. $E = mc^2$ is a corollary.<br>
+          <strong>General relativity</strong> — gravity is the curvature of spacetime caused by mass and energy.<br>
+          <strong>Quantum mechanics</strong> — probability amplitudes and the wavefunction for atoms and photons.<br>
+          <strong>Quantum field theory</strong> — fields everywhere, particles as their excitations.<br>
+          <strong>Particle physics</strong> — the Standard Model: quarks, leptons, gauge bosons, and the Higgs.<br>
+          <strong>Cosmology</strong> — the history and large-scale structure of the universe.<br>
+          <strong>Frontier</strong> — quantum gravity, dark matter, dark energy, and the open puzzles.
+        </p>
+      </div>
+
+      <p>You do not need to read these in order. If you know what you want, jump to a card below. If you are starting fresh, classical mechanics is the traditional entry point because everything else either generalizes it or contradicts it in controlled ways. Thermodynamics and electromagnetism are the most immediately useful if you build things with wires and heat sinks. Quantum mechanics is the hardest to learn but the most useful if you want to understand chemistry, semiconductors, or why a laser works.</p>
+    </section>
+
+    <!-- ============================================================ -->
+    <section id="subjects">
+      <h2>The ten subjects <span class="era">// pick your entry point</span></h2>
+      <div class="grid">
+        <a class="card card-link" href="./classical-mechanics.html">
+          <h4>Classical Mechanics</h4>
+          <p class="meta">Newton, Lagrange · foundation</p>
+          <p>Kinematics, Newton's laws, work and energy, momentum, rotation, and a first look at Lagrangian mechanics. The physics of machines, projectiles, and vehicles.</p>
+          <span class="tag hot">start here</span>
+        </a>
+        <a class="card card-link" href="./electromagnetism.html">
+          <h4>Electromagnetism</h4>
+          <p class="meta">Maxwell · foundation</p>
+          <p>Electric and magnetic fields, Gauss's law, circuits, Faraday's law, Maxwell's equations, and electromagnetic waves. The physics of chips, motors, antennas, and light.</p>
+          <span class="tag hot">core</span>
+        </a>
+        <a class="card card-link" href="./thermodynamics.html">
+          <h4>Thermodynamics</h4>
+          <p class="meta">Clausius, Boltzmann · foundation</p>
+          <p>Temperature, heat, entropy, the ideal gas law, Carnot engines, and the Boltzmann distribution. The physics of engines, refrigerators, and why data centers need cooling.</p>
+          <span class="tag hot">core</span>
+        </a>
+        <a class="card card-link" href="./special-relativity.html">
+          <h4>Special Relativity</h4>
+          <p class="meta">prereq: classical mechanics</p>
+          <p>Lorentz transformations, time dilation, length contraction, four-vectors, and $E = mc^2$. What changes about mechanics when you insist the speed of light is the same in every frame.</p>
+          <span class="tag">core</span>
+        </a>
+        <a class="card card-link" href="./general-relativity.html">
+          <h4>General Relativity</h4>
+          <p class="meta">prereq: special relativity, calculus</p>
+          <p>The equivalence principle, curvature, the Einstein field equations, and the Schwarzschild solution. Gravity as the geometry of spacetime.</p>
+          <span class="tag">advanced</span>
+        </a>
+        <a class="card card-link" href="./quantum-mechanics.html">
+          <h4>Quantum Mechanics</h4>
+          <p class="meta">prereq: linear algebra, calculus</p>
+          <p>Wavefunctions, the Schrödinger equation, operators, measurement, spin, and entanglement. The physics of atoms, lasers, transistors, and qubits.</p>
+          <span class="tag hot">core</span>
+        </a>
+        <a class="card card-link" href="./quantum-field-theory.html">
+          <h4>Quantum Field Theory</h4>
+          <p class="meta">prereq: QM, special relativity</p>
+          <p>Fields everywhere, particles as their quantized excitations, Feynman diagrams, and renormalization. The framework behind the Standard Model.</p>
+          <span class="tag">advanced</span>
+        </a>
+        <a class="card card-link" href="./particle-physics.html">
+          <h4>Particle Physics</h4>
+          <p class="meta">prereq: QFT (light touch)</p>
+          <p>Quarks, leptons, gauge bosons, and the Higgs. Symmetries, conservation laws, and what the Large Hadron Collider actually does.</p>
+          <span class="tag">core</span>
+        </a>
+        <a class="card card-link" href="./cosmology.html">
+          <h4>Cosmology</h4>
+          <p class="meta">prereq: general relativity, thermo</p>
+          <p>Friedmann equations, the cosmic microwave background, nucleosynthesis, dark matter, and dark energy. The history of the universe from the first microsecond onward.</p>
+          <span class="tag">core</span>
+        </a>
+        <a class="card card-link" href="./frontier.html">
+          <h4>Frontier</h4>
+          <p class="meta">open questions · 2026</p>
+          <p>Quantum gravity, the measurement problem, the hierarchy problem, dark sector searches, and what might break the Standard Model next.</p>
+          <span class="tag">speculative</span>
+        </a>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section id="paths">
+      <h2>Suggested paths <span class="era">// four goal-driven routes</span></h2>
+      <p>The ten subjects interlock, but if you have a specific goal in mind, here are the shortest paths through.</p>
+      <div class="grid">
+        <div class="card">
+          <h4>"I want to understand how engines and data centers work."</h4>
+          <p class="meta">classical → thermo → EM</p>
+          <p>Start with <a href="./classical-mechanics.html">Classical Mechanics</a> for energy and work. Then <a href="./thermodynamics.html">Thermodynamics</a> for heat, entropy, and Carnot. Finish with <a href="./electromagnetism.html">Electromagnetism</a> for motors, transformers, and induction.</p>
+          <span class="tag hot">engineering path</span>
+        </div>
+        <div class="card">
+          <h4>"I want quantum to click."</h4>
+          <p class="meta">classical → EM → QM</p>
+          <p><a href="./classical-mechanics.html">Classical Mechanics</a> for energy and conservation. <a href="./electromagnetism.html">Electromagnetism</a> for waves. Then <a href="./quantum-mechanics.html">Quantum Mechanics</a>, where waves start carrying probability instead of energy.</p>
+          <span class="tag hot">popular path</span>
+        </div>
+        <div class="card">
+          <h4>"I want to read papers on cosmology or the early universe."</h4>
+          <p class="meta">classical → SR → GR → cosmology</p>
+          <p>Mechanics for the vocabulary. <a href="./special-relativity.html">SR</a> for four-vectors. <a href="./general-relativity.html">GR</a> for curvature. <a href="./cosmology.html">Cosmology</a> for the Friedmann equations and what the CMB actually tells you.</p>
+          <span class="tag">advanced path</span>
+        </div>
+        <div class="card">
+          <h4>"I care about chip design, semiconductors, and quantum computing."</h4>
+          <p class="meta">EM → thermo → QM</p>
+          <p><a href="./electromagnetism.html">EM</a> for fields and circuits. <a href="./thermodynamics.html">Thermo</a> for why your chip heats up. <a href="./quantum-mechanics.html">QM</a> for band theory, tunnelling, and qubits.</p>
+          <span class="tag hot">hardware path</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section id="crosslinks">
+      <h2>Where physics meets the rest of the site</h2>
+      <div class="grid">
+        <a class="card card-link" href="../math/calculus.html">
+          <h4>Math: Calculus</h4>
+          <p class="meta">prereq for everything</p>
+          <p>Derivatives are velocities and forces; integrals are work and flux. Every physics formula with a differential in it comes from calculus.</p>
+        </a>
+        <a class="card card-link" href="../math/linear-algebra.html">
+          <h4>Math: Linear Algebra</h4>
+          <p class="meta">prereq for QM and relativity</p>
+          <p>Quantum states live in Hilbert space; Lorentz transformations are matrices; stress and inertia are tensors. Linear algebra is the grammar.</p>
+        </a>
+        <a class="card card-link" href="../math/probability.html">
+          <h4>Math: Probability</h4>
+          <p class="meta">prereq for stat mech and QM</p>
+          <p>Statistical mechanics is probability over phase space. Quantum mechanics is probability amplitudes. Both rest on the same machinery.</p>
+        </a>
+        <a class="card card-link" href="../cs/algorithms.html">
+          <h4>CS: Algorithms</h4>
+          <p class="meta">simulation</p>
+          <p>Physics simulations — molecular dynamics, lattice QCD, N-body — are some of the oldest and largest consumers of algorithmic cleverness.</p>
+        </a>
+        <a class="card card-link" href="../topics/foundation-models.html">
+          <h4>AI: Foundation Models</h4>
+          <p class="meta">physics for ML hardware</p>
+          <p>Training a trillion-parameter model is thermodynamics (heat), electromagnetism (power delivery), and quantum mechanics (the transistors). Physics runs the datacenter.</p>
+        </a>
+        <a class="card card-link" href="../topics/diffusion.html">
+          <h4>AI: Diffusion Models</h4>
+          <p class="meta">borrowed from stat mech</p>
+          <p>Diffusion models borrow their math directly from non-equilibrium statistical mechanics. Langevin dynamics, Fokker-Planck — physicists saw this movie first.</p>
+        </a>
+      </div>
+    </section>
+
+    <div class="next-card">
+      <div class="label">START HERE</div>
+      <a href="./classical-mechanics.html">→ Classical Mechanics</a>
+      <p>Newton's laws are the traditional entry point. You'll recognize most of it from high school, but we'll build it back up from first principles and go as far as Lagrangian mechanics so you can see where modern physics actually starts.</p>
+    </div>
+
+  </div>
+</main>
+
+<script defer src="../search-index.js"></script>
+<script defer src="../search.js"></script>
+</body>
+</html>
+</content>
+</invoke>

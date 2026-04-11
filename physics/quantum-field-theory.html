@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quantum Field Theory — Deep Dive</title>
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError: false});"></script>
+</head>
+<body>
+<div id="tooltip"></div>
+
+<nav class="topic-nav">
+  <a class="back" href="./index.html">← Physics Track</a>
+  <div class="crumb">Physics / <span class="topic-name">Quantum Field Theory</span></div>
+</nav>
+
+<div class="topic-layout">
+  <aside class="topic-toc">
+    <h4>ON THIS PAGE</h4>
+    <ul>
+      <li><a href="#why">1. Why QFT exists</a></li>
+      <li><a href="#vocab">2. Vocabulary cheat sheet</a></li>
+      <li><a href="#quantization">3. Field quantization</a></li>
+      <li><a href="#kleingordon">4. The scalar field</a></li>
+      <li><a href="#feynman">5. Feynman diagrams</a></li>
+      <li><a href="#demo">6. Interactive: scattering builder</a></li>
+      <li><a href="#renorm">7. Renormalization</a></li>
+      <li><a href="#gauge">8. Gauge theories and QED</a></li>
+      <li><a href="#experiment">9. Experimental confirmation</a></li>
+      <li><a href="#code">10. A numerical glimpse</a></li>
+      <li><a href="#summary">11. Cheat sheet</a></li>
+    </ul>
+  </aside>
+
+  <article class="topic-content">
+    <h1>Quantum Field Theory</h1>
+    <p class="subtitle">When you try to merge quantum mechanics with special relativity, particles stop being the fundamental objects. Fields do. Every particle in the universe becomes a ripple in one of a handful of underlying quantum fields, and the rules for how ripples scatter, create each other, and annihilate are what we call QFT. It is the most accurate theoretical framework humans have ever written down.</p>
+    <div class="meta-tags">
+      <span>Prereq: quantum mechanics, special relativity, <a href="../math/calculus.html">calculus</a>, <a href="../math/linear-algebra.html">linear algebra</a></span>
+      <span>Read time: ~40 min</span>
+      <span>Interactive figures: 1</span>
+      <span>Code: NumPy</span>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="why">1. Why QFT exists</h2>
+
+    <p>Ordinary quantum mechanics handles one or two particles at a time. You write down a wavefunction $\psi(x, t)$, evolve it with the Schrödinger equation, and compute probabilities. It works beautifully for hydrogen atoms and chemical bonds. It fails the moment you push it to relativistic energies.</p>
+
+    <p>Two specific things break. First, Einstein's $E = mc^2$ says energy and mass are interchangeable. If you smash two electrons together hard enough, you can spit out an electron-positron pair and extra photons — the particle count is not conserved. A fixed-particle-number wavefunction has nowhere to put the new particles. Second, even for a single particle, combining quantum mechanics with relativity produces negative-energy solutions, negative probabilities, and faster-than-light propagation if you take the naive Schrödinger approach seriously.</p>
+
+    <p>The fix, worked out in stages from 1927 (Dirac) through 1948 (Feynman, Schwinger, Tomonaga) and onward, is to stop treating particles as fundamental. Instead, the fundamental object is a <strong>field</strong> that fills all of space. A field is just a function: at every point in spacetime, you have a number (or a vector, or a spinor). Classically, the electromagnetic field at a point tells you the electric and magnetic field values there. Quantum mechanically, that field value becomes an <em>operator</em> on a Hilbert space, and the states of the theory are no longer "one particle over there, another over here" but configurations of the field itself. Particles reappear as quantized excitations — discrete units of vibration in the field — like phonons in a crystal or photons in an optical cavity.</p>
+
+    <div class="callout">
+      <div class="label">THE PUNCHLINE</div>
+      <p>There is one electron field filling the universe. Every electron you have ever met is the same kind of ripple in it. When a high-energy collision produces a new electron, the field gains one more ripple. When an electron annihilates with a positron, two ripples vanish into two photon-field ripples. Particles are not the nouns of physics. Fields are. Particles are the verbs.</p>
+    </div>
+
+    <p>Why should you care beyond the poetry? Four reasons:</p>
+
+    <ul>
+      <li><strong>It predicts the universe's most precise numbers.</strong> QED's prediction of the electron's magnetic moment matches experiment to about 12 decimal places. Nothing else in science comes close.</li>
+      <li><strong>It underlies everything at the LHC.</strong> Every Higgs-boson discovery plot, every cross-section measurement, every exclusion limit on supersymmetric particles, is a QFT calculation compared to data.</li>
+      <li><strong>It connects to condensed matter.</strong> The same path-integral and renormalization tools describe phase transitions, superconductors, and the fractional quantum Hall effect. See <a href="./frontier.html">frontier physics</a>.</li>
+      <li><strong>It is the right framework for thinking about anything "quantum plus fields".</strong> Quantum optics, cavity QED, analog gravity in condensed matter, the early universe — all run on QFT.</li>
+    </ul>
+
+    <p>This page will walk you through the logic without drowning you in path integrals. You will leave with a working mental picture of what a field looks like when you quantize it, what a Feynman diagram actually computes, why renormalization is not cheating, and why the Standard Model of particle physics is a particular set of QFT choices.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="vocab">2. Vocabulary cheat sheet</h2>
+
+    <p>These symbols show up on every QFT page you will ever read. Skim them now; the sections below define each properly.</p>
+
+    <table class="rank-table">
+      <thead><tr><th>Symbol</th><th>Read as</th><th>Means</th></tr></thead>
+      <tbody>
+        <tr><td>$\phi(x)$</td><td>"phi of x"</td><td>A scalar field — one number at each spacetime point. Here $x = (t, \vec x)$ is a four-vector.</td></tr>
+        <tr><td>$\hat\phi(x)$</td><td>"phi hat of x"</td><td>The same field promoted to a quantum operator. Acts on states in a Hilbert space.</td></tr>
+        <tr><td>$|0\rangle$</td><td>"the vacuum"</td><td>The ground state — no particles present. Still seethes with quantum fluctuations.</td></tr>
+        <tr><td>$a^\dagger_k$, $a_k$</td><td>"a-dagger", "a"</td><td>Creation and annihilation operators. Add or remove one quantum of momentum $k$ to the field.</td></tr>
+        <tr><td>$\mathcal{L}$</td><td>"Lagrangian density"</td><td>A function of fields and their derivatives whose integral defines the action. Specifies the theory.</td></tr>
+        <tr><td>$S$</td><td>"action"</td><td>$S = \int \mathcal{L}\, d^4x$. Classical paths extremize it; quantum paths are weighted by $e^{iS/\hbar}$.</td></tr>
+        <tr><td>$\hbar$, $c$</td><td>"h-bar, c"</td><td>Planck's constant over $2\pi$ and the speed of light. In QFT people set $\hbar = c = 1$ to reduce clutter.</td></tr>
+        <tr><td>$\alpha$</td><td>"alpha"</td><td>The fine-structure constant, $\approx 1/137$. The coupling strength of QED.</td></tr>
+        <tr><td>$g$</td><td>"g"</td><td>A generic coupling constant. Bigger $g$ means interactions are stronger.</td></tr>
+        <tr><td>$\Lambda$</td><td>"cutoff"</td><td>An energy scale above which you stop trusting the theory. Central to renormalization.</td></tr>
+      </tbody>
+    </table>
+
+    <p>One warning: QFT notation is gnarly and inconsistent across textbooks. Different authors use different metric signatures, different Fourier conventions, and different sign conventions for the action. On this page we will prioritize clarity over conformity.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="quantization">3. Field quantization — classical fields become operators</h2>
+
+    <p>Think about a guitar string. Classically, it is a smooth curve $y(x, t)$ that vibrates with various frequencies. You can decompose any motion into normal modes — the fundamental and its harmonics — and the total motion is a sum over modes, each behaving like a simple harmonic oscillator.</p>
+
+    <p>Quantum mechanically, a simple harmonic oscillator has discrete energy levels $E_n = \hbar \omega (n + \tfrac12)$, where $n = 0, 1, 2, \dots$ is the number of quanta of excitation. A quantum string has one such ladder per mode. When you excite mode $k$ from its ground state to $n = 1$, you have added one "quantum" of vibration in that mode. If the string were the electromagnetic field, that quantum would be a photon of momentum $k$.</p>
+
+    <p>This is the whole idea of field quantization. Take a classical field. Decompose it into Fourier modes. Treat each mode as a quantum harmonic oscillator. The "excitations" of the modes <em>are</em> the particles of the theory. A field with many modes excited corresponds to many particles flying around.</p>
+
+    <div class="callout math">
+      <div class="label">THE MODE EXPANSION</div>
+      <p>For a free scalar field you write it as a sum over plane-wave modes labelled by momentum $\vec k$, each mode carrying a creation operator $a^\dagger_k$ and an annihilation operator $a_k$. Acting with $a^\dagger_k$ on the vacuum creates a particle of momentum $k$. Acting with $a_k$ removes one, or gives zero if no such particle was there.</p>
+    </div>
+
+    <div class="math-display">$$\hat\phi(x) = \int \frac{d^3 k}{(2\pi)^3}\, \frac{1}{\sqrt{2\omega_k}}\left( a_k\, e^{-i k \cdot x} + a^\dagger_k\, e^{+i k \cdot x} \right).$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Plane-wave expansion of a free scalar field</p>
+      <dl>
+        <dt>$\hat\phi(x)$</dt><dd>The field operator at spacetime point $x = (t, \vec x)$. Acting on a state, it either adds or removes one quantum somewhere.</dd>
+        <dt>$\int \frac{d^3 k}{(2\pi)^3}$</dt><dd>Integral over all three-momenta. Each $\vec k$ labels one Fourier mode. The factor of $(2\pi)^3$ is a convention that keeps the algebra clean.</dd>
+        <dt>$\omega_k$</dt><dd>The energy (frequency in natural units) of a quantum with momentum $\vec k$, given by $\omega_k = \sqrt{|\vec k|^2 + m^2}$ for a particle of mass $m$.</dd>
+        <dt>$a_k$</dt><dd>Annihilation operator: removes one particle of momentum $\vec k$ from whatever state it acts on.</dd>
+        <dt>$a^\dagger_k$</dt><dd>Creation operator: adds one particle of momentum $\vec k$. It is the Hermitian conjugate of $a_k$.</dd>
+        <dt>$e^{\pm i k \cdot x}$</dt><dd>A plane wave. The $k \cdot x$ in the exponent is the Lorentz-invariant dot product of the four-vectors $k = (\omega_k, \vec k)$ and $x = (t, \vec x)$.</dd>
+        <dt>$1/\sqrt{2\omega_k}$</dt><dd>A normalization factor chosen so the one-particle states have a nice Lorentz-invariant inner product.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Analogy.</strong> A piano has 88 keys. Each key is a mode. Playing a chord is a superposition of modes. The whole instrument is the "field"; the individual notes are the particles. Now make the keys continuous (all real-valued momenta), make each key's amplitude an operator whose eigenvalues are integers, and you have a free quantum field.</p>
+    </div>
+
+    <p>The creation and annihilation operators obey commutation relations that are the whole engine of the theory:</p>
+
+    <div class="math-display">$$[a_k, a^\dagger_{k'}] = (2\pi)^3\, \delta^3(\vec k - \vec k'), \qquad [a_k, a_{k'}] = 0.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Canonical commutation relations</p>
+      <dl>
+        <dt>$[A, B]$</dt><dd>"Commutator" — short for $AB - BA$. In quantum mechanics, operators do not always commute, and the commutator tells you by how much.</dd>
+        <dt>$\delta^3(\vec k - \vec k')$</dt><dd>The three-dimensional Dirac delta. Zero unless $\vec k = \vec k'$, and integrates to one. Here it enforces "only operators at the same momentum interact."</dd>
+        <dt>$(2\pi)^3$</dt><dd>A convention factor that drops out if you are careful, and that keeps Fourier integrals from collecting ugly constants.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why it matters.</strong> This one line is what forces particles to be discrete. It is a generalization of the $[x, p] = i\hbar$ relation from elementary quantum mechanics. Everything else — antiparticles, Feynman rules, the sign of the vacuum energy — descends from here.</p>
+    </div>
+
+    <p>Once you have the operators, you build the Hilbert space: the vacuum $|0\rangle$ (with $a_k|0\rangle = 0$ for every $k$), one-particle states $a^\dagger_k |0\rangle$, two-particle states $a^\dagger_{k_1} a^\dagger_{k_2} |0\rangle$, and so on. The whole thing is called <strong>Fock space</strong>. It is automatically a variable-particle-number theory, which is exactly what relativity demanded.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="kleingordon">4. The scalar field and the Klein-Gordon equation</h2>
+
+    <p>The simplest field you can quantize is a real-valued scalar — just one number at each spacetime point, no internal structure. It is not a realistic particle on its own (the Higgs boson is the only fundamental scalar in the Standard Model, and even it is complex-valued), but it is the cleanest teaching example, and every more elaborate field reuses the same ideas.</p>
+
+    <p>The classical equation of motion for a free scalar of mass $m$ is the <strong>Klein-Gordon equation</strong>:</p>
+
+    <div class="math-display">$$\left( \partial_t^2 - \nabla^2 + m^2 \right) \phi(x) = 0.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Klein-Gordon equation</p>
+      <dl>
+        <dt>$\phi(x)$</dt><dd>The scalar field — one real number at each point in spacetime.</dd>
+        <dt>$\partial_t^2$</dt><dd>Second derivative with respect to time. Captures the field's temporal acceleration.</dd>
+        <dt>$\nabla^2$</dt><dd>The Laplacian — sum of second spatial derivatives. Captures how sharply the field curves in space.</dd>
+        <dt>$m^2$</dt><dd>The field's mass squared (times $c^4/\hbar^2$, buried in the natural units). Sets the minimum energy of one quantum.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>What it is.</strong> Plug in a plane wave $\phi \propto e^{-i(\omega t - \vec k \cdot \vec x)}$ and the equation reduces to $\omega^2 = |\vec k|^2 + m^2$, i.e. the relativistic dispersion $E^2 = p^2 c^2 + m^2 c^4$. So the Klein-Gordon equation is just $E^2 = p^2 + m^2$, promoted to an operator equation acting on a field. Every massive free field in the universe satisfies something Klein-Gordon-like somewhere in its derivation.</p>
+    </div>
+
+    <p>The Lagrangian density whose Euler-Lagrange equation gives Klein-Gordon is</p>
+
+    <div class="math-display">$$\mathcal{L} = \tfrac{1}{2}(\partial_\mu \phi)(\partial^\mu \phi) - \tfrac{1}{2} m^2 \phi^2.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Free scalar Lagrangian</p>
+      <dl>
+        <dt>$\mathcal{L}$</dt><dd>The Lagrangian density — a function of the field and its derivatives whose integral over spacetime is the action.</dd>
+        <dt>$\partial_\mu \phi$</dt><dd>The spacetime gradient of $\phi$: a four-component object $(\partial_t \phi, \partial_x \phi, \partial_y \phi, \partial_z \phi)$ with index $\mu$ running over time and three spatial directions.</dd>
+        <dt>$(\partial_\mu \phi)(\partial^\mu \phi)$</dt><dd>Lorentz dot product of two such four-gradients: $(\partial_t \phi)^2 - |\nabla \phi|^2$. Invariant under boosts and rotations.</dd>
+        <dt>$-\tfrac{1}{2} m^2 \phi^2$</dt><dd>Mass term. The minus sign (relative to the kinetic term) is the convention that makes $m$ the physical particle mass.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why Lagrangians.</strong> Writing a theory as "here is my $\mathcal{L}$" is the single tersest way to specify what the fields are, how they propagate, and which symmetries they respect. Every term you add to $\mathcal{L}$ is an interaction you are turning on. Particle physicists literally list Lagrangian terms when they propose new physics.</p>
+    </div>
+
+    <p>Interactions are terms you tack onto this free Lagrangian. A $\lambda \phi^4$ term gives you a quartic self-interaction — scalars can scatter off themselves. A $-e\, \bar\psi \gamma^\mu \psi A_\mu$ term in QED couples fermions $\psi$ to the photon field $A_\mu$. The free theory is solvable in closed form; the interacting theory is not, and you compute it as a series in small coupling constants. That is what Feynman diagrams are for.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="feynman">5. Feynman diagrams — perturbation theory you can draw</h2>
+
+    <p>When the coupling constant is small (like QED's $\alpha \approx 1/137$), you can compute scattering amplitudes as a power series in the coupling. The first term is a "tree-level" contribution, the next is a "one-loop" correction, and so on. Richard Feynman's great insight in the 1940s was that each term in this series has a pictorial interpretation: a diagram with lines and vertices.</p>
+
+    <ul>
+      <li><strong>External lines</strong> are incoming and outgoing particles. They correspond to the particles you prepared in the detector frame and the particles you measure afterward.</li>
+      <li><strong>Internal lines (propagators)</strong> are virtual particles — transient disturbances in the field that are not directly observed but carry the interaction. A propagator is the mathematical answer to "given the field operator acts here, what is the amplitude for a quantum to show up there?"</li>
+      <li><strong>Vertices</strong> are interaction points, read directly off the interaction part of $\mathcal{L}$. A $\lambda \phi^4/4!$ term gives a four-leg vertex with factor $-i\lambda$. A QED vertex has two fermion lines and one photon line, with factor $-ie\gamma^\mu$.</li>
+    </ul>
+
+    <p>To compute an amplitude, draw every topologically distinct diagram with the right external lines and the fewest vertices, translate each piece via the <em>Feynman rules</em> (a propagator factor for each internal line, a vertex factor for each vertex, and an integral $\int d^4 k$ for each internal loop), and sum them up. Then square to get a probability, and integrate over final-state phase space to get a cross-section.</p>
+
+    <div class="callout">
+      <div class="label">A PUZZLE WORTH KNOWING</div>
+      <p>Feynman diagrams are not literal spacetime pictures of particles bouncing off each other. They are a bookkeeping device for terms in an asymptotic series. Internal lines do not satisfy $E^2 = p^2 + m^2$ — they are "off-shell." Virtual particles are not observable. The diagram is a mnemonic for an integral.</p>
+    </div>
+
+    <p>Even so, the mental picture is useful. An electron radiates a photon and re-absorbs it — that is an electron self-energy correction, and it contributes to the electron's effective mass. An electron emits a virtual photon that splits into an electron-positron pair before recombining — that is a vacuum polarization correction, and it contributes to the running of the electromagnetic coupling. The diagrams make what would otherwise be a soul-crushing series of indices into something you can literally draw on a napkin.</p>
+
+    <div class="problem-set" data-topic="phys-qft-fields"></div>
+
+    <!-- ========================================================== -->
+    <h2 id="demo">6. Interactive: tree-level versus one-loop scattering</h2>
+
+    <p>Below is a schematic of $2 \to 2$ scattering — two particles in, two particles out. The slider lets you choose how many loops to include in the amplitude. You will see the relative size of each contribution, governed roughly by a factor of $\alpha / (4\pi)$ per loop. At $\alpha \approx 1/137$, one loop is already a 0.06% correction, two loops a 4-parts-in-$10^7$ correction, and so on. Most of QED's precision comes from people computing 4 and 5-loop diagrams by hand (and now by computer algebra).</p>
+
+    <div class="viz-3d">
+      <div class="v3-controls">
+        <span class="v3-label">Loop order:</span>
+        <input id="qftLoops" type="range" min="0" max="5" value="1" step="1" style="flex:1;max-width:320px;">
+        <span id="qftLoopsLabel" style="min-width:60px;color:#22d3ee;font-family:ui-monospace,monospace;">1</span>
+        <span class="v3-label" style="margin-left:12px;">Coupling $\alpha$:</span>
+        <input id="qftAlpha" type="range" min="0.001" max="0.3" value="0.00729" step="0.001" style="flex:1;max-width:260px;">
+        <span id="qftAlphaLabel" style="min-width:70px;color:#22d3ee;font-family:ui-monospace,monospace;">0.00729</span>
+      </div>
+      <svg id="qftSvg" viewBox="0 0 720 380" style="width:100%;height:auto;background:#0a0d12;border-radius:6px;"></svg>
+      <p class="v3-caption" id="qftCaption">Schematic Feynman diagram for $2 \to 2$ scattering. Straight lines are fermions, wavy lines are photons. The bar chart on the right shows the relative magnitude of the selected loop-order contribution compared to tree level.</p>
+    </div>
+
+    <p>Things to notice as you drag the sliders:</p>
+
+    <ul>
+      <li>Each added loop costs roughly a factor of $\alpha/(4\pi)$ — about $6 \times 10^{-4}$ at the physical electromagnetic coupling. This is why QED is a <em>convergent-looking</em> series even though formally it is asymptotic.</li>
+      <li>Crank up $\alpha$ toward $0.3$ (the rough scale of the strong coupling at intermediate energies) and the series stops converging visually. This is why you cannot do QCD perturbatively at low energies — you need lattice methods or effective theories instead.</li>
+      <li>The labelled diagram on the left does not change structurally; only which internal-lines-and-vertices combination dominates changes. Higher-loop diagrams have more internal momentum integrals and more places for virtual particles to wander.</li>
+    </ul>
+
+    <!-- ========================================================== -->
+    <h2 id="renorm">7. Renormalization — why the infinities are not a disaster</h2>
+
+    <p>Compute a loop diagram and you get an integral of the form $\int d^4 k / k^2$ extending to arbitrarily large momentum $k$. That integral is infinite. QFT was almost abandoned in the 1930s because of these ultraviolet divergences. The way out, pinned down in the late 1940s, is called <strong>renormalization</strong>. It has two stages.</p>
+
+    <p><strong>Stage one: regulate.</strong> Impose some upper cutoff $\Lambda$ on the momentum integral, so you are only summing contributions up to energy $\Lambda$. The integral becomes finite but $\Lambda$-dependent.</p>
+
+    <p><strong>Stage two: renormalize.</strong> Re-express the theory's parameters — the mass, the charge, the field strength — in terms of the <em>measured</em> values instead of the "bare" values written in $\mathcal{L}$. The $\Lambda$-dependence gets absorbed into the definition of those parameters. What is left, when you compute any physical quantity, is a finite, $\Lambda$-independent prediction.</p>
+
+    <div class="defn">
+      <strong>Renormalization in one sentence.</strong> You cannot measure the "bare" electron charge or mass directly. You can only measure what the electron does at some experimental energy scale. Once you agree to express answers in those measured quantities, the divergences cancel.
+    </div>
+
+    <p>A striking consequence: the effective coupling constants you measure depend on the energy at which you are probing the theory. Electromagnetic charge grows with energy (because vacuum polarization screens the bare charge less at short distances), while the strong coupling shrinks with energy (the opposite sign, called <strong>asymptotic freedom</strong>, which was discovered by David Gross, Frank Wilczek, and Hugh Politzer in 1973 and won them the 2004 Nobel Prize). Running couplings are testable: you can measure $\alpha$ at the Z-boson mass (about 91 GeV) and find $\alpha(M_Z) \approx 1/128$, noticeably larger than the low-energy $1/137$.</p>
+
+    <p>For a slow introduction aimed at a wider audience, think of renormalization as "parametrizing ignorance." You do not know what happens at the Planck scale. But every measurement you make at LHC energies can be expressed using parameters defined at LHC energies, and the Planck-scale physics leaks in only through small, computable corrections suppressed by ratios like $(\text{LHC energy}/\text{Planck})^2 \sim 10^{-32}$. Renormalization is how you quarantine ignorance about what you cannot see.</p>
+
+    <div class="problem-set" data-topic="phys-qft-renorm"></div>
+
+    <!-- ========================================================== -->
+    <h2 id="gauge">8. Gauge theories and QED as the canonical example</h2>
+
+    <p>The Standard Model's gauge theories fall out of asking: "what if I demand my Lagrangian be invariant under a <em>local</em> symmetry transformation?" For QED, the relevant symmetry is a change of phase of the electron field at each spacetime point independently. Writing the free Dirac Lagrangian and then requiring invariance under $\psi(x) \to e^{i\alpha(x)}\psi(x)$ forces you to introduce a new vector field $A_\mu(x)$ — the photon — that transforms as $A_\mu \to A_\mu - \partial_\mu \alpha$ to cancel the derivative of $\psi$'s phase.</p>
+
+    <div class="math-display">$$\mathcal{L}_{\text{QED}} = \bar\psi\,(i \gamma^\mu D_\mu - m)\,\psi - \tfrac{1}{4} F_{\mu\nu} F^{\mu\nu}, \qquad D_\mu = \partial_\mu + i e A_\mu.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">The QED Lagrangian</p>
+      <dl>
+        <dt>$\psi$</dt><dd>The electron field — a four-component spinor at each spacetime point. Its quanta are electrons and positrons.</dd>
+        <dt>$\bar\psi$</dt><dd>The Dirac conjugate: $\psi^\dagger \gamma^0$. Combined with $\psi$ it builds Lorentz scalars and vectors.</dd>
+        <dt>$\gamma^\mu$</dt><dd>The four Dirac matrices. They implement the Clifford algebra relations that let spinors carry half-integer spin.</dd>
+        <dt>$D_\mu$</dt><dd>The <em>covariant derivative</em>. It is the ordinary derivative $\partial_\mu$ plus $i e A_\mu$. The addition is exactly what local gauge invariance forces.</dd>
+        <dt>$A_\mu$</dt><dd>The photon field — a four-vector at each spacetime point. Its time component is the electromagnetic scalar potential, its spatial components the vector potential.</dd>
+        <dt>$F_{\mu\nu}$</dt><dd>The electromagnetic field-strength tensor: $F_{\mu\nu} = \partial_\mu A_\nu - \partial_\nu A_\mu$. Its components are the electric and magnetic field values.</dd>
+        <dt>$e$</dt><dd>The (renormalized) electron charge. Related to the fine-structure constant by $\alpha = e^2/(4\pi)$ in natural units.</dd>
+        <dt>$m$</dt><dd>The electron mass. A parameter determined by experiment.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>The payoff.</strong> One short line specifies electromagnetism as a quantum theory. Every phenomenon you know — Coulomb's law, Compton scattering, atomic spectra, the Casimir effect — is encoded here. Replace the $U(1)$ phase symmetry by the larger $SU(2) \times U(1)$ and you get electroweak theory. Replace it by $SU(3)$ and you get QCD. Build them all and you have the Standard Model.</p>
+    </div>
+
+    <h3>Worked example: the electron-photon vertex</h3>
+
+    <p>The interaction term in $\mathcal{L}_{\text{QED}}$ is $-e \bar\psi \gamma^\mu \psi A_\mu$. Read off the vertex: two fermion lines (one $\psi$, one $\bar\psi$) and one photon line ($A_\mu$) meet at a point, with a factor of $-i e \gamma^\mu$ attached. Every QED process is built from this single vertex repeated. Tree-level Compton scattering (an electron scatters off a photon) uses two vertices. Electron-electron scattering via photon exchange uses two vertices. The muon's anomalous magnetic moment requires vertices arranged into a triangle-with-a-loop, and is so precisely measured that it has been a potential window to new physics for two decades (the Fermilab Muon g-2 measurement in 2021 and its follow-ups have kept the tension alive; whether it is new physics or uncertain hadronic contributions is still debated as of 2025).</p>
+
+    <div class="problem-set" data-topic="phys-qft-feynman"></div>
+
+    <!-- ========================================================== -->
+    <h2 id="experiment">9. Experimental confirmation</h2>
+
+    <p>Physics would not have spent seven decades refining QFT if it did not pay. A short tour of the most precise agreements:</p>
+
+    <ul>
+      <li><strong>Electron anomalous magnetic moment</strong>, $g_e - 2$. The Dirac equation predicts $g_e = 2$ for a point-like spin-$1/2$ particle. QED loops add corrections. Theory, computed through five loops, and measurement (most recently the Harvard Penning trap result, 2023) agree to about one part in $10^{12}$. This is the most precise comparison of theory and experiment in all of science.</li>
+      <li><strong>Lamb shift.</strong> Two states of hydrogen that would be degenerate in the Dirac theory are split by about 1 GHz. Willis Lamb and Robert Retherford measured it in 1947, and Hans Bethe explained it the same summer with a prototype renormalization calculation. Lamb got the 1955 Nobel Prize; Bethe's calculation jump-started QED.</li>
+      <li><strong>Higgs boson discovery, 2012.</strong> ATLAS and CMS at the LHC found a new scalar at about 125 GeV. Its decay branching ratios match Standard Model predictions derived from QFT, and its properties (spin zero, CP-even) are exactly what the electroweak sector required.</li>
+      <li><strong>Running of $\alpha_s$.</strong> The strong coupling constant has been measured at dozens of energies by many experiments and tracks the QCD prediction from $Q \sim 2\,\text{GeV}$ up to the TeV scale.</li>
+      <li><strong>Jets at colliders.</strong> When quarks and gluons are produced at a collider, they "hadronize" into collimated sprays called jets. The angular distributions and energy profiles of those jets match QCD predictions to percent accuracy in regimes where perturbation theory is valid.</li>
+    </ul>
+
+    <p>Not everything agrees. The muon's magnetic moment has a persistent tension at the few-sigma level; neutrino masses are not in the original Standard Model; dark matter is unaccounted for; and quantum gravity is not a renormalizable QFT in the usual sense. QFT is extremely successful but clearly not the whole story — see <a href="./particle-physics.html">particle physics</a> for the measurements and <a href="./frontier.html">frontier physics</a> for where things might break next.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="code">10. A tiny numerical glimpse</h2>
+
+    <p>Full QFT calculations require specialized software (FeynCalc, FORM, MadGraph). But a toy thermal-field computation is very much in reach. Below we compute the vacuum energy of a free scalar field on a 1D lattice — a "zero-point" sum that is finite once you put it in a box and gives intuition for the structure of QFT calculations.</p>
+
+    <div class="code-tabs" id="ct-qft">
+      <div class="ct-header">
+        <button class="ct-tab active" data-tab="np">NumPy</button>
+        <button class="ct-tab" data-tab="py">Plain Python</button>
+        <span class="ct-label">free-scalar zero-point energy</span>
+      </div>
+
+      <div class="ct-panel active" data-tab="np"><pre><code><span class="kw">import</span> numpy <span class="kw">as</span> np
+
+<span class="cmt"># ---------- Free scalar on a 1D lattice with N sites ----------</span>
+<span class="cmt"># The sum of (1/2) omega_k over all modes is the vacuum energy.</span>
+<span class="cmt"># Dispersion on a lattice of spacing a is omega_k = sqrt(m^2 + (2/a sin(k a / 2))^2).</span>
+
+<span class="kw">def</span> <span class="fn">vacuum_energy</span>(N=<span class="num">256</span>, L=<span class="num">10.0</span>, m=<span class="num">0.3</span>):
+    a   = L / N                         <span class="cmt"># lattice spacing</span>
+    k   = <span class="num">2</span> * np.pi * np.fft.fftfreq(N, d=a)
+    <span class="cmt"># lattice dispersion (finite-difference second derivative)</span>
+    omega = np.sqrt(m ** <span class="num">2</span> + (<span class="num">2</span> / a * np.sin(k * a / <span class="num">2</span>)) ** <span class="num">2</span>)
+    <span class="kw">return</span> <span class="num">0.5</span> * omega.<span class="fn">sum</span>() / L      <span class="cmt"># energy density</span>
+
+<span class="cmt"># The answer depends on N (the cutoff). As N grows, the sum diverges</span>
+<span class="cmt"># linearly in the cutoff scale — that is the "UV divergence" you just</span>
+<span class="cmt"># heard about. Differences between two values of m are finite, though.</span>
+
+<span class="kw">for</span> N <span class="kw">in</span> [<span class="num">64</span>, <span class="num">128</span>, <span class="num">256</span>, <span class="num">512</span>, <span class="num">1024</span>]:
+    <span class="fn">print</span>(<span class="str">f"N={N:4d}   E0 = {vacuum_energy(N=N):.4f}"</span>)
+
+<span class="cmt"># Physical observable: how does the ground-state energy shift when</span>
+<span class="cmt"># the mass changes? This difference is cutoff-independent in the limit</span>
+<span class="cmt"># of a fine lattice, and it's the kind of quantity QFT is good at.</span>
+<span class="fn">print</span>(<span class="str">"Delta E (m=0.3 vs m=0.4):"</span>,
+      <span class="fn">vacuum_energy</span>(N=<span class="num">1024</span>, m=<span class="num">0.4</span>) - <span class="fn">vacuum_energy</span>(N=<span class="num">1024</span>, m=<span class="num">0.3</span>))
+</code></pre></div>
+
+      <div class="ct-panel" data-tab="py"><pre><code><span class="kw">import</span> math
+
+<span class="cmt"># Same computation without NumPy — slower, more explicit.</span>
+
+<span class="kw">def</span> <span class="fn">vacuum_energy</span>(N=<span class="num">256</span>, L=<span class="num">10.0</span>, m=<span class="num">0.3</span>):
+    a = L / N
+    total = <span class="num">0.0</span>
+    <span class="kw">for</span> j <span class="kw">in</span> <span class="fn">range</span>(N):
+        k = <span class="num">2</span> * math.pi * j / L                 <span class="cmt"># allowed lattice momenta</span>
+        omega = math.sqrt(m * m + (<span class="num">2</span> / a * math.sin(k * a / <span class="num">2</span>)) ** <span class="num">2</span>)
+        total += <span class="num">0.5</span> * omega
+    <span class="kw">return</span> total / L
+
+<span class="kw">for</span> N <span class="kw">in</span> [<span class="num">64</span>, <span class="num">128</span>, <span class="num">256</span>]:
+    <span class="fn">print</span>(<span class="str">f"N={N:3d}   E0/L = {vacuum_energy(N=N):.4f}"</span>)
+</code></pre></div>
+    </div>
+
+    <p>Three things the output makes concrete:</p>
+
+    <ul>
+      <li><strong>The absolute zero-point energy grows with the cutoff $N$.</strong> There is no "right" number for the vacuum energy in isolation — it depends on what you integrate up to. This is the mildest form of the cosmological constant problem.</li>
+      <li><strong>Differences are finite.</strong> Change $m$ and the difference $\Delta E$ converges as $N \to \infty$. Renormalization teaches you to only ever trust differences and ratios, not absolute values.</li>
+      <li><strong>Lattice dispersion differs from continuum dispersion.</strong> For small $k a$, the lattice formula reduces to $\sqrt{m^2 + k^2}$. For $k a$ near $\pi$, it curves over. Lattice QCD exploits exactly this structure to compute nonperturbative physics numerically.</li>
+    </ul>
+
+    <!-- ========================================================== -->
+    <h2 id="summary">11. Cheat sheet</h2>
+
+    <div class="grid">
+      <div class="card">
+        <h4>Field quantization</h4>
+        <p>$\hat\phi(x) = \int \frac{d^3k}{(2\pi)^3\sqrt{2\omega_k}}(a_k e^{-ikx} + a^\dagger_k e^{+ikx})$</p>
+        <p class="meta">Classical field, Fourier decomposed, with mode amplitudes promoted to creation/annihilation operators.</p>
+      </div>
+      <div class="card">
+        <h4>Klein-Gordon</h4>
+        <p>$(\partial_t^2 - \nabla^2 + m^2)\phi = 0$</p>
+        <p class="meta">$E^2 = p^2 + m^2$ as a field equation.</p>
+      </div>
+      <div class="card">
+        <h4>Commutators</h4>
+        <p>$[a_k, a^\dagger_{k'}] = (2\pi)^3 \delta^3(\vec k - \vec k')$</p>
+        <p class="meta">One line forces particles to be discrete.</p>
+      </div>
+      <div class="card">
+        <h4>Free scalar action</h4>
+        <p>$S = \int d^4x\, \tfrac12[(\partial\phi)^2 - m^2 \phi^2]$</p>
+        <p class="meta">Minimize for classical e.o.m., use $e^{iS/\hbar}$ for quantum paths.</p>
+      </div>
+      <div class="card">
+        <h4>QED Lagrangian</h4>
+        <p>$\mathcal{L} = \bar\psi(i\gamma^\mu D_\mu - m)\psi - \tfrac14 F_{\mu\nu}F^{\mu\nu}$</p>
+        <p class="meta">Local $U(1)$ gauge invariance forces the photon.</p>
+      </div>
+      <div class="card">
+        <h4>Feynman recipe</h4>
+        <p>Draw every diagram. Assign propagators, vertices, loop integrals. Sum. Square. Integrate.</p>
+        <p class="meta">A perturbation series you can literally draw.</p>
+      </div>
+      <div class="card">
+        <h4>Running coupling</h4>
+        <p>$\alpha(Q^2)$ changes with energy scale.</p>
+        <p class="meta">EM grows with energy; strong shrinks (asymptotic freedom).</p>
+      </div>
+      <div class="card">
+        <h4>Vacuum</h4>
+        <p>$|0\rangle$ with $a_k|0\rangle = 0$</p>
+        <p class="meta">No particles, but zero-point fluctuations in every mode.</p>
+      </div>
+      <div class="card">
+        <h4>$g_e - 2$</h4>
+        <p>Theory vs experiment to $10^{-12}$.</p>
+        <p class="meta">The most precise QED test, and a triumph of renormalization.</p>
+      </div>
+    </div>
+
+    <h3>See also</h3>
+    <div class="see-also">
+      <div class="card">
+        <h4><a href="./particle-physics.html">Particle physics (Standard Model)</a></h4>
+        <p>QFT is the language; the Standard Model is one specific Lagrangian written in that language. Which fields, which symmetries, which couplings.</p>
+      </div>
+      <div class="card">
+        <h4><a href="./frontier.html">Frontier physics</a></h4>
+        <p>String theory, loop quantum gravity, and holography all build on (or try to subsume) QFT. The information paradox lives here too.</p>
+      </div>
+      <div class="card">
+        <h4><a href="./cosmology.html">Cosmology</a></h4>
+        <p>QFT on curved spacetime gives you inflation, Hawking radiation, and the spectrum of primordial perturbations imprinted on the CMB.</p>
+      </div>
+      <div class="card">
+        <h4><a href="../math/linear-algebra.html">Linear algebra</a></h4>
+        <p>Hilbert spaces, operators, and tensor products. QFT is linear algebra on infinite-dimensional spaces, with calculus and Lorentz covariance bolted on.</p>
+      </div>
+      <div class="card">
+        <h4><a href="../math/calculus.html">Calculus</a></h4>
+        <p>Path integrals are limits of ordinary integrals. The functional derivative is the calculus of variations in disguise. You cannot avoid calculus here.</p>
+      </div>
+      <div class="card">
+        <h4><a href="../topics/diffusion.html">Diffusion models (AI/ML)</a></h4>
+        <p>A surprising crossover: score-matching and diffusion models are structurally similar to Euclidean QFT on a lattice. Stat-mech methods cross over directly.</p>
+      </div>
+    </div>
+
+    <div class="bib">
+      <h4>Further reading</h4>
+      <ul>
+        <li>Anthony Zee — <em>Quantum Field Theory in a Nutshell</em> (2nd ed., 2010). The most readable single book; starts from path integrals and keeps the intuition front and center. Skim it before any of the others.</li>
+        <li>Michael Peskin and Daniel Schroeder — <em>An Introduction to Quantum Field Theory</em> (1995). The standard graduate text. Long and careful. Chapters 1-6 cover everything on this page and much more.</li>
+        <li>Matthew Schwartz — <em>Quantum Field Theory and the Standard Model</em> (2014). A newer alternative to Peskin-Schroeder, with a more physical emphasis and cleaner notation.</li>
+        <li>Richard Feynman — <em>QED: The Strange Theory of Light and Matter</em> (1985, public lecture transcript). Zero equations, real insight. Give this to anyone who has ever asked "but what is a photon?"</li>
+        <li>Steven Weinberg — <em>The Quantum Theory of Fields</em>, Vol I-III (1995-2000). The definitive reference. Start with it only if you want to know why every convention is what it is.</li>
+        <li>Srednicki, <em>Quantum Field Theory</em>, <a href="https://web.physics.ucsb.edu/~mark/qft.html">free online draft</a>. Good pedagogical alternative, freely available.</li>
+        <li>Wikipedia, <a href="https://en.wikipedia.org/wiki/Renormalization">Renormalization</a>. Historically rich and surprisingly clear on why the infinities are not a bug.</li>
+      </ul>
+    </div>
+
+    <div class="next-card">
+      <div class="label">NEXT UP</div>
+      <a href="./particle-physics.html">→ Particle Physics: the Standard Model</a>
+      <p>Now that you know what a quantum field is, we can catalogue the ones that actually exist: six quarks, six leptons, four gauge bosons, and the Higgs. Plus why neutrinos oscillate, why quarks cannot be isolated, and what is still missing.</p>
+    </div>
+
+  </article>
+</div>
+
+<script>
+// =========================================================
+// Code tabs
+document.querySelectorAll('.code-tabs').forEach(root => {
+  const tabs = root.querySelectorAll('.ct-tab');
+  const panels = root.querySelectorAll('.ct-panel');
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const target = tab.getAttribute('data-tab');
+      tabs.forEach(t => t.classList.toggle('active', t === tab));
+      panels.forEach(p => p.classList.toggle('active', p.getAttribute('data-tab') === target));
+    });
+  });
+});
+
+// =========================================================
+// QFT loop-order diagram visualizer
+(function() {
+  const svg = document.getElementById('qftSvg');
+  if (!svg) return;
+  const NS = 'http://www.w3.org/2000/svg';
+  const loopSlider = document.getElementById('qftLoops');
+  const loopLabel  = document.getElementById('qftLoopsLabel');
+  const alphaSlider= document.getElementById('qftAlpha');
+  const alphaLabel = document.getElementById('qftAlphaLabel');
+  const caption    = document.getElementById('qftCaption');
+
+  function mk(tag, attrs) {
+    const el = document.createElementNS(NS, tag);
+    for (const k in attrs) el.setAttribute(k, attrs[k]);
+    return el;
+  }
+  function mkText(x, y, txt, color, size, anchor) {
+    const t = mk('text', {x:x, y:y, fill: color||'#b4c4d4', 'font-size': size||11,
+      'font-family':'ui-monospace, monospace'});
+    if (anchor) t.setAttribute('text-anchor', anchor);
+    t.textContent = txt;
+    return t;
+  }
+
+  // Wavy photon line from (x1,y1) to (x2,y2) as a simple sine path
+  function wavy(x1, y1, x2, y2, color) {
+    const N = 40;
+    let d = '';
+    const dx = x2 - x1, dy = y2 - y1;
+    const len = Math.hypot(dx, dy);
+    const nx = -dy / len, ny = dx / len;
+    for (let i = 0; i <= N; i++) {
+      const t = i / N;
+      const bx = x1 + dx * t;
+      const by = y1 + dy * t;
+      const amp = 4 * Math.sin(t * Math.PI * 8);
+      const x = bx + nx * amp;
+      const y = by + ny * amp;
+      d += (i === 0 ? 'M' : 'L') + x.toFixed(1) + ',' + y.toFixed(1) + ' ';
+    }
+    const p = mk('path', {d:d, stroke: color, 'stroke-width':2, fill:'none'});
+    return p;
+  }
+
+  function draw() {
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+
+    const loops = parseInt(loopSlider.value, 10);
+    const alpha = parseFloat(alphaSlider.value);
+    loopLabel.textContent = loops;
+    alphaLabel.textContent = alpha.toFixed(5);
+
+    // Left panel: diagram schematic
+    svg.appendChild(mk('rect', {x:20,y:20,width:380,height:340,fill:'#0f131a',stroke:'#2a3446'}));
+    svg.appendChild(mkText(30, 40, 'Feynman diagram (schematic)', '#b4c4d4', 12));
+    svg.appendChild(mkText(30, 56, 'loops = ' + loops, '#7a8a9a', 11));
+
+    // Fermion lines: two in on the left, two out on the right, meeting at vertices
+    const xL = 80, xR = 340;
+    const yTop = 130, yBot = 260;
+    const xVL = 160, xVR = 260;
+    // Incoming
+    svg.appendChild(mk('line', {x1:xL,y1:yTop,x2:xVL,y2:yTop,stroke:'#22d3ee','stroke-width':2}));
+    svg.appendChild(mk('line', {x1:xL,y1:yBot,x2:xVL,y2:yBot,stroke:'#22d3ee','stroke-width':2}));
+    // Outgoing
+    svg.appendChild(mk('line', {x1:xVR,y1:yTop,x2:xR,y2:yTop,stroke:'#22d3ee','stroke-width':2}));
+    svg.appendChild(mk('line', {x1:xVR,y1:yBot,x2:xR,y2:yBot,stroke:'#22d3ee','stroke-width':2}));
+    // Internal fermion between vertices
+    svg.appendChild(mk('line', {x1:xVL,y1:yTop,x2:xVR,y2:yTop,stroke:'#22d3ee','stroke-width':2,'stroke-dasharray':'4,3'}));
+    svg.appendChild(mk('line', {x1:xVL,y1:yBot,x2:xVR,y2:yBot,stroke:'#22d3ee','stroke-width':2,'stroke-dasharray':'4,3'}));
+    // Photon propagator (wavy) between the two lines
+    svg.appendChild(wavy((xVL+xVR)/2, yTop, (xVL+xVR)/2, yBot, '#f472b6'));
+    // Vertex dots
+    [[xVL,yTop],[xVR,yTop],[xVL,yBot],[xVR,yBot]].forEach(p=>{
+      svg.appendChild(mk('circle',{cx:p[0],cy:p[1],r:4,fill:'#f472b6'}));
+    });
+    // Additional loop blobs for loops > 0
+    for (let i = 0; i < loops; i++) {
+      const cx = 210 + (i%3)*25 - 25;
+      const cy = 195 + Math.floor(i/3)*30 - 15;
+      svg.appendChild(mk('circle',{cx:cx,cy:cy,r:10,fill:'none',stroke:'#7c5cff','stroke-width':1.5}));
+    }
+    // Labels
+    svg.appendChild(mkText(xL-6, yTop-10, 'e-', '#7a8a9a', 10, 'end'));
+    svg.appendChild(mkText(xL-6, yBot+18, 'e-', '#7a8a9a', 10, 'end'));
+    svg.appendChild(mkText(xR+6, yTop-10, 'e-', '#7a8a9a', 10, 'start'));
+    svg.appendChild(mkText(xR+6, yBot+18, 'e-', '#7a8a9a', 10, 'start'));
+    svg.appendChild(mkText(215, 195, 'gamma', '#f472b6', 10, 'middle'));
+
+    // Right panel: bar chart of relative size
+    svg.appendChild(mk('rect', {x:430,y:20,width:270,height:340,fill:'#0f131a',stroke:'#2a3446'}));
+    svg.appendChild(mkText(440, 40, 'Relative size per order', '#b4c4d4', 12));
+    svg.appendChild(mkText(440, 56, 'factor ~ (alpha/(4*pi))^n', '#7a8a9a', 11));
+
+    const baseX = 460;
+    const baseY = 320;
+    const barW  = 32;
+    const gap   = 8;
+    const maxH  = 240;
+
+    for (let n = 0; n <= 5; n++) {
+      const ratio = Math.pow(alpha / (4 * Math.PI), n);
+      // Log scale: -log10(ratio) mapped to bar height
+      const logR = Math.log10(Math.max(ratio, 1e-20));
+      // Scale so that n=0 (ratio=1) is full height
+      const h = Math.max(2, maxH * (1 + logR / 20));
+      const x = baseX + n * (barW + gap);
+      const y = baseY - h;
+      const isSelected = (n === loops);
+      svg.appendChild(mk('rect', {x:x, y:y, width:barW, height:h,
+        fill: isSelected ? '#22d3ee' : '#1a2030', stroke: isSelected ? '#f472b6' : '#384050'}));
+      svg.appendChild(mkText(x + barW/2, baseY + 14, String(n), '#7a8a9a', 10, 'middle'));
+      svg.appendChild(mkText(x + barW/2, y - 4, ratio.toExponential(1), '#b4c4d4', 9, 'middle'));
+    }
+    svg.appendChild(mkText(baseX + 3*(barW+gap), baseY + 30, 'loop order n', '#7a8a9a', 10, 'middle'));
+
+    caption.textContent = 'loops = ' + loops + '; alpha = ' + alpha.toFixed(5) +
+      '; contribution ~ (alpha/(4*pi))^' + loops + ' = ' +
+      Math.pow(alpha/(4*Math.PI), loops).toExponential(2) +
+      '. Each loop costs roughly alpha/(4*pi), so the series converges fast at QED couplings.';
+  }
+
+  loopSlider.addEventListener('input', draw);
+  alphaSlider.addEventListener('input', draw);
+  draw();
+})();
+</script>
+<script defer src="../problem-set.js"></script>
+<script defer src="quantum-field-theory-problems.js"></script>
+</body>
+</html>

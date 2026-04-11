@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Atomic Structure — Deep Dive</title>
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError: false});"></script>
+</head>
+<body>
+<div id="tooltip"></div>
+
+<nav class="topic-nav">
+  <a class="back" href="./index.html">← Chemistry Hub</a>
+  <div class="crumb">Chemistry / <span class="topic-name">Atomic Structure</span></div>
+</nav>
+
+<div class="topic-layout">
+  <aside class="topic-toc">
+    <h4>ON THIS PAGE</h4>
+    <ul>
+      <li><a href="#why">1. Why atomic structure matters</a></li>
+      <li><a href="#vocab">2. Vocabulary cheat sheet</a></li>
+      <li><a href="#atoms">3. Atoms and isotopes</a></li>
+      <li><a href="#bohr">4. The quantum atom</a></li>
+      <li><a href="#orbitals">5. Orbitals and quantum numbers</a></li>
+      <li><a href="#demo">6. Interactive: orbital visualizer</a></li>
+      <li><a href="#config">7. Electron configurations</a></li>
+      <li><a href="#periodic">8. Periodic trends</a></li>
+      <li><a href="#spectra">9. Spectroscopy basics</a></li>
+      <li><a href="#code">10. Source code</a></li>
+      <li><a href="#summary">11. Cheat sheet</a></li>
+    </ul>
+  </aside>
+
+  <article class="topic-content">
+    <h1>Atomic Structure</h1>
+    <p class="subtitle">The periodic table is not arbitrary. Every trend on it — size, reactivity, color, conductivity — falls out of one idea: electrons live in quantized orbitals around a positively charged nucleus, and the rules for filling those orbitals determine everything else.</p>
+    <div class="meta-tags">
+      <span>Prereq: high-school chemistry, a touch of <a href="../physics/quantum-mechanics.html">quantum mechanics</a></span>
+      <span>Read time: ~30 min</span>
+      <span>Interactive figures: 1</span>
+      <span>Code: NumPy</span>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="why">1. Why atomic structure matters</h2>
+
+    <p>You already know the cartoon. An atom is a tiny nucleus with electrons buzzing around it. The nucleus has protons (positive) and neutrons (neutral); the electrons (negative) balance the protons to make the whole thing electrically neutral. Different elements have different numbers of protons, and chemistry is mostly about what the electrons do.</p>
+
+    <p>That cartoon is right, but flat. It doesn't tell you why carbon forms four bonds, why sodium and fluorine react violently while argon refuses, why copper is a conductor and diamond an insulator, why iron's d-electrons give it magnetism, or why every emission line in a sodium streetlamp is exactly where it is. All of that comes from one deeper fact: electrons inside atoms are restricted to a discrete set of quantum states, and the structure of those states is what makes chemistry predictable.</p>
+
+    <p>Why should you care, if you aren't a chemist?</p>
+
+    <ul>
+      <li><strong>Materials and batteries.</strong> Why does lithium make good anodes? Because it has one loosely held valence electron and a small, light ion. Why is cobalt's role in a cathode hard to replace? Its d-orbital occupancy sets the voltage window. Every cell-chemistry tradeoff is an atomic-structure tradeoff.</li>
+      <li><strong>Pharmaceuticals.</strong> Drug-target binding is electron density docking with electron density. Medicinal chemists spend their days predicting how substituents change electronic structure and therefore binding affinity.</li>
+      <li><strong>Environmental and atmospheric.</strong> Ozone depletion, greenhouse warming, and photochemistry in the upper atmosphere are all driven by how specific photons interact with specific electronic transitions in specific molecules.</li>
+      <li><strong>Imaging and diagnostics.</strong> MRI sees nuclear spins. PET scans see positron emissions. X-ray crystallography reads electron density. All are atomic-structure tools.</li>
+    </ul>
+
+    <div class="callout">
+      <div class="label">THE PUNCHLINE</div>
+      <p>Electrons in atoms can only live in certain shapes (orbitals) at certain energies. The rules for which orbitals exist come from the Schrödinger equation. The rules for how to fill them come from the Pauli exclusion principle and the Aufbau principle. Those two rulebooks, applied to a nucleus with $Z$ protons, reproduce the entire periodic table.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="vocab">2. Vocabulary cheat sheet</h2>
+
+    <table class="rank-table">
+      <thead><tr><th>Symbol</th><th>Read as</th><th>Means</th></tr></thead>
+      <tbody>
+        <tr><td>$Z$</td><td>"atomic number"</td><td>Number of protons in the nucleus. Defines what element you have.</td></tr>
+        <tr><td>$A$</td><td>"mass number"</td><td>Total number of nucleons (protons + neutrons) in the nucleus.</td></tr>
+        <tr><td>$N$</td><td>"neutron number"</td><td>Number of neutrons, equal to $A - Z$.</td></tr>
+        <tr><td>$n$</td><td>"principal quantum number"</td><td>$1, 2, 3, \dots$ — the shell an electron is in. Larger $n$ means farther from the nucleus and higher energy.</td></tr>
+        <tr><td>$\ell$</td><td>"angular momentum quantum number"</td><td>$0, 1, 2, \dots, n-1$. Labels the subshell ($s, p, d, f$).</td></tr>
+        <tr><td>$m_\ell$</td><td>"magnetic quantum number"</td><td>Integer from $-\ell$ to $+\ell$. Labels which orbital inside a subshell.</td></tr>
+        <tr><td>$m_s$</td><td>"spin quantum number"</td><td>$+\tfrac{1}{2}$ or $-\tfrac{1}{2}$ — spin up or spin down.</td></tr>
+        <tr><td>$E_n$</td><td>"energy of level $n$"</td><td>The energy of an electron in the $n$-th shell (exact for hydrogen, approximate otherwise).</td></tr>
+        <tr><td>$\psi$</td><td>"psi"</td><td>The wavefunction — a function whose squared magnitude gives the probability density of finding the electron somewhere.</td></tr>
+        <tr><td>eV</td><td>"electron volt"</td><td>A convenient energy unit, $1\ \text{eV} = 1.602\times 10^{-19}$ J. Chemistry happens on the eV scale.</td></tr>
+      </tbody>
+    </table>
+
+    <!-- ========================================================== -->
+    <h2 id="atoms">3. Atoms and isotopes</h2>
+
+    <p>A neutral atom has three ingredients:</p>
+
+    <ul>
+      <li><strong>Protons</strong> in the nucleus. Each carries charge $+e$. The count is $Z$, the atomic number, and it determines the element. $Z = 6$ is carbon, always. Change $Z$ and you change the element.</li>
+      <li><strong>Neutrons</strong> in the nucleus. Neutral, slightly more massive than protons. Their count is $N$, and it can vary without changing the element — atoms with the same $Z$ but different $N$ are called <strong>isotopes</strong>.</li>
+      <li><strong>Electrons</strong> outside the nucleus, each with charge $-e$. In a neutral atom there are $Z$ of them, one for every proton. Chemistry is mostly about these.</li>
+    </ul>
+
+    <p>The total mass of the atom is dominated by the nucleus (protons and neutrons are about 1800 times heavier than an electron). We quote the mass in <strong>mass number</strong>:</p>
+
+    <div class="math-display">$$A = Z + N.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Mass number</p>
+      <dl>
+        <dt>$A$</dt><dd>The mass number — the total count of nucleons. For ordinary carbon, $A = 12$ (six protons + six neutrons).</dd>
+        <dt>$Z$</dt><dd>The atomic number — the proton count. Fixes the element.</dd>
+        <dt>$N$</dt><dd>The neutron count. Varies across isotopes of the same element.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Notation.</strong> Chemists write an isotope as $^{A}_{Z}X$, for example $^{14}_{6}\text{C}$ — carbon-14, the isotope with two extra neutrons, the one radiocarbon dating measures. Since the element symbol already pins down $Z$, the lower subscript is usually dropped and you just see $^{14}\text{C}$. Most elements you encounter are actually a weighted mixture of isotopes — "natural carbon" is about 98.9% $^{12}\text{C}$ and 1.1% $^{13}\text{C}$, with a trace of $^{14}\text{C}$.</p>
+    </div>
+
+    <p>When you look up an element's atomic weight on a periodic table (say, 12.011 for carbon), that decimal is the natural abundance-weighted average of the isotope masses. If your work cares about individual isotopes — in mass spectrometry, NMR, or nuclear chemistry — you will often need the specific value for a specific isotope, not the average.</p>
+
+    <h3>Worked example: isotope arithmetic</h3>
+
+    <p>Boron has two stable isotopes: $^{10}\text{B}$ (mass 10.013 u, abundance 19.9%) and $^{11}\text{B}$ (mass 11.009 u, abundance 80.1%). The weighted average is</p>
+
+    <div class="math-display">$$\bar m = (0.199)(10.013) + (0.801)(11.009) = 10.811\ \text{u},$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Weighted average atomic mass</p>
+      <dl>
+        <dt>$\bar m$</dt><dd>The abundance-weighted average mass of one atom of naturally occurring boron, in atomic mass units (u).</dd>
+        <dt>$0.199,\ 0.801$</dt><dd>Natural abundance fractions (summing to 1).</dd>
+        <dt>$10.013,\ 11.009$</dt><dd>The nuclidic masses of the two isotopes in atomic mass units.</dd>
+      </dl>
+      <p class="mg-why"><strong>Why it matters.</strong> Boron-10 absorbs thermal neutrons about 200 times more strongly than boron-11. Nuclear reactors and boron neutron capture therapy both use enriched $^{10}\text{B}$, not natural boron — the average you see on the periodic table hides the fact that one isotope does almost all the work.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="bohr">4. The quantum atom</h2>
+
+    <p>The first useful model of the atom was Niels Bohr's, in 1913. He assumed electrons orbit the nucleus in circular paths like planets, but with one non-classical twist: only certain orbits are allowed. The allowed orbits are those where the electron's angular momentum is an integer multiple of $\hbar = h/(2\pi)$ (Planck's constant over $2\pi$).</p>
+
+    <p>For a single-electron ion with nuclear charge $Ze$, the Bohr model predicts discrete energy levels</p>
+
+    <div class="math-display">$$E_n = -\frac{Z^2\, R_H}{n^2}, \qquad n = 1, 2, 3, \dots$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Bohr energy levels (hydrogen-like atoms)</p>
+      <dl>
+        <dt>$E_n$</dt><dd>The energy of an electron in the $n$-th allowed orbit. Negative, because the electron is <em>bound</em> to the nucleus — you'd have to supply energy to rip it out to infinity.</dd>
+        <dt>$Z$</dt><dd>The nuclear charge. For hydrogen, $Z = 1$. For a singly ionized helium atom (He$^+$), $Z = 2$. The formula only works for atoms with exactly one electron.</dd>
+        <dt>$R_H$</dt><dd>The Rydberg energy, $R_H \approx 13.6$ eV. It's a universal constant built from $m_e$, $e$, $\hbar$, and $\epsilon_0$. You can compute it from first principles.</dd>
+        <dt>$n$</dt><dd>The principal quantum number, $1, 2, 3, \dots$. $n = 1$ is the ground state — the lowest energy, the most tightly bound.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>What it means.</strong> The electron can't sit anywhere; it can only sit in specific energy slots. When it drops from a higher slot to a lower one, the energy difference is released as a single photon — and because the levels are discrete, the photon has a very specific wavelength. That's why flames from sodium are yellow, neon signs are red, and hydrogen emission is a series of sharp lines instead of a rainbow.</p>
+    </div>
+
+    <p>For hydrogen ($Z = 1$), $E_1 = -13.6$ eV, $E_2 = -3.4$ eV, $E_3 = -1.51$ eV, and so on, converging to 0 as $n \to \infty$. The energy you need to ionize a hydrogen atom from its ground state — pull its electron out to infinity — is $0 - (-13.6) = 13.6$ eV. That number is the <strong>first ionization energy</strong> of hydrogen, and it's the first prediction you can compute and check against experiment.</p>
+
+    <div class="callout warn">
+      <div class="label">WHERE BOHR BREAKS</div>
+      <p>Bohr's model works for hydrogen and hydrogen-like ions (He$^+$, Li$^{2+}$, etc.) but fails the moment you add a second electron. It also can't predict orbital shapes, chemical bonding, or fine spectral structure. The modern picture replaces "electron in a circular orbit" with "electron in a three-dimensional wavefunction that is a solution to the Schrödinger equation." That's the subject of the next section.</p>
+    </div>
+
+    <h3>The Schrödinger picture in one paragraph</h3>
+
+    <p>For a single electron in a potential $V(r)$ (for hydrogen, $V(r) = -Ze^2/(4\pi\epsilon_0 r)$), the time-independent Schrödinger equation is</p>
+
+    <div class="math-display">$$-\frac{\hbar^2}{2m_e}\nabla^2 \psi + V(r)\,\psi = E\,\psi.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Schrödinger equation for the hydrogen atom</p>
+      <dl>
+        <dt>$\psi$</dt><dd>The wavefunction of the electron. A complex-valued function of position whose squared magnitude $|\psi|^2$ gives the probability density of finding the electron at a given point.</dd>
+        <dt>$\nabla^2$</dt><dd>The Laplacian — sum of second partial derivatives in all three spatial directions. It encodes the kinetic energy of the electron in quantum mechanics.</dd>
+        <dt>$m_e$</dt><dd>The electron mass, $9.109\times 10^{-31}$ kg.</dd>
+        <dt>$\hbar$</dt><dd>Planck's constant over $2\pi$, $1.055\times 10^{-34}$ J·s.</dd>
+        <dt>$V(r)$</dt><dd>The Coulomb potential — attractive, negative, going to zero at infinity.</dd>
+        <dt>$E$</dt><dd>The energy — the eigenvalue. Only certain values of $E$ give wavefunctions that are well-behaved, and those are the allowed energy levels.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>What solving this buys you.</strong> The solutions come labeled by three quantum numbers $(n, \ell, m_\ell)$ and they reproduce the Bohr energies $E_n = -Z^2 R_H/n^2$ exactly — plus they give you the three-dimensional shapes of the orbitals. Bohr's circular orbits become a special case of a much richer geometry. See <a href="../physics/quantum-mechanics.html">quantum mechanics</a> for the full derivation.</p>
+    </div>
+
+    <div class="problem-set" data-topic="chem-atomic-spectra"></div>
+
+    <!-- ========================================================== -->
+    <h2 id="orbitals">5. Orbitals and quantum numbers</h2>
+
+    <p>Every electron in an atom is described by four quantum numbers. Three come from the Schrödinger equation; the fourth is a purely quantum property called spin.</p>
+
+    <ol>
+      <li><strong>Principal quantum number $n = 1, 2, 3, \dots$</strong> — the shell. Sets the main energy and rough distance from the nucleus.</li>
+      <li><strong>Angular momentum quantum number $\ell = 0, 1, 2, \dots, n-1$</strong> — the subshell. Sets the orbital shape. $\ell = 0$ is called $s$, $\ell = 1$ is $p$, $\ell = 2$ is $d$, $\ell = 3$ is $f$. (The letters are historical — they come from pre-quantum spectroscopy: sharp, principal, diffuse, fundamental.)</li>
+      <li><strong>Magnetic quantum number $m_\ell = -\ell, \dots, 0, \dots, +\ell$</strong> — labels the $2\ell + 1$ orbitals in the $\ell$-th subshell. For $\ell = 1$ (a $p$ subshell) you get $m_\ell \in \{-1, 0, +1\}$, the three $p$ orbitals usually called $p_x, p_y, p_z$.</li>
+      <li><strong>Spin quantum number $m_s = \pm\tfrac{1}{2}$</strong> — intrinsic angular momentum. Every electron is either spin-up or spin-down.</li>
+    </ol>
+
+    <p>The <strong>Pauli exclusion principle</strong> says no two electrons in the same atom can share all four quantum numbers. In practice, that means each orbital (a specific $n, \ell, m_\ell$) holds at most two electrons — one spin-up and one spin-down.</p>
+
+    <div class="defn">
+      <strong>How many orbitals in a shell?</strong> Shell $n$ has $n$ subshells ($\ell = 0$ through $\ell = n-1$), each with $2\ell + 1$ orbitals, each holding 2 electrons. So shell $n$ holds $2n^2$ electrons total. Shell 1: 2 electrons. Shell 2: 8. Shell 3: 18. Shell 4: 32.
+    </div>
+
+    <h3>Orbital shapes</h3>
+
+    <p>The math of the Schrödinger equation, when separated into radial and angular parts, assigns every $(n, \ell, m_\ell)$ a specific three-dimensional probability density:</p>
+
+    <ul>
+      <li><strong>$s$ orbitals ($\ell = 0$)</strong> are spherically symmetric. The $1s$ orbital is a ball of electron density centered on the nucleus, densest at $r = 0$ (well, actually at the Bohr radius $a_0 \approx 0.529$ Å if you look at the radial distribution function). The $2s$ has a spherical node — a thin shell where the density drops to zero — between two concentric regions of density.</li>
+      <li><strong>$p$ orbitals ($\ell = 1$)</strong> are dumbbell shaped, with a nodal plane through the nucleus. The three $p$ orbitals in a shell are oriented along mutually perpendicular axes: $p_x, p_y, p_z$.</li>
+      <li><strong>$d$ orbitals ($\ell = 2$)</strong> come in five shapes, four of them four-leaf-clovers in different orientations, plus the distinctive "dumbbell-with-a-donut" $d_{z^2}$.</li>
+      <li><strong>$f$ orbitals ($\ell = 3$)</strong> have seven even more baroque shapes. You mostly encounter them in the lanthanides and actinides.</li>
+    </ul>
+
+    <p>These shapes are the reason molecular geometry is what it is. When atoms bond, their orbitals overlap, and the overlap geometry is set by the orbital shapes. See <a href="./bonding.html">bonding</a> for the consequences.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="demo">6. Interactive: orbital shapes</h2>
+
+    <p>The figure below draws cross-sections of hydrogen-like orbitals. Pick an orbital by its $(n, \ell, m_\ell)$ quantum numbers and the display updates with a 2D slice of the probability density $|\psi|^2$ in the $xz$-plane. Brighter means more likely to find the electron.</p>
+
+    <div class="viz-3d">
+      <div class="v3-controls">
+        <span class="v3-label">Orbital:</span>
+        <select id="orbSel" style="flex:1;max-width:260px;background:#0a0d12;color:#e4ecf5;border:1px solid #2a3446;border-radius:4px;padding:4px 8px;font-family:ui-monospace,monospace;">
+          <option value="1,0,0">1s   (n=1, l=0, m=0)</option>
+          <option value="2,0,0">2s   (n=2, l=0, m=0)</option>
+          <option value="2,1,0">2p_z (n=2, l=1, m=0)</option>
+          <option value="2,1,1">2p_x (n=2, l=1, m=±1)</option>
+          <option value="3,0,0">3s   (n=3, l=0, m=0)</option>
+          <option value="3,1,0">3p_z (n=3, l=1, m=0)</option>
+          <option value="3,2,0">3d_z²(n=3, l=2, m=0)</option>
+          <option value="3,2,1">3d_xz(n=3, l=2, m=±1)</option>
+          <option value="3,2,2">3d_x²-y² (n=3, l=2, m=±2)</option>
+        </select>
+        <span id="orbLabel" style="min-width:110px;color:#22d3ee;font-family:ui-monospace,monospace;">1s</span>
+      </div>
+      <svg id="orbSvg" viewBox="0 0 720 360" style="width:100%;height:auto;background:#0a0d12;border-radius:6px;"></svg>
+      <p class="v3-caption" id="orbCaption">A cross-section of $|\psi|^2$ in the $xz$-plane. Nodes — planes where the density is zero — show up as dark lines. Higher $n$ pushes the density farther out. Higher $\ell$ adds angular nodes.</p>
+    </div>
+
+    <p>Things to notice as you click through:</p>
+
+    <ul>
+      <li>The $1s$ is a single blob at the center. No nodes of any kind.</li>
+      <li>The $2s$ has a radial node — a sphere of zero density nested inside the outer density. Very hard to see in 2D but visible as a thin dark ring.</li>
+      <li>The $p$ orbitals have one angular node (a plane). The two lobes have opposite sign in the underlying wavefunction $\psi$, even though both show up bright in $|\psi|^2$.</li>
+      <li>The $d$ orbitals have two angular nodes. Their shapes dictate the geometry of transition-metal complexes.</li>
+    </ul>
+
+    <div class="problem-set" data-topic="chem-atomic-trends"></div>
+
+    <!-- ========================================================== -->
+    <h2 id="config">7. Electron configurations and the Aufbau principle</h2>
+
+    <p>To build a multi-electron atom, you feed electrons into orbitals one at a time, in increasing order of energy, with two per orbital (Pauli). That procedure is called the <strong>Aufbau principle</strong> (German for "building up"), and it comes with two refinements:</p>
+
+    <ul>
+      <li><strong>Hund's rule.</strong> When filling orbitals of equal energy (say, the three $p$ orbitals in a $p$ subshell), put one electron in each orbital, all with parallel spin, before pairing any up. Intuitively: electrons repel, so they spread out and keep their spins aligned to minimize Pauli repulsion within the same spatial orbital.</li>
+      <li><strong>Madelung rule (also called $n + \ell$).</strong> Orbitals fill in order of increasing $n + \ell$, with lower $n$ breaking ties. So $4s$ fills before $3d$ because $n + \ell = 4 + 0 = 4$ beats $3 + 2 = 5$. This is the origin of all the rows in the periodic table.</li>
+    </ul>
+
+    <p>The standard filling order is: $1s, 2s, 2p, 3s, 3p, 4s, 3d, 4p, 5s, 4d, 5p, 6s, 4f, 5d, 6p, 7s, 5f, 6d, \dots$</p>
+
+    <p>So carbon ($Z = 6$) fills as $1s^2\, 2s^2\, 2p^2$. Sodium ($Z = 11$) is $1s^2\, 2s^2\, 2p^6\, 3s^1$. Iron ($Z = 26$) is $1s^2\, 2s^2\, 2p^6\, 3s^2\, 3p^6\, 4s^2\, 3d^6$. You can also write these using <strong>noble gas shorthand</strong>: Fe is $[\text{Ar}]\, 4s^2\, 3d^6$, because argon has $1s^2\, 2s^2\, 2p^6\, 3s^2\, 3p^6$ and you don't need to rewrite it.</p>
+
+    <div class="callout">
+      <div class="label">CARE: EXCEPTIONS</div>
+      <p>Aufbau gives the right answer for most elements, but there are a dozen or so annoying exceptions, mostly in the d-block. Chromium is $[\text{Ar}]\,4s^1\,3d^5$ instead of $4s^2\,3d^4$ (half-filled d subshells are extra stable). Copper is $[\text{Ar}]\,4s^1\,3d^{10}$ instead of $4s^2\,3d^9$ (completely filled d subshells are extra stable). These aren't mistakes in the rule — they're cases where the small energy cost of moving one electron is paid back by extra exchange stabilization. If you need configurations for a specific element, look them up; don't trust Aufbau blindly past row 4.</p>
+    </div>
+
+    <div class="problem-set" data-topic="chem-atomic-config"></div>
+
+    <!-- ========================================================== -->
+    <h2 id="periodic">8. Periodic trends</h2>
+
+    <p>The periodic table's rows correspond to shells filling up. Its columns correspond to atoms with matching outer-shell configurations — the <strong>valence electrons</strong> — and that's why columns share chemical behavior. All the alkali metals (Li, Na, K, Rb, Cs) have $ns^1$ valence configurations, and they all react the same way: lose one electron, become a $+1$ cation. All the halogens (F, Cl, Br, I) have $ns^2 np^5$ configurations, and they all want one more electron to close their shell.</p>
+
+    <p>Four trends fall out of this structure. Three of them you should commit to memory, because they come up constantly.</p>
+
+    <h3>Atomic radius</h3>
+
+    <p><strong>Across a row</strong> (left to right), atoms shrink. The nuclear charge $Z$ goes up, but the additional electrons go into the same shell and don't shield each other well, so every electron feels a stronger effective nuclear charge and is pulled in tighter. <strong>Down a column</strong>, atoms grow. Each row adds a whole new shell, and the core electrons partially shield the outer ones from the nucleus, so the outer shell settles at a larger radius.</p>
+
+    <h3>Ionization energy</h3>
+
+    <p>The <strong>first ionization energy</strong> $\text{IE}_1$ is the energy required to remove one electron from a neutral gas-phase atom:</p>
+
+    <div class="math-display">$$\text{X}(g) \;\longrightarrow\; \text{X}^+(g) + e^-, \qquad \Delta E = \text{IE}_1.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">First ionization energy</p>
+      <dl>
+        <dt>$\text{X}(g)$</dt><dd>A neutral atom of element $X$ in the gas phase. The "g" means we're not dealing with any solvent or neighbors.</dd>
+        <dt>$\text{X}^+(g)$</dt><dd>The resulting $+1$ cation, still in the gas phase.</dd>
+        <dt>$e^-$</dt><dd>The liberated electron, carried off to infinity.</dd>
+        <dt>$\Delta E$</dt><dd>The energy change, always positive — you have to <em>supply</em> energy to rip the electron out.</dd>
+        <dt>$\text{IE}_1$</dt><dd>Shorthand for the first ionization energy, typically quoted in eV per atom or kJ/mol per mole of atoms. For hydrogen, 13.6 eV or 1312 kJ/mol.</dd>
+      </dl>
+      <p class="mg-why"><strong>Why care.</strong> Ionization energies set the voltage window of batteries, the work functions of metals, and the thresholds for photoionization in mass spectrometry. They're also the cleanest experimental check on atomic-structure theory: compute them from first principles and compare to measurement.</p>
+    </div>
+
+    <p>Across a row, $\text{IE}_1$ generally rises (the nucleus pulls harder, electrons are harder to remove). Down a column, it falls (the electron you're removing is in a higher, less tightly bound shell). There are two famous glitches: $\text{IE}_1$ drops slightly going from Be to B (because you start pulling a 2p electron instead of a 2s one, and 2p is higher in energy), and again from N to O (because the O you're pulling from has a paired 2p electron, which is less stable than the half-filled configuration of N).</p>
+
+    <h3>Electron affinity and electronegativity</h3>
+
+    <p><strong>Electron affinity</strong> is the energy released when a neutral atom captures an electron to become a $-1$ anion. <strong>Electronegativity</strong> is a derived quantity (Pauling's scale) that captures how strongly an atom pulls shared electrons toward itself in a bond. Both grow across a row and shrink down a column, for the same reasons ionization energy does. Fluorine is the most electronegative element (Pauling scale 3.98). Francium is the least (0.7). Everything else falls in between, and the electronegativity difference between two bonded atoms controls whether the bond is purely covalent, polar, or ionic — see <a href="./bonding.html">bonding</a>.</p>
+
+    <div class="callout good">
+      <div class="label">THE CORE TRENDS, MEMORIZE</div>
+      <p>Across a row (L→R): radius shrinks, ionization energy rises, electron affinity gets more negative, electronegativity rises. Down a column: radius grows, ionization energy falls, electron affinity weakens, electronegativity falls. Noble gases are exceptional on every axis because their shells are full. Transition metals are less predictable because their d-electrons shield poorly.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="spectra">9. Spectroscopy: how energy levels become light</h2>
+
+    <p>Spectroscopy is the experimental handle on electronic structure. Shine light on an atom and it absorbs photons whose energies exactly match gaps between its electronic levels. Heat an atom and it emits photons at those same gaps as excited electrons fall back down. The pattern of absorbed or emitted wavelengths is a fingerprint of the atom's energy-level structure, and for simple atoms like hydrogen, you can read the level structure off the spectrum and confirm the theory.</p>
+
+    <p>For hydrogen, the transition from level $n_i$ to level $n_f$ emits a photon of energy</p>
+
+    <div class="math-display">$$\Delta E = E_{n_i} - E_{n_f} = R_H\left(\frac{1}{n_f^2} - \frac{1}{n_i^2}\right).$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Rydberg formula for hydrogen transitions</p>
+      <dl>
+        <dt>$n_i, n_f$</dt><dd>Initial and final principal quantum numbers. For emission, $n_i > n_f$ (electron drops down).</dd>
+        <dt>$\Delta E$</dt><dd>The photon energy. For emission, positive and equal to $h\nu$ where $\nu$ is the photon frequency.</dd>
+        <dt>$R_H$</dt><dd>The Rydberg energy, $13.6$ eV.</dd>
+        <dt>$1/n_f^2 - 1/n_i^2$</dt><dd>Always positive when $n_i > n_f$; the difference of inverse squares is why the spectral lines cluster closer together as you go to higher $n_i$.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Reading the series.</strong> Transitions to $n_f = 1$ give the Lyman series (UV), $n_f = 2$ the Balmer series (visible — these are the lines you see through a diffraction grating in a hydrogen discharge tube), $n_f = 3$ the Paschen series (infrared). Each series has infinitely many lines that converge to a series limit at $R_H/n_f^2$, the energy to ionize from that final level.</p>
+    </div>
+
+    <p>Connect to the photon: $E_{\text{photon}} = h\nu = hc/\lambda$, where $\nu$ is frequency and $\lambda$ is wavelength. If $\Delta E = 10.2$ eV (the first Lyman line, $n_i=2 \to n_f=1$), then $\lambda = hc/\Delta E = 121.6$ nm — in the vacuum ultraviolet. That line is one of the brightest in the spectrum of the early universe, and it's how astronomers find distant hydrogen.</p>
+
+    <h3>Worked example: the Balmer alpha line</h3>
+
+    <p>Compute the wavelength of the $n_i = 3 \to n_f = 2$ transition in hydrogen.</p>
+
+    <ol>
+      <li>$\Delta E = R_H(1/4 - 1/9) = 13.6\,(0.25 - 0.1111) = 13.6 \times 0.1389 = 1.889$ eV.</li>
+      <li>Convert to joules: $\Delta E = 1.889 \times 1.602\times 10^{-19} = 3.026\times 10^{-19}$ J.</li>
+      <li>$\lambda = hc/\Delta E = (6.626\times 10^{-34})(3\times 10^8)/(3.026\times 10^{-19})$.</li>
+      <li>$= 6.566\times 10^{-7}$ m $= 656.6$ nm. Red light.</li>
+    </ol>
+
+    <p>That's the H-alpha line, and it's exactly the red glow you see in pictures of nebulae. The prediction and the observation agree to parts per million.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="code">10. Atomic structure in code</h2>
+
+    <p>Two small computations. The first evaluates the radial part of a hydrogen orbital. The second computes a weighted isotope mass from abundances. Both are tiny; both are useful.</p>
+
+    <div class="code-tabs" id="ct-atomic">
+      <div class="ct-header">
+        <button class="ct-tab active" data-tab="np">NumPy</button>
+        <button class="ct-tab" data-tab="py">Plain Python</button>
+        <span class="ct-label">atomic-structure primitives</span>
+      </div>
+
+      <div class="ct-panel active" data-tab="np"><pre><code><span class="kw">import</span> numpy <span class="kw">as</span> np
+
+<span class="cmt"># ---------- 1. Hydrogen 1s radial wavefunction ----------</span>
+<span class="cmt"># R_{10}(r) = 2 (1/a0)^{3/2} exp(-r/a0)</span>
+<span class="cmt"># a0 is the Bohr radius in meters.</span>
+a0 = <span class="num">5.29177e-11</span>
+<span class="kw">def</span> <span class="fn">R10</span>(r):
+    <span class="kw">return</span> <span class="num">2.0</span> * a0**(-<span class="num">1.5</span>) * np.<span class="fn">exp</span>(-r / a0)
+
+<span class="cmt"># Radial probability density P(r) = 4 pi r^2 |R(r)|^2</span>
+<span class="cmt"># Most likely r is where dP/dr = 0, which happens at r = a0.</span>
+r_grid = np.<span class="fn">linspace</span>(<span class="num">0</span>, <span class="num">5</span> * a0, <span class="num">200</span>)
+P = <span class="num">4</span> * np.pi * r_grid**<span class="num">2</span> * <span class="fn">R10</span>(r_grid)**<span class="num">2</span>
+r_peak = r_grid[np.<span class="fn">argmax</span>(P)]
+<span class="fn">print</span>(<span class="str">f"most likely r = {r_peak/a0:.3f} a0 (expected 1.000)"</span>)
+
+<span class="cmt"># ---------- 2. Bohr energy levels ----------</span>
+RH = <span class="num">13.6057</span>  <span class="cmt"># eV</span>
+<span class="kw">def</span> <span class="fn">E_bohr</span>(n, Z=<span class="num">1</span>):
+    <span class="kw">return</span> -Z**<span class="num">2</span> * RH / n**<span class="num">2</span>
+
+<span class="cmt"># Balmer alpha: n=3 -> n=2</span>
+dE = <span class="fn">E_bohr</span>(<span class="num">3</span>) - <span class="fn">E_bohr</span>(<span class="num">2</span>)  <span class="cmt"># negative, emission</span>
+<span class="fn">print</span>(<span class="str">f"Balmer alpha photon = {-dE:.3f} eV"</span>)
+<span class="cmt"># hc in eV*nm is a handy constant: 1240 eV*nm</span>
+lam_nm = <span class="num">1240.0</span> / (-dE)
+<span class="fn">print</span>(<span class="str">f"wavelength = {lam_nm:.1f} nm (expected ~656)"</span>)
+
+<span class="cmt"># ---------- 3. Average atomic mass from isotopes ----------</span>
+<span class="kw">def</span> <span class="fn">avg_mass</span>(masses, abundances):
+    a = np.<span class="fn">asarray</span>(abundances, dtype=<span class="kw">float</span>)
+    a = a / a.<span class="fn">sum</span>()  <span class="cmt"># normalize in case percentages don't sum to 1</span>
+    <span class="kw">return</span> <span class="fn">float</span>(np.<span class="fn">dot</span>(masses, a))
+
+<span class="cmt"># Boron: 10B (10.013 u, 19.9%) and 11B (11.009 u, 80.1%)</span>
+m_B = <span class="fn">avg_mass</span>([<span class="num">10.013</span>, <span class="num">11.009</span>], [<span class="num">0.199</span>, <span class="num">0.801</span>])
+<span class="fn">print</span>(<span class="str">f"natural boron = {m_B:.3f} u (periodic table: 10.811)"</span>)
+</code></pre></div>
+
+      <div class="ct-panel" data-tab="py"><pre><code><span class="kw">import</span> math
+
+<span class="cmt"># Same calculations without NumPy.</span>
+
+a0 = <span class="num">5.29177e-11</span>
+RH = <span class="num">13.6057</span>
+
+<span class="kw">def</span> <span class="fn">R10</span>(r):
+    <span class="kw">return</span> <span class="num">2.0</span> * a0**(-<span class="num">1.5</span>) * math.<span class="fn">exp</span>(-r / a0)
+
+<span class="kw">def</span> <span class="fn">E_bohr</span>(n, Z=<span class="num">1</span>):
+    <span class="kw">return</span> -Z * Z * RH / (n * n)
+
+<span class="kw">def</span> <span class="fn">photon_nm</span>(n_hi, n_lo, Z=<span class="num">1</span>):
+    dE = <span class="fn">E_bohr</span>(n_hi, Z) - <span class="fn">E_bohr</span>(n_lo, Z)
+    <span class="kw">return</span> <span class="num">1240.0</span> / (-dE)
+
+<span class="fn">print</span>(<span class="str">f"Lyman alpha  = {photon_nm(2,1):6.1f} nm"</span>)  <span class="cmt"># ~121.6</span>
+<span class="fn">print</span>(<span class="str">f"Balmer alpha = {photon_nm(3,2):6.1f} nm"</span>)  <span class="cmt"># ~656.5</span>
+<span class="fn">print</span>(<span class="str">f"Paschen alpha= {photon_nm(4,3):6.1f} nm"</span>)  <span class="cmt"># ~1875</span>
+
+<span class="cmt"># He+ (Z=2) Lyman alpha: factor of Z^2 = 4 in energy, 1/4 in wavelength</span>
+<span class="fn">print</span>(<span class="str">f"He+ Lyman alpha = {photon_nm(2,1,Z=2):.1f} nm"</span>)  <span class="cmt"># ~30.4</span>
+
+<span class="kw">def</span> <span class="fn">avg_mass</span>(masses, fractions):
+    total = <span class="fn">sum</span>(fractions)
+    <span class="kw">return</span> <span class="fn">sum</span>(m * (f / total) <span class="kw">for</span> m, f <span class="kw">in</span> <span class="fn">zip</span>(masses, fractions))
+
+<span class="fn">print</span>(<span class="str">f"Cl avg = {avg_mass([34.969, 36.966], [0.7576, 0.2424]):.3f}"</span>)  <span class="cmt"># ~35.45</span>
+</code></pre></div>
+    </div>
+
+    <p>Three things worth noticing:</p>
+
+    <ul>
+      <li>$hc$ in electron-volt nanometers is 1239.84 eV·nm, usually rounded to 1240. Chemists carry it as a unit constant so they never have to convert back and forth through SI units.</li>
+      <li>The Bohr energies scale like $Z^2$, so He$^+$ has four times hydrogen's ionization energy and quarter-sized wavelengths. Li$^{2+}$ has nine times, and so on. That's how you get from the Balmer lines to the Lyman lines of heavier one-electron ions.</li>
+      <li>For multi-electron atoms, you can't just plug in $Z$ — electron-electron repulsion messes up the simple formula. You need an effective nuclear charge $Z_\text{eff}$ that each electron actually feels, which is smaller than $Z$ because of shielding. Slater's rules give empirical values of $Z_\text{eff}$, and Hartree-Fock computes them self-consistently; see <a href="./quantum-chemistry.html">quantum chemistry</a>.</li>
+    </ul>
+
+    <!-- ========================================================== -->
+    <h2 id="summary">11. Cheat sheet</h2>
+
+    <div class="grid">
+      <div class="card">
+        <h4>Atomic number</h4>
+        <p>$Z$ = proton count. Fixes the element.</p>
+        <p class="meta">Change $Z$ → change element.</p>
+      </div>
+      <div class="card">
+        <h4>Mass number</h4>
+        <p>$A = Z + N$.</p>
+        <p class="meta">Labels isotopes of the same element.</p>
+      </div>
+      <div class="card">
+        <h4>Bohr energy</h4>
+        <p>$E_n = -Z^2 R_H / n^2$, $R_H = 13.6$ eV.</p>
+        <p class="meta">Exact for hydrogen-like ions only.</p>
+      </div>
+      <div class="card">
+        <h4>Quantum numbers</h4>
+        <p>$(n, \ell, m_\ell, m_s)$, four labels per electron.</p>
+        <p class="meta">Pauli: no two electrons share all four.</p>
+      </div>
+      <div class="card">
+        <h4>Subshell sizes</h4>
+        <p>$s$: 2, $p$: 6, $d$: 10, $f$: 14.</p>
+        <p class="meta">From $2(2\ell+1)$ electrons per subshell.</p>
+      </div>
+      <div class="card">
+        <h4>Shell capacity</h4>
+        <p>Shell $n$ holds $2n^2$ electrons.</p>
+        <p class="meta">2, 8, 18, 32, $\dots$</p>
+      </div>
+      <div class="card">
+        <h4>Filling order</h4>
+        <p>$1s, 2s, 2p, 3s, 3p, 4s, 3d, 4p, \dots$</p>
+        <p class="meta">Madelung $n+\ell$ rule, with d-block exceptions.</p>
+      </div>
+      <div class="card">
+        <h4>Rydberg formula</h4>
+        <p>$\Delta E = R_H(1/n_f^2 - 1/n_i^2)$</p>
+        <p class="meta">Transition energy between hydrogen levels.</p>
+      </div>
+      <div class="card">
+        <h4>Periodic trends →</h4>
+        <p>Across a row: radius ↓, IE ↑, EN ↑.</p>
+        <p class="meta">Down a column: opposite.</p>
+      </div>
+      <div class="card">
+        <h4>Photon energy</h4>
+        <p>$E = h\nu = hc/\lambda$; $hc = 1240$ eV·nm.</p>
+        <p class="meta">Carry the constant; skip the unit dance.</p>
+      </div>
+    </div>
+
+    <h3>See also</h3>
+    <div class="grid">
+      <div class="card">
+        <h4><a href="./bonding.html">Bonding</a></h4>
+        <p>Orbitals from this page overlap to form chemical bonds. Lewis structures, VSEPR, hybridization, and molecular orbital theory all start here.</p>
+      </div>
+      <div class="card">
+        <h4><a href="../physics/quantum-mechanics.html">Physics: Quantum Mechanics</a></h4>
+        <p>The Schrödinger equation, the particle in a box, angular momentum, and the spin-statistics theorem — everything this page asserts comes from there.</p>
+      </div>
+      <div class="card">
+        <h4><a href="./quantum-chemistry.html">Quantum Chemistry</a></h4>
+        <p>Where the single-electron picture stops working and you need Hartree-Fock, DFT, and post-HF methods to do chemistry quantitatively.</p>
+      </div>
+      <div class="card">
+        <h4><a href="../math/linear-algebra.html">Math: Linear Algebra</a></h4>
+        <p>Orbitals are eigenvectors of the Hamiltonian. Energy levels are eigenvalues. Atomic structure is a linear algebra problem in an infinite-dimensional Hilbert space.</p>
+      </div>
+    </div>
+
+    <div class="bib">
+      <h4>Further reading</h4>
+      <ul>
+        <li>Peter Atkins and Julio de Paula — <em>Physical Chemistry</em>. The standard rigorous undergraduate treatment. Chapters on atomic structure are thorough and well-illustrated.</li>
+        <li>Linus Pauling — <em>The Nature of the Chemical Bond</em> (1939, revised 1960). The book that established electronegativity and hybridization as everyday tools. Still readable.</li>
+        <li>Walter Kohn's Nobel lecture (1999) — <a href="https://www.nobelprize.org/prizes/chemistry/1998/kohn/lecture/">Electronic structure of matter</a>. The origin of density functional theory, and one of the clearest modern overviews of where atomic-structure theory goes beyond Hartree-Fock.</li>
+        <li>NIST Atomic Spectra Database — <a href="https://www.nist.gov/pml/atomic-spectra-database">nist.gov/pml/atomic-spectra-database</a>. The authoritative table of measured atomic transition wavelengths for every element.</li>
+        <li>Wikipedia — <a href="https://en.wikipedia.org/wiki/Hydrogen_atom">Hydrogen atom</a>. A solid article with the full derivation of the Schrödinger solutions.</li>
+      </ul>
+    </div>
+
+    <div class="next-card">
+      <div class="label">NEXT UP</div>
+      <a href="./bonding.html">→ Bonding</a>
+      <p>Now that you know what orbitals look like, the next question is what happens when two atoms bring their orbitals into contact. The answer is the entire edifice of chemical bonding: Lewis structures, VSEPR geometry, hybridization, molecular orbitals, and the intermolecular forces that set the boiling points of everything around you.</p>
+    </div>
+
+  </article>
+</div>
+
+<script>
+// =========================================================
+// Code tabs
+document.querySelectorAll('.code-tabs').forEach(root => {
+  const tabs = root.querySelectorAll('.ct-tab');
+  const panels = root.querySelectorAll('.ct-panel');
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const target = tab.getAttribute('data-tab');
+      tabs.forEach(t => t.classList.toggle('active', t === tab));
+      panels.forEach(p => p.classList.toggle('active', p.getAttribute('data-tab') === target));
+    });
+  });
+});
+
+// =========================================================
+// Orbital visualizer
+(function() {
+  const svg = document.getElementById('orbSvg');
+  if (!svg) return;
+  const NS = 'http://www.w3.org/2000/svg';
+  const sel = document.getElementById('orbSel');
+  const label = document.getElementById('orbLabel');
+  const caption = document.getElementById('orbCaption');
+
+  // Dimensionless density functions |psi|^2 for hydrogenic orbitals,
+  // in units where a0 = 1. Inputs: x, z (cross-section in xz-plane, y=0).
+  // We use rho = r/a0 and the standard real spherical orbitals.
+  function dens(n, l, m, x, z) {
+    const r = Math.sqrt(x*x + z*z);
+    // spherical polar: theta measured from +z axis, phi in xy-plane
+    // in xz-plane with y=0, phi = 0 if x >= 0 else pi
+    const cosTheta = r > 1e-9 ? z / r : 0;
+    // We compute |psi|^2 for real orbitals.
+    // Hydrogen radial functions (dimensionless with a0=1):
+    let R;
+    if (n === 1 && l === 0) {
+      R = 2 * Math.exp(-r);
+    } else if (n === 2 && l === 0) {
+      R = (1/Math.sqrt(2)) * (1 - r/2) * Math.exp(-r/2);
+    } else if (n === 2 && l === 1) {
+      R = (1/(2*Math.sqrt(6))) * r * Math.exp(-r/2);
+    } else if (n === 3 && l === 0) {
+      R = (2/(3*Math.sqrt(3))) * (1 - 2*r/3 + 2*r*r/27) * Math.exp(-r/3);
+    } else if (n === 3 && l === 1) {
+      R = (4/(9*Math.sqrt(6))) * (1 - r/6) * r * Math.exp(-r/3);
+    } else if (n === 3 && l === 2) {
+      R = (2*Math.sqrt(2)/(81*Math.sqrt(15))) * r * r * Math.exp(-r/3);
+    } else {
+      R = Math.exp(-r);
+    }
+    // Angular part (real spherical harmonics, normalized so |Y|^2 integrates to 1/(4pi)... we drop constants and keep shapes):
+    let Y;
+    if (l === 0) {
+      Y = 1;
+    } else if (l === 1 && m === 0) {
+      // p_z: cos(theta)
+      Y = cosTheta;
+    } else if (l === 1 && Math.abs(m) === 1) {
+      // p_x in xz-plane: sin(theta)*cos(phi). In the xz plane, phi=0 or pi, so cos(phi) = sign(x).
+      const sinTheta = r > 1e-9 ? x / r : 0;  // with y=0, this works
+      Y = sinTheta;
+    } else if (l === 2 && m === 0) {
+      // d_z2: 3 cos^2(theta) - 1 (up to normalization)
+      Y = 3 * cosTheta * cosTheta - 1;
+    } else if (l === 2 && Math.abs(m) === 1) {
+      // d_xz: sin(theta)*cos(theta)*cos(phi); in xz-plane, cos(phi)=sign(x), so this is x*z/r^2.
+      Y = r > 1e-9 ? (x * z) / (r * r) : 0;
+    } else if (l === 2 && Math.abs(m) === 2) {
+      // d_{x^2 - y^2}: sin^2(theta)*cos(2 phi). In xz-plane with y=0, this is x^2/r^2.
+      Y = r > 1e-9 ? (x * x) / (r * r) : 0;
+    } else {
+      Y = 1;
+    }
+    return (R * Y) * (R * Y);
+  }
+
+  const W = 720, H = 360;
+  const cx = W / 2, cy = H / 2;
+
+  function draw() {
+    const parts = sel.value.split(',').map(Number);
+    const n = parts[0], l = parts[1], m = parts[2];
+    const name = sel.options[sel.selectedIndex].text.split(' ')[0];
+    label.textContent = name;
+
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+
+    // Scale: extent of the box in units of a0.
+    // Pick box size so higher shells still fit.
+    const box = n <= 1 ? 6 : (n === 2 ? 14 : 28);
+    const scale = Math.min(W, H) / (2 * box);
+
+    // Grid
+    const frame = document.createElementNS(NS, 'rect');
+    frame.setAttribute('x', 0); frame.setAttribute('y', 0);
+    frame.setAttribute('width', W); frame.setAttribute('height', H);
+    frame.setAttribute('fill', '#0a0d12');
+    svg.appendChild(frame);
+
+    // Axis cross
+    const ax = document.createElementNS(NS, 'line');
+    ax.setAttribute('x1', 0); ax.setAttribute('y1', cy);
+    ax.setAttribute('x2', W); ax.setAttribute('y2', cy);
+    ax.setAttribute('stroke', '#1a2030'); ax.setAttribute('stroke-width', 1);
+    svg.appendChild(ax);
+    const ay = document.createElementNS(NS, 'line');
+    ay.setAttribute('x1', cx); ay.setAttribute('y1', 0);
+    ay.setAttribute('x2', cx); ay.setAttribute('y2', H);
+    ay.setAttribute('stroke', '#1a2030'); ay.setAttribute('stroke-width', 1);
+    svg.appendChild(ay);
+
+    // Draw density as a grid of colored squares.
+    const step = 4; // pixel size
+    // First pass: find max density for normalization.
+    let vmax = 0;
+    const vals = [];
+    for (let py = 0; py < H; py += step) {
+      const row = [];
+      for (let px = 0; px < W; px += step) {
+        // Convert pixel to (x, z) in a0 units.
+        const x = (px - cx) / scale;
+        const z = -(py - cy) / scale;  // SVG y is down
+        const v = dens(n, l, m, x, z);
+        row.push(v);
+        if (v > vmax) vmax = v;
+      }
+      vals.push(row);
+    }
+    if (vmax <= 0) vmax = 1;
+
+    for (let i = 0; i < vals.length; i++) {
+      for (let j = 0; j < vals[i].length; j++) {
+        const v = vals[i][j] / vmax;
+        if (v < 0.01) continue;
+        // Gamma for better visibility of faint features
+        const g = Math.pow(v, 0.45);
+        const r255 = Math.round(34 + g * (34));   // toward cyan
+        const g255 = Math.round(40 + g * (171));
+        const b255 = Math.round(60 + g * (135));
+        const rect = document.createElementNS(NS, 'rect');
+        rect.setAttribute('x', j * step);
+        rect.setAttribute('y', i * step);
+        rect.setAttribute('width', step);
+        rect.setAttribute('height', step);
+        rect.setAttribute('fill', `rgb(${r255},${g255},${b255})`);
+        rect.setAttribute('opacity', 0.85);
+        svg.appendChild(rect);
+      }
+    }
+
+    // Nucleus marker
+    const nuc = document.createElementNS(NS, 'circle');
+    nuc.setAttribute('cx', cx); nuc.setAttribute('cy', cy);
+    nuc.setAttribute('r', 3);
+    nuc.setAttribute('fill', '#f472b6');
+    svg.appendChild(nuc);
+
+    // Caption
+    const nodesRadial = n - l - 1;
+    const nodesAngular = l;
+    caption.innerHTML =
+      `Cross-section of $|\\psi|^2$ for ${name} ` +
+      `(n=${n}, l=${l}, m=${m}). ` +
+      `${nodesRadial} radial nodes + ${nodesAngular} angular nodes. ` +
+      `Box spans $\\pm${box}\\,a_0$.`;
+    if (typeof window.renderMathInElement === 'function') {
+      try { window.renderMathInElement(caption, {delimiters: [{left:'$',right:'$',display:false}], throwOnError:false}); } catch (e) {}
+    }
+  }
+
+  sel.addEventListener('change', draw);
+  draw();
+})();
+</script>
+<script defer src="../problem-set.js"></script>
+<script defer src="atomic-structure-problems.js"></script>
+<script defer src="../search-index.js"></script>
+<script defer src="../search.js"></script>
+</body>
+</html>

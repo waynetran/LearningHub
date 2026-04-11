@@ -153,6 +153,8 @@
       <p><strong>Below the simulator</strong> is a second interactive figure: the complexity-class hierarchy. We'll get to that in section 8 — once we have the language to describe what it means.</p>
     </div>
 
+    <div class="problem-set" data-topic="theory-tm"></div>
+
     <!-- ========================================================== -->
     <h2 id="s5">5. Decidability — what computers can answer at all</h2>
 
@@ -225,6 +227,8 @@
       <p><strong>What this does and doesn't say.</strong> It does <em>not</em> say "we can never tell whether any specific program halts." For most actual programs you encounter, you can tell. Compilers do termination analysis on loops every day. What it says is that <em>no single algorithm</em> works for every program. For any halting checker you write, there is some adversarial program designed to break it. The undecidability is about the impossibility of a uniform solution, not about your specific Friday-afternoon code review.</p>
     </div>
 
+    <div class="problem-set" data-topic="theory-undecidable"></div>
+
     <!-- ========================================================== -->
     <h2 id="s7">7. Reductions — the tool for comparing problems</h2>
 
@@ -289,6 +293,8 @@
       <svg id="ccSvg" viewBox="0 0 720 340" style="width:100%;height:auto;background:#0a0d12;border-radius:6px;"></svg>
       <p class="v3-caption" id="ccCaption">P is the smallest, EXPSPACE the largest. Each ring contains everything inside it. Hover or click to see which class a problem belongs to.</p>
     </div>
+
+    <div class="problem-set" data-topic="theory-reductions"></div>
 
     <!-- ========================================================== -->
     <h2 id="s9">9. P vs NP</h2>
@@ -1033,6 +1039,8 @@ document.querySelectorAll('.code-tabs').forEach(root => {
   update(0);
 })();
 </script>
+<script defer src="../problem-set.js"></script>
+<script defer src="theoretical-cs-problems.js"></script>
 <script defer src="../search-index.js"></script>
 <script defer src="../search.js"></script>
 </body>

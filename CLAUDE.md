@@ -4,48 +4,61 @@ This file is the contract for anyone (human or agent) editing the site. Read it 
 
 ## What the site is
 
-An interactive learning hub for tech professionals who want to catch up on the math, CS, and AI/ML foundations behind modern technology — without being talked down to, and without being assumed to remember everything. The guiding design question is:
+An interactive reference hub for a broad quantitative audience — researchers, scientists, engineers, product managers, executives, students, and enthusiasts — who want a serious, self-contained tour through the math, physics, chemistry, CS, and AI behind modern science and technology. The guiding design question is:
 
 > "How does a smart, busy, possibly-rusty reader land here, find what they need in one click, and dig as deep as they want in layered chunks?"
 
-### Three tracks
+### Five tracks
 
-- **AI / ML** — frontier and history of AI, at `ai-ml.html` + `topics/*.html`
-- **Mathematics** — prerequisite math for everything else, at `math/index.html` + `math/*.html`
-- **Computer Science** — algorithms, complexity, theory, at `cs/index.html` + `cs/*.html`
+- **Mathematics** — the shared language of quantitative reasoning, at `math/index.html` + `math/*.html`. Used by every other track.
+- **Physics** — classical through frontier (string theory, quantum info), at `physics/index.html` + `physics/*.html`
+- **Chemistry** — atoms to biochemistry to computational methods, at `chemistry/index.html` + `chemistry/*.html`
+- **Computer Science** — algorithms, complexity, theory, optimization, at `cs/index.html` + `cs/*.html`
+- **AI / Machine Learning** — frontier and history of AI, at `ai-ml.html` + `topics/*.html`
 
 The root landing page (`index.html`) is the hub — it routes visitors into one of the tracks.
 
 ## File & URL conventions
 
 ```
-research/
-├── index.html              ← site hub (landing)
-├── ai-ml.html              ← AI/ML track landing (was old index.html)
-├── styles.css              ← all shared styles, SSOT for theme
-├── topics/                 ← AI/ML deep dives (existing template)
+LearningHub/
+├── index.html                ← site hub (landing)
+├── ai-ml.html                ← AI/ML track hub
+├── problem-set.js            ← shared problem-set runtime (window.LearningHubProblemSet)
+├── styles.css                ← all shared styles, SSOT for theme
+├── topics/                   ← AI/ML deep dives
 │   ├── *.html
 ├── math/
-│   ├── index.html          ← math track hub
+│   ├── index.html            ← math track hub
 │   ├── calculus.html
-│   ├── linear-algebra.html
-│   ├── ...                 ← one file per subject
+│   ├── calculus-problems.js  ← problem-set registration for calculus
+│   ├── ...                   ← one HTML + one JS per subject
+├── physics/
+│   ├── index.html
+│   ├── classical-mechanics.html
+│   ├── classical-mechanics-problems.js
+│   ├── ...
+├── chemistry/
+│   ├── index.html
+│   ├── ...
 ├── cs/
-│   ├── index.html          ← CS track hub
+│   ├── index.html
 │   ├── algorithms.html
+│   ├── algorithms-problems.js
 │   ├── ...
 ```
 
-Paths are relative. From a math page, the CSS is `../styles.css`, the site hub is `../index.html`, the AI/ML landing is `../ai-ml.html`, a sibling math page is `./linear-algebra.html`, and an AI/ML deep dive is `../topics/foundation-models.html`.
+Paths are relative. From a subject page, the CSS is `../styles.css`, the site hub is `../index.html`, a sibling page is `./<other-subject>.html`, the shared runtime is `../problem-set.js`, and a sibling subject's problem file is `<subject>-problems.js`.
 
 ## The audience, and what that implies
 
-Assume the reader has **forgotten the prerequisites** but is **not incapable of learning them**. That means:
+Assume the reader has **forgotten the prerequisites** but is **not incapable of learning them**, AND is **not necessarily a programmer** — they may be a physicist, chemist, biologist, engineer, economist, product manager, executive, student, or curious enthusiast. That means:
 
 1. **Never leave a symbol undefined.** Every math formula is followed by a `math-glossary` block that names every variable, operator, and constant in plain English, with a short "why this matters" or analogy.
 2. **Prereq badges at the top of every page.** List what the page assumes, and *link each prerequisite* to the page that teaches it. If the link doesn't exist yet, at least drop a `TODO` so we can build it later.
 3. **Layered depth.** Give a one-sentence intuition, then a worked example, then the formal statement, then the proof/derivation (optional). Let readers stop at whichever layer they need.
-4. **"See also" at the bottom of every major section.** Cross-link to related pages in other tracks — math ↔ ML, algorithms ↔ numerical analysis, probability ↔ RL, etc.
+4. **"See also" at the bottom of every major section.** Cross-link to related pages in other tracks — math ↔ physics, physics ↔ chemistry, probability ↔ statistical mechanics, optimization ↔ ML, linear algebra ↔ quantum mechanics, etc.
+5. **Examples from many fields, not just AI/ML.** When showing a formula in action, pull use cases from physics experiments, chemistry lab practice, engineering workflows, finance and economics, biology, and AI — whichever best illuminates the idea. Do not default to neural-network framing.
 
 ## The page template (non-negotiable)
 

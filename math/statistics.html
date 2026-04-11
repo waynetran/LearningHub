@@ -425,6 +425,10 @@
       <p class="mg-why"><strong>Why this is beautiful.</strong> Taking $\frac{\partial \ell}{\partial \mu} = 0$ gives you $\hat{\mu} = \bar{x}$, the sample mean. Taking $\frac{\partial \ell}{\partial \sigma^2} = 0$ gives you $\hat{\sigma}^2 = \frac{1}{n}\sum(x_i - \bar{x})^2$ — the sample variance with the $n$ divisor, not $n-1$. So the MLE for variance is actually slightly biased. You knew MLE was a powerful trick; here it also reveals that the "natural" quantities we've been computing all along are maximum-likelihood estimates under a Gaussian assumption.</p>
     </div>
 
+    <div class="problem-set" data-topic="stats-estimation-mle"></div>
+
+    <div class="problem-set" data-topic="stats-confidence-intervals"></div>
+
     <!-- ========================================================== -->
     <h2 id="testing">9. Hypothesis testing</h2>
 
@@ -509,6 +513,8 @@
 
     <p>Since about 2005 a loose coalition of statisticians (Ioannidis' "Why Most Published Research Findings Are False", the ASA's 2016 statement on p-values, the replication crisis in psychology and biomedicine) has been pushing for researchers to de-emphasize p-values in favor of effect sizes, confidence intervals, and pre-registration. The p-value isn't broken, but treating $p < 0.05$ as a magic passing grade <em>is</em>. The recommendation: use p-values as a single piece of evidence among many, never as the whole story, and always report effect sizes and uncertainty intervals alongside.</p>
 
+    <div class="problem-set" data-topic="stats-hypothesis-testing"></div>
+
     <!-- ========================================================== -->
     <h2 id="regression">11. Linear regression</h2>
 
@@ -576,6 +582,8 @@
       </dl>
       <p class="mg-why"><strong>So.</strong> Least-squares regression is <em>not</em> an arbitrary choice. It's the maximum-likelihood estimator when you assume the noise is Gaussian with constant variance. If the noise were Laplace-distributed, MLE would give you sum-of-<em>absolute</em>-errors (L1 regression). Whenever you see a loss function, ask "what noise model does this correspond to?" and the answer is usually enlightening.</p>
     </div>
+
+    <div class="problem-set" data-topic="stats-regression"></div>
 
     <!-- ========================================================== -->
     <h2 id="biasvar">12. Bias-variance tradeoff</h2>
@@ -1096,6 +1104,8 @@ document.querySelectorAll('.code-tabs').forEach(root => {
   draw();
 })();
 </script>
+<script defer src="../problem-set.js"></script>
+<script defer src="statistics-problems.js"></script>
 <script defer src="../search-index.js"></script>
 <script defer src="../search.js"></script>
 </body>

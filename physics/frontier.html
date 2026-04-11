@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Frontier Physics — Deep Dive</title>
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError: false});"></script>
+</head>
+<body>
+<div id="tooltip"></div>
+
+<nav class="topic-nav">
+  <a class="back" href="./index.html">← Physics Track</a>
+  <div class="crumb">Physics / <span class="topic-name">Frontier</span></div>
+</nav>
+
+<div class="topic-layout">
+  <aside class="topic-toc">
+    <h4>ON THIS PAGE</h4>
+    <ul>
+      <li><a href="#why">1. What "frontier" means</a></li>
+      <li><a href="#vocab">2. Vocabulary cheat sheet</a></li>
+      <li><a href="#strings">3. String theory at a flyover</a></li>
+      <li><a href="#lqg">4. Loop quantum gravity</a></li>
+      <li><a href="#qinfo">5. Quantum information and quantum computing</a></li>
+      <li><a href="#demo">6. Interactive: a one-qubit Bloch sphere</a></li>
+      <li><a href="#topological">7. Topological matter</a></li>
+      <li><a href="#hard">8. Hard problems that may or may not have answers</a></li>
+      <li><a href="#code">9. A tiny quantum simulator</a></li>
+      <li><a href="#summary">10. Cheat sheet</a></li>
+    </ul>
+  </aside>
+
+  <article class="topic-content">
+    <h1>Frontier Physics</h1>
+    <p class="subtitle">A tasting menu of the arguments physicists have over lunch in 2026. String theory and its cousins, loop quantum gravity, quantum information as a working tool and as a theory of its own, topological phases of matter, and a handful of questions nobody has cracked. This page does not try to teach you any one of them. It tries to give you enough of a map that you can read a popular article or an arXiv title page and know which neighborhood you are in.</p>
+    <div class="meta-tags">
+      <span>Prereq: <a href="./quantum-mechanics.html">quantum mechanics</a>, <a href="./quantum-field-theory.html">QFT</a> (light touch), <a href="./general-relativity.html">GR</a> (light touch)</span>
+      <span>Read time: ~32 min</span>
+      <span>Interactive figures: 1</span>
+      <span>Code: Python</span>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="why">1. What "frontier" means</h2>
+
+    <p>Every tenured physicist will tell you the same thing: the fun stuff is the stuff we do not yet know how to calculate. The Standard Model is a triumph and a cage. It fits essentially every collider measurement, and it also leaves us with no accepted theory of gravity at short distances, no explanation for dark matter, no story about how the universe survived its matter-antimatter asymmetry, no first-principles derivation of the value of the cosmological constant, and no clean understanding of what happens inside a black hole or at the big bang. The "frontier" is where people try to push past those walls — sometimes with bold new frameworks, sometimes with careful re-examinations of old problems, and sometimes with entirely new experimental tools that make old questions answerable.</p>
+
+    <p>This page is deliberately not a textbook on any one of these topics. It is a map. Each section gives you the minimum vocabulary, the main idea, the most common misconception, and a pointer to where to read more. If you want depth, follow the <em>Further reading</em> links; for each of these subjects there is a multi-year apprenticeship ahead of you. If you want breadth — an answer to "what do theoretical physicists actually argue about?" — this page should do it.</p>
+
+    <div class="callout">
+      <div class="label">FIVE ONGOING FIGHTS</div>
+      <p>Quantum gravity (string theory vs loop quantum gravity vs asymptotic safety vs give up). The measurement problem in quantum mechanics (Copenhagen, many-worlds, QBism, pilot-wave, or "shut up and calculate"). Dark sector searches (WIMPs, axions, sterile neutrinos, primordial black holes). Quantum supremacy and the future of quantum computing. The structure of the string landscape and whether "the multiverse" is science or not. Most of the rest of this page is context for these fights.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="vocab">2. Vocabulary cheat sheet</h2>
+
+    <p>Words you will see on every frontier-physics preprint. You do not need to master the math behind each; recognizing them is enough.</p>
+
+    <table class="rank-table">
+      <thead><tr><th>Term</th><th>Meaning</th><th>Where it lives</th></tr></thead>
+      <tbody>
+        <tr><td>String</td><td>A one-dimensional extended object whose vibration modes correspond to particles.</td><td>String theory.</td></tr>
+        <tr><td>Brane</td><td>A higher-dimensional extended object on which open strings can end. Matter can live on branes.</td><td>String theory, M-theory.</td></tr>
+        <tr><td>Compactification</td><td>Rolling up extra spatial dimensions so small that everyday physics does not notice them.</td><td>String theory, Kaluza-Klein.</td></tr>
+        <tr><td>Duality</td><td>A surprising mathematical equivalence between two seemingly different theories.</td><td>Strings (T-, S-, AdS/CFT), condensed matter.</td></tr>
+        <tr><td>Landscape</td><td>The enormous space of possible string-theory vacua, each giving different low-energy physics.</td><td>String theory.</td></tr>
+        <tr><td>Spin network</td><td>A graph whose edges carry $SU(2)$ representations — basis for quantum states of geometry.</td><td>Loop quantum gravity.</td></tr>
+        <tr><td>Qubit</td><td>A two-level quantum system. The smallest quantum information unit.</td><td>Quantum computing.</td></tr>
+        <tr><td>Entanglement entropy</td><td>The von Neumann entropy of the reduced density matrix of a subsystem.</td><td>Quantum info, holography.</td></tr>
+        <tr><td>Topological invariant</td><td>A quantity that stays constant under smooth deformations. Integer-valued.</td><td>Topological matter, TQFT.</td></tr>
+        <tr><td>Anyon</td><td>A 2D quasiparticle with neither bosonic nor fermionic exchange statistics.</td><td>Topological matter, fractional QH.</td></tr>
+      </tbody>
+    </table>
+
+    <!-- ========================================================== -->
+    <h2 id="strings">3. String theory at a flyover</h2>
+
+    <p>String theory's founding observation: if you replace point particles with tiny one-dimensional strings, the mathematical pathologies that make quantum gravity non-renormalizable soften. Different vibrational modes of the string correspond to different particles, and one of the lowest modes of a closed string always has the quantum numbers of a graviton — a massless spin-2 particle that mediates gravity. So string theory automatically contains quantum gravity, which no other framework can currently claim.</p>
+
+    <p>That is the good news. The bad news is a long list of complications:</p>
+
+    <ul>
+      <li><strong>Extra dimensions.</strong> String theory is mathematically consistent only in 10 spacetime dimensions (for superstrings) or 11 (for M-theory). To match the world, you have to "compactify" the extra 6 or 7 dimensions into a tiny Calabi-Yau manifold or similar.</li>
+      <li><strong>Supersymmetry.</strong> The superstring requires supersymmetry on the worldsheet (2D theory of the string). Whether spacetime supersymmetry survives at low energies is a model-dependent question.</li>
+      <li><strong>The landscape.</strong> There are ${\sim} 10^{500}$ (or more) plausible choices of compactification, each giving a different low-energy effective field theory. No one knows how to pick the one that matches our universe from first principles.</li>
+      <li><strong>No unique low-energy prediction.</strong> Because of the landscape, asking "what does string theory predict for the top quark mass?" is like asking "what does object-oriented programming predict your IDE to look like?" — the answer depends on which vacuum you picked.</li>
+      <li><strong>Experimental inaccessibility.</strong> The natural energy scale of string excitations is the Planck scale, $\sim 10^{19}$ GeV, which is 15 orders of magnitude beyond the LHC.</li>
+    </ul>
+
+    <div class="defn">
+      <strong>Dualities and AdS/CFT.</strong> The most spectacular successes of string theory are internal — mathematical dualities between apparently different theories. Most famously, Maldacena's 1997 AdS/CFT correspondence says that a particular 5D string theory on anti-de Sitter space is <em>exactly equivalent</em> to a particular 4D gauge theory living on its boundary. That is a fully non-perturbative equivalence between gravity and gauge theory, and it has generated thousands of papers applying gravity calculations to condensed-matter and QCD problems. Whether it tells us our universe is stringy is a different question.
+    </div>
+
+    <p>Compactification dimensionally reduces a 10D theory to a 4D effective theory. The number of light scalar fields you get in 4D is related to the topology of the compact manifold. For a Calabi-Yau threefold, the count is given by its Hodge numbers $h^{1,1}$ and $h^{2,1}$.</p>
+
+    <div class="math-display">$$\text{4D moduli} = h^{1,1}(X) + h^{2,1}(X) + 1,$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Calabi-Yau moduli counting</p>
+      <dl>
+        <dt>$X$</dt><dd>A Calabi-Yau manifold — a complex manifold with vanishing first Chern class, used as the compact factor of 10D spacetime.</dd>
+        <dt>$h^{1,1}(X)$</dt><dd>A topological invariant counting independent closed 2-forms modulo exact ones. Counts the "Kähler moduli" that determine the sizes of the compact dimensions.</dd>
+        <dt>$h^{2,1}(X)$</dt><dd>Counts independent closed $(2,1)$-forms. Gives the "complex structure moduli" that deform the shape of the manifold.</dd>
+        <dt>$+1$</dt><dd>The dilaton — a separate scalar field controlling the string coupling.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why you care.</strong> Each modulus is a massless scalar field in 4D until something gives it a potential. A phenomenologically viable string vacuum needs every modulus stabilized (given a mass). The "moduli problem" — making sure there are no rolling light scalars messing up cosmology — is one of the main obstacles to realistic string model-building.</p>
+    </div>
+
+    <p>Beyond the Standard Model, the most often-cited phenomenological target of string theory is to reproduce the Standard Model (three generations, right gauge group, right Yukawa patterns) from a specific compactification. Hundreds of such "string standard models" have been constructed; none of them has been independently verified as the correct one, and many are arguably equally good fits. The honest state of play: string theory is a rich mathematical framework that contains gravity and gauge theory, and it has taught us deep things about holography, entanglement, and strongly coupled systems. Whether it is the correct microscopic theory of nature is an open empirical question.</p>
+
+    <div class="problem-set" data-topic="phys-frontier-strings"></div>
+
+    <!-- ========================================================== -->
+    <h2 id="lqg">4. Loop quantum gravity briefly</h2>
+
+    <p>Loop quantum gravity (LQG) is the other major non-string approach to quantum gravity. Where string theory starts from a bigger object (the string) that hopes to tame gravity as a byproduct, LQG starts from general relativity itself and tries to quantize it directly, using mathematical tools (Wilson loops) borrowed from gauge theory.</p>
+
+    <p>The key technical move is to reformulate gravity in "Ashtekar variables" — a connection and a densitized triad — so that it looks like an $SU(2)$ gauge theory. You then quantize by defining an inner product on holonomies of this connection along closed loops. The result is a kinematical Hilbert space whose basis states are "spin networks," graphs whose edges carry $SU(2)$ representations. Area and volume operators have <em>discrete</em> spectra in this framework, with a minimum quantum of area on the order of the Planck area, $\ell_P^2 \sim 10^{-70}\,\text{m}^2$.</p>
+
+    <p>LQG's strengths: it is background-independent (it does not assume a fixed spacetime) and it makes a clean, conceptually arresting claim that spacetime itself is discrete at the Planck scale. Its weaknesses: the dynamics (the "Hamiltonian constraint") is very hard to define consistently, it has not reproduced a low-energy classical limit that clearly matches general relativity, and it does not naturally incorporate matter or gauge interactions the way string theory does. There is active work on "spin foams" (a path-integral formulation) and on LQG-inspired cosmological models (loop quantum cosmology) that predict a bounce instead of a big-bang singularity.</p>
+
+    <p>The honest short version: LQG is a minority program compared to string theory by headcount, but it is the cleanest example of trying to take "spacetime is really discrete at small scales" seriously as a mathematical structure. It has not yet produced a falsifiable experimental prediction.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="qinfo">5. Quantum information and quantum computing</h2>
+
+    <p>Quantum information has evolved in the past thirty years from a niche curiosity into a full-fledged subfield with its own vocabulary, conferences, and billion-dollar hardware programs. It is also the place where frontier physics most directly meets engineering.</p>
+
+    <h3>Qubits, gates, and entanglement</h3>
+
+    <p>The fundamental unit is a <strong>qubit</strong> — a two-level quantum system whose state is an arbitrary complex superposition of two basis states $|0\rangle$ and $|1\rangle$:</p>
+
+    <div class="math-display">$$|\psi\rangle = \alpha\,|0\rangle + \beta\,|1\rangle, \qquad |\alpha|^2 + |\beta|^2 = 1.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">One qubit state</p>
+      <dl>
+        <dt>$|0\rangle, |1\rangle$</dt><dd>Orthonormal basis states. In a spin-$\tfrac12$ system they are spin up and spin down; in a photonic system they are horizontal and vertical polarization; in a transmon qubit they are the ground and first-excited state of an LC resonator.</dd>
+        <dt>$\alpha, \beta$</dt><dd>Complex probability amplitudes. Only the relative phase and the magnitudes have physical meaning; an overall phase is unobservable.</dd>
+        <dt>$|\alpha|^2, |\beta|^2$</dt><dd>Probabilities of measuring the qubit in $|0\rangle$ or $|1\rangle$ respectively, in the computational basis.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Analogy (with a caveat).</strong> A qubit is like a coin spinning in the air, not yet landed — it is not "50% heads, 50% tails" but in a genuine superposition. The caveat is that the coin analogy obscures phase: two qubits in superposition can interfere constructively or destructively, and <em>that</em> is where the power of quantum computing comes from, not from "trying all answers at once."</p>
+    </div>
+
+    <p>An $n$-qubit state lives in a $2^n$-dimensional complex Hilbert space. Most such states are <strong>entangled</strong> — meaning the joint state cannot be written as a product of individual qubit states. A two-qubit Bell state,</p>
+
+    <div class="math-display">$$|\Phi^+\rangle = \frac{1}{\sqrt 2}\left(|00\rangle + |11\rangle\right),$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">A maximally entangled two-qubit state</p>
+      <dl>
+        <dt>$|00\rangle, |11\rangle$</dt><dd>Basis states where both qubits are $0$ or both are $1$.</dd>
+        <dt>$1/\sqrt 2$</dt><dd>Normalization. Gives each outcome a $1/2$ probability.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>The correlation.</strong> Measure the first qubit: you get $0$ or $1$ with equal probability. But whichever outcome you get, the second qubit (measured in the same basis) gives exactly the same result. The correlation is stronger than any classical joint distribution permits (CHSH inequality), and it has been tested experimentally to extraordinary precision (the 2022 Nobel Prize went to Aspect, Clauser, and Zeilinger for these tests).</p>
+    </div>
+
+    <p>You manipulate qubits with <strong>gates</strong>: unitary operations on the Hilbert space. Important single-qubit gates include the Pauli $X$ (bit flip), the Hadamard $H$ (equal superposition), and the phase gate. The canonical two-qubit gate is the controlled-NOT (CNOT), which flips the target qubit iff the control is in $|1\rangle$. A minimal universal gate set is $\{H, T, \text{CNOT}\}$ — with those you can approximate any unitary on any number of qubits to arbitrary precision (Solovay-Kitaev theorem).</p>
+
+    <h3>Entanglement as a resource</h3>
+
+    <p>The entanglement entropy of a bipartite state quantifies how much of its information is shared between the two parts:</p>
+
+    <div class="math-display">$$S(\rho_A) = -\text{Tr}\!\left(\rho_A \log \rho_A\right), \qquad \rho_A = \text{Tr}_B\,|\psi\rangle\langle\psi|.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Von Neumann entanglement entropy</p>
+      <dl>
+        <dt>$|\psi\rangle$</dt><dd>A pure state of the combined system $A \cup B$.</dd>
+        <dt>$\rho_A = \text{Tr}_B |\psi\rangle\langle\psi|$</dt><dd>The reduced density matrix of $A$, obtained by "tracing out" the other subsystem. It summarizes all measurements that only touch $A$.</dd>
+        <dt>$S(\rho_A)$</dt><dd>Von Neumann entropy of $\rho_A$. Zero if and only if the combined state factors as $|\psi_A\rangle \otimes |\psi_B\rangle$, positive otherwise. Maximal for maximally entangled states.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why this matters beyond quantum computing.</strong> Entanglement entropy is the central quantity in the black-hole information paradox, the AdS/CFT "Ryu-Takayanagi formula" relating bulk geometric areas to boundary entropies, and modern attempts to define "spacetime from entanglement." It is the cleanest place where quantum information and quantum gravity are now the same subject.</p>
+    </div>
+
+    <h3>Shor's algorithm and what is actually hard</h3>
+
+    <p>Peter Shor's 1994 algorithm factors an $n$-bit integer in time polynomial in $n$ on a quantum computer, compared to the best known classical time of $\sim \exp(n^{1/3})$. Since RSA cryptography relies on factoring being classically hard, Shor is the reason governments care about quantum computers. The core idea is to reduce factoring to finding the period of a modular-exponentiation function, and to use the quantum Fourier transform to find that period in one shot.</p>
+
+    <p>Concretely, to break RSA-2048 you probably need several thousand perfect logical qubits, which with current error-correction overheads means tens of millions of physical qubits. Google, IBM, IonQ, and others are in the hundreds-to-thousands-of-physical-qubits range as of 2025. Useful cryptographic attacks are still not tomorrow. "Post-quantum cryptography" (classical algorithms resistant to quantum attack) is already being standardized by NIST, because nobody wants to find out too late.</p>
+
+    <p>Current quantum computers run a dozen or so shallow algorithms interestingly well — variational chemistry, optimization-heuristic benchmarks, sampling demonstrations — and struggle with deep, error-sensitive circuits. The "quantum advantage" line is blurry and contested, but the trajectory of hardware is steep and the <em>theoretical</em> promise is on firm footing.</p>
+
+    <div class="problem-set" data-topic="phys-frontier-qinfo"></div>
+
+    <!-- ========================================================== -->
+    <h2 id="demo">6. Interactive: a one-qubit Bloch sphere</h2>
+
+    <p>A single qubit's pure state lives on the surface of a unit sphere — the Bloch sphere. The north pole is $|0\rangle$, the south pole is $|1\rangle$, and points on the equator are equal superpositions with different phases. Drag the sliders for the polar angle $\theta$ and the azimuthal angle $\varphi$ to explore the parameter space.</p>
+
+    <div class="viz-3d">
+      <div class="v3-controls">
+        <span class="v3-label">$\theta$:</span>
+        <input id="qbitTheta" type="range" min="0" max="180" value="60" step="1" style="flex:1;max-width:260px;">
+        <span id="qbitThetaLabel" style="min-width:50px;color:#22d3ee;font-family:ui-monospace,monospace;">60</span>
+        <span class="v3-label" style="margin-left:12px;">$\varphi$:</span>
+        <input id="qbitPhi" type="range" min="0" max="360" value="45" step="1" style="flex:1;max-width:260px;">
+        <span id="qbitPhiLabel" style="min-width:50px;color:#22d3ee;font-family:ui-monospace,monospace;">45</span>
+      </div>
+      <svg id="qbitSvg" viewBox="0 0 720 380" style="width:100%;height:auto;background:#0a0d12;border-radius:6px;"></svg>
+      <p class="v3-caption" id="qbitCaption">A single qubit's pure state on the Bloch sphere. Read off the state vector, probabilities, and relative phase.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="topological">7. Topological matter</h2>
+
+    <p>Condensed-matter physics in the last two decades has been dominated by the discovery that many materials have phases distinguished not by local order parameters (like magnetization or superconducting density) but by <strong>topological invariants</strong> — integers that stay put under smooth changes of parameters. These invariants live in the band structure of the material, and their non-triviality forces conducting states to exist on any boundary of the sample, even though the bulk is insulating.</p>
+
+    <ul>
+      <li><strong>Topological insulators.</strong> Discovered theoretically in 2005 (Kane and Mele) and experimentally in 2007 (HgTe quantum wells, later Bi$_2$Se$_3$). The bulk is an insulator; the surface or edge hosts a one-way (chiral) metallic state protected by time-reversal symmetry. The edge state cannot be localized or scattered backward by disorder, as long as the symmetry is preserved.</li>
+      <li><strong>Quantum Hall effect.</strong> The oldest topological phase, discovered by von Klitzing in 1980. In a 2D electron gas in a strong magnetic field, the Hall conductance takes exquisitely quantized values $\sigma_{xy} = n e^2 / h$, where $n$ is an integer (or a fraction for the fractional Hall effect). The integer is the first Chern number of the band, and the quantization is exact enough to be used as a resistance standard.</li>
+      <li><strong>Anyons.</strong> In 2D, quasiparticle excitations need not be bosons or fermions. Exchanging two of them can multiply the wavefunction by any phase $e^{i\theta}$ (abelian anyons) or by a unitary matrix acting on a degenerate subspace (non-abelian anyons). Non-abelian anyons are the resource behind topological quantum computing.</li>
+      <li><strong>Topological quantum computing.</strong> If you could braid non-abelian anyons around each other, the resulting unitary operation would depend only on the topology of the braid — not on the precise trajectory. That means quantum gates would be intrinsically robust to local perturbations. Microsoft's "Station Q" program pursues Majorana-based implementations; experimental claims here have been volatile but the idea is theoretically clean.</li>
+    </ul>
+
+    <p>The unifying mathematical structure is that the ground-state manifold of a topological phase is classified by a topological invariant — an integer (Chern number, $\mathbb{Z}_2$ index, winding number) computed from the Berry connection of the filled bands. The invariant is not a smooth function of Hamiltonian parameters; it jumps when the gap closes, signaling a topological phase transition. This is a genuinely new kind of phase transition, different from the Landau paradigm of spontaneous symmetry breaking.</p>
+
+    <div class="math-display">$$C = \frac{1}{2\pi} \int_{\text{BZ}} \mathcal{F}_{xy}\, d^2 k \in \mathbb{Z},$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">First Chern number of a filled band</p>
+      <dl>
+        <dt>$\mathcal{F}_{xy}$</dt><dd>The Berry curvature of the band in the two-dimensional Brillouin zone, $\mathcal{F}_{xy} = \partial_{k_x} A_{k_y} - \partial_{k_y} A_{k_x}$, where $A_{k}$ is the Berry connection built from the Bloch states.</dd>
+        <dt>$\text{BZ}$</dt><dd>The Brillouin zone — the fundamental domain of crystal momenta. For a 2D crystal it is a torus.</dd>
+        <dt>$C \in \mathbb{Z}$</dt><dd>The Chern number — an integer because the curvature is integrated over a closed 2-manifold (Gauss-Bonnet / Chern-Weil theorem).</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why integers.</strong> Think of it as counting how many times the band's wavefunction winds as you walk around the Brillouin zone. Like the number of times a string wraps around a pole, it cannot change by a little bit: either you wrap once or you do not. The Hall conductance inherits this integer from the geometry.</p>
+    </div>
+
+    <div class="problem-set" data-topic="phys-frontier-topo"></div>
+
+    <!-- ========================================================== -->
+    <h2 id="hard">8. Hard problems that may or may not have answers</h2>
+
+    <p>A short list of open questions, each of which is both deep and not obviously solvable.</p>
+
+    <ul>
+      <li><strong>The measurement problem.</strong> Why does a quantum superposition "collapse" to a definite outcome when measured? Decoherence tells you how a system appears classical; it does not tell you why one branch is realized. Many-worlds skips the collapse entirely but saddles you with an ontological multiverse. Pilot-wave theories add hidden variables. QBism says probabilities are subjective bets. Everyone has a favorite; none is experimentally distinguished.</li>
+      <li><strong>The cosmological constant problem.</strong> Naive QFT predicts a vacuum energy $10^{120}$ times larger than measured. No generally accepted solution exists. Anthropic arguments using the string landscape are the closest thing to a story, and many physicists dislike them.</li>
+      <li><strong>Black hole information.</strong> Hawking's 1974 calculation predicted black holes evaporate into thermal radiation, which would destroy information and violate unitarity. AdS/CFT says unitarity wins, but the detailed mechanism (Page curve, islands, ER=EPR) is still being worked out. There has been tremendous progress since 2019 via quantum extremal surfaces.</li>
+      <li><strong>The strong CP problem.</strong> QCD <em>could</em> violate CP symmetry via a topological theta term, but it visibly does not. Why is the theta parameter so close to zero? The most popular explanation is the axion, and axion searches are ramping up.</li>
+      <li><strong>Hierarchy problem.</strong> Why is the Higgs mass 125 GeV and not Planck-scale? Supersymmetry was invented partly to solve this. The LHC has not found SUSY, so alternative mechanisms (composite Higgs, extra dimensions, twin Higgs, anthropic arguments) are in the running.</li>
+      <li><strong>Dark sector nature.</strong> Dark matter exists; what is it? Dark energy looks like $\Lambda$; is it really? The DESI 2024–2025 hints at a time-varying equation of state kept this debate lively.</li>
+    </ul>
+
+    <p>None of these is the kind of problem that an afternoon of thinking solves. Each has been the subject of active work for decades, and each probably has at least one genuinely new idea ahead of it before it gets pinned down.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="code">9. A tiny quantum simulator</h2>
+
+    <p>Simulating a quantum circuit on a classical computer is exponentially expensive in the number of qubits — that is half the motivation for quantum hardware in the first place. But for two or three qubits it is trivially cheap, and it is a useful way to build intuition. Here is an implementation that applies a Hadamard gate and a CNOT to produce a Bell state.</p>
+
+    <div class="code-tabs" id="ct-frontier">
+      <div class="ct-header">
+        <button class="ct-tab active" data-tab="np">NumPy</button>
+        <button class="ct-tab" data-tab="py">Plain Python</button>
+        <span class="ct-label">tiny quantum simulator</span>
+      </div>
+
+      <div class="ct-panel active" data-tab="np"><pre><code><span class="kw">import</span> numpy <span class="kw">as</span> np
+
+<span class="cmt"># Basis states of two qubits: |00>, |01>, |10>, |11> (little-endian convention)</span>
+ket = <span class="kw">lambda</span> i, n=<span class="num">4</span>: np.eye(n)[i]
+
+<span class="cmt"># Single-qubit gates</span>
+H   = (<span class="num">1</span> / np.sqrt(<span class="num">2</span>)) * np.array([[<span class="num">1</span>, <span class="num">1</span>], [<span class="num">1</span>, -<span class="num">1</span>]])
+I2  = np.eye(<span class="num">2</span>)
+X   = np.array([[<span class="num">0</span>, <span class="num">1</span>], [<span class="num">1</span>, <span class="num">0</span>]])
+
+<span class="cmt"># Tensor two single-qubit gates into a two-qubit gate</span>
+<span class="kw">def</span> <span class="fn">kron</span>(A, B): <span class="kw">return</span> np.kron(A, B)
+
+<span class="cmt"># CNOT with qubit 0 as control, qubit 1 as target</span>
+CNOT = np.array([[<span class="num">1</span>,<span class="num">0</span>,<span class="num">0</span>,<span class="num">0</span>],
+                 [<span class="num">0</span>,<span class="num">1</span>,<span class="num">0</span>,<span class="num">0</span>],
+                 [<span class="num">0</span>,<span class="num">0</span>,<span class="num">0</span>,<span class="num">1</span>],
+                 [<span class="num">0</span>,<span class="num">0</span>,<span class="num">1</span>,<span class="num">0</span>]])
+
+<span class="cmt"># Start in |00>, Hadamard the first qubit, then CNOT</span>
+psi = <span class="fn">ket</span>(<span class="num">0</span>)                          <span class="cmt"># |00></span>
+psi = <span class="fn">kron</span>(H, I2) @ psi                  <span class="cmt"># (|0>+|1>)/sqrt(2) tensor |0></span>
+psi = CNOT @ psi                       <span class="cmt"># Bell state (|00>+|11>)/sqrt(2)</span>
+
+<span class="fn">print</span>(<span class="str">"Final amplitudes:"</span>, psi.round(<span class="num">4</span>))
+<span class="fn">print</span>(<span class="str">"Probabilities:"</span>,    np.<span class="fn">abs</span>(psi)**<span class="num">2</span>)
+
+<span class="cmt"># Entanglement check: reduce to qubit 0 and compute von Neumann entropy</span>
+rho  = np.outer(psi, psi.conj())
+rho_reshape = rho.reshape(<span class="num">2</span>, <span class="num">2</span>, <span class="num">2</span>, <span class="num">2</span>)
+rho_A = np.einsum(<span class="str">"ijkj-&gt;ik"</span>, rho_reshape)  <span class="cmt"># partial trace over qubit 1</span>
+eigs = np.linalg.eigvalsh(rho_A)
+S = -<span class="fn">sum</span>(l * np.log2(l) <span class="kw">for</span> l <span class="kw">in</span> eigs <span class="kw">if</span> l &gt; <span class="num">1e-12</span>)
+<span class="fn">print</span>(<span class="str">f"Entanglement entropy S(rho_A) = {S:.4f}  (expect 1.0)"</span>)
+</code></pre></div>
+
+      <div class="ct-panel" data-tab="py"><pre><code><span class="cmt"># Same calculation without NumPy, as explicit lists.</span>
+<span class="kw">from</span> math <span class="kw">import</span> sqrt, log2
+
+<span class="cmt"># |00>, |01>, |10>, |11></span>
+psi = [<span class="num">1.0</span>, <span class="num">0.0</span>, <span class="num">0.0</span>, <span class="num">0.0</span>]
+
+<span class="cmt"># Hadamard on qubit 0 (acts on first index of the pair)</span>
+<span class="kw">def</span> <span class="fn">hadamard0</span>(v):
+    a, b, c, d = v
+    s = <span class="num">1</span> / sqrt(<span class="num">2</span>)
+    <span class="kw">return</span> [s*(a + c), s*(b + d), s*(a - c), s*(b - d)]
+
+<span class="kw">def</span> <span class="fn">cnot_01</span>(v):
+    a, b, c, d = v
+    <span class="kw">return</span> [a, b, d, c]   <span class="cmt"># control 0, target 1</span>
+
+psi = <span class="fn">hadamard0</span>(psi)
+psi = <span class="fn">cnot_01</span>(psi)
+<span class="fn">print</span>(<span class="str">"Bell amps:"</span>, psi)       <span class="cmt"># [0.707, 0, 0, 0.707]</span>
+</code></pre></div>
+    </div>
+
+    <p>What the output confirms: starting in $|00\rangle$, the two operations produce $(|00\rangle + |11\rangle)/\sqrt 2$, the canonical Bell state. The entanglement entropy of either qubit's reduced state is exactly $\log_2 2 = 1$ — one "bit" of entanglement. That matches what the theory says maximal two-qubit entanglement should give. Scale this up to $n$ qubits and the state vector has $2^n$ complex components; simulating even 40 qubits needs terabytes of memory, which is why people build the real hardware.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="summary">10. Cheat sheet</h2>
+
+    <div class="grid">
+      <div class="card">
+        <h4>String theory</h4>
+        <p>1D objects whose vibrations are particles. Needs 10D spacetime. Includes gravity automatically.</p>
+        <p class="meta">Strength: contains gravity. Weakness: no unique vacuum.</p>
+      </div>
+      <div class="card">
+        <h4>Landscape</h4>
+        <p>$\gtrsim 10^{500}$ possible string vacua, each giving different low-energy physics.</p>
+        <p class="meta">Either a feature (anthropics) or a bug (no predictivity).</p>
+      </div>
+      <div class="card">
+        <h4>AdS/CFT</h4>
+        <p>Gravity in $D$+1 dimensions $\leftrightarrow$ gauge theory in $D$ dimensions.</p>
+        <p class="meta">A non-perturbative equivalence. Holographic.</p>
+      </div>
+      <div class="card">
+        <h4>Loop quantum gravity</h4>
+        <p>Quantize GR directly. Spacetime discrete at the Planck scale, with minimum area $\sim \ell_P^2$.</p>
+        <p class="meta">Background-independent. No matter yet.</p>
+      </div>
+      <div class="card">
+        <h4>Qubit</h4>
+        <p>$|\psi\rangle = \alpha|0\rangle + \beta|1\rangle$, $|\alpha|^2+|\beta|^2=1$.</p>
+        <p class="meta">Superposition + phase, not "probability of 0 or 1".</p>
+      </div>
+      <div class="card">
+        <h4>Bell state</h4>
+        <p>$(|00\rangle+|11\rangle)/\sqrt 2$</p>
+        <p class="meta">Maximally entangled. One bit of entanglement entropy per side.</p>
+      </div>
+      <div class="card">
+        <h4>Shor</h4>
+        <p>Factors in $O(\log^3 n)$ on a quantum computer.</p>
+        <p class="meta">Breaks RSA if you have enough logical qubits.</p>
+      </div>
+      <div class="card">
+        <h4>Topological phase</h4>
+        <p>Integer-valued invariant (Chern, $\mathbb{Z}_2$) in the band structure.</p>
+        <p class="meta">Symmetry-protected edge states.</p>
+      </div>
+      <div class="card">
+        <h4>Hall conductance</h4>
+        <p>$\sigma_{xy} = n\, e^2/h$, $n \in \mathbb{Z}$.</p>
+        <p class="meta">Quantized exactly because $n$ is topological.</p>
+      </div>
+    </div>
+
+    <h3>See also</h3>
+    <div class="see-also">
+      <div class="card">
+        <h4><a href="./quantum-field-theory.html">Quantum field theory</a></h4>
+        <p>QFT is the machinery every frontier framework assumes. AdS/CFT is a statement about a particular CFT; topological matter is a statement about low-energy effective QFTs with topological terms.</p>
+      </div>
+      <div class="card">
+        <h4><a href="./quantum-mechanics.html">Quantum mechanics</a></h4>
+        <p>The measurement problem, entanglement, and qubit algebra all live here. Read QM first if the bra-ket notation or unitarity statements are unfamiliar.</p>
+      </div>
+      <div class="card">
+        <h4><a href="./general-relativity.html">General relativity</a></h4>
+        <p>GR is the classical theory whose quantization all these frameworks struggle with. Anti-de Sitter space, black holes, and cosmological bounces are all GR constructions.</p>
+      </div>
+      <div class="card">
+        <h4><a href="./cosmology.html">Cosmology</a></h4>
+        <p>Inflation, dark energy, and the cosmological constant problem are where quantum gravity most directly meets data. Early-universe physics is the testing ground.</p>
+      </div>
+      <div class="card">
+        <h4><a href="../math/linear-algebra.html">Linear algebra</a></h4>
+        <p>Hilbert spaces, tensor products, eigenvalue problems, and unitary matrices are the grammar of everything here. Quantum computing is linear algebra on $2^n$-dimensional spaces.</p>
+      </div>
+      <div class="card">
+        <h4><a href="../cs/algorithms.html">Algorithms</a></h4>
+        <p>Shor, Grover, and the quantum Fourier transform are algorithmic ideas. Complexity classes like BQP versus NP are the right language to compare "what quantum computers can do."</p>
+      </div>
+    </div>
+
+    <div class="bib">
+      <h4>Further reading</h4>
+      <ul>
+        <li>Michael Nielsen &amp; Isaac Chuang — <em>Quantum Computation and Quantum Information</em> (2000, still in print). The canonical textbook for everything quantum-info.</li>
+        <li>Joseph Polchinski — <em>String Theory</em>, Vol I &amp; II (1998). The standard graduate reference. Dense. Start with Zwiebach if you want a gentler first pass.</li>
+        <li>Barton Zwiebach — <em>A First Course in String Theory</em> (2nd ed., 2009). Actually readable. Used in many senior undergraduate courses.</li>
+        <li>Carlo Rovelli — <em>Quantum Gravity</em> (2004). The authoritative LQG text, by one of the field's founders.</li>
+        <li>Shinsei Ryu &amp; Tadashi Takayanagi — "Holographic derivation of entanglement entropy from AdS/CFT," 2006. The paper that started the modern entanglement-entropy-in-gravity program.</li>
+        <li>Xiao-Gang Wen — <em>Quantum Field Theory of Many-Body Systems</em> (2004). Great treatment of topological phases, anyons, and TQFT.</li>
+        <li>Scott Aaronson — <em>Quantum Computing Since Democritus</em> (2013). A polemical, funny, very pedagogical overview of quantum info and complexity.</li>
+        <li>Wikipedia, <a href="https://en.wikipedia.org/wiki/String_theory_landscape">String theory landscape</a>, and <a href="https://en.wikipedia.org/wiki/Topological_insulator">topological insulators</a>. Good starting points if you want to drill in.</li>
+      </ul>
+    </div>
+
+    <div class="next-card">
+      <div class="label">NEXT UP</div>
+      <a href="./index.html">→ Back to the Physics Track</a>
+      <p>You have now seen every subject on the physics side of the hub. Jump back to the index if you want to revisit an earlier card, or skip over to one of the sibling tracks — math for the underlying tools, chemistry for what it looks like when physics meets atoms and bonds, or AI/ML for where many of these ideas are getting their newest workout.</p>
+    </div>
+
+  </article>
+</div>
+
+<script>
+// =========================================================
+// Code tabs
+document.querySelectorAll('.code-tabs').forEach(root => {
+  const tabs = root.querySelectorAll('.ct-tab');
+  const panels = root.querySelectorAll('.ct-panel');
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const target = tab.getAttribute('data-tab');
+      tabs.forEach(t => t.classList.toggle('active', t === tab));
+      panels.forEach(p => p.classList.toggle('active', p.getAttribute('data-tab') === target));
+    });
+  });
+});
+
+// =========================================================
+// Bloch sphere interactive
+(function(){
+  const svg = document.getElementById('qbitSvg');
+  if (!svg) return;
+  const NS = 'http://www.w3.org/2000/svg';
+  const thSlider = document.getElementById('qbitTheta');
+  const phSlider = document.getElementById('qbitPhi');
+  const thLabel  = document.getElementById('qbitThetaLabel');
+  const phLabel  = document.getElementById('qbitPhiLabel');
+  const caption  = document.getElementById('qbitCaption');
+
+  function mk(tag, attrs){
+    const el = document.createElementNS(NS, tag);
+    for (const k in attrs) el.setAttribute(k, attrs[k]);
+    return el;
+  }
+  function mkText(x, y, txt, color, size, anchor){
+    const t = mk('text', {x:x, y:y, fill: color||'#b4c4d4', 'font-size': size||11, 'font-family':'ui-monospace, monospace'});
+    if (anchor) t.setAttribute('text-anchor', anchor);
+    t.textContent = txt;
+    return t;
+  }
+
+  // Project a 3D point to 2D with a simple isometric-ish projection
+  function project(x, y, z, cx, cy, R){
+    // Rotate the sphere slightly for a nicer view: tilt x by 20 deg
+    const tilt = 20 * Math.PI / 180;
+    const yR = y * Math.cos(tilt) - z * Math.sin(tilt);
+    const zR = y * Math.sin(tilt) + z * Math.cos(tilt);
+    // Orthographic: drop zR
+    return {u: cx + R * x, v: cy - R * yR};
+  }
+
+  function draw(){
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+
+    const theta = parseFloat(thSlider.value) * Math.PI / 180;
+    const phi   = parseFloat(phSlider.value) * Math.PI / 180;
+    thLabel.textContent = thSlider.value;
+    phLabel.textContent = phSlider.value;
+
+    // Amplitudes
+    const a = Math.cos(theta / 2);
+    const b_re = Math.sin(theta / 2) * Math.cos(phi);
+    const b_im = Math.sin(theta / 2) * Math.sin(phi);
+    const p0 = a * a;
+    const p1 = b_re*b_re + b_im*b_im;
+
+    // Left panel: Bloch sphere
+    svg.appendChild(mk('rect',{x:20,y:20,width:380,height:340,fill:'#0f131a',stroke:'#2a3446'}));
+    svg.appendChild(mkText(34, 40, 'Bloch sphere', '#b4c4d4', 12));
+
+    const cx = 210, cy = 190, R = 130;
+
+    // Great circles (equator and two meridians)
+    function circle(nSamples, mapper, color, dash){
+      let d = '';
+      for (let i = 0; i <= nSamples; i++){
+        const t = 2 * Math.PI * i / nSamples;
+        const p = mapper(t);
+        const proj = project(p[0], p[1], p[2], cx, cy, R);
+        d += (i === 0 ? 'M' : 'L') + proj.u.toFixed(1) + ',' + proj.v.toFixed(1) + ' ';
+      }
+      const path = mk('path',{d:d, stroke:color,'stroke-width':1.2,fill:'none'});
+      if (dash) path.setAttribute('stroke-dasharray', dash);
+      svg.appendChild(path);
+    }
+    // Equator
+    circle(64, t => [Math.cos(t), Math.sin(t), 0], '#384050');
+    // Meridian XZ
+    circle(64, t => [Math.cos(t), 0, Math.sin(t)], '#2a3446', '3,3');
+    // Meridian YZ
+    circle(64, t => [0, Math.cos(t), Math.sin(t)], '#2a3446', '3,3');
+
+    // Sphere outline
+    svg.appendChild(mk('circle',{cx:cx, cy:cy, r:R, fill:'none', stroke:'#384050','stroke-width':1.5}));
+
+    // Axes
+    const origin = project(0, 0, 0, cx, cy, R);
+    function axisLine(x, y, z, label){
+      const p = project(x, y, z, cx, cy, R);
+      svg.appendChild(mk('line',{x1:origin.u, y1:origin.v, x2:p.u, y2:p.v, stroke:'#7a8a9a','stroke-width':1}));
+      svg.appendChild(mkText(p.u, p.v, label, '#7a8a9a', 11, 'middle'));
+    }
+    axisLine(1.15, 0, 0, '+x');
+    axisLine(-1.15, 0, 0, '-x');
+    axisLine(0, 1.15, 0, '+y');
+    axisLine(0, -1.15, 0, '-y');
+    axisLine(0, 0, 1.15, '|0>');
+    axisLine(0, 0, -1.15, '|1>');
+
+    // State vector
+    const sx = Math.sin(theta) * Math.cos(phi);
+    const sy = Math.sin(theta) * Math.sin(phi);
+    const sz = Math.cos(theta);
+    const tip = project(sx, sy, sz, cx, cy, R);
+    svg.appendChild(mk('line',{x1:origin.u, y1:origin.v, x2:tip.u, y2:tip.v, stroke:'#22d3ee','stroke-width':3}));
+    svg.appendChild(mk('circle',{cx:tip.u, cy:tip.v, r:5, fill:'#f472b6'}));
+
+    // Right panel: text readout
+    svg.appendChild(mk('rect',{x:420,y:20,width:280,height:340,fill:'#0f131a',stroke:'#2a3446'}));
+    svg.appendChild(mkText(434, 44, 'State', '#b4c4d4', 13));
+    svg.appendChild(mkText(434, 68, '|psi> = ' + a.toFixed(3) + ' |0>', '#22d3ee', 12));
+    svg.appendChild(mkText(470, 86, '+ (' + b_re.toFixed(3) + ' + i ' + b_im.toFixed(3) + ') |1>', '#22d3ee', 12));
+
+    svg.appendChild(mkText(434, 124, 'theta = ' + (theta*180/Math.PI).toFixed(0) + ' deg', '#b4c4d4', 12));
+    svg.appendChild(mkText(434, 142, 'phi   = ' + (phi*180/Math.PI).toFixed(0) + ' deg', '#b4c4d4', 12));
+
+    svg.appendChild(mkText(434, 178, 'Probabilities', '#b4c4d4', 13));
+    svg.appendChild(mkText(434, 196, 'P(|0>) = ' + p0.toFixed(3), '#22d3ee', 12));
+    svg.appendChild(mkText(434, 214, 'P(|1>) = ' + p1.toFixed(3), '#f472b6', 12));
+
+    svg.appendChild(mkText(434, 248, 'Bloch vector', '#b4c4d4', 13));
+    svg.appendChild(mkText(434, 266, 'x = ' + sx.toFixed(3), '#7a8a9a', 12));
+    svg.appendChild(mkText(434, 282, 'y = ' + sy.toFixed(3), '#7a8a9a', 12));
+    svg.appendChild(mkText(434, 298, 'z = ' + sz.toFixed(3), '#7a8a9a', 12));
+
+    svg.appendChild(mkText(434, 330, '(pure state on the unit sphere)', '#7a8a9a', 10));
+
+    caption.textContent = 'theta = ' + (theta*180/Math.PI).toFixed(0) +
+      ' deg, phi = ' + (phi*180/Math.PI).toFixed(0) +
+      ' deg. State |psi> = cos(theta/2)|0> + e^(i phi) sin(theta/2)|1>.';
+  }
+
+  thSlider.addEventListener('input', draw);
+  phSlider.addEventListener('input', draw);
+  draw();
+})();
+</script>
+<script defer src="../problem-set.js"></script>
+<script defer src="frontier-problems.js"></script>
+</body>
+</html>

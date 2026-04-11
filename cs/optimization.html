@@ -235,6 +235,8 @@
 
     <p>This is why people work so hard to <em>convexify</em> problems — replacing a nasty $\ell_0$ sparsity penalty with $\ell_1$ (LASSO), or relaxing integer constraints to continuous ones, or fitting an SVM by minimizing a hinge loss. Convexity is the prize, and it's worth bending the problem to get it.</p>
 
+    <div class="problem-set" data-topic="opt-convex"></div>
+
     <!-- ========================================================== -->
     <h2 id="tracer">5. Interactive — gradient descent tracer</h2>
 
@@ -485,6 +487,8 @@
 
     <p>Quasi-Newton methods build a cheap approximation $B_t \approx \nabla^2 f(\mathbf{x}_t)$ from observed gradient differences. The most famous is BFGS (Broyden, Fletcher, Goldfarb, Shanno, 1970), which updates an $n \times n$ approximation each step. For large $n$, the limited-memory version L-BFGS keeps only the last $\sim 10$ gradient differences and reconstructs the Hessian action on the fly. L-BFGS is the go-to optimizer for deterministic, smooth problems with thousands to a million variables — not as good as Adam for noisy ML, but a beast for classical statistics, image registration, and physics inverse problems.</p>
 
+    <div class="problem-set" data-topic="opt-gd"></div>
+
     <!-- ========================================================== -->
     <h2 id="lagrange">10. Constrained optimization — Lagrange multipliers</h2>
 
@@ -598,6 +602,8 @@
 
     <p>You've already seen KKT, even if you didn't recognize it. The dual formulation of a Support Vector Machine drops out of the KKT conditions. The "active set" methods used in industrial QP solvers are KKT-driven. The "shadow prices" in linear programming are KKT multipliers. Once you spot the pattern, every constrained problem looks like a KKT problem.</p>
 
+    <div class="problem-set" data-topic="opt-constrained"></div>
+
     <!-- ========================================================== -->
     <h2 id="lp">12. Linear programming — the workhorse of operations research</h2>
 
@@ -668,6 +674,8 @@
     </ul>
 
     <p>The combination is called <em>branch-and-cut</em>, and it's why a Boeing scheduling problem with 50 million variables and a billion constraints can be solved overnight.</p>
+
+    <div class="problem-set" data-topic="opt-lp"></div>
 
     <!-- ========================================================== -->
     <h2 id="convexopt">14. Convex optimization — beyond LP</h2>
@@ -1316,6 +1324,8 @@ document.querySelectorAll('.code-tabs').forEach(root => {
   redraw();
 })();
 </script>
+<script defer src="../problem-set.js"></script>
+<script defer src="optimization-problems.js"></script>
 <script defer src="../search-index.js"></script>
 <script defer src="../search.js"></script>
 </body>

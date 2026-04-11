@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Computer Science — A Pragmatic Tour for Programmers</title>
+<title>Computer Science — A Pragmatic Tour</title>
 <link rel="stylesheet" href="../styles.css">
 </head>
 <body>
@@ -32,7 +32,7 @@
   <div class="hero-inner">
     <span class="chip">UPDATED APRIL 2026</span>
     <h1>Computer Science — The Core Four</h1>
-    <p class="lede">A pragmatic tour of the four subjects a working programmer in 2026 is expected to have in their bones: algorithms &amp; data structures, complexity, theoretical CS, and mathematical optimization. Hover any <span class="term" data-label="Term" data-def="Words with a dotted underline have definitions you can hover. Try it on the ones throughout this page.">dotted term</span> for a one-line definition. Click any <span class="term" data-label="Deep Dive" data-def="A pill-shaped link in a section heading. Clicking it opens the full textbook-level page with proofs, code, and interactive figures.">Deep Dive →</span> pill to jump into the full textbook page for that subject.</p>
+    <p class="lede">A pragmatic tour of the four subjects behind every serious conversation about computation: algorithms &amp; data structures, complexity, theoretical CS, and mathematical optimization. Useful to engineers, but also to physicists running simulations, biologists sequencing genomes, product managers scoping features, and students building intuition. Hover any <span class="term" data-label="Term" data-def="Words with a dotted underline have definitions you can hover. Try it on the ones throughout this page.">dotted term</span> for a one-line definition. Click any <span class="term" data-label="Deep Dive" data-def="A pill-shaped link in a section heading. Clicking it opens the full textbook-level page with proofs, code, and interactive figures.">Deep Dive →</span> pill to jump into the full textbook page for that subject.</p>
   </div>
 </div>
 
@@ -155,9 +155,9 @@
       <!-- ============================================================ -->
       <section id="overview">
         <h2>Overview <span class="era">// what you still need</span></h2>
-        <p>If you've been shipping code for years without touching a textbook, you've probably noticed four moments where the knowledge you skipped comes back to haunt you. One: an interviewer draws a tree on a whiteboard and asks you to level-order traverse it. Two: a senior engineer reviews your pull request and says "this is <span class="term" data-label="Quadratic" data-def="Running time proportional to n². Doubles the input, quadruples the work. The cliff where naive nested loops start to matter.">quadratic</span>, it'll blow up at a million rows." Three: someone casually says "that problem is <span class="term" data-label="NP-hard" data-def="A problem at least as hard as every problem in NP. Informally: if you could solve it in polynomial time, you could solve every verification problem in polynomial time, and the world's cryptography would fall.">NP-hard</span>, so we need a heuristic" and you don't know whether to believe them. Four: you try to train an ML model and Adam is "not converging" and the loss landscape is a mystery.</p>
+        <p>CS isn't only for programmers. A computational biologist hits the wall when a <span class="term" data-label="Quadratic" data-def="Running time proportional to n². Doubles the input, quadruples the work. The cliff where naive nested loops start to matter.">quadratic</span> sequence aligner can't scale to a million reads. A physicist wastes weeks because their simulation's inner loop is O(n²) when it could be O(n log n). A product manager nods along when someone says "that feature is <span class="term" data-label="NP-hard" data-def="A problem at least as hard as every problem in NP. Informally: if you could solve it in polynomial time, you could solve every verification problem in polynomial time, and the world's cryptography would fall.">NP-hard</span>, so we'll need a heuristic" without knowing whether to believe them. A student reads a paper on protein folding or climate modelling and stalls on the big-O claims. All four people need the same ideas.</p>
 
-        <p>This track exists to cover those four blind spots. It isn't a full undergraduate CS curriculum — there's no operating systems, no networks, no databases, no compilers. What's here is the <em>theoretical core</em>, the stuff that applies regardless of whether you're writing Python, Rust, Elixir, or embedding prompts. You'll find one hub page (this one) for the skim, and one deep-dive page per subject for the read.</p>
+        <p>This track exists to cover those blind spots. It isn't a full undergraduate CS curriculum — there's no operating systems, no networks, no databases, no compilers. What's here is the <em>theoretical core</em>, the stuff that applies whether you're running a chemistry simulation, optimizing a supply chain, building a trading model, or shipping a web service. You'll find one hub page (this one) for the skim, and one deep-dive page per subject for the read.</p>
 
         <p>The goal of this page is modest: give you an accurate mental model of each of the four subjects, a couple of interactive demos that let you <em>see</em> the key ideas, and a clear jump-off to the full page when you want the proofs and code. Don't try to read the whole thing in one sitting. Skim it top-to-bottom once, bookmark the section you needed, and come back to that section with a coffee.</p>
 
@@ -167,13 +167,13 @@
             <strong>01 · Algorithms &amp; Data Structures.</strong> The working toolkit — arrays, hash tables, trees, heaps, graphs, and the recipes (sorting, searching, BFS/DFS, dynamic programming) that act on them.<br>
             <strong>02 · Complexity &amp; Big-O.</strong> A notation for talking about cost without getting lost in hardware. Read the code, read the bound, know in advance whether it'll scale.<br>
             <strong>03 · Theoretical CS.</strong> Turing machines, the halting problem, P vs NP. What machines can and can't do — and which problems are expected to be forever hard.<br>
-            <strong>04 · Mathematical Optimization.</strong> Pick numbers to minimize a loss, subject to constraints. Gradient descent, convexity, KKT, duality — the math running inside every training loop.
+            <strong>04 · Mathematical Optimization.</strong> Pick numbers to minimize a cost, subject to constraints. Gradient descent, convexity, KKT, duality. The math behind portfolio allocation, circuit design, logistics routing, and every machine-learning training loop.
           </p>
         </div>
 
         <h3>What this track is, and isn't</h3>
         <ul class="clean">
-          <li><strong>Is:</strong> a compact tour of the classical CS theory a working engineer actually needs in 2026, with inline demos and links to full textbook pages.</li>
+          <li><strong>Is:</strong> a compact tour of the classical CS theory that researchers, scientists, engineers, and curious readers actually reach for in 2026, with inline demos and links to full textbook pages.</li>
           <li><strong>Isn't:</strong> a replacement for CLRS, Sipser, or Boyd &amp; Vandenberghe. When you need depth, the deep-dive pages cite them.</li>
           <li><strong>Isn't:</strong> a systems curriculum. No OS, networks, databases, or compilers. Those are fine subjects; they just live elsewhere.</li>
           <li><strong>Assumes:</strong> you can read pseudocode, have seen a for-loop, and remember roughly what a function is. Everything past that is fair game to re-explain.</li>

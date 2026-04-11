@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Organic Chemistry — Deep Dive</title>
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError: false});"></script>
+</head>
+<body>
+<div id="tooltip"></div>
+
+<nav class="topic-nav">
+  <a class="back" href="../index.html">← Learning Hub</a>
+  <div class="crumb">Chemistry / <span class="topic-name">Organic Chemistry</span></div>
+</nav>
+
+<div class="topic-layout">
+  <aside class="topic-toc">
+    <h4>ON THIS PAGE</h4>
+    <ul>
+      <li><a href="#why">1. Why carbon is special</a></li>
+      <li><a href="#vocab">2. Vocabulary cheat sheet</a></li>
+      <li><a href="#skeletons">3. Alkanes, alkenes, alkynes</a></li>
+      <li><a href="#iupac">4. IUPAC nomenclature</a></li>
+      <li><a href="#fg">5. Functional groups</a></li>
+      <li><a href="#iso">6. Isomerism and chirality</a></li>
+      <li><a href="#mech">7. Reaction mechanisms</a></li>
+      <li><a href="#demo">8. Interactive: SN1 vs SN2 selector</a></li>
+      <li><a href="#retro">9. Retrosynthesis</a></li>
+      <li><a href="#code">10. Organic chemistry in code</a></li>
+      <li><a href="#summary">11. Cheat sheet</a></li>
+    </ul>
+  </aside>
+
+  <article class="topic-content">
+    <h1>Organic Chemistry</h1>
+    <p class="subtitle">A working tour of the chemistry of carbon — the element that builds every drug, every polymer, every fuel, and every living cell. Once you can name a compound, identify its functional groups, spot its stereocenters, and push the electrons of its reactions, organic chemistry stops being memorization and starts being a reasoning system with rules.</p>
+    <div class="meta-tags">
+      <span>Prereq: <a href="./bonding.html">bonding</a>, <a href="./equilibrium.html">equilibrium</a></span>
+      <span>Read time: ~45 min</span>
+      <span>Interactive figures: 1</span>
+      <span>Code: RDKit / SMILES</span>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="why">1. Why carbon is special — and why you should care</h2>
+
+    <p>Look at the label of any prescription bottle. The molecules listed are carbon skeletons decorated with a handful of functional groups. Look at a plastic bag, a nylon jacket, a gasoline pump, a vitamin tablet, a lithium battery separator, or the protein coat on the virus your flu shot is trained against — all carbon. Biology runs on carbon. Industrial chemistry is mostly carbon. The entire pharmaceutical industry is essentially "which carbon skeleton, with which functional groups, in which three-dimensional arrangement, binds best to the target protein." That is organic chemistry.</p>
+
+    <p>Carbon earns this unique status because of a few quiet properties. It forms four strong covalent bonds of comparable energy to itself and to almost every other nonmetal. Those bonds are stable at biological and industrial temperatures but not so stable that they can't be rearranged with the right reagent. Carbon can form long chains, rings, branches, double bonds, triple bonds, and aromatic systems, giving an almost unlimited structural vocabulary. Nitrogen, oxygen, sulfur, and phosphorus slot into that vocabulary as "functional groups" — reactive handles that let you convert one molecule into another on demand.</p>
+
+    <div class="callout">
+      <div class="label">THE PUNCHLINE</div>
+      <p>Organic chemistry is four things in a trench coat: a <em>naming system</em> (IUPAC), a <em>catalog of functional groups</em> (the reactive handles), a <em>language of stereochemistry</em> (where atoms sit in 3D), and a <em>library of mechanisms</em> (how electrons flow when reactions run). Master those four and you can read any paper in the pharma or materials literature.</p>
+    </div>
+
+    <p>Why care, whether you are a drug designer, a battery chemist, a polymer engineer, a clinician, or a PM trying to understand a biotech pitch? A few concrete reasons:</p>
+    <ul>
+      <li><strong>Drug discovery.</strong> Lead optimization is organic chemistry — swap a methyl for a fluorine, change an ester to an amide, add a stereocenter, see what happens to binding and metabolism.</li>
+      <li><strong>Materials.</strong> Conjugated polymers in OLED displays, the electrolyte in a lithium battery, the resin in a 3D printer — all organic.</li>
+      <li><strong>Clinical pharmacology.</strong> Drug metabolism is mostly oxidation and conjugation of functional groups. Understanding first-pass metabolism and half-life means understanding which bond the liver is going to break first.</li>
+      <li><strong>Environmental chemistry.</strong> Persistent organic pollutants, atmospheric oxidation of hydrocarbons, and microplastic degradation all hinge on organic mechanisms.</li>
+      <li><strong>Synthesis planning.</strong> Retrosynthesis — working backward from a target to cheap starting materials — is how every total synthesis and every API (active pharmaceutical ingredient) gets made.</li>
+    </ul>
+
+    <p>This page teaches organic chemistry from zero. You need to know what a covalent bond is, what "electron pair" means, and roughly what an equilibrium constant is. Everything else we build.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="vocab">2. Vocabulary cheat sheet</h2>
+
+    <p>Skim this now. Each term gets a full treatment below.</p>
+
+    <table class="rank-table">
+      <thead><tr><th>Symbol / term</th><th>Read as</th><th>Means</th></tr></thead>
+      <tbody>
+        <tr><td>$\text{C}_n\text{H}_{2n+2}$</td><td>"alkane formula"</td><td>General formula for a saturated, acyclic hydrocarbon (alkane).</td></tr>
+        <tr><td>sp$^3$, sp$^2$, sp</td><td>"s-p-three, s-p-two, s-p"</td><td>Hybridization states of carbon — tetrahedral, trigonal planar, and linear.</td></tr>
+        <tr><td>R–</td><td>"R group"</td><td>A generic placeholder for "some alkyl/aryl chain." Like an $x$ in algebra.</td></tr>
+        <tr><td>–OH, –NH$_2$, –COOH</td><td>"hydroxyl, amine, carboxyl"</td><td>Three of the most common functional groups.</td></tr>
+        <tr><td>S$_N$1, S$_N$2</td><td>"S-N-one, S-N-two"</td><td>Unimolecular and bimolecular nucleophilic substitution — two ways a leaving group departs and a nucleophile takes its place.</td></tr>
+        <tr><td>E1, E2</td><td>"E-one, E-two"</td><td>Unimolecular and bimolecular elimination — making a double bond by kicking out a leaving group and a proton.</td></tr>
+        <tr><td>R/S</td><td>"R or S"</td><td>Cahn-Ingold-Prelog descriptors for a chiral center — right-hand or left-hand spatial arrangement.</td></tr>
+        <tr><td>cis/trans (Z/E)</td><td>"cis/trans" or "Z/E"</td><td>Geometric isomers across a double bond — same-side vs opposite-side.</td></tr>
+        <tr><td>$pK_a$</td><td>"p-K-a"</td><td>Acid strength on a log scale. Crucial for predicting acid/base reactivity.</td></tr>
+        <tr><td>retron</td><td>"retron"</td><td>A substructure in the target molecule that suggests a specific disconnection in retrosynthesis.</td></tr>
+      </tbody>
+    </table>
+
+    <p>One convention. We draw organic molecules as <em>skeletal structures</em>: carbons are unlabeled vertices and line-ends, and hydrogens on carbon are implicit. A zig-zag of four lines is butane. A hexagon with a circle is benzene. A skeletal drawing packs enormous information into a tiny picture once you learn to read it.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="skeletons">3. Alkanes, alkenes, alkynes — the carbon skeletons</h2>
+
+    <p>Start with the simplest organic molecules: compounds of only carbon and hydrogen. These come in three flavors based on the bonds between carbons.</p>
+
+    <ul>
+      <li><strong>Alkanes</strong> — only single C–C bonds. Saturated. General formula $C_n H_{2n+2}$ for a straight or branched chain, $C_n H_{2n}$ for a ring. Methane ($CH_4$), ethane ($C_2H_6$), propane, butane, and so on. Carbon is sp$^3$ hybridized, tetrahedral, with ~109.5° bond angles. Relatively unreactive — think natural gas, wax, motor oil.</li>
+      <li><strong>Alkenes</strong> — at least one C=C double bond. General formula $C_n H_{2n}$. Ethylene ($C_2H_4$), propylene, butadiene. The sp$^2$ carbons are planar, bond angle ~120°. The $\pi$ bond is reactive — alkenes are how organic chemists make new C–C and C–X bonds.</li>
+      <li><strong>Alkynes</strong> — at least one C$\equiv$C triple bond. General formula $C_n H_{2n-2}$. Acetylene ($C_2H_2$), propyne. sp carbons are linear, 180°.</li>
+    </ul>
+
+    <p>The degree of unsaturation (double bonds + rings) of a hydrocarbon is</p>
+
+    <div class="math-display">$$ \text{DoU} \;=\; \frac{2n+2-m}{2}, $$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Degree of unsaturation</p>
+      <dl>
+        <dt>$n$</dt><dd>Number of carbon atoms in the molecule.</dd>
+        <dt>$m$</dt><dd>Number of hydrogen atoms (plus number of halogens; subtract nitrogens).</dd>
+        <dt>$2n + 2$</dt><dd>The maximum hydrogen count for a fully saturated acyclic alkane.</dd>
+        <dt>DoU</dt><dd>How many H$_2$ "units" you are missing compared with that maximum. Each double bond or ring accounts for one.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Practical use.</strong> If a drug candidate has a molecular formula from mass spec and you compute DoU = 7, you know you have some combination of rings and $\pi$ bonds adding up to seven. Benzene alone is DoU 4 (three double bonds + one ring). A fused bicyclic aromatic like naphthalene is DoU 7. Mass spec plus DoU is the first sanity check every med chem group runs.</p>
+    </div>
+
+    <h3>Why alkenes are reactive and alkanes are not</h3>
+
+    <p>The $\pi$ electrons of a C=C double bond sit above and below the internuclear axis, exposed and polarizable. An electrophile — something electron-hungry — can grab them. A C–C single bond, by contrast, has its electron density buried between the nuclei, and is essentially inert under mild conditions. This is the whole reason alkenes are the workhorses of organic synthesis: they are reactive enough to transform but stable enough to handle.</p>
+
+    <div class="callout">
+      <div class="label">RULE OF THUMB</div>
+      <p>If a molecule has a $\pi$ bond, a lone pair, or a polar bond, chemists can do something to it. If it has only C–C and C–H single bonds, it is inert to almost everything except free-radical chemistry and combustion.</p>
+    </div>
+
+    <div class="problem-set" data-topic="chem-org-skeletons"></div>
+
+    <!-- ========================================================== -->
+    <h2 id="iupac">4. IUPAC nomenclature — naming with rules</h2>
+
+    <p>IUPAC names encode structure in a strict grammar. Once you learn the grammar, a name like "(2R,3S)-3-amino-2-hydroxy-4-methylpentanoic acid" stops being gibberish and starts being a complete recipe for drawing the molecule. Here are the rules for a straight-chain organic compound, in order:</p>
+
+    <ol>
+      <li><strong>Find the longest carbon chain containing the principal functional group.</strong> Its length gives the root: meth (1), eth (2), prop (3), but (4), pent (5), hex (6), hept (7), oct (8), non (9), dec (10).</li>
+      <li><strong>Choose the suffix for the highest-priority functional group.</strong> Carboxylic acid (-oic acid) > ester (-oate) > amide (-amide) > nitrile (-nitrile) > aldehyde (-al) > ketone (-one) > alcohol (-ol) > amine (-amine) > alkene (-ene) > alkane (-ane).</li>
+      <li><strong>Number the chain</strong> so the principal group gets the lowest locant. Ties? Go to the next-highest group, then substituents.</li>
+      <li><strong>Prefix all substituents alphabetically</strong>, each with its locant. Lowercase Greek prefixes (di, tri) don't count for alphabetization. So "3-ethyl-2,2-dimethylpentane" sorts e before m.</li>
+      <li><strong>Stereo descriptors</strong> (R/S, E/Z) go at the very front in parentheses.</li>
+    </ol>
+
+    <p>An example. Take a molecule with six carbons in its longest chain, a carboxylic acid on one end, a methyl branch on carbon 3, and an OH on carbon 4. Acid wins; number from the acid end so it is C1; name is "4-hydroxy-3-methylhexanoic acid." You just named $\beta$-methylmevalonic acid without having to memorize the trivial name.</p>
+
+    <div class="defn">
+      <strong>Test you can do it.</strong> Draw 2-chloro-3,3-dimethylbutane. It's a four-carbon chain (butane), with two methyls both on C3, and a chlorine on C2. The structure is $CH_3 \text{-} CHCl \text{-} C(CH_3)_2 \text{-} CH_3$. If you got that, you can read names going forward.
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="fg">5. Functional groups — the reactive handles</h2>
+
+    <p>A functional group is a small cluster of atoms that shows up in many different molecules and behaves about the same everywhere. That's the key insight: if you know how an ester reacts, you know how <em>every</em> ester reacts, modulo steric and electronic tweaks. There are maybe fifteen functional groups that cover 95% of what you'll meet in a first course, and about seven that show up in most drug molecules.</p>
+
+    <table class="rank-table">
+      <thead><tr><th>Group</th><th>Formula</th><th>Example</th><th>Key behavior</th></tr></thead>
+      <tbody>
+        <tr><td>Alkane</td><td>R–H</td><td>Hexane</td><td>Inert. Solvent, fuel.</td></tr>
+        <tr><td>Alkene</td><td>R$_2$C=CR$_2$</td><td>Ethylene</td><td>Electron-rich $\pi$ bond; adds electrophiles.</td></tr>
+        <tr><td>Alkyne</td><td>RC$\equiv$CR</td><td>Acetylene</td><td>Like alkene but more so; terminal alkynes are weakly acidic.</td></tr>
+        <tr><td>Alcohol</td><td>R–OH</td><td>Ethanol</td><td>H-bond donor/acceptor. Weakly acidic ($pK_a \approx 16$).</td></tr>
+        <tr><td>Ether</td><td>R–O–R</td><td>Diethyl ether</td><td>Lewis base, inert solvent.</td></tr>
+        <tr><td>Amine (1°/2°/3°)</td><td>RNH$_2$, R$_2$NH, R$_3$N</td><td>Methylamine</td><td>Weakly basic (pK$_b \approx 4$ for aliphatic). Nucleophile.</td></tr>
+        <tr><td>Aldehyde</td><td>R–CHO</td><td>Acetaldehyde</td><td>Electrophilic carbonyl. Easily oxidized to acid.</td></tr>
+        <tr><td>Ketone</td><td>R–CO–R</td><td>Acetone</td><td>Electrophilic carbonyl. Not easily oxidized.</td></tr>
+        <tr><td>Carboxylic acid</td><td>R–COOH</td><td>Acetic acid</td><td>Acidic ($pK_a \approx 5$). Forms esters and amides.</td></tr>
+        <tr><td>Ester</td><td>R–COO–R</td><td>Ethyl acetate</td><td>Hydrolyzes to acid + alcohol. Many drugs are prodrug esters.</td></tr>
+        <tr><td>Amide</td><td>R–CO–NR$_2$</td><td>Acetamide</td><td>Not basic (N lone pair delocalized into C=O). Peptide backbone.</td></tr>
+        <tr><td>Nitrile</td><td>R–C$\equiv$N</td><td>Acetonitrile</td><td>Electrophilic C; hydrolyzes to amide, then acid.</td></tr>
+        <tr><td>Halide</td><td>R–X (X = F, Cl, Br, I)</td><td>Chloroform</td><td>Leaving group; substrate for S$_N$/E reactions.</td></tr>
+        <tr><td>Aromatic</td><td>Ph–</td><td>Benzene</td><td>$\pi$-delocalized ring. Undergoes EAS, not addition.</td></tr>
+      </tbody>
+    </table>
+
+    <h3>The carbonyl group — the single most important handle</h3>
+
+    <p>Half of organic synthesis revolves around C=O chemistry. The carbonyl carbon is electrophilic because oxygen is more electronegative and pulls electron density toward itself, leaving a partial positive on carbon. Nucleophiles attack carbon; electrophiles grab oxygen's lone pair. Aldehydes, ketones, esters, amides, acids, acid chlorides, and anhydrides all share this reactivity pattern and interconvert among themselves.</p>
+
+    <div class="math-display">$$ R\text{-}CHO + H_2N\text{-}R' \;\rightleftharpoons\; R\text{-}CH(OH)\text{-}NHR' \;\rightleftharpoons\; R\text{-}CH=N\text{-}R' + H_2O. $$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Imine (Schiff base) formation</p>
+      <dl>
+        <dt>$R\text{-}CHO$</dt><dd>A generic aldehyde. The $R$ is any alkyl or aryl group.</dd>
+        <dt>$H_2N\text{-}R'$</dt><dd>A primary amine.</dd>
+        <dt>$R\text{-}CH(OH)\text{-}NHR'$</dt><dd>The unstable tetrahedral intermediate (a "hemiaminal") with OH and NHR' both on the former carbonyl carbon.</dd>
+        <dt>$R\text{-}CH=N\text{-}R'$</dt><dd>The imine product — a carbon-nitrogen double bond, also called a Schiff base.</dd>
+        <dt>$\rightleftharpoons$</dt><dd>Every step is reversible; imine formation is driven by removing water.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why you care.</strong> Imine formation is how pyridoxal (vitamin B6) shuttles amino groups in transaminases. It's how biochemists label proteins with amine-reactive dyes. It's how reductive amination — the pharma industry's bread-and-butter amine-synthesis method — starts. One equilibrium, a hundred applications.</p>
+    </div>
+
+    <div class="problem-set" data-topic="chem-org-fg"></div>
+
+    <!-- ========================================================== -->
+    <h2 id="iso">6. Isomerism and chirality — 3D matters</h2>
+
+    <p>Two molecules with the same molecular formula but different structures are <strong>isomers</strong>. There are three broad types, in increasing subtlety:</p>
+
+    <ol>
+      <li><strong>Structural isomers</strong> — different connectivity. Butane vs isobutane: same $C_4H_{10}$, different skeleton.</li>
+      <li><strong>Geometric (cis/trans or E/Z) isomers</strong> — same connectivity but different geometry across a rigid bond (usually C=C). Cis-2-butene vs trans-2-butene. These interconvert only by breaking the $\pi$ bond, which needs heat or light.</li>
+      <li><strong>Optical isomers (enantiomers)</strong> — same connectivity and geometry, but mirror images that cannot be superimposed. Different hands of the same molecule. They interconvert only by breaking and remaking bonds at the chiral center.</li>
+    </ol>
+
+    <p>A <strong>stereocenter</strong> (or chiral center) is a carbon bonded to four <em>different</em> groups. Four different groups means there are exactly two three-dimensional arrangements — like your left and right hands. The Cahn-Ingold-Prelog rules give you an unambiguous label:</p>
+
+    <ol>
+      <li>Rank the four substituents by atomic number at the first point of difference. Higher Z wins. Break ties by the next shell of atoms.</li>
+      <li>Orient the molecule so the lowest-priority group points away from you.</li>
+      <li>Trace 1 → 2 → 3 around the front. Clockwise = <strong>R</strong> (rectus). Counterclockwise = <strong>S</strong> (sinister).</li>
+    </ol>
+
+    <div class="callout warn">
+      <div class="label">WHY THIS MATTERS</div>
+      <p>In the 1950s, thalidomide was sold as a racemic mixture (50/50 R and S). The R enantiomer sedated. The S enantiomer caused severe birth defects. Same molecular formula, same connectivity, same functional groups — different hand. Since then, every chiral drug must be characterized enantiomer by enantiomer, and most are sold as single enantiomers. "Enantiopure synthesis" is a multi-billion-dollar industry.</p>
+    </div>
+
+    <h3>Optical rotation and specific rotation</h3>
+
+    <p>Enantiomers rotate the plane of polarized light equally but in opposite directions. The measurable quantity is the specific rotation:</p>
+
+    <div class="math-display">$$ [\alpha]^{T}_\lambda \;=\; \frac{\alpha}{c \cdot \ell}. $$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Specific rotation</p>
+      <dl>
+        <dt>$[\alpha]^{T}_\lambda$</dt><dd>Specific rotation at temperature $T$ and wavelength $\lambda$ (usually the sodium D line at 589 nm), in deg·mL·g$^{-1}$·dm$^{-1}$.</dd>
+        <dt>$\alpha$</dt><dd>Measured rotation of the plane of polarized light, in degrees, on a polarimeter.</dd>
+        <dt>$c$</dt><dd>Concentration of the sample, in g/mL.</dd>
+        <dt>$\ell$</dt><dd>Path length of the polarimeter cell, in dm (decimeters — the instrument is weird and historical).</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why the quirky units.</strong> The decimeter convention comes from 19th-century sugar chemistry, where tube lengths were standardized to 1 dm. Modern chemists inherited the units even though nobody uses decimeters for anything else. The upshot: specific rotation is a molecular fingerprint of enantiomeric identity. Sucrose is $+66.4°$, fructose is $-92°$, hence "invert sugar" — the inversion of rotation sign when sucrose is hydrolyzed.</p>
+    </div>
+
+    <p>If a synthesis gives you an "enantiomeric excess" (ee) of 80%, it means you have 90% of one enantiomer and 10% of the other (the difference is 80%, hence the name). Drug regulators typically want >99% ee.</p>
+
+    <div class="problem-set" data-topic="chem-org-stereo"></div>
+
+    <!-- ========================================================== -->
+    <h2 id="mech">7. Reaction mechanisms — pushing electrons</h2>
+
+    <p>Every organic reaction is a choreographed dance of electron pairs. Curly-arrow notation tracks the dance: a curly arrow starts at an electron pair (a lone pair, a $\pi$ bond, or a $\sigma$ bond) and ends where that pair is going. Learn to push arrows and you can predict reactions you have never seen.</p>
+
+    <h3>Nucleophilic substitution: S$_N$1 vs S$_N$2</h3>
+
+    <p>A <strong>nucleophile</strong> (Nu:, electron-rich) attacks a carbon bearing a <strong>leaving group</strong> (LG, electron-poor). The leaving group departs with the bonding pair. There are two distinct pathways.</p>
+
+    <p><strong>S$_N$2</strong> is concerted: the nucleophile attacks from the back side as the leaving group departs, passing through a single five-coordinate transition state. The backside attack inverts the stereochemistry at carbon — "Walden inversion" — like an umbrella flipping in the wind. Rate is first-order in nucleophile and first-order in substrate:</p>
+
+    <div class="math-display">$$ \text{rate}_{S_N 2} \;=\; k_2 \, [\text{Nu}] \, [\text{R-LG}]. $$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">S$_N$2 rate law</p>
+      <dl>
+        <dt>$k_2$</dt><dd>Second-order rate constant, units M$^{-1}$ s$^{-1}$. Depends on temperature, solvent, and identity of substrate/nucleophile.</dd>
+        <dt>$[\text{Nu}]$</dt><dd>Molar concentration of the nucleophile.</dd>
+        <dt>$[\text{R-LG}]$</dt><dd>Molar concentration of the substrate (the carbon with the leaving group).</dd>
+        <dt>rate</dt><dd>Rate of product formation, M/s. Doubling either concentration doubles the rate.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Intuition.</strong> Both pieces must meet at the same place at the same time, so the rate scales with how likely they are to collide — the product of the two concentrations. Backside attack is hindered by bulky substituents, so S$_N$2 strongly prefers primary (1°) and methyl substrates over tertiary (3°) ones.</p>
+    </div>
+
+    <p><strong>S$_N$1</strong> is stepwise. First, the leaving group leaves on its own, making a carbocation intermediate. Then the nucleophile attacks the flat, sp$^2$ carbocation from either face. The rate depends only on the rate-determining ionization, so it is first-order in substrate alone and zero-order in nucleophile:</p>
+
+    <div class="math-display">$$ \text{rate}_{S_N 1} \;=\; k_1 \, [\text{R-LG}]. $$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">S$_N$1 rate law</p>
+      <dl>
+        <dt>$k_1$</dt><dd>First-order rate constant, units s$^{-1}$. Strongly dependent on carbocation stability and solvent polarity.</dd>
+        <dt>$[\text{R-LG}]$</dt><dd>Molar concentration of substrate. Nucleophile concentration does not appear.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>What the zero-order in Nu tells you.</strong> The slow step is the substrate falling apart on its own. Whatever the nucleophile concentration, the substrate can't break down any faster. Stability of the carbocation is everything: tertiary > secondary > primary > methyl. Polar protic solvents (water, alcohols) stabilize the developing cation and speed S$_N$1 up. S$_N$1 also <em>racemizes</em> the stereocenter because the flat cation can be attacked from either face.</p>
+    </div>
+
+    <h3>Elimination: E1 vs E2</h3>
+
+    <p>Instead of replacing the leaving group with a nucleophile, you can kick out both the leaving group and a proton from the neighboring (β) carbon, forming a double bond. Same two mechanisms:</p>
+
+    <ul>
+      <li><strong>E2</strong> — concerted, one transition state. Base grabs β-H, the $\sigma$ bond goes into a new C=C $\pi$ bond, leaving group departs all at once. Requires antiperiplanar geometry between the departing H and LG (they must be on opposite sides of the C–C bond). Follows Zaitsev's rule: the more substituted (more stable) alkene is favored.</li>
+      <li><strong>E1</strong> — stepwise. Leaving group leaves first, making the carbocation. Base then deprotonates a β-H. Competes with S$_N$1 on tertiary substrates; usually you get a mixture.</li>
+    </ul>
+
+    <div class="callout">
+      <div class="label">CHOOSING BETWEEN THE FOUR</div>
+      <p>Primary substrate + good nucleophile: <strong>S$_N$2</strong>. Tertiary substrate + polar protic solvent: <strong>S$_N$1/E1</strong> mixture. Strong bulky base: <strong>E2</strong>. Low-basicity nucleophile, cold: <strong>S$_N$2</strong>. The four mechanisms compete; temperature, solvent, base strength, and substrate steric bulk decide which one wins.</p>
+    </div>
+
+    <h3>Electrophilic addition to alkenes</h3>
+
+    <p>Alkenes react with electrophiles by adding across the double bond. Markovnikov's rule says: "the rich get richer" — when HX adds across an unsymmetrical alkene, the H goes to the carbon that already has more H's, so the X ends up on the more substituted carbon (where the more stable carbocation forms). Anti-Markovnikov outcomes happen under radical conditions (HBr with peroxides) or via hydroboration-oxidation.</p>
+
+    <h3>Electrophilic aromatic substitution (EAS)</h3>
+
+    <p>Benzene's $\pi$ electrons are stabilized by delocalization — the ring would rather keep its aromaticity than add across a $\pi$ bond. So benzene <em>substitutes</em> an H with an electrophile (E$^+$) rather than adding. The mechanism is:</p>
+
+    <ol>
+      <li>E$^+$ attacks a carbon of the ring, making a resonance-stabilized "arenium ion" intermediate (also called a Wheland intermediate). Aromaticity is temporarily broken.</li>
+      <li>A base plucks off the proton on that same carbon, restoring aromaticity. Overall: H replaced by E.</li>
+    </ol>
+
+    <p>Classic EAS reactions: nitration (HNO$_3$/H$_2$SO$_4$ → E$^+$ = NO$_2^+$), halogenation (Br$_2$/FeBr$_3$), Friedel-Crafts alkylation/acylation (RCl or RCOCl + AlCl$_3$), sulfonation. Substituents already on the ring direct the new group: electron-donors (–OH, –NH$_2$, –OR, –R) are <em>ortho/para</em> directors and activators; electron-withdrawers (–NO$_2$, –CN, –COR) are <em>meta</em> directors and deactivators. Halogens are the weird exception: ortho/para directors but deactivators.</p>
+
+    <div class="problem-set" data-topic="chem-org-mech"></div>
+
+    <!-- ========================================================== -->
+    <h2 id="demo">8. Interactive: S$_N$1 vs S$_N$2 vs E1 vs E2 selector</h2>
+
+    <p>Slide the four knobs — substrate class, nucleophile strength, base strength, and solvent — and watch the prediction shift among the four pathways. The underlying logic is a simple rule table based on energetics.</p>
+
+    <div class="viz-3d">
+      <div class="v3-controls">
+        <span class="v3-label">Substrate:</span>
+        <select id="oSub" style="background:#0f131a;color:#e6ecf5;border:1px solid #2a3446;border-radius:4px;padding:4px 8px;">
+          <option value="1">1° (methyl/primary)</option>
+          <option value="2" selected>2° (secondary)</option>
+          <option value="3">3° (tertiary)</option>
+        </select>
+        <span class="v3-label">Nucleophile:</span>
+        <select id="oNu" style="background:#0f131a;color:#e6ecf5;border:1px solid #2a3446;border-radius:4px;padding:4px 8px;">
+          <option value="weak">weak (H$_2$O, ROH)</option>
+          <option value="strong" selected>strong (RO$^-$, N$_3^-$, RS$^-$)</option>
+        </select>
+        <span class="v3-label">Base:</span>
+        <select id="oBase" style="background:#0f131a;color:#e6ecf5;border:1px solid #2a3446;border-radius:4px;padding:4px 8px;">
+          <option value="weak" selected>weak / non-bulky</option>
+          <option value="bulky">strong + bulky (tBuO$^-$)</option>
+        </select>
+        <span class="v3-label">Solvent:</span>
+        <select id="oSolv" style="background:#0f131a;color:#e6ecf5;border:1px solid #2a3446;border-radius:4px;padding:4px 8px;">
+          <option value="protic">polar protic (water, ROH)</option>
+          <option value="aprotic" selected>polar aprotic (DMSO, DMF, MeCN)</option>
+        </select>
+      </div>
+      <svg id="oMechSvg" viewBox="0 0 720 360" style="width:100%;height:auto;background:#0a0d12;border-radius:6px;"></svg>
+      <p class="v3-caption" id="oMechCaption">Pick conditions and the bar chart shows the rough fraction of each mechanism predicted by the standard selectivity rules.</p>
+    </div>
+
+    <p>Things to try:</p>
+    <ul>
+      <li>Set primary substrate with a strong nucleophile — S$_N$2 dominates.</li>
+      <li>Set tertiary with weak nucleophile in polar protic solvent — S$_N$1/E1 mixture.</li>
+      <li>Switch base to bulky tBuO$^-$ on a secondary or tertiary substrate — E2 takes over.</li>
+      <li>Primary substrate with bulky base — still E2, because steric hindrance favors deprotonation over backside attack.</li>
+    </ul>
+
+    <!-- ========================================================== -->
+    <h2 id="retro">9. Retrosynthesis — working backward from the target</h2>
+
+    <p>Retrosynthesis is how real chemists plan syntheses. Instead of starting from cheap feedstocks and hoping, you draw the target molecule and ask: "What bond could I disconnect to arrive at simpler precursors?" Each disconnection is a hypothetical reverse reaction. You repeat until the precursors are all commercially available.</p>
+
+    <p>The notation uses a double-shafted open arrow ⇒ for a retrosynthetic step (as opposed to → for a forward reaction). The pieces you get after a disconnection are called <strong>synthons</strong> — idealized fragments that you then map to real reagents called <strong>synthetic equivalents</strong>. A "d$^1$" synthon like "acyl anion" corresponds to a real reagent like a Grignard or a dithiane.</p>
+
+    <div class="defn">
+      <strong>The retrosynthetic rule.</strong> For every functional group in the target, ask: which reaction that I know how to run forward would make this group from something simpler? That reaction defines the disconnection. Repeat until you hit a starting material.
+    </div>
+
+    <p>Example. Target: 2-phenylbutanoic acid, $PhCH(C_2H_5)COOH$.</p>
+
+    <ol>
+      <li>Acid → nitrile + hydrolysis, or acid → ester + hydrolysis, or $\alpha$-alkylation of an enolate. Pick the enolate route as a concrete example.</li>
+      <li>Disconnect the C–C bond $\alpha$ to the carbonyl between the phenyl-bearing carbon and one of the ethyl-bearing carbons. The synthons are a carbanion $\alpha$ to a carboxyl (acyl anion equivalent) and an alkyl halide.</li>
+      <li>Real reagents: phenylacetic acid (or its ester), a strong non-nucleophilic base to form the enolate (LDA, NaH), and ethyl iodide as the alkylating agent.</li>
+      <li>Forward synthesis: phenylacetic acid → enolate → alkylate with EtI → 2-phenylbutanoic acid. Three steps on paper, one round in a flask.</li>
+    </ol>
+
+    <p>Modern retrosynthesis is increasingly automated. Tools like the Chematica / Synthia software from Bartosz Grzybowski's group, and ML systems from Segler, Waller, Coley, and others (2018 onward), can propose multi-step routes to complex targets and rank them by feasibility. Underneath, they still run on the principle you just learned: disconnect at a functional group, check that the forward reaction is known, recurse.</p>
+
+    <div class="problem-set" data-topic="chem-org-retro"></div>
+
+    <!-- ========================================================== -->
+    <h2 id="code">10. Organic chemistry in code — SMILES and RDKit</h2>
+
+    <p>Chemists represent molecules on a computer using SMILES strings (Simplified Molecular Input Line Entry System). "CCO" is ethanol. "c1ccccc1" is benzene. "CC(=O)Oc1ccccc1C(=O)O" is aspirin. A SMILES is a linear encoding of the molecular graph that any serious chemistry library — RDKit, OpenBabel, ChemAxon — can parse in microseconds.</p>
+
+    <div class="code-tabs" id="ct-org">
+      <div class="ct-header">
+        <button class="ct-tab active" data-tab="rd">RDKit</button>
+        <button class="ct-tab" data-tab="py">Plain Python</button>
+        <span class="ct-label">organic chemistry primitives</span>
+      </div>
+
+      <div class="ct-panel active" data-tab="rd"><pre><code><span class="kw">from</span> rdkit <span class="kw">import</span> Chem
+<span class="kw">from</span> rdkit.Chem <span class="kw">import</span> Descriptors, AllChem, Draw
+
+<span class="cmt"># Parse a SMILES into an RDKit molecule</span>
+aspirin = Chem.<span class="fn">MolFromSmiles</span>(<span class="str">"CC(=O)Oc1ccccc1C(=O)O"</span>)
+<span class="fn">print</span>(<span class="str">"formula:"</span>, Chem.<span class="fn">rdMolDescriptors</span>.<span class="fn">CalcMolFormula</span>(aspirin))
+<span class="fn">print</span>(<span class="str">f"MW: {Descriptors.MolWt(aspirin):.2f}"</span>)          <span class="cmt"># 180.16</span>
+<span class="fn">print</span>(<span class="str">f"logP: {Descriptors.MolLogP(aspirin):.2f}"</span>)        <span class="cmt"># ~1.19</span>
+<span class="fn">print</span>(<span class="str">f"HBD: {Descriptors.NumHDonors(aspirin)}"</span>)          <span class="cmt"># 1</span>
+<span class="fn">print</span>(<span class="str">f"HBA: {Descriptors.NumHAcceptors(aspirin)}"</span>)        <span class="cmt"># 3</span>
+
+<span class="cmt"># Count functional groups using SMARTS patterns</span>
+patterns = {
+    <span class="str">"carboxylic_acid"</span>: <span class="str">"C(=O)[OH]"</span>,
+    <span class="str">"ester"</span>:           <span class="str">"C(=O)O[C,c]"</span>,
+    <span class="str">"amide"</span>:           <span class="str">"C(=O)N"</span>,
+    <span class="str">"aromatic_ring"</span>:   <span class="str">"c1ccccc1"</span>,
+}
+<span class="kw">for</span> name, smarts <span class="kw">in</span> patterns.<span class="fn">items</span>():
+    patt = Chem.<span class="fn">MolFromSmarts</span>(smarts)
+    n = <span class="fn">len</span>(aspirin.<span class="fn">GetSubstructMatches</span>(patt))
+    <span class="fn">print</span>(<span class="str">f"  {name}: {n}"</span>)
+
+<span class="cmt"># Generate a 3D conformer and optimize with MMFF</span>
+mol3d = Chem.<span class="fn">AddHs</span>(aspirin)
+AllChem.<span class="fn">EmbedMolecule</span>(mol3d, randomSeed=<span class="num">42</span>)
+AllChem.<span class="fn">MMFFOptimizeMolecule</span>(mol3d)
+<span class="fn">print</span>(<span class="str">"num atoms (incl. H):"</span>, mol3d.<span class="fn">GetNumAtoms</span>())
+
+<span class="cmt"># Assign CIP stereochemistry labels (R/S, E/Z)</span>
+ibuprofen = Chem.<span class="fn">MolFromSmiles</span>(<span class="str">"CC(C(=O)O)c1ccc(cc1)CC(C)C"</span>)
+Chem.<span class="fn">AssignStereochemistry</span>(ibuprofen, cleanIt=<span class="kw">True</span>, force=<span class="kw">True</span>)
+<span class="kw">for</span> atom <span class="kw">in</span> ibuprofen.<span class="fn">GetAtoms</span>():
+    <span class="kw">if</span> atom.<span class="fn">HasProp</span>(<span class="str">"_CIPCode"</span>):
+        <span class="fn">print</span>(<span class="str">f"atom {atom.GetIdx()} ({atom.GetSymbol()}): "</span> + atom.<span class="fn">GetProp</span>(<span class="str">"_CIPCode"</span>))
+</code></pre></div>
+
+      <div class="ct-panel" data-tab="py"><pre><code><span class="cmt"># A hand-rolled degree-of-unsaturation calculator and Lipinski filter.</span>
+
+<span class="kw">def</span> <span class="fn">degree_of_unsaturation</span>(C, H, N=<span class="num">0</span>, X=<span class="num">0</span>):
+    <span class="cmt"># X = total halogens; ignore O and S</span>
+    <span class="kw">return</span> (<span class="num">2</span> * C + <span class="num">2</span> - H - X + N) // <span class="num">2</span>
+
+<span class="fn">print</span>(<span class="str">"benzene DoU:"</span>, <span class="fn">degree_of_unsaturation</span>(<span class="num">6</span>, <span class="num">6</span>))          <span class="cmt"># 4</span>
+<span class="fn">print</span>(<span class="str">"caffeine DoU:"</span>, <span class="fn">degree_of_unsaturation</span>(<span class="num">8</span>, <span class="num">10</span>, N=<span class="num">4</span>))    <span class="cmt"># 6</span>
+
+<span class="kw">def</span> <span class="fn">lipinski_violations</span>(mw, logP, hbd, hba):
+    <span class="cmt"># Classic Rule of Five for oral bioavailability (Lipinski 1997).</span>
+    violations = <span class="num">0</span>
+    <span class="kw">if</span> mw &gt; <span class="num">500</span>: violations += <span class="num">1</span>
+    <span class="kw">if</span> logP &gt; <span class="num">5</span>: violations += <span class="num">1</span>
+    <span class="kw">if</span> hbd &gt; <span class="num">5</span>: violations += <span class="num">1</span>
+    <span class="kw">if</span> hba &gt; <span class="num">10</span>: violations += <span class="num">1</span>
+    <span class="kw">return</span> violations
+
+<span class="cmt"># Aspirin passes (0 violations); cyclosporine fails spectacularly (3+).</span>
+<span class="fn">print</span>(<span class="str">"aspirin violations:"</span>, <span class="fn">lipinski_violations</span>(<span class="num">180.16</span>, <span class="num">1.19</span>, <span class="num">1</span>, <span class="num">3</span>))
+</code></pre></div>
+    </div>
+
+    <p>A few practical notes about how computational organic chemistry actually works in industry:</p>
+    <ul>
+      <li>SMILES, InChI, and SMARTS are the three standard string representations. SMILES for humans and inputs, InChI for database deduplication, SMARTS for substructure search and rules (the patterns above).</li>
+      <li>Tanimoto similarity over Morgan fingerprints is the default for "find molecules like this one." Values above 0.4-0.5 usually mean meaningful resemblance; above 0.85 often means effectively the same scaffold.</li>
+      <li>Conformer generation with RDKit's ETKDG algorithm plus MMFF or UFF optimization gets you reasonable 3D geometries for docking. For anything serious (binding energies, transition states), you move to quantum chemistry. See <a href="./quantum-chemistry.html">quantum chemistry</a>.</li>
+    </ul>
+
+    <!-- ========================================================== -->
+    <h2 id="summary">11. Cheat sheet</h2>
+
+    <div class="grid">
+      <div class="card">
+        <h4>Hybridization</h4>
+        <p>sp$^3$ tetrahedral 109.5°, sp$^2$ planar 120°, sp linear 180°</p>
+        <p class="meta">Single, double, triple bonds.</p>
+      </div>
+      <div class="card">
+        <h4>Degree of unsaturation</h4>
+        <p>$(2n+2-m)/2$</p>
+        <p class="meta">Rings + $\pi$ bonds from formula alone.</p>
+      </div>
+      <div class="card">
+        <h4>IUPAC priority</h4>
+        <p>acid &gt; ester &gt; amide &gt; aldehyde &gt; ketone &gt; alcohol &gt; amine</p>
+        <p class="meta">Highest gets the suffix and the lowest locant.</p>
+      </div>
+      <div class="card">
+        <h4>Carbonyl reactivity</h4>
+        <p>Electrophilic at C, basic at O</p>
+        <p class="meta">Nucleophiles attack C; acids/H-bonds activate the C=O.</p>
+      </div>
+      <div class="card">
+        <h4>R/S assignment</h4>
+        <p>Rank 1-4 by Z, orient #4 away, trace 1→2→3</p>
+        <p class="meta">CW = R, CCW = S.</p>
+      </div>
+      <div class="card">
+        <h4>S$_N$1 vs S$_N$2</h4>
+        <p>1: stepwise, 3° favored, racemizes</p>
+        <p class="meta">2: concerted, 1° favored, inverts (Walden).</p>
+      </div>
+      <div class="card">
+        <h4>Markovnikov</h4>
+        <p>"H goes where the H's are"</p>
+        <p class="meta">HX across alkene → more stable carbocation intermediate.</p>
+      </div>
+      <div class="card">
+        <h4>EAS directing</h4>
+        <p>Donors → o/p activators. Acceptors → m deactivators. Halogens → o/p deactivators.</p>
+        <p class="meta">Exception exists.</p>
+      </div>
+      <div class="card">
+        <h4>Retrosynthesis</h4>
+        <p>Disconnect at functional groups; map synthons to reagents</p>
+        <p class="meta">⇒ arrow is reverse of →.</p>
+      </div>
+      <div class="card">
+        <h4>Lipinski Ro5</h4>
+        <p>MW &lt; 500, logP &lt; 5, HBD ≤ 5, HBA ≤ 10</p>
+        <p class="meta">Rough oral-bioavailability filter.</p>
+      </div>
+    </div>
+
+    <h3>See also</h3>
+    <div class="see-also">
+      <div class="card">
+        <h4><a href="./bonding.html">Bonding</a></h4>
+        <p>Hybridization, MO theory, and intermolecular forces are the bedrock of everything on this page. Drug-target binding is mostly IMFs.</p>
+      </div>
+      <div class="card">
+        <h4><a href="./equilibrium.html">Chemical equilibrium</a></h4>
+        <p>Every reversible organic reaction has a $K$. Imine formation, esterification, and tautomerism are equilibria you push with Le Chatelier.</p>
+      </div>
+      <div class="card">
+        <h4><a href="./biochemistry.html">Biochemistry</a></h4>
+        <p>Enzymes are organic-chemistry catalysts tuned by billions of years of evolution. Amino acids, sugars, and nucleotides are just functional-group salads on carbon skeletons.</p>
+      </div>
+      <div class="card">
+        <h4><a href="./quantum-chemistry.html">Quantum chemistry</a></h4>
+        <p>Arrow-pushing is shorthand for what electrons really do. DFT tells you the transition state energies and the selectivities.</p>
+      </div>
+      <div class="card">
+        <h4><a href="./kinetics.html">Kinetics</a></h4>
+        <p>The difference between S$_N$1 and S$_N$2 is a difference in rate law. Kinetics is how you tell mechanisms apart experimentally.</p>
+      </div>
+    </div>
+
+    <div class="bib">
+      <h4>Further reading</h4>
+      <ul>
+        <li>Jonathan Clayden, Nick Greeves, and Stuart Warren — <em>Organic Chemistry</em> (2nd ed., Oxford, 2012). The reference modern textbook. Mechanism-first, exceptionally clear.</li>
+        <li>Kurt C. Peter Vollhardt and Neil E. Schore — <em>Organic Chemistry: Structure and Function</em> (8th ed.). The standard US undergraduate text.</li>
+        <li>E. J. Corey and Xue-Min Cheng — <em>The Logic of Chemical Synthesis</em> (Wiley, 1995). Retrosynthesis from the person who won the 1990 Nobel for inventing it.</li>
+        <li>Francis A. Carey and Richard J. Sundberg — <em>Advanced Organic Chemistry</em>, parts A and B. Graduate-level with mechanism and synthesis split into two volumes.</li>
+        <li>Marc B. Smith — <em>March's Advanced Organic Chemistry</em> (8th ed., Wiley, 2019). The definitive reference desk book. Every named reaction, every selectivity rule.</li>
+        <li>RDKit documentation — <a href="https://www.rdkit.org/">rdkit.org</a>. Open-source cheminformatics toolkit used throughout industry and academia.</li>
+      </ul>
+    </div>
+
+    <div class="next-card">
+      <div class="label">NEXT UP</div>
+      <a href="./biochemistry.html">→ Biochemistry</a>
+      <p>Now that you can read organic structures and mechanisms, you're ready for the subject where those structures are proteins, DNA, and metabolites, and those mechanisms are catalyzed by enzymes operating at breathtaking selectivity.</p>
+    </div>
+
+  </article>
+</div>
+
+<script>
+// =========================================================
+// Code tabs
+document.querySelectorAll('.code-tabs').forEach(root => {
+  const tabs = root.querySelectorAll('.ct-tab');
+  const panels = root.querySelectorAll('.ct-panel');
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const target = tab.getAttribute('data-tab');
+      tabs.forEach(t => t.classList.toggle('active', t === tab));
+      panels.forEach(p => p.classList.toggle('active', p.getAttribute('data-tab') === target));
+    });
+  });
+});
+
+// =========================================================
+// SN1/SN2/E1/E2 selector visualization
+(function() {
+  const svg = document.getElementById('oMechSvg');
+  if (!svg) return;
+  const NS = 'http://www.w3.org/2000/svg';
+  const sub  = document.getElementById('oSub');
+  const nu   = document.getElementById('oNu');
+  const base = document.getElementById('oBase');
+  const solv = document.getElementById('oSolv');
+  const caption = document.getElementById('oMechCaption');
+
+  const W = 720, H = 360;
+  const ml = 100, mr = 30, mt = 40, mb = 50;
+  const plotW = W - ml - mr;
+  const plotH = H - mt - mb;
+
+  function mkText(x, y, txt, color, size, anchor) {
+    const t = document.createElementNS(NS, 'text');
+    t.setAttribute('x', x); t.setAttribute('y', y);
+    t.setAttribute('fill', color || '#b4c4d4');
+    t.setAttribute('font-size', size || 12);
+    t.setAttribute('font-family', 'ui-monospace, monospace');
+    if (anchor) t.setAttribute('text-anchor', anchor);
+    t.textContent = txt;
+    return t;
+  }
+  function mkRect(x, y, w, h, fill, stroke) {
+    const r = document.createElementNS(NS, 'rect');
+    r.setAttribute('x', x); r.setAttribute('y', y);
+    r.setAttribute('width', w); r.setAttribute('height', h);
+    r.setAttribute('fill', fill);
+    if (stroke) { r.setAttribute('stroke', stroke); r.setAttribute('stroke-width', 1); }
+    return r;
+  }
+
+  // scoring function based on standard rules
+  function score() {
+    const s = sub.value; // '1','2','3'
+    const nuStr = nu.value;      // weak/strong
+    const baStr = base.value;    // weak/bulky
+    const sol   = solv.value;    // protic/aprotic
+
+    let sn1 = 0, sn2 = 0, e1 = 0, e2 = 0;
+
+    // Substrate effect
+    if (s === '1') { sn2 += 3; }
+    if (s === '2') { sn2 += 1; sn1 += 1; e1 += 1; e2 += 1; }
+    if (s === '3') { sn1 += 2; e1 += 2; e2 += 2; }
+
+    // Nucleophile strength
+    if (nuStr === 'strong') { sn2 += 2; }
+    else { sn1 += 1; e1 += 1; }
+
+    // Base strength/bulk
+    if (baStr === 'bulky') { e2 += 3; sn2 -= 1; }
+    else { sn2 += 1; }
+
+    // Solvent
+    if (sol === 'protic') { sn1 += 2; e1 += 1; sn2 -= 1; }
+    else { sn2 += 2; e2 += 1; }
+
+    // 1° substrate basically can't do SN1/E1
+    if (s === '1') { sn1 = 0; e1 = 0; }
+    // 3° can't do SN2 (sterically)
+    if (s === '3') { sn2 = 0; }
+
+    const vals = [sn1, sn2, e1, e2].map(v => Math.max(v, 0));
+    const total = vals.reduce((a,b)=>a+b, 0) || 1;
+    return {
+      labels: ['S_N1', 'S_N2', 'E1', 'E2'],
+      fractions: vals.map(v => v / total),
+      raw: vals,
+    };
+  }
+
+  function draw() {
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+    svg.appendChild(mkRect(ml, mt, plotW, plotH, '#0f131a', '#2a3446'));
+
+    const r = score();
+    const n = r.labels.length;
+    const barW = plotW / n * 0.55;
+    const step = plotW / n;
+
+    // gridlines 0, 0.25, 0.5, 0.75, 1
+    for (let f = 0; f <= 1.0001; f += 0.25) {
+      const y = mt + plotH - f * plotH;
+      const line = document.createElementNS(NS, 'line');
+      line.setAttribute('x1', ml); line.setAttribute('y1', y);
+      line.setAttribute('x2', ml + plotW); line.setAttribute('y2', y);
+      line.setAttribute('stroke', '#1a212e'); line.setAttribute('stroke-width', 1);
+      svg.appendChild(line);
+      svg.appendChild(mkText(ml - 6, y + 4, (f*100).toFixed(0) + '%', '#7a8a9a', 11, 'end'));
+    }
+
+    const colors = ['#7c5cff', '#22d3ee', '#f472b6', '#a3e635'];
+
+    for (let i = 0; i < n; i++) {
+      const cx = ml + step * (i + 0.5);
+      const h = r.fractions[i] * plotH;
+      svg.appendChild(mkRect(cx - barW/2, mt + plotH - h, barW, h, colors[i]));
+      svg.appendChild(mkText(cx, mt + plotH + 18, r.labels[i], '#b4c4d4', 13, 'middle'));
+      svg.appendChild(mkText(cx, mt + plotH - h - 6, (r.fractions[i]*100).toFixed(0) + '%', colors[i], 12, 'middle'));
+    }
+
+    // title
+    svg.appendChild(mkText(ml + plotW/2, mt - 18,
+      'Predicted mechanism distribution',
+      '#e6ecf5', 13, 'middle'));
+
+    // pick the winner
+    let best = 0;
+    for (let i = 1; i < n; i++) if (r.fractions[i] > r.fractions[best]) best = i;
+    const winner = r.labels[best].replace('_','');
+    caption.textContent =
+      'Conditions: ' + sub.options[sub.selectedIndex].text +
+      ', ' + nu.options[nu.selectedIndex].text +
+      ', ' + base.options[base.selectedIndex].text +
+      ', ' + solv.options[solv.selectedIndex].text +
+      '. Most likely mechanism: ' + winner + '.';
+  }
+
+  [sub, nu, base, solv].forEach(el => el.addEventListener('change', draw));
+  draw();
+})();
+</script>
+<script defer src="../problem-set.js"></script>
+<script defer src="organic-chemistry-problems.js"></script>
+</body>
+</html>

@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quantum Chemistry — Deep Dive</title>
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError: false});"></script>
+</head>
+<body>
+<div id="tooltip"></div>
+
+<nav class="topic-nav">
+  <a class="back" href="../index.html">← Learning Hub</a>
+  <div class="crumb">Chemistry / <span class="topic-name">Quantum Chemistry</span></div>
+</nav>
+
+<div class="topic-layout">
+  <aside class="topic-toc">
+    <h4>ON THIS PAGE</h4>
+    <ul>
+      <li><a href="#why">1. Why quantum chemistry matters</a></li>
+      <li><a href="#vocab">2. Vocabulary cheat sheet</a></li>
+      <li><a href="#eq">3. The molecular Schrödinger equation</a></li>
+      <li><a href="#bo">4. Born-Oppenheimer approximation</a></li>
+      <li><a href="#hf">5. Hartree-Fock method</a></li>
+      <li><a href="#basis">6. Basis sets</a></li>
+      <li><a href="#posthf">7. Post-Hartree-Fock methods</a></li>
+      <li><a href="#dft">8. Density functional theory</a></li>
+      <li><a href="#demo">9. Interactive: method comparison</a></li>
+      <li><a href="#practice">10. How a calculation is run in practice</a></li>
+      <li><a href="#code">11. Quantum chemistry in code</a></li>
+      <li><a href="#summary">12. Cheat sheet</a></li>
+    </ul>
+  </aside>
+
+  <article class="topic-content">
+    <h1>Quantum Chemistry</h1>
+    <p class="subtitle">Quantum chemistry is the machinery that turns "what does the Schrödinger equation say about this molecule?" into a practical number — a bond length, a reaction barrier, an excitation energy, a binding affinity. You will meet the equation, the Born-Oppenheimer split, Hartree-Fock mean-field theory, basis sets and how they encode atoms, the correlated methods that refine HF, density functional theory and its zoo of functionals, and finally a walkthrough of what a working computational chemist actually does at the keyboard.</p>
+    <div class="meta-tags">
+      <span>Prereq: <a href="./atomic-structure.html">atomic structure</a>, <a href="../physics/quantum-mechanics.html">quantum mechanics</a>, <a href="../math/linear-algebra.html">linear algebra</a></span>
+      <span>Read time: ~55 min</span>
+      <span>Interactive figures: 1</span>
+      <span>Code: PySCF / NumPy</span>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="why">1. Why quantum chemistry matters</h2>
+
+    <p>A molecule is, at bottom, a small collection of nuclei and electrons glued together by Coulomb's law and the rules of quantum mechanics. Everything else — its shape, its vibration frequencies, its color, its reactivity, whether it binds a protein, whether it catches fire, whether it conducts electricity — is downstream. If you could solve the Schrödinger equation exactly for any molecule, you would have a complete physical theory of chemistry. For molecules with more than two electrons, you cannot solve it exactly. Quantum chemistry is the art and science of solving it approximately, and well enough to predict the number you need.</p>
+
+    <p>That sounds academic until you realize that computational chemistry now sits on the critical path of major industries. Every pharmaceutical company runs docking and QM/MM calculations on lead compounds before synthesizing them. Every battery company uses DFT to screen electrolytes and electrode materials. Every catalyst group at a national lab or materials startup runs DFT to map transition states and tune selectivity. Semiconductor foundries use it to model defect energies. Even AI weather models and molecular dynamics force fields increasingly borrow their ground truth from quantum-chemistry reference calculations.</p>
+
+    <div class="callout">
+      <div class="label">THE PUNCHLINE</div>
+      <p>You cannot solve the many-electron Schrödinger equation for anything bigger than H$_2^+$. The whole subject is a hierarchy of approximations, each trading cost for accuracy, each with known failure modes. Knowing which method to pick for which problem is 80% of being good at this.</p>
+    </div>
+
+    <p>Reasons to care, whether you are a materials researcher, a pharma scientist, a battery engineer, or an ML practitioner:</p>
+
+    <ul>
+      <li><strong>Drug design.</strong> QM calculations on protein-ligand complexes (QM/MM) give you reaction barriers for enzymes, binding energies for tight inhibitors, and $pK_a$ predictions for ionizable groups.</li>
+      <li><strong>Materials and catalysts.</strong> DFT is the workhorse for predicting cohesive energies, band gaps, surface reconstructions, and transition-state energies on heterogeneous catalysts.</li>
+      <li><strong>Spectroscopy.</strong> IR, UV-vis, NMR chemical shifts, and EPR parameters all have quantum-chemical expressions and routinely computed accuracy better than experiment.</li>
+      <li><strong>Environmental chemistry.</strong> Atmospheric radical reactions, photolysis cross-sections, and aerosol nucleation energies are computed by QC before being used in climate models.</li>
+      <li><strong>ML + QC.</strong> Neural network potentials (ANI, SchNet, NequIP, Allegro, MACE) are trained on DFT or CCSD(T) reference data. The data you feed them is still the rate-limiting step.</li>
+    </ul>
+
+    <p>This page assumes you have met <a href="./atomic-structure.html">atoms and orbitals</a> and the very basics of <a href="../physics/quantum-mechanics.html">quantum mechanics</a> (Schrödinger equation, wavefunctions, operators). Everything else we build.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="vocab">2. Vocabulary cheat sheet</h2>
+
+    <table class="rank-table">
+      <thead><tr><th>Symbol / term</th><th>Read as</th><th>Means</th></tr></thead>
+      <tbody>
+        <tr><td>$\hat H$</td><td>"H-hat" or Hamiltonian</td><td>Energy operator. Its eigenvalues are allowed total energies.</td></tr>
+        <tr><td>$\Psi$</td><td>"Psi"</td><td>Many-electron wavefunction. $|\Psi|^2$ is a probability density for finding electrons.</td></tr>
+        <tr><td>$\rho(\mathbf r)$</td><td>"rho" or electron density</td><td>Probability of finding any electron at position $\mathbf r$. Central object of DFT.</td></tr>
+        <tr><td>BO</td><td>"Born-Oppenheimer"</td><td>Nuclei are fixed while electrons equilibrate; electronic energy depends on nuclear positions.</td></tr>
+        <tr><td>HF</td><td>"Hartree-Fock"</td><td>Mean-field approximation: each electron sees the average field of the others.</td></tr>
+        <tr><td>SCF</td><td>"self-consistent field"</td><td>Iterative solution where the electronic field and orbitals are updated together until they stop changing.</td></tr>
+        <tr><td>Basis set</td><td>—</td><td>A finite collection of atom-centered functions used to expand the unknown orbitals.</td></tr>
+        <tr><td>MP2, CCSD, CCSD(T)</td><td>—</td><td>Post-HF methods that include electron correlation; CCSD(T) is the "gold standard."</td></tr>
+        <tr><td>DFT</td><td>"density functional theory"</td><td>Alternative to wavefunction methods: compute energy from $\rho(\mathbf r)$ via a functional.</td></tr>
+        <tr><td>B3LYP, PBE, M06-2X</td><td>—</td><td>Widely used DFT functionals.</td></tr>
+        <tr><td>$E_{\text{xc}}$</td><td>"exchange-correlation energy"</td><td>The unknown-and-approximated piece of the DFT energy. All the art lives here.</td></tr>
+      </tbody>
+    </table>
+
+    <!-- ========================================================== -->
+    <h2 id="eq">3. The molecular Schrödinger equation</h2>
+
+    <p>Write down the Hamiltonian of a molecule with $M$ nuclei and $N$ electrons:</p>
+
+    <div class="math-display">$$ \hat H \;=\; -\sum_{A=1}^{M}\frac{\hbar^2}{2 M_A}\nabla_A^2 \;-\; \sum_{i=1}^{N}\frac{\hbar^2}{2 m_e}\nabla_i^2 \;+\; \sum_{A<B}\frac{Z_A Z_B e^2}{4\pi\epsilon_0 R_{AB}} \;-\; \sum_{i,A}\frac{Z_A e^2}{4\pi\epsilon_0 r_{iA}} \;+\; \sum_{i<j}\frac{e^2}{4\pi\epsilon_0 r_{ij}}. $$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">The full molecular Hamiltonian</p>
+      <dl>
+        <dt>$\hat H$</dt><dd>Total energy operator. Its eigenvalues are allowed energies of the molecule; its eigenfunctions are the many-body wavefunctions.</dd>
+        <dt>$M$, $N$</dt><dd>Number of nuclei and number of electrons, respectively.</dd>
+        <dt>$M_A$, $Z_A$</dt><dd>Mass and charge (atomic number) of nucleus $A$.</dd>
+        <dt>$m_e$, $e$</dt><dd>Electron mass and elementary charge.</dd>
+        <dt>$\hbar$</dt><dd>Reduced Planck constant. Quantum of action.</dd>
+        <dt>$\nabla_A^2$, $\nabla_i^2$</dt><dd>Laplacian with respect to the coordinates of nucleus $A$ (or electron $i$). The kinetic energy operators.</dd>
+        <dt>$R_{AB}$, $r_{iA}$, $r_{ij}$</dt><dd>Distances: nucleus-nucleus, electron-nucleus, and electron-electron, respectively.</dd>
+        <dt>$\epsilon_0$</dt><dd>Vacuum permittivity, the constant in Coulomb's law.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Reading it term by term.</strong> The first term is nuclear kinetic energy, the second is electronic kinetic energy, and the last three are the three Coulomb interactions (nucleus-nucleus repulsion, electron-nucleus attraction, electron-electron repulsion). Everything quantum-chemical is an attack on this expression.</p>
+    </div>
+
+    <p>The time-independent Schrödinger equation for the whole molecule is $\hat H \Psi(\mathbf R, \mathbf r) = E \Psi(\mathbf R, \mathbf r)$, where $\mathbf R$ collects all nuclear coordinates and $\mathbf r$ collects all electron coordinates. This is a partial differential equation in $3(M + N)$ variables. For a single water molecule, that is $3 \cdot (3 + 10) = 39$ spatial dimensions. Direct numerical solution is hopeless beyond the smallest systems.</p>
+
+    <p>Chemists in atomic units set $\hbar = m_e = e = 4\pi\epsilon_0 = 1$. Distances come out in <strong>bohr</strong> ($a_0 \approx 0.529$ Å), energies in <strong>hartree</strong> (1 E$_h$ $\approx 27.2$ eV $\approx 627.5$ kcal/mol). Everything below is in atomic units unless stated otherwise.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="bo">4. Born-Oppenheimer approximation</h2>
+
+    <p>A proton is 1836 times heavier than an electron. On the timescale that electrons move, the nuclei look frozen. Max Born and J. Robert Oppenheimer (1927) exploited this: write the total wavefunction as a product of a nuclear piece and an electronic piece,</p>
+
+    <div class="math-display">$$ \Psi(\mathbf R, \mathbf r) \;\approx\; \chi(\mathbf R)\, \psi_{\text{el}}(\mathbf r; \mathbf R), $$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">The Born-Oppenheimer factorization</p>
+      <dl>
+        <dt>$\chi(\mathbf R)$</dt><dd>Nuclear wavefunction — depends only on the nuclear positions. Captures vibrations, rotations, and translation.</dd>
+        <dt>$\psi_{\text{el}}(\mathbf r; \mathbf R)$</dt><dd>Electronic wavefunction, which depends on the electron coordinates $\mathbf r$ but is parametric in $\mathbf R$ — solved at each fixed nuclear geometry.</dd>
+        <dt>$;$</dt><dd>Semicolon separates the independent variables ($\mathbf r$) from the parameters ($\mathbf R$). Standard notation.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why the split works.</strong> Because electrons are light, they adjust near-instantaneously to wherever the nuclei are. Solve the electronic Schrödinger equation at each fixed geometry and you get a potential energy function $E_{\text{el}}(\mathbf R)$ — the <em>potential energy surface</em> (PES) — on which the nuclei move. The PES is the central concept of all molecular dynamics, reaction rate theory, and vibrational spectroscopy.</p>
+    </div>
+
+    <p>Plug into the full Schrödinger equation and (dropping small terms) you get the <strong>electronic Schrödinger equation</strong> at fixed nuclear geometry $\mathbf R$:</p>
+
+    <div class="math-display">$$ \hat H_{\text{el}}(\mathbf R) \, \psi_{\text{el}}(\mathbf r; \mathbf R) \;=\; E_{\text{el}}(\mathbf R)\, \psi_{\text{el}}(\mathbf r; \mathbf R). $$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Electronic Schrödinger equation</p>
+      <dl>
+        <dt>$\hat H_{\text{el}}(\mathbf R)$</dt><dd>Electronic Hamiltonian — same as $\hat H$ minus the nuclear kinetic term, with the nuclear coordinates treated as fixed parameters.</dd>
+        <dt>$\psi_{\text{el}}$</dt><dd>The electronic wavefunction. Contains everything you want to know about bonding, electron density, and so on.</dd>
+        <dt>$E_{\text{el}}(\mathbf R)$</dt><dd>Electronic energy at that nuclear geometry. Varying $\mathbf R$ and recomputing gives you the potential energy surface.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>When BO breaks.</strong> Near conical intersections (where two electronic states cross), the electronic wavefunction changes abruptly as the nuclei move, and the assumption that electrons adjust instantly fails. Photochemistry, singlet fission in solar cells, and the non-adiabatic transitions in retinal isomerization are all Born-Oppenheimer breakdowns you have to handle specially.</p>
+    </div>
+
+    <p>From here on, "solving quantum chemistry" almost always means solving the <em>electronic</em> equation at one or more nuclear geometries. The nuclei are a parameter.</p>
+
+    <div class="problem-set" data-topic="chem-qc-foundations"></div>
+
+    <!-- ========================================================== -->
+    <h2 id="hf">5. The Hartree-Fock method</h2>
+
+    <p>Even with nuclei frozen, the electronic equation couples every electron to every other through $1/r_{ij}$. Hartree-Fock (HF) is the simplest useful approximation: replace the true many-body problem with a set of one-electron problems, where each electron moves in the <em>average</em> field of all the others.</p>
+
+    <p>The HF ansatz for the ground-state wavefunction is a single <strong>Slater determinant</strong>:</p>
+
+    <div class="math-display">$$ \Psi_{\text{HF}}(\mathbf r_1, \ldots, \mathbf r_N) \;=\; \frac{1}{\sqrt{N!}} \det\!\left[\phi_1(\mathbf r_1)\,\phi_2(\mathbf r_2)\,\cdots\,\phi_N(\mathbf r_N)\right]. $$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">The Slater determinant</p>
+      <dl>
+        <dt>$\phi_i$</dt><dd>One-electron spin-orbital — a product of a spatial orbital and a spin function. The unknown we solve for.</dd>
+        <dt>$\det$</dt><dd>Determinant. Writing $\Psi$ as a determinant automatically makes it antisymmetric under swapping any two electrons, enforcing the Pauli principle.</dd>
+        <dt>$1/\sqrt{N!}$</dt><dd>Normalization factor so $\int |\Psi|^2 = 1$.</dd>
+        <dt>$\mathbf r_i$</dt><dd>Position (and spin) of the $i$-th electron.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why a determinant.</strong> Electrons are fermions — swapping any two must change the sign of $\Psi$. A determinant does exactly that automatically, because swapping two columns flips its sign. If two orbitals were identical, two columns would be equal, and the determinant (and the wavefunction) would be zero. That is the Pauli exclusion principle falling out of the math.</p>
+    </div>
+
+    <p>Applying the variational principle — minimize $\langle\Psi|\hat H|\Psi\rangle$ over the orbitals — gives the <strong>Hartree-Fock equations</strong>:</p>
+
+    <div class="math-display">$$ \hat f \, \phi_i \;=\; \varepsilon_i \, \phi_i, \qquad \hat f = \hat h + \sum_{j=1}^{N} \big(\hat J_j - \hat K_j\big). $$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Hartree-Fock equations</p>
+      <dl>
+        <dt>$\hat f$</dt><dd>Fock operator — the effective one-electron Hamiltonian felt by each electron in the mean field of the others.</dd>
+        <dt>$\hat h$</dt><dd>One-electron core Hamiltonian (kinetic energy + electron-nucleus attraction).</dd>
+        <dt>$\hat J_j$</dt><dd>Coulomb operator — classical electron-electron repulsion averaged over orbital $j$.</dd>
+        <dt>$\hat K_j$</dt><dd>Exchange operator — a purely quantum-mechanical correction from antisymmetry. Non-local, and the most expensive ingredient.</dd>
+        <dt>$\varepsilon_i$</dt><dd>Orbital energy of spin-orbital $\phi_i$. For the highest occupied orbital, $-\varepsilon_i$ approximates the ionization energy (Koopmans' theorem).</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Mean-field limitation.</strong> Because every electron sees only an averaged field, it does not dynamically "dodge" the instantaneous positions of the others. That missing dodging is called <em>electron correlation</em> and accounts for errors of tens of kcal/mol in bond energies. HF is a starting point, not the destination.</p>
+    </div>
+
+    <p>The Fock operator depends on the very orbitals you are trying to find. So Hartree-Fock is solved <strong>self-consistently</strong>: guess orbitals, build $\hat f$, diagonalize it to get new orbitals, repeat until nothing changes. The iteration is called the <em>Self-Consistent Field</em> (SCF) procedure, and it is the inner loop of almost every modern quantum chemistry code.</p>
+
+    <div class="callout good">
+      <div class="label">WHAT HF GIVES YOU — AND WHAT IT MISSES</div>
+      <p>Hartree-Fock gets you about 99% of the total electronic energy. Unfortunately, chemistry lives in the <em>last 1%</em>: bond dissociation energies, activation barriers, and intermolecular interactions are all differences between large numbers. HF systematically overestimates bond lengths, underestimates bond energies, and misses van der Waals interactions entirely. Worse, it fails qualitatively for systems with near-degenerate frontier orbitals (transition metals, bond breaking). You almost always need something better.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="basis">6. Basis sets — encoding orbitals on a computer</h2>
+
+    <p>You cannot represent an arbitrary function $\phi_i(\mathbf r)$ on a computer. You expand it in a finite set of pre-chosen functions:</p>
+
+    <div class="math-display">$$ \phi_i(\mathbf r) \;=\; \sum_{\mu=1}^{K} C_{\mu i} \, \chi_\mu(\mathbf r). $$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Basis expansion of a molecular orbital</p>
+      <dl>
+        <dt>$\phi_i$</dt><dd>The $i$-th molecular orbital (an unknown to be determined).</dd>
+        <dt>$\chi_\mu$</dt><dd>A basis function — typically centered on one of the atoms. Often a sum of Gaussians chosen to mimic a Slater orbital.</dd>
+        <dt>$C_{\mu i}$</dt><dd>Coefficient — how much of $\chi_\mu$ goes into $\phi_i$. These are the unknowns the SCF procedure finds.</dd>
+        <dt>$K$</dt><dd>Number of basis functions. Typically a few dozen to a few thousand, depending on the system and target accuracy.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why Gaussians.</strong> The true atomic orbitals are Slater-type (exponential decay, $e^{-\zeta r}$), but products of two Slater functions on different centers have no closed-form integral. Boys (1950) showed that a product of two Gaussians centered on different atoms is another Gaussian on a third point — which makes the four-center electron-repulsion integrals analytically tractable. That single observation is what made modern quantum chemistry possible.</p>
+    </div>
+
+    <h3>The Pople zoo</h3>
+
+    <p>Standard chemistry basis sets are built up from primitive Gaussians and labeled with a coded name:</p>
+
+    <ul>
+      <li><strong>STO-3G</strong> — "Slater-type orbital approximated by 3 Gaussians." Minimal basis: one function per occupied orbital. Tiny, fast, and qualitatively wrong for most things, but great for teaching.</li>
+      <li><strong>3-21G, 6-31G</strong> — Split-valence. Core electrons get one function, valence electrons get two (split for flexibility). 6-31G has 6 primitives contracted into one core function plus 3+1 valence.</li>
+      <li><strong>6-31G*</strong> (or 6-31G(d)) — Add polarization functions (d-functions on heavy atoms). Lets the orbitals polarize under bonding.</li>
+      <li><strong>6-31G**</strong> (or 6-31G(d,p)) — Add p-functions on hydrogens too. Useful when H's are doing interesting chemistry (e.g. hydrogen bonding).</li>
+      <li><strong>6-31+G*</strong> — Add diffuse functions for anions and excited states.</li>
+      <li><strong>cc-pVDZ, cc-pVTZ, cc-pVQZ</strong> — Correlation-consistent (Dunning). Designed for systematic convergence of correlated calculations. DZ, TZ, QZ mean double/triple/quadruple zeta — each level adds one more function per orbital.</li>
+      <li><strong>def2-SVP, def2-TZVP</strong> — Karlsruhe basis sets, widely used with DFT.</li>
+    </ul>
+
+    <div class="defn">
+      <strong>Rule of thumb.</strong> 6-31G* or def2-SVP for routine DFT of organics. cc-pVTZ and up for correlated wavefunction methods. cc-pVQZ or larger for benchmark-quality CCSD(T). STO-3G only for toy calculations or teaching.
+    </div>
+
+    <p>A minimal basis for water is 7 functions. A 6-31G* basis for water is 19. A cc-pVQZ basis for water is 115. The cost of a Hartree-Fock or DFT calculation scales roughly as $O(K^4)$ in the worst case, so basis-set size is a big deal.</p>
+
+    <div class="problem-set" data-topic="chem-qc-hf-basis"></div>
+
+    <!-- ========================================================== -->
+    <h2 id="posthf">7. Post-Hartree-Fock — adding electron correlation</h2>
+
+    <p>Electron correlation is the difference between the exact energy and the Hartree-Fock energy. All the effort beyond HF goes into recovering as much of it as possible. The main options, in increasing cost and accuracy:</p>
+
+    <ul>
+      <li><strong>MP2 (Møller-Plesset second order).</strong> Treat electron correlation as a perturbation on top of HF. Gives ~80-90% of correlation energy at a cost of $O(N^5)$. Decent for weak interactions and reasonable geometries. Poor for systems with small HOMO-LUMO gaps.</li>
+      <li><strong>CI (Configuration Interaction).</strong> Expand the wavefunction in multiple Slater determinants (HF ground + excited configurations) and let the coefficients vary. Full CI is exact within the basis, but cost scales exponentially. Truncated CI (CIS, CISD) is cheaper but not size-consistent.</li>
+      <li><strong>CCSD and CCSD(T).</strong> Coupled cluster with single and double excitations (CCSD) or with perturbative triples (CCSD(T)). The latter is the "gold standard" of single-reference quantum chemistry. Cost $O(N^6)$ for CCSD, $O(N^7)$ for CCSD(T).</li>
+      <li><strong>CASSCF / CASPT2.</strong> Multi-reference methods. Needed when a single determinant cannot even qualitatively describe the system (biradicals, transition-metal complexes, bond breaking). Expensive and requires chemical judgment to choose the active space.</li>
+    </ul>
+
+    <p>As a gut rule, <strong>CCSD(T)/cc-pVQZ</strong> on a closed-shell organic molecule hits around 1 kcal/mol accuracy on reaction energies. Reaching that costs orders of magnitude more CPU than DFT, which is why DFT dominates routine work and CCSD(T) is used for benchmarks.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="dft">8. Density functional theory</h2>
+
+    <p>DFT takes a radically different approach: forget the many-electron wavefunction and work with the electron density $\rho(\mathbf r)$ instead. The density is a function of just three spatial variables, no matter how many electrons there are — so you have swapped a $3N$-dimensional problem for a 3-dimensional one. If that sounds too good to be true, it is, and the catch lives in a single ugly term.</p>
+
+    <div class="defn">
+      <strong>Hohenberg-Kohn theorem (1964).</strong> For a given external potential (the nuclei), the ground-state electron density $\rho(\mathbf r)$ uniquely determines the full ground-state wavefunction, and therefore every ground-state property. There is a universal energy functional $E[\rho]$ whose minimum is the ground-state energy, and whose minimizer is the ground-state density.
+    </div>
+
+    <p>Kohn and Sham (1965) operationalized this by mapping the interacting electron system onto a <em>fictitious</em> non-interacting system that has the same density. The orbitals of the non-interacting system obey an HF-looking equation, the <strong>Kohn-Sham equation</strong>:</p>
+
+    <div class="math-display">$$ \left[ -\tfrac{1}{2}\nabla^2 + v_{\text{ext}}(\mathbf r) + v_H[\rho](\mathbf r) + v_{\text{xc}}[\rho](\mathbf r) \right]\phi_i^{\text{KS}} \;=\; \varepsilon_i\,\phi_i^{\text{KS}}. $$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Kohn-Sham equations</p>
+      <dl>
+        <dt>$-\tfrac{1}{2}\nabla^2$</dt><dd>Kinetic energy operator (in atomic units).</dd>
+        <dt>$v_{\text{ext}}$</dt><dd>External potential — the Coulomb attraction of the nuclei.</dd>
+        <dt>$v_H[\rho]$</dt><dd>Hartree potential — the classical Coulomb repulsion of the electron density with itself.</dd>
+        <dt>$v_{\text{xc}}[\rho]$</dt><dd>Exchange-correlation potential — everything we do not know, lumped into one term.</dd>
+        <dt>$\phi_i^{\text{KS}}$</dt><dd>Kohn-Sham orbital. Mathematically a one-electron orbital, not the "real" wavefunction, but its density adds up to the true $\rho$.</dd>
+        <dt>$\varepsilon_i$</dt><dd>Kohn-Sham orbital energy. Not a true physical energy (except for the highest occupied, which is exactly minus the ionization energy).</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Where the art lives.</strong> The entire cleverness and all the failure modes of DFT live in the choice of exchange-correlation functional $E_{\text{xc}}[\rho]$ that gives rise to $v_{\text{xc}}$. There is no general recipe for writing it down, and the zoo of functionals below reflects different strategies for approximating the unknown.</p>
+    </div>
+
+    <h3>The functional zoo: Jacob's ladder</h3>
+
+    <p>John Perdew organized functionals into five rungs of a ladder, each adding one more ingredient that the functional can see:</p>
+
+    <ol>
+      <li><strong>LDA (local density approximation).</strong> $E_{\text{xc}}$ depends only on $\rho(\mathbf r)$ at each point. Exact for a uniform electron gas. Underestimates bond lengths and overbinds. Too crude for chemistry but fine for solid-state metals.</li>
+      <li><strong>GGA (generalized gradient approximation).</strong> Depends on $\rho$ and $|\nabla\rho|$. The classic GGA is PBE (Perdew-Burke-Ernzerhof, 1996) — still the workhorse of materials science. BLYP and PW91 are also common.</li>
+      <li><strong>meta-GGA.</strong> Adds the kinetic energy density $\tau$ or the Laplacian $\nabla^2\rho$. SCAN, M06-L, TPSS.</li>
+      <li><strong>Hybrid functionals.</strong> Mix in a fraction of exact HF exchange. <strong>B3LYP</strong> (Becke 3-parameter, Lee-Yang-Parr, 1994) is by far the most cited functional in chemistry. PBE0, M06-2X, $\omega$B97X-D are modern competitors.</li>
+      <li><strong>Double hybrids.</strong> Also include a bit of MP2 correlation. Even more accurate, more expensive. B2PLYP, DSD-PBEP86.</li>
+    </ol>
+
+    <div class="callout">
+      <div class="label">WHAT TO PICK</div>
+      <p>Routine organic chemistry: <strong>B3LYP/6-31G*</strong> or <strong>$\omega$B97X-D/def2-TZVP</strong>. Non-covalent interactions (docking, host-guest): <strong>$\omega$B97X-D</strong> or <strong>B3LYP-D3</strong> (with dispersion correction). Transition metals: <strong>M06</strong>, <strong>TPSS</strong>, or multi-reference methods. Solids and surfaces: <strong>PBE</strong> or <strong>SCAN</strong>. If you need reference accuracy: <strong>CCSD(T)/CBS</strong> and skip DFT altogether.</p>
+    </div>
+
+    <p>Two persistent failure modes you should always keep in mind. First, standard DFT has no dispersion (van der Waals), so it does not bind stacked aromatic rings or fold peptides correctly without an empirical correction like Grimme's D3 or D4. Second, self-interaction error — an electron spuriously interacts with itself through the Hartree term — causes delocalization errors, and in extreme cases predicts the wrong ground state (e.g. dissociating H$_2^+$ to two half-electrons). Range-separated hybrids like $\omega$B97X address this partially.</p>
+
+    <div class="problem-set" data-topic="chem-qc-dft"></div>
+
+    <!-- ========================================================== -->
+    <h2 id="demo">9. Interactive: method accuracy vs cost</h2>
+
+    <p>Pick a method and a basis set and the figure shows an approximate cost (relative to HF/STO-3G = 1) and an approximate mean-absolute-error on reaction energies (kcal/mol) for a typical small-molecule benchmark. These numbers are illustrative not authoritative — real errors depend heavily on the system — but the shape of the trade-off is real.</p>
+
+    <div class="viz-3d">
+      <div class="v3-controls">
+        <span class="v3-label">Method:</span>
+        <select id="qMethod" style="background:#0f131a;color:#e6ecf5;border:1px solid #2a3446;border-radius:4px;padding:4px 8px;">
+          <option value="hf">HF</option>
+          <option value="mp2">MP2</option>
+          <option value="b3lyp" selected>B3LYP (DFT)</option>
+          <option value="wb97xd">$\omega$B97X-D (DFT)</option>
+          <option value="ccsd">CCSD</option>
+          <option value="ccsdt">CCSD(T)</option>
+        </select>
+        <span class="v3-label">Basis:</span>
+        <select id="qBasis" style="background:#0f131a;color:#e6ecf5;border:1px solid #2a3446;border-radius:4px;padding:4px 8px;">
+          <option value="sto3g">STO-3G</option>
+          <option value="631g">6-31G</option>
+          <option value="631gdp" selected>6-31G(d,p)</option>
+          <option value="ccpvtz">cc-pVTZ</option>
+          <option value="ccpvqz">cc-pVQZ</option>
+        </select>
+      </div>
+      <svg id="qcSvg" viewBox="0 0 720 360" style="width:100%;height:auto;background:#0a0d12;border-radius:6px;"></svg>
+      <p class="v3-caption" id="qcCaption">Log-scale dot with cost on the X axis and mean absolute error (MAE) on the Y axis. Lower and cheaper is better — the lower-left is the practical sweet spot.</p>
+    </div>
+
+    <p>Things to look for:</p>
+
+    <ul>
+      <li>HF/STO-3G sits at the origin but with enormous error. Fine for teaching, bad for predictions.</li>
+      <li>B3LYP/6-31G* lives near the lower-left — a few kcal/mol of error for modest cost. This is why it has been the default for 25 years.</li>
+      <li>CCSD(T)/cc-pVQZ is near 1 kcal/mol error but costs orders of magnitude more. Benchmark territory.</li>
+      <li>MP2 is cheaper than CCSD but noticeably worse on dispersion-dominated systems.</li>
+    </ul>
+
+    <!-- ========================================================== -->
+    <h2 id="practice">10. How a calculation is run in practice</h2>
+
+    <p>A typical workflow for a medicinal or materials chemist wanting DFT results on a small molecule looks like this:</p>
+
+    <ol>
+      <li><strong>Build a starting structure.</strong> Either a SMILES string converted to 3D by RDKit, or a hand-drawn structure in Avogadro / GaussView / IQmol. Sanity-check bond lengths and hybridization.</li>
+      <li><strong>Pick a method and basis.</strong> Start with B3LYP-D3/def2-SVP or $\omega$B97X-D/def2-TZVP for most organic chemistry.</li>
+      <li><strong>Geometry optimization.</strong> Let the code relax atoms until forces are below a threshold ($\sim 10^{-4}$ Hartree/bohr). Check that the optimized structure is what you expected.</li>
+      <li><strong>Frequency calculation.</strong> Compute harmonic vibrational frequencies. Confirm a minimum (all real frequencies) or a transition state (exactly one imaginary). This also gives you thermodynamic corrections (ZPE, entropy).</li>
+      <li><strong>Single-point energy.</strong> Re-compute the energy at a larger basis or a higher method for the final number. A common recipe is "geometry optimization at B3LYP-D3/def2-SVP, single-point at DLPNO-CCSD(T)/def2-TZVP."</li>
+      <li><strong>Solvation and corrections.</strong> If your property involves solvent, re-run in a PCM or SMD continuum solvent model. If dispersion matters, use D3(BJ) or D4.</li>
+      <li><strong>Sanity-check the answer.</strong> Does the computed IR spectrum agree with experiment? Does the dipole moment match? Is the reaction energy on the order of what chemistry common sense says?</li>
+    </ol>
+
+    <p>Popular software (open-source and commercial):</p>
+
+    <ul>
+      <li><strong>PySCF</strong> (open source). Python-native, modular, perfect for hacking and teaching.</li>
+      <li><strong>Psi4</strong> (open source). Well-rounded; good coupled-cluster implementation.</li>
+      <li><strong>NWChem</strong>, <strong>Orca</strong>, <strong>Q-Chem</strong>. Free for academics; good DFT and correlated methods.</li>
+      <li><strong>Gaussian</strong> (commercial). The industry standard in pharma; polished, reliable, opinionated.</li>
+      <li><strong>VASP</strong>, <strong>Quantum ESPRESSO</strong>, <strong>CP2K</strong>. Plane-wave codes used for solids, surfaces, and AIMD.</li>
+      <li><strong>CP2K</strong>, <strong>BigDFT</strong>. Linear-scaling for biomolecules.</li>
+    </ul>
+
+    <!-- ========================================================== -->
+    <h2 id="code">11. Quantum chemistry in code</h2>
+
+    <p>A toy Hartree-Fock for H$_2$ in a minimal STO-3G basis, plus a high-level PySCF script that runs B3LYP on water.</p>
+
+    <div class="code-tabs" id="ct-qc">
+      <div class="ct-header">
+        <button class="ct-tab active" data-tab="np">PySCF</button>
+        <button class="ct-tab" data-tab="py">Toy HF (NumPy)</button>
+        <span class="ct-label">quantum chemistry primitives</span>
+      </div>
+
+      <div class="ct-panel active" data-tab="np"><pre><code><span class="cmt"># pip install pyscf</span>
+<span class="kw">from</span> pyscf <span class="kw">import</span> gto, scf, dft, cc
+
+<span class="cmt"># 1. Build a molecule.</span>
+mol = gto.<span class="fn">M</span>(
+    atom = <span class="str">"""</span>
+<span class="str">    O  0.000  0.000  0.117</span>
+<span class="str">    H  0.000  0.757 -0.469</span>
+<span class="str">    H  0.000 -0.757 -0.469</span>
+<span class="str">    """</span>,
+    basis = <span class="str">"6-31g(d,p)"</span>,
+)
+
+<span class="cmt"># 2. Hartree-Fock</span>
+mf_hf = scf.<span class="fn">RHF</span>(mol).<span class="fn">run</span>()
+<span class="fn">print</span>(<span class="str">f"HF total energy:   {mf_hf.e_tot:.6f} Eh"</span>)
+
+<span class="cmt"># 3. Same molecule with B3LYP</span>
+mf_dft = dft.<span class="fn">RKS</span>(mol)
+mf_dft.xc = <span class="str">"b3lyp"</span>
+mf_dft.<span class="fn">run</span>()
+<span class="fn">print</span>(<span class="str">f"B3LYP energy:      {mf_dft.e_tot:.6f} Eh"</span>)
+
+<span class="cmt"># 4. CCSD on top of HF for benchmark accuracy</span>
+cc_obj = cc.<span class="fn">CCSD</span>(mf_hf).<span class="fn">run</span>()
+<span class="fn">print</span>(<span class="str">f"CCSD correlation:  {cc_obj.e_corr:.6f} Eh"</span>)
+<span class="fn">print</span>(<span class="str">f"CCSD total:        {cc_obj.e_tot:.6f} Eh"</span>)
+
+<span class="cmt"># 5. Optimize geometry + vibrational frequencies</span>
+<span class="kw">from</span> pyscf.geomopt.geometric_solver <span class="kw">import</span> optimize
+mol_opt = <span class="fn">optimize</span>(mf_dft)
+<span class="kw">from</span> pyscf.hessian <span class="kw">import</span> thermo
+mf2 = dft.<span class="fn">RKS</span>(mol_opt); mf2.xc = <span class="str">"b3lyp"</span>; mf2.<span class="fn">run</span>()
+hessian = mf2.<span class="fn">Hessian</span>().<span class="fn">kernel</span>()
+freq_info = thermo.<span class="fn">harmonic_analysis</span>(mf2.mol, hessian)
+<span class="fn">print</span>(<span class="str">"frequencies (cm-1):"</span>, freq_info[<span class="str">"freq_wavenumber"</span>])
+</code></pre></div>
+
+      <div class="ct-panel" data-tab="py"><pre><code><span class="kw">import</span> numpy <span class="kw">as</span> np
+
+<span class="cmt"># Toy RHF for H2 at R = 1.4 bohr in a minimal basis.</span>
+<span class="cmt"># Integrals are hard-coded from standard tables for teaching.</span>
+
+<span class="cmt"># S: overlap, T: kinetic, V_ne: nuclear attraction (one-electron)</span>
+S    = np.array([[<span class="num">1.0</span>, <span class="num">0.6593</span>], [<span class="num">0.6593</span>, <span class="num">1.0</span>]])
+T    = np.array([[<span class="num">0.7600</span>, <span class="num">0.2365</span>], [<span class="num">0.2365</span>, <span class="num">0.7600</span>]])
+V_ne = np.array([[<span class="num">-1.8804</span>, <span class="num">-1.1948</span>], [<span class="num">-1.1948</span>, <span class="num">-1.8804</span>]])
+H_core = T + V_ne
+
+<span class="cmt"># Two-electron integrals (mu nu | la si) in chemists' notation</span>
+ERI = np.zeros((<span class="num">2</span>,<span class="num">2</span>,<span class="num">2</span>,<span class="num">2</span>))
+ERI[<span class="num">0</span>,<span class="num">0</span>,<span class="num">0</span>,<span class="num">0</span>] = ERI[<span class="num">1</span>,<span class="num">1</span>,<span class="num">1</span>,<span class="num">1</span>] = <span class="num">0.7746</span>
+ERI[<span class="num">0</span>,<span class="num">0</span>,<span class="num">1</span>,<span class="num">1</span>] = ERI[<span class="num">1</span>,<span class="num">1</span>,<span class="num">0</span>,<span class="num">0</span>] = <span class="num">0.5697</span>
+ERI[<span class="num">0</span>,<span class="num">1</span>,<span class="num">0</span>,<span class="num">1</span>] = ERI[<span class="num">1</span>,<span class="num">0</span>,<span class="num">1</span>,<span class="num">0</span>] = <span class="num">0.2970</span>
+<span class="cmt"># (Hermitian + permutation symmetry gives the rest; abbreviated here)</span>
+
+<span class="kw">def</span> <span class="fn">symm_orthog</span>(S):
+    eigval, U = np.linalg.<span class="fn">eigh</span>(S)
+    <span class="kw">return</span> U @ np.<span class="fn">diag</span>(<span class="num">1</span>/np.<span class="fn">sqrt</span>(eigval)) @ U.T
+
+X = <span class="fn">symm_orthog</span>(S)
+P = np.zeros_like(S)                       <span class="cmt"># density matrix</span>
+
+<span class="kw">for</span> it <span class="kw">in</span> <span class="fn">range</span>(<span class="num">30</span>):
+    <span class="cmt"># Build Fock from density + 2-electron integrals</span>
+    G = np.zeros_like(H_core)
+    <span class="kw">for</span> mu <span class="kw">in</span> <span class="fn">range</span>(<span class="num">2</span>):
+        <span class="kw">for</span> nu <span class="kw">in</span> <span class="fn">range</span>(<span class="num">2</span>):
+            <span class="kw">for</span> la <span class="kw">in</span> <span class="fn">range</span>(<span class="num">2</span>):
+                <span class="kw">for</span> si <span class="kw">in</span> <span class="fn">range</span>(<span class="num">2</span>):
+                    G[mu,nu] += P[la,si] * (ERI[mu,nu,la,si] - <span class="num">0.5</span>*ERI[mu,la,nu,si])
+    F = H_core + G
+    Fp = X.T @ F @ X
+    eps, Cp = np.linalg.<span class="fn">eigh</span>(Fp)
+    C = X @ Cp
+    <span class="cmt"># Only 1 doubly-occupied orbital for H2 (2 electrons)</span>
+    P_new = <span class="num">2</span> * np.<span class="fn">outer</span>(C[:,<span class="num">0</span>], C[:,<span class="num">0</span>])
+    <span class="kw">if</span> np.<span class="fn">abs</span>(P_new - P).<span class="fn">max</span>() &lt; <span class="num">1e-8</span>: <span class="kw">break</span>
+    P = P_new
+
+E_elec = <span class="num">0.5</span> * np.<span class="fn">sum</span>(P * (H_core + F))
+E_nuc  = <span class="num">1.0</span> / <span class="num">1.4</span>
+<span class="fn">print</span>(<span class="str">f"Converged in {it+1} iterations"</span>)
+<span class="fn">print</span>(<span class="str">f"E_total = {E_elec + E_nuc:.6f} Eh (exact ~-1.133 Eh at this geometry)"</span>)
+</code></pre></div>
+    </div>
+
+    <p>Three practical notes:</p>
+    <ul>
+      <li>Real codes never do the ERI loop explicitly. They use density fitting, integral screening, and linear-algebra tricks that change the scaling prefactor dramatically. A B3LYP single-point on caffeine takes about a second on a laptop; the same calculation ten years ago took an hour.</li>
+      <li>For systems with more than ~50 heavy atoms, you move to semiempirical methods (GFN-xTB) or neural-network potentials (ANI, SchNet, MACE) for the first pass, and only spend DFT where you really need it.</li>
+      <li>Everything in this section is ground-state electronic structure. Excited states, magnetic properties, and molecular dynamics each add another layer of machinery.</li>
+    </ul>
+
+    <!-- ========================================================== -->
+    <h2 id="summary">12. Cheat sheet</h2>
+
+    <div class="grid">
+      <div class="card">
+        <h4>Full Hamiltonian</h4>
+        <p>Kinetic + Coulomb, $3(M+N)$ dims</p>
+        <p class="meta">Exactly solvable only for H, H$_2^+$.</p>
+      </div>
+      <div class="card">
+        <h4>Born-Oppenheimer</h4>
+        <p>Separate nuclear and electronic motion</p>
+        <p class="meta">Works because $M_\text{nuc} \gg m_e$.</p>
+      </div>
+      <div class="card">
+        <h4>Hartree-Fock</h4>
+        <p>Single Slater determinant, mean-field</p>
+        <p class="meta">Captures ~99% of energy, misses ~1% that is chemistry.</p>
+      </div>
+      <div class="card">
+        <h4>SCF</h4>
+        <p>Iterate until orbitals stop changing</p>
+        <p class="meta">Inner loop of almost every quantum-chemistry code.</p>
+      </div>
+      <div class="card">
+        <h4>Basis sets</h4>
+        <p>Expand orbitals in atom-centered Gaussians</p>
+        <p class="meta">STO-3G toy → 6-31G* routine → cc-pVQZ benchmark.</p>
+      </div>
+      <div class="card">
+        <h4>Post-HF</h4>
+        <p>MP2 ≪ CCSD ≪ CCSD(T)</p>
+        <p class="meta">Scaling $N^5$ / $N^6$ / $N^7$. CCSD(T) = gold standard.</p>
+      </div>
+      <div class="card">
+        <h4>DFT</h4>
+        <p>Minimize $E[\rho]$ via Kohn-Sham orbitals</p>
+        <p class="meta">Cost like HF; accuracy near correlated methods.</p>
+      </div>
+      <div class="card">
+        <h4>Jacob's ladder</h4>
+        <p>LDA → GGA → meta-GGA → hybrid → double hybrid</p>
+        <p class="meta">B3LYP is the workhorse; $\omega$B97X-D is the modern default.</p>
+      </div>
+      <div class="card">
+        <h4>Failure modes</h4>
+        <p>No dispersion, self-interaction error</p>
+        <p class="meta">Fix with D3/D4 corrections and range-separation.</p>
+      </div>
+      <div class="card">
+        <h4>Workflow</h4>
+        <p>Build → opt → freq → single point → corrections</p>
+        <p class="meta">The "opt+freq+SP" recipe is universal.</p>
+      </div>
+    </div>
+
+    <h3>See also</h3>
+    <div class="see-also">
+      <div class="card">
+        <h4><a href="./atomic-structure.html">Atomic structure</a></h4>
+        <p>Orbitals, quantum numbers, and angular momentum — the one-electron building blocks that quantum chemistry combines into molecules.</p>
+      </div>
+      <div class="card">
+        <h4><a href="./bonding.html">Chemical bonding</a></h4>
+        <p>MO theory, VSEPR, and hybridization are the conceptual scaffolding built on top of quantum chemistry, and the language most chemists think in.</p>
+      </div>
+      <div class="card">
+        <h4><a href="./organic-chemistry.html">Organic chemistry</a></h4>
+        <p>Arrow-pushing is shorthand for what electrons really do. Quantum chemistry maps activation barriers, selectivities, and mechanisms that would take years to probe experimentally.</p>
+      </div>
+      <div class="card">
+        <h4><a href="./biochemistry.html">Biochemistry</a></h4>
+        <p>QM/MM lets you put an enzyme active site under a quantum-chemistry microscope while treating the surrounding protein as a classical force field.</p>
+      </div>
+      <div class="card">
+        <h4><a href="../physics/quantum-mechanics.html">Physics: Quantum mechanics</a></h4>
+        <p>The underlying physics of the many-body Schrödinger equation. Everything on this page is an approximation strategy for a problem quantum mechanics only describes in principle.</p>
+      </div>
+      <div class="card">
+        <h4><a href="../math/linear-algebra.html">Math: Linear algebra</a></h4>
+        <p>Molecular orbitals are eigenvectors of the Fock or Kohn-Sham matrix. Everything about HF and DFT is ultimately a large Hermitian eigenvalue problem.</p>
+      </div>
+    </div>
+
+    <div class="bib">
+      <h4>Further reading</h4>
+      <ul>
+        <li>Attila Szabo and Neil S. Ostlund — <em>Modern Quantum Chemistry: Introduction to Advanced Electronic Structure Theory</em> (Dover, 1989). The standard graduate textbook for Hartree-Fock and post-HF. Still unmatched for pedagogical clarity.</li>
+        <li>Frank Jensen — <em>Introduction to Computational Chemistry</em> (3rd ed., Wiley, 2017). A comprehensive survey covering wavefunction and density functional methods with practical guidance.</li>
+        <li>Trygve Helgaker, Poul Jørgensen, and Jeppe Olsen — <em>Molecular Electronic-Structure Theory</em> (Wiley, 2000). The deep reference for anyone serious about coupled cluster and response theory.</li>
+        <li>Robert G. Parr and Weitao Yang — <em>Density Functional Theory of Atoms and Molecules</em> (Oxford, 1989). The classic DFT textbook from the group that introduced most of it to chemistry.</li>
+        <li>John Perdew's Jacob's ladder papers — see for example Perdew et al., <em>J. Chem. Phys.</em> 123, 062201 (2005), "Prescription for the design and selection of density functional approximations."</li>
+        <li>PySCF documentation — <a href="https://pyscf.org/">pyscf.org</a>. The easiest modern entry point to hands-on quantum chemistry in Python.</li>
+      </ul>
+    </div>
+
+    <div class="next-card">
+      <div class="label">NEXT UP</div>
+      <a href="./index.html">→ Chemistry hub</a>
+      <p>You have now seen the eight core subjects of chemistry from atoms to quantum methods. Head back to the hub to choose a different thread, or jump to a sibling track for the mathematics and physics that underpin everything on this page.</p>
+    </div>
+
+  </article>
+</div>
+
+<script>
+// =========================================================
+// Code tabs
+document.querySelectorAll('.code-tabs').forEach(root => {
+  const tabs = root.querySelectorAll('.ct-tab');
+  const panels = root.querySelectorAll('.ct-panel');
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const target = tab.getAttribute('data-tab');
+      tabs.forEach(t => t.classList.toggle('active', t === tab));
+      panels.forEach(p => p.classList.toggle('active', p.getAttribute('data-tab') === target));
+    });
+  });
+});
+
+// =========================================================
+// Method vs basis scatter
+(function() {
+  const svg = document.getElementById('qcSvg');
+  if (!svg) return;
+  const NS = 'http://www.w3.org/2000/svg';
+  const mSel = document.getElementById('qMethod');
+  const bSel = document.getElementById('qBasis');
+  const caption = document.getElementById('qcCaption');
+
+  // rough relative cost (per-point, HF/STO-3G = 1)
+  const methodCost = { hf: 1, mp2: 5, b3lyp: 2, wb97xd: 3, ccsd: 100, ccsdt: 500 };
+  const basisCost  = { sto3g: 1, '631g': 3, '631gdp': 8, ccpvtz: 40, ccpvqz: 200 };
+
+  // illustrative MAE (kcal/mol) on a typical small-molecule reaction benchmark
+  const methodErr = { hf: 15, mp2: 4, b3lyp: 3, wb97xd: 2.2, ccsd: 2, ccsdt: 0.8 };
+  const basisErr  = { sto3g: 20, '631g': 8, '631gdp': 3, ccpvtz: 1.2, ccpvqz: 0.5 };
+
+  const labels = {
+    hf: 'HF', mp2: 'MP2', b3lyp: 'B3LYP', wb97xd: 'ωB97X-D', ccsd: 'CCSD', ccsdt: 'CCSD(T)',
+    sto3g: 'STO-3G', '631g': '6-31G', '631gdp': '6-31G(d,p)', ccpvtz: 'cc-pVTZ', ccpvqz: 'cc-pVQZ',
+  };
+
+  const W = 720, H = 360;
+  const ml = 80, mr = 30, mt = 30, mb = 50;
+  const plotW = W - ml - mr;
+  const plotH = H - mt - mb;
+
+  // log-log axes
+  const logCostMin = 0,    logCostMax = 6;   // 1 to 1e6
+  const logErrMin  = -0.5, logErrMax  = 2;   // 0.3 to 100 kcal/mol
+
+  function xOf(c) {
+    const lc = Math.log10(Math.max(c, 1));
+    return ml + (lc - logCostMin) / (logCostMax - logCostMin) * plotW;
+  }
+  function yOf(e) {
+    const le = Math.log10(Math.max(e, 0.1));
+    return mt + plotH - (le - logErrMin) / (logErrMax - logErrMin) * plotH;
+  }
+
+  function mkText(x, y, txt, color, size, anchor) {
+    const t = document.createElementNS(NS, 'text');
+    t.setAttribute('x', x); t.setAttribute('y', y);
+    t.setAttribute('fill', color || '#7a8a9a');
+    t.setAttribute('font-size', size || 11);
+    t.setAttribute('font-family', 'ui-monospace, monospace');
+    if (anchor) t.setAttribute('text-anchor', anchor);
+    t.textContent = txt;
+    return t;
+  }
+  function mkLine(x1, y1, x2, y2, stroke, w, dash) {
+    const l = document.createElementNS(NS, 'line');
+    l.setAttribute('x1', x1); l.setAttribute('y1', y1);
+    l.setAttribute('x2', x2); l.setAttribute('y2', y2);
+    l.setAttribute('stroke', stroke);
+    l.setAttribute('stroke-width', w || 1);
+    if (dash) l.setAttribute('stroke-dasharray', dash);
+    return l;
+  }
+  function mkRect(x, y, w, h, fill, stroke) {
+    const r = document.createElementNS(NS, 'rect');
+    r.setAttribute('x', x); r.setAttribute('y', y);
+    r.setAttribute('width', w); r.setAttribute('height', h);
+    r.setAttribute('fill', fill);
+    if (stroke) { r.setAttribute('stroke', stroke); r.setAttribute('stroke-width', 1); }
+    return r;
+  }
+  function mkCircle(cx, cy, r, fill, stroke) {
+    const c = document.createElementNS(NS, 'circle');
+    c.setAttribute('cx', cx); c.setAttribute('cy', cy); c.setAttribute('r', r);
+    c.setAttribute('fill', fill);
+    if (stroke) { c.setAttribute('stroke', stroke); c.setAttribute('stroke-width', 1.5); }
+    return c;
+  }
+
+  function draw() {
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+    svg.appendChild(mkRect(ml, mt, plotW, plotH, '#0f131a', '#2a3446'));
+
+    // gridlines at each decade
+    for (let lc = logCostMin; lc <= logCostMax; lc++) {
+      const x = xOf(Math.pow(10, lc));
+      svg.appendChild(mkLine(x, mt, x, mt + plotH, '#1a212e', 1));
+      svg.appendChild(mkText(x, mt + plotH + 14, '10^' + lc, '#7a8a9a', 10, 'middle'));
+    }
+    for (let le = Math.ceil(logErrMin); le <= logErrMax; le++) {
+      const y = yOf(Math.pow(10, le));
+      svg.appendChild(mkLine(ml, y, ml + plotW, y, '#1a212e', 1));
+      svg.appendChild(mkText(ml - 6, y + 3, Math.pow(10, le).toFixed(le < 0 ? 1 : 0), '#7a8a9a', 10, 'end'));
+    }
+
+    // chemical accuracy line (1 kcal/mol)
+    const yChem = yOf(1);
+    svg.appendChild(mkLine(ml, yChem, ml + plotW, yChem, '#f472b6', 1, '4,4'));
+    svg.appendChild(mkText(ml + 8, yChem - 4, '1 kcal/mol (chemical accuracy)', '#f472b6', 10));
+
+    // draw all combinations as faint dots
+    const methods = Object.keys(methodCost);
+    const bases = Object.keys(basisCost);
+    for (const m of methods) {
+      for (const b of bases) {
+        const cost = methodCost[m] * basisCost[b];
+        const err = Math.max(methodErr[m], basisErr[b]);
+        const x = xOf(cost), y = yOf(err);
+        svg.appendChild(mkCircle(x, y, 3, '#2a3446', '#384050'));
+      }
+    }
+
+    // highlight selected
+    const ms = mSel.value, bs = bSel.value;
+    const cost = methodCost[ms] * basisCost[bs];
+    const err = Math.max(methodErr[ms], basisErr[bs]);
+    const x = xOf(cost), y = yOf(err);
+    svg.appendChild(mkCircle(x, y, 8, '#22d3ee', '#fff'));
+    svg.appendChild(mkText(x + 12, y - 6, labels[ms] + ' / ' + labels[bs], '#22d3ee', 12));
+
+    // axis labels
+    svg.appendChild(mkText(ml + plotW / 2, H - 12, 'relative cost (log scale)', '#b4c4d4', 11, 'middle'));
+    svg.appendChild(mkText(14, mt + plotH / 2, 'MAE (kcal/mol, log)', '#b4c4d4', 11));
+
+    caption.textContent =
+      labels[ms] + '/' + labels[bs] +
+      ': relative cost ≈ ' + cost.toLocaleString() +
+      ', MAE ≈ ' + err.toFixed(1) + ' kcal/mol (illustrative).';
+  }
+
+  mSel.addEventListener('change', draw);
+  bSel.addEventListener('change', draw);
+  draw();
+})();
+</script>
+<script defer src="../problem-set.js"></script>
+<script defer src="quantum-chemistry-problems.js"></script>
+</body>
+</html>

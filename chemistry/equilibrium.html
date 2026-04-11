@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chemical Equilibrium — Deep Dive</title>
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError: false});"></script>
+</head>
+<body>
+<div id="tooltip"></div>
+
+<nav class="topic-nav">
+  <a class="back" href="../index.html">← Learning Hub</a>
+  <div class="crumb">Chemistry / <span class="topic-name">Chemical Equilibrium</span></div>
+</nav>
+
+<div class="topic-layout">
+  <aside class="topic-toc">
+    <h4>ON THIS PAGE</h4>
+    <ul>
+      <li><a href="#why">1. Why equilibrium matters</a></li>
+      <li><a href="#vocab">2. Vocabulary cheat sheet</a></li>
+      <li><a href="#keq">3. The equilibrium constant K</a></li>
+      <li><a href="#q">4. K, Q, and direction</a></li>
+      <li><a href="#lechat">5. Le Chatelier's principle</a></li>
+      <li><a href="#ice">6. ICE tables</a></li>
+      <li><a href="#acidbase">7. Acid-base equilibria</a></li>
+      <li><a href="#demo">8. Interactive: titration plotter</a></li>
+      <li><a href="#ksp">9. Solubility (K_sp)</a></li>
+      <li><a href="#complex">10. Complex-ion formation</a></li>
+      <li><a href="#code">11. Equilibrium in code</a></li>
+      <li><a href="#summary">12. Cheat sheet</a></li>
+    </ul>
+  </aside>
+
+  <article class="topic-content">
+    <h1>Chemical Equilibrium</h1>
+    <p class="subtitle">Every reaction is secretly two reactions running in opposite directions. Equilibrium is the point where they tie. Once you can write down an equilibrium constant, read an ICE table, and apply Le Chatelier's principle, a huge slice of chemistry stops feeling like magic and starts feeling like bookkeeping.</p>
+    <div class="meta-tags">
+      <span>Prereq: <a href="../math/calculus.html">logs and exponents</a>, stoichiometry</span>
+      <span>Read time: ~35 min</span>
+      <span>Interactive figures: 1</span>
+      <span>Code: NumPy, Python</span>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="why">1. Why equilibrium matters</h2>
+
+    <p>You dissolve an aspirin tablet in water. Some of it dissociates into ions, some stays intact. You add a drop of acid to a buffer and the pH barely moves. A pharmaceutical company spends years tuning a synthesis so that an expensive precursor actually converts into product instead of sitting around unreacted. A cement kiln burns limestone to make quicklime, and the industrial engineers care intensely about the exact temperature because it decides how far the reaction runs. Your blood holds its pH at 7.4 within a hundredth of a unit even while you exercise and dump CO<sub>2</sub> into it.</p>
+
+    <p>Every one of those stories is the same story: a reaction that goes forward <em>and</em> backward at the same time, and the balance between the two directions decides what you end up with. That balance is <strong>chemical equilibrium</strong>. It is not "the reaction stopped." The reaction never stops. At equilibrium, forward and reverse are running at identical rates, so the net concentrations sit still. It's dynamic, not dead.</p>
+
+    <div class="callout">
+      <div class="label">THE PUNCHLINE</div>
+      <p>For a reversible reaction, there exists a single number — the equilibrium constant $K$ — that tells you the ratio of products to reactants at equilibrium, at a given temperature. If you know $K$, you can predict how much of each species will be around once things settle. That one number replaces a huge amount of case-by-case reasoning.</p>
+    </div>
+
+    <p>Why should you care, whether you build drugs, batteries, fertilizers, fuel cells, climate models, or just drink coffee in the morning? A few reasons in increasing order of how directly they touch your day job:</p>
+
+    <ul>
+      <li><strong>Drug design.</strong> Binding affinity of a drug to a receptor is an equilibrium constant. The whole pharmacology vocabulary — $K_d$, $K_i$, IC<sub>50</sub> — is equilibrium language in disguise.</li>
+      <li><strong>Batteries and fuel cells.</strong> The voltage you get depends on how far a redox reaction is from equilibrium. That's the Nernst equation, which is equilibrium plus a logarithm.</li>
+      <li><strong>Climate.</strong> CO<sub>2</sub> dissolving in the ocean, then hydrolyzing to carbonic acid, then to bicarbonate and carbonate, is a coupled set of equilibria. Ocean acidification is a shift in that set.</li>
+      <li><strong>Life itself.</strong> Every enzyme, every pH buffer, every ion pump is a controlled equilibrium. Homeostasis is engineering equilibrium.</li>
+    </ul>
+
+    <p>This page will teach you equilibrium from zero. You need to remember what moles and molarity mean, and how to read a balanced equation. Everything else we will build.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="vocab">2. Vocabulary cheat sheet</h2>
+
+    <p>Glance at this table now. Each symbol gets a full treatment below.</p>
+
+    <table class="rank-table">
+      <thead><tr><th>Symbol</th><th>Read as</th><th>Means</th></tr></thead>
+      <tbody>
+        <tr><td>$K$ or $K_{eq}$</td><td>"K-eq"</td><td>Equilibrium constant. The ratio of products to reactants (each raised to its stoichiometric coefficient) at equilibrium.</td></tr>
+        <tr><td>$K_c$</td><td>"K-c"</td><td>Equilibrium constant written in terms of molar concentrations (M).</td></tr>
+        <tr><td>$K_p$</td><td>"K-p"</td><td>Equilibrium constant written in terms of partial pressures (atm or bar).</td></tr>
+        <tr><td>$Q$</td><td>"Q"</td><td>Reaction quotient — same formula as $K$ but with current, not equilibrium, concentrations.</td></tr>
+        <tr><td>$K_a, K_b$</td><td>"K-a, K-b"</td><td>Acid and base ionization constants. Measure how far a weak acid or base dissociates.</td></tr>
+        <tr><td>$K_w$</td><td>"K-w"</td><td>Ion product of water: $[H^+][OH^-] = 10^{-14}$ at 25°C.</td></tr>
+        <tr><td>$K_{sp}$</td><td>"K-s-p"</td><td>Solubility product. An equilibrium constant for a solid dissolving into its ions.</td></tr>
+        <tr><td>$K_f$</td><td>"K-f"</td><td>Formation constant for a complex ion.</td></tr>
+        <tr><td>pH</td><td>"p-H"</td><td>$-\log_{10}[H^+]$. A compact way to write hydrogen-ion concentration.</td></tr>
+        <tr><td>$[\text{X}]$</td><td>"concentration of X"</td><td>Molar concentration of species X, in moles per liter.</td></tr>
+      </tbody>
+    </table>
+
+    <p>One convention warning before we start: concentrations are dimensionless in the formal definition of $K$ (they're implicitly divided by a 1 M reference state), which is why $K$ comes out as a pure number. In practice you just write $[\text{A}]$ in molarity and don't worry about the units — they cancel out if you're careful.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="keq">3. The equilibrium constant</h2>
+
+    <p>Consider a generic reversible reaction:</p>
+
+    <div class="math-display">$$ aA + bB \; \rightleftharpoons \; cC + dD. $$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">A generic reversible reaction</p>
+      <dl>
+        <dt>$A, B$</dt><dd>Reactants — the molecules you start with.</dd>
+        <dt>$C, D$</dt><dd>Products — the molecules formed.</dd>
+        <dt>$a, b, c, d$</dt><dd>Stoichiometric coefficients — how many of each species appear in the balanced equation. For $2 H_2 + O_2 \to 2 H_2O$, these are 2, 1, and 2.</dd>
+        <dt>$\rightleftharpoons$</dt><dd>"Reversible arrow." The reaction can run both ways. Crucially different from a single $\to$, which implies one-way.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Picture.</strong> Imagine two buckets — one on the left, one on the right — connected by two pipes. One pipe pumps water right (forward reaction), the other pumps water left (reverse). At equilibrium, both pumps are still running, but the water levels stop changing.</p>
+    </div>
+
+    <p>At equilibrium, the law of mass action says the concentrations obey:</p>
+
+    <div class="math-display">$$ K_c \;=\; \frac{[C]^c \, [D]^d}{[A]^a \, [B]^b}. $$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">The equilibrium constant expression</p>
+      <dl>
+        <dt>$K_c$</dt><dd>Equilibrium constant in terms of concentrations. Depends only on temperature — not on how you started, or how much you have, or the vessel size.</dd>
+        <dt>$[C], [D]$</dt><dd>Molar concentrations of the products at equilibrium, in mol/L.</dd>
+        <dt>$[A], [B]$</dt><dd>Molar concentrations of the reactants at equilibrium.</dd>
+        <dt>$[C]^c$</dt><dd>Concentration of $C$ raised to the power of its stoichiometric coefficient $c$. The coefficient is the exponent — this is the most commonly muffed detail on first exposure.</dd>
+        <dt>products / reactants</dt><dd>Products always go in the numerator. If you flip the reaction, you flip $K$ (new $K$ = $1/$old $K$).</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why coefficients become exponents.</strong> The derivation from kinetics: forward rate is proportional to $[A]^a [B]^b$, reverse rate is proportional to $[C]^c [D]^d$, and at equilibrium they're equal. Set them equal, solve for the ratio, and exponents fall out naturally. Thermodynamically, the same expression pops out of the condition $\Delta G = 0$ at equilibrium.</p>
+    </div>
+
+    <p>A concrete example: the Haber process, which makes nearly all of the world's fertilizer nitrogen:</p>
+
+    <div class="math-display">$$ N_2(g) + 3\,H_2(g) \; \rightleftharpoons \; 2\,NH_3(g), \qquad K_c \approx 6.0 \times 10^{-2} \text{ at } 500\text{°C}. $$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Haber process equilibrium</p>
+      <dl>
+        <dt>$N_2(g)$</dt><dd>Nitrogen gas, the cheap feedstock from air.</dd>
+        <dt>$3\,H_2(g)$</dt><dd>Three moles of hydrogen gas per mole of nitrogen. The 3 becomes an exponent in $K$.</dd>
+        <dt>$2\,NH_3(g)$</dt><dd>Two moles of ammonia per mole of nitrogen. The 2 becomes an exponent.</dd>
+        <dt>$K_c \approx 0.06$</dt><dd>At high temperature, $K$ is small — the reaction favors reactants. Which is why industry runs it at high <em>pressure</em> and moderate temperature: pressure pushes the equilibrium toward fewer gas moles (ammonia side) even when the raw $K$ is small.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why this matters.</strong> Fritz Haber figured this out around 1909, and it roughly doubled the food supply of the planet. The trade-off between rate (which wants high temperature) and yield (which wants low temperature, because the reaction is exothermic) is a classic equilibrium problem — and it's solved by running at a hot-but-not-too-hot temperature with an iron catalyst and roughly 200 atm of pressure.</p>
+    </div>
+
+    <h3>Gases: $K_p$ vs $K_c$</h3>
+
+    <p>When your species are gases, you can use partial pressures instead of concentrations:</p>
+
+    <div class="math-display">$$ K_p \;=\; \frac{P_C^c \, P_D^d}{P_A^a \, P_B^b}. $$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Equilibrium in partial pressures</p>
+      <dl>
+        <dt>$K_p$</dt><dd>Equilibrium constant using partial pressures.</dd>
+        <dt>$P_A$</dt><dd>Partial pressure of gas $A$ — its contribution to the total pressure, typically in atm or bar.</dd>
+        <dt>$c, d, a, b$</dt><dd>Same stoichiometric coefficients as before.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Link to $K_c$.</strong> Since $P = nRT/V = [X]RT$ for each gas, you can convert: $K_p = K_c \, (RT)^{\Delta n}$, where $\Delta n$ is the change in moles of gas going from reactants to products. For the Haber reaction, $\Delta n = 2 - (1+3) = -2$, and $K_p$ is related to $K_c$ through a factor of $(RT)^{-2}$.</p>
+    </div>
+
+    <h3>What doesn't go in the expression</h3>
+
+    <p>Pure solids and pure liquids <em>don't appear</em> in $K$ expressions. Their "concentration" is a constant — they have a fixed density — so the usual convention is to fold those constants into $K$ itself. Example: for limestone decomposition</p>
+
+    <div class="math-display">$$ CaCO_3(s) \; \rightleftharpoons \; CaO(s) + CO_2(g), \quad K_p = P_{CO_2}. $$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Pure phases drop out</p>
+      <dl>
+        <dt>$CaCO_3(s), CaO(s)$</dt><dd>Limestone and quicklime — both solids. Solids don't appear in $K$ because their activity is 1.</dd>
+        <dt>$CO_2(g)$</dt><dd>The only gas-phase species, so it's the only thing in the expression.</dd>
+        <dt>$K_p = P_{CO_2}$</dt><dd>At fixed temperature, there's a single equilibrium $CO_2$ pressure above a mixture of the two solids. You could turn this into a $CO_2$ thermometer if you wanted.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why it works.</strong> Cement kilns exploit this: above about 825°C, the equilibrium $CO_2$ pressure exceeds 1 atm, so carbonate breaks down and stays broken down. Below that temperature the reverse happens and quicklime reabsorbs $CO_2$ from air. The temperature that makes $K_p = 1$ atm is the practical "go" point.</p>
+    </div>
+
+    <div class="problem-set" data-topic="chem-eq-kequil"></div>
+
+    <!-- ========================================================== -->
+    <h2 id="q">4. The reaction quotient $Q$ — which way does it go?</h2>
+
+    <p>$K$ tells you the ratio <em>at equilibrium</em>. But what if you mix some $A$, $B$, $C$, and $D$ together and want to know which way the reaction will run? That's what $Q$ is for. $Q$ has the same formula as $K$, but you plug in the <em>current</em> concentrations, not the equilibrium ones:</p>
+
+    <div class="math-display">$$ Q \;=\; \frac{[C]^c \, [D]^d}{[A]^a \, [B]^b}, \quad \text{(using current concentrations, not necessarily equilibrium).} $$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Reaction quotient</p>
+      <dl>
+        <dt>$Q$</dt><dd>A snapshot of the product/reactant ratio at any instant. Only equals $K$ when you're at equilibrium.</dd>
+        <dt>Current concentrations</dt><dd>Whatever you just mixed up, or wherever the reaction currently is — not the equilibrium values.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Rules of the road.</strong> If $Q < K$, you have too few products, so net reaction runs <em>forward</em> (left to right) to raise $Q$ toward $K$. If $Q > K$, too many products, so net reaction runs <em>reverse</em>. If $Q = K$, you're already at equilibrium and nothing net happens.</p>
+    </div>
+
+    <p>This is genuinely useful. Imagine you have a reaction vessel with $[A] = 0.5$ M, $[B] = 0.5$ M, and $[C] = 1.0$ M for $A + B \rightleftharpoons C$ with $K_c = 2$. Compute $Q = 1.0 / (0.5 \cdot 0.5) = 4.0$. Since $4 > 2$, the system has too many products. Net reverse. You'll watch $[C]$ drop and $[A], [B]$ rise until $Q$ hits 2.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="lechat">5. Le Chatelier's principle</h2>
+
+    <p>Here's a rule that looks like magic and is actually just $Q$-vs-$K$ logic in plain English.</p>
+
+    <div class="defn">
+      <strong>Le Chatelier's principle.</strong> If an equilibrium is disturbed — by adding or removing something, changing the volume, or changing the temperature — the system will shift in the direction that partially undoes the disturbance.
+    </div>
+
+    <p>The principle sounds almost like personality advice, and it is often taught as a handwave. But every case is just "what did the disturbance do to $Q$, and what does that imply about direction?"</p>
+
+    <ul>
+      <li><strong>Add more reactant.</strong> $[A]$ goes up, so $Q$ goes down, so $Q < K$, so the reaction shifts forward to consume the added reactant. Industry uses this to drive reactions to higher yield — keep dumping in one reactant so $Q$ is always low.</li>
+      <li><strong>Remove product.</strong> $[C]$ drops, $Q$ drops, reaction shifts forward. This is "distillation trick": boil off the product as it forms and you push the equilibrium.</li>
+      <li><strong>Compress the volume (gases).</strong> All concentrations rise by the same factor, but the side with more gas moles rises <em>faster</em> in the $Q$ expression (more exponents). So the system shifts toward the side with fewer gas moles. Haber synthesis exploits this: $4 \to 2$ mol of gas on forming ammonia, so pressure pushes forward.</li>
+      <li><strong>Raise temperature.</strong> This is the tricky one. Temperature changes $K$ itself, not just $Q$. If the forward reaction is exothermic (releases heat), higher $T$ <em>decreases</em> $K$ — the equilibrium shifts backward. If endothermic, higher $T$ <em>increases</em> $K$. Dye equilibria in chemistry demos show this beautifully: some go pink at room temperature and blue on heating.</li>
+    </ul>
+
+    <p>The temperature dependence is quantified by the <strong>van't Hoff equation</strong>, which is essentially the Clausius-Clapeyron relation applied to $K$:</p>
+
+    <div class="math-display">$$ \ln\!\left(\frac{K_2}{K_1}\right) \;=\; -\frac{\Delta H^\circ}{R}\!\left(\frac{1}{T_2} - \frac{1}{T_1}\right). $$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">van't Hoff equation</p>
+      <dl>
+        <dt>$K_1, K_2$</dt><dd>Equilibrium constants at temperatures $T_1$ and $T_2$ (in kelvin, always).</dd>
+        <dt>$\Delta H^\circ$</dt><dd>Standard enthalpy of reaction — how much heat the forward reaction releases (negative) or absorbs (positive), per mole, in J/mol or kJ/mol.</dd>
+        <dt>$R$</dt><dd>The ideal gas constant, $8.314$ J/(mol·K). Just a units conversion factor.</dd>
+        <dt>$\ln(K_2/K_1)$</dt><dd>How $K$ changes on a log scale — because rate- and equilibrium-type quantities are multiplicatively sensitive to temperature.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>How to read it.</strong> For an exothermic reaction ($\Delta H < 0$), if $T_2 > T_1$ then $(1/T_2 - 1/T_1) < 0$, and the right-hand side is negative, so $K_2 < K_1$. Higher temperature, lower $K$, shifted backward. Exactly the qualitative Le Chatelier rule, but with a number attached.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="ice">6. ICE tables — the algebra machine for equilibrium</h2>
+
+    <p>Most equilibrium problems reduce to this question: "I start with these amounts, and I know $K$. What are the concentrations at equilibrium?" The universal solving technique is the <strong>ICE table</strong>. ICE stands for <strong>I</strong>nitial, <strong>C</strong>hange, <strong>E</strong>quilibrium. Make three rows, fill them in, and your unknowns line up on a silver platter.</p>
+
+    <p>Example. Consider $N_2O_4(g) \rightleftharpoons 2 NO_2(g)$ with $K_c = 4.6 \times 10^{-3}$ at 25°C. You start with $[N_2O_4]_0 = 0.10$ M and no $NO_2$. Find the equilibrium concentrations.</p>
+
+    <table class="rank-table">
+      <thead><tr><th></th><th>$N_2O_4$</th><th>$NO_2$</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Initial</strong></td><td>0.10</td><td>0</td></tr>
+        <tr><td><strong>Change</strong></td><td>$-x$</td><td>$+2x$</td></tr>
+        <tr><td><strong>Equilibrium</strong></td><td>$0.10 - x$</td><td>$2x$</td></tr>
+      </tbody>
+    </table>
+
+    <p>The change row reflects the stoichiometry: for every $x$ moles per liter of $N_2O_4$ that disappear, $2x$ moles per liter of $NO_2$ appear (coefficient of 2). Now plug equilibrium values into the $K$ expression:</p>
+
+    <div class="math-display">$$ K_c \;=\; \frac{[NO_2]^2}{[N_2O_4]} \;=\; \frac{(2x)^2}{0.10 - x} \;=\; 4.6 \times 10^{-3}. $$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Plug ICE into K</p>
+      <dl>
+        <dt>$(2x)^2$</dt><dd>Equilibrium $[NO_2]$ squared — because the coefficient of $NO_2$ is 2, it gets that exponent in the $K$ expression.</dd>
+        <dt>$0.10 - x$</dt><dd>Equilibrium $[N_2O_4]$ — what's left after $x$ mol/L converted.</dd>
+        <dt>$4.6 \times 10^{-3}$</dt><dd>The given $K$.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Small-$x$ approximation.</strong> When $K$ is much smaller than the initial concentration (here $4.6 \times 10^{-3} \ll 0.10$), you can often assume $x \ll 0.10$ and approximate $0.10 - x \approx 0.10$. That gives $4 x^2 / 0.10 = 4.6 \times 10^{-3}$, so $x^2 = 1.15 \times 10^{-4}$, and $x \approx 0.0107$. Check: $0.0107 / 0.10 \approx 11\%$ — borderline, but the approximation is usable. Rule of thumb: if $x$ is less than 5% of the initial, you're fine; if 5-10%, quote both approximation and exact answer; beyond 10%, solve the quadratic.</p>
+    </div>
+
+    <p>Solving exactly: $(2x)^2 = 4.6 \times 10^{-3} (0.10 - x)$ gives $4x^2 + 4.6 \times 10^{-3} x - 4.6 \times 10^{-4} = 0$. Quadratic formula gives $x \approx 0.0102$ M. So at equilibrium, $[N_2O_4] \approx 0.090$ M and $[NO_2] \approx 0.020$ M. About 10% of the $N_2O_4$ dissociated — which is why you see brown $NO_2$ in a flask that was initially colorless $N_2O_4$.</p>
+
+    <div class="problem-set" data-topic="chem-eq-icetable"></div>
+
+    <!-- ========================================================== -->
+    <h2 id="acidbase">7. Acid-base equilibria</h2>
+
+    <p>Acid-base chemistry is just equilibrium chemistry applied to proton transfers. The two big constants are $K_a$ (how strongly an acid gives up its proton) and $K_b$ (how strongly a base grabs one).</p>
+
+    <div class="math-display">$$ HA(aq) + H_2O(l) \; \rightleftharpoons \; H_3O^+(aq) + A^-(aq), \quad K_a \;=\; \frac{[H_3O^+][A^-]}{[HA]}. $$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Acid ionization</p>
+      <dl>
+        <dt>$HA$</dt><dd>A generic weak acid. $H$ is the proton to donate, $A$ is the conjugate base.</dd>
+        <dt>$H_3O^+$</dt><dd>Hydronium ion — a water molecule that has accepted a proton. Usually we just write $H^+$ for short, but hydronium is the physically real species in water.</dd>
+        <dt>$A^-$</dt><dd>The deprotonated acid — the conjugate base of $HA$.</dd>
+        <dt>$K_a$</dt><dd>Acid dissociation constant. Bigger $K_a$ = stronger acid. For acetic acid, $K_a \approx 1.8 \times 10^{-5}$. For HCl, $K_a \approx 10^{6}$ (essentially fully dissociated — we call it a strong acid).</dd>
+        <dt>$H_2O$</dt><dd>Water, the solvent. Its "concentration" (55 M) is folded into $K_a$ by convention, so it doesn't appear in the expression.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why log scales.</strong> $K_a$ values span 30 orders of magnitude across common acids. Nobody wants to type "0.00000018" every time, so chemists use $pK_a = -\log_{10} K_a$. Acetic acid's $pK_a$ is $4.76$. Carbonic acid's is $6.35$. Water itself has $pK_a \approx 15.7$. Smaller $pK_a$ = stronger acid. The whole pH scale is a log scale for exactly the same reason.</p>
+    </div>
+
+    <h3>pH, pOH, and $K_w$</h3>
+
+    <p>Pure water autoionizes a little bit: $H_2O + H_2O \rightleftharpoons H_3O^+ + OH^-$. The equilibrium constant for this is</p>
+
+    <div class="math-display">$$ K_w \;=\; [H^+][OH^-] \;=\; 1.0 \times 10^{-14} \text{ at 25°C}. $$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">The ion product of water</p>
+      <dl>
+        <dt>$K_w$</dt><dd>A fundamental constant of aqueous chemistry. At 25°C it's exactly $10^{-14}$ (close enough to exactly that chemists quote it as such).</dd>
+        <dt>$[H^+]$</dt><dd>Hydronium concentration. In pure water, $\sqrt{10^{-14}} = 10^{-7}$ M.</dd>
+        <dt>$[OH^-]$</dt><dd>Hydroxide concentration. Same thing in pure water.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why pH 7 is "neutral."</strong> Because $\log_{10}(10^{-7}) = -7$, and $pH = -\log[H^+] = 7$. That 7 is not special — it's just the square root of $K_w$ turned into a log. At body temperature (37°C), $K_w$ rises slightly and neutral pH drops to about 6.8. Cold seawater has neutral around 7.5.</p>
+    </div>
+
+    <p>Define $pH = -\log_{10}[H^+]$ and $pOH = -\log_{10}[OH^-]$. Taking $-\log$ of both sides of $K_w$:</p>
+
+    <div class="math-display">$$ pH + pOH \;=\; 14 \quad (\text{at 25°C}). $$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">pH and pOH are complementary</p>
+      <dl>
+        <dt>$pH$</dt><dd>Negative base-10 log of hydronium concentration. Low pH = acidic, high pH = basic, 7 is neutral at 25°C.</dd>
+        <dt>$pOH$</dt><dd>Same for hydroxide.</dd>
+        <dt>$14$</dt><dd>The value of $-\log_{10}(K_w) = -\log_{10}(10^{-14})$.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Useful shortcut.</strong> If you know one, you know the other. pH 3 coffee has pOH 11. pH 9 soap has pOH 5. Blood (pH 7.4) has pOH 6.6.</p>
+    </div>
+
+    <h3>Henderson-Hasselbalch and buffers</h3>
+
+    <p>Rearrange the $K_a$ expression by taking $-\log$ of both sides:</p>
+
+    <div class="math-display">$$ pH \;=\; pK_a + \log_{10}\!\left(\frac{[A^-]}{[HA]}\right). $$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Henderson-Hasselbalch equation</p>
+      <dl>
+        <dt>$pH$</dt><dd>The pH of the solution you're designing.</dd>
+        <dt>$pK_a$</dt><dd>$-\log_{10}(K_a)$ for the weak acid in the buffer. The buffer works best when $pH \approx pK_a$, i.e. when the ratio on the right is about 1.</dd>
+        <dt>$[A^-]/[HA]$</dt><dd>The ratio of conjugate base to acid form. You control this by how much of each you add.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why buffers resist pH changes.</strong> If you add a little strong acid, some $A^-$ converts to $HA$. The ratio shifts only slightly (as long as both forms are plentiful), so $\log$ of the ratio moves even less, and pH moves by a tiny amount. That's why blood uses the $H_2CO_3 / HCO_3^-$ system with $pK_a \approx 6.35$, and why the body tolerates enormous loads of metabolic acid without the pH shifting more than a few hundredths. Design rule: pick a buffer acid with $pK_a$ close to your target pH, within about $\pm 1$.</p>
+    </div>
+
+    <p><strong>Worked example.</strong> You want a buffer at pH 4.8 using acetic acid ($pK_a = 4.76$). Then $\log([A^-]/[HA]) = 4.8 - 4.76 = 0.04$, so $[A^-]/[HA] = 10^{0.04} \approx 1.10$. You need 1.10 moles of sodium acetate per mole of acetic acid. If you mix 0.100 mol acetic acid with 0.110 mol sodium acetate in 1 L of water, you have a pH 4.8 buffer that will hold its pH against modest acid/base additions.</p>
+
+    <div class="problem-set" data-topic="chem-eq-acidbase"></div>
+
+    <!-- ========================================================== -->
+    <h2 id="demo">8. Interactive: titration curve plotter</h2>
+
+    <p>A titration is: you have a weak acid of known concentration, you add strong base slowly, and you watch the pH. The curve has four interesting features — the initial pH, the buffer region near $pH = pK_a$, the steep equivalence point, and the final plateau. Slide $pK_a$ and see how the curve morphs; slide the initial acid concentration and watch the equivalence-point pH rise.</p>
+
+    <div class="viz-3d">
+      <div class="v3-controls">
+        <span class="v3-label">pK_a:</span>
+        <input id="tpKa" type="range" min="2.5" max="10.5" value="4.76" step="0.05" style="flex:1;max-width:260px;">
+        <span id="tpKaLabel" style="min-width:60px;color:#22d3ee;font-family:ui-monospace,monospace;">4.76</span>
+        <span class="v3-label">[HA]₀ (M):</span>
+        <input id="tC0" type="range" min="0.005" max="0.5" value="0.1" step="0.005" style="flex:1;max-width:200px;">
+        <span id="tC0Label" style="min-width:60px;color:#22d3ee;font-family:ui-monospace,monospace;">0.100</span>
+      </div>
+      <svg id="titrationSvg" viewBox="0 0 720 360" style="width:100%;height:auto;background:#0a0d12;border-radius:6px;"></svg>
+      <p class="v3-caption" id="titrationCaption">Titrate 50.0 mL of a weak acid with 0.100 M NaOH. Curve flattens in the buffer region ($pH \approx pK_a$), then jumps at the equivalence point (half-equivalence marked with the pink dot).</p>
+    </div>
+
+    <p>Things to look for as you drag:</p>
+
+    <ul>
+      <li>At the <em>half-equivalence point</em> (half the base needed to fully neutralize has been added), $[A^-] = [HA]$ and Henderson-Hasselbalch gives $pH = pK_a$. The pink dot always sits exactly at that height.</li>
+      <li>At the <em>equivalence point</em>, all the acid is neutralized. The solution is basic (because you've made the conjugate base $A^-$ which hydrolyzes back). Stronger acids push the equivalence-point pH closer to 7; weaker acids push it higher.</li>
+      <li>Dilute acids ($[HA]_0$ small) have flatter curves and less distinct equivalence points — which is why titration accuracy breaks down at very low concentrations.</li>
+    </ul>
+
+    <div class="problem-set" data-topic="chem-eq-buffer"></div>
+
+    <!-- ========================================================== -->
+    <h2 id="ksp">9. Solubility equilibria — $K_{sp}$</h2>
+
+    <p>Insoluble salts aren't <em>totally</em> insoluble. A tiny amount dissolves, and the dissolved fraction sits at equilibrium with the solid. For $AgCl(s) \rightleftharpoons Ag^+(aq) + Cl^-(aq)$:</p>
+
+    <div class="math-display">$$ K_{sp} \;=\; [Ag^+][Cl^-] \;=\; 1.8 \times 10^{-10}. $$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Solubility product</p>
+      <dl>
+        <dt>$K_{sp}$</dt><dd>Solubility product. The product of ion concentrations at saturation. The solid itself (pure phase) doesn't appear.</dd>
+        <dt>$[Ag^+]$</dt><dd>Silver ion concentration at saturation.</dd>
+        <dt>$[Cl^-]$</dt><dd>Chloride ion concentration at saturation.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Molar solubility.</strong> If you drop $AgCl$ into pure water, $[Ag^+] = [Cl^-] = s$ where $s$ is the molar solubility. So $s^2 = K_{sp}$, giving $s = \sqrt{1.8 \times 10^{-10}} \approx 1.3 \times 10^{-5}$ M — about 2 mg per liter. Silver halides are used in photographic film because they're essentially insoluble but photosensitive. For a salt like $Ca_3(PO_4)_2$ (bone mineral), $K_{sp} = [Ca^{2+}]^3 [PO_4^{3-}]^2$ — the stoichiometric coefficients become exponents, just like the generic $K$.</p>
+    </div>
+
+    <h3>Common-ion effect</h3>
+
+    <p>Add a source of $Cl^-$ to that silver chloride solution — say, sodium chloride at 0.10 M. Now $[Cl^-]$ is fixed at 0.10, so $[Ag^+]$ has to shrink to $K_{sp} / 0.10 = 1.8 \times 10^{-9}$ M to maintain the product. The silver chloride is <em>less</em> soluble in salt water than in pure water. This is the <strong>common-ion effect</strong>. It's Le Chatelier's principle applied to dissolution: you added a product, so the equilibrium shifts toward the solid.</p>
+
+    <p>Practical use: in water treatment, adding excess phosphate precipitates out calcium. In kidney-stone pathology, a high-oxalate diet raises $[C_2O_4^{2-}]$ and shifts $CaC_2O_4$ out of solution inside your kidneys. The same math, different context.</p>
+
+    <p><strong>Prediction rule.</strong> If you mix ionic solutions and wonder whether a precipitate will form, compute $Q_{sp}$ from the initial concentrations. If $Q_{sp} > K_{sp}$, precipitation will occur until $Q$ drops to $K$. If $Q_{sp} < K_{sp}$, nothing precipitates — the solution is undersaturated.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="complex">10. Complex-ion equilibria</h2>
+
+    <p>Transition metal cations love to grab ligands — small molecules or anions that donate electron pairs to the metal. The equilibrium constant for complex formation is $K_f$:</p>
+
+    <div class="math-display">$$ Ag^+(aq) + 2\,NH_3(aq) \; \rightleftharpoons \; [Ag(NH_3)_2]^+(aq), \quad K_f = 1.7 \times 10^{7}. $$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Formation constant</p>
+      <dl>
+        <dt>$Ag^+$</dt><dd>A bare silver cation — the metal center.</dd>
+        <dt>$NH_3$</dt><dd>Ammonia, a two-electron donor. It's acting as a ligand here.</dd>
+        <dt>$[Ag(NH_3)_2]^+$</dt><dd>The diamminesilver(I) complex — the final, solvated species.</dd>
+        <dt>$K_f$</dt><dd>Formation constant, which is the equilibrium constant for the complex formation written as products-over-reactants. Very big $K_f$ means the complex is strongly favored.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why this matters.</strong> Silver halides are "insoluble" — but if you add ammonia, the $Ag^+$ gets grabbed by $NH_3$, pulling it out of the dissolution equilibrium. $[Ag^+]$ drops, so the $K_{sp}$ equilibrium shifts dissolution-ward, so more $AgCl$ dissolves. This is exactly how you redissolve silver chloride in chemistry labs, and how historical photographers "fixed" silver halide films using thiosulfate (which forms $[Ag(S_2O_3)_2]^{3-}$, an even more stable complex).</p>
+    </div>
+
+    <p>Biological ligands work the same way. Heme in hemoglobin is an $Fe^{2+}$ porphyrin complex. $O_2$ binding to heme is a complex-formation equilibrium with a $K_f$ that's sharply tuned by surrounding protein to grab oxygen in lungs and release it in tissues. Carbon monoxide poisoning is this equilibrium with a far larger $K_f$ for CO than for $O_2$ — CO wins the binding competition irreversibly.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="code">11. Equilibrium in code</h2>
+
+    <p>Three small routines: solving for $x$ in an ICE table using the quadratic formula, computing pH of a weak acid, and simulating a titration curve.</p>
+
+    <div class="code-tabs" id="ct-eq">
+      <div class="ct-header">
+        <button class="ct-tab active" data-tab="np">NumPy</button>
+        <button class="ct-tab" data-tab="py">Plain Python</button>
+        <span class="ct-label">equilibrium primitives</span>
+      </div>
+
+      <div class="ct-panel active" data-tab="np"><pre><code><span class="kw">import</span> numpy <span class="kw">as</span> np
+
+<span class="cmt"># ---------- 1. Solve (2x)^2 / (C0 - x) = K for x, via quadratic ----------</span>
+<span class="kw">def</span> <span class="fn">ice_solve_dissociation</span>(C0, K):
+    <span class="cmt"># N2O4 -> 2 NO2 style: 4 x^2 + K x - K C0 = 0</span>
+    a, b, c = <span class="num">4.0</span>, K, -K * C0
+    disc = b * b - <span class="num">4</span> * a * c
+    x = (-b + np.sqrt(disc)) / (<span class="num">2</span> * a)
+    <span class="kw">return</span> x
+
+<span class="cmt"># Sanity check against worked example in the text</span>
+x = ice_solve_dissociation(<span class="num">0.10</span>, <span class="num">4.6e-3</span>)
+<span class="fn">print</span>(<span class="str">f"x = {x:.5f} M,  [N2O4] = {0.10 - x:.4f},  [NO2] = {2*x:.4f}"</span>)
+
+<span class="cmt"># ---------- 2. pH of a weak acid at concentration C, given Ka ----------</span>
+<span class="kw">def</span> <span class="fn">weak_acid_pH</span>(C, Ka):
+    <span class="cmt"># HA -&gt; H+ + A-,  K = x^2 / (C - x)</span>
+    <span class="cmt"># x^2 + K x - K C = 0</span>
+    disc = Ka * Ka + <span class="num">4</span> * Ka * C
+    x = (-Ka + np.sqrt(disc)) / <span class="num">2</span>
+    <span class="kw">return</span> -np.log10(x)
+
+<span class="fn">print</span>(<span class="str">f"pH of 0.10 M acetic acid: {weak_acid_pH(0.10, 1.8e-5):.2f}"</span>)
+<span class="cmt"># Expected: ~2.87</span>
+
+<span class="cmt"># ---------- 3. Titration curve: weak acid + strong base ----------</span>
+<span class="kw">def</span> <span class="fn">titration_curve</span>(C_HA, V_HA, C_NaOH, pKa, V_base):
+    <span class="cmt"># V_base is an array of NaOH volumes added (mL).</span>
+    <span class="cmt"># Returns pH at each volume.</span>
+    Ka = <span class="num">10</span> ** (-pKa)
+    n_HA = C_HA * V_HA / <span class="num">1000</span>                      <span class="cmt"># moles of acid</span>
+    n_OH = C_NaOH * V_base / <span class="num">1000</span>                   <span class="cmt"># moles base added</span>
+    V_tot = (V_HA + V_base) / <span class="num">1000</span>                    <span class="cmt"># total volume L</span>
+
+    pH = np.zeros_like(V_base, dtype=<span class="kw">float</span>)
+    <span class="kw">for</span> i, (nb, V) <span class="kw">in</span> <span class="fn">enumerate</span>(<span class="fn">zip</span>(n_OH, V_tot)):
+        <span class="kw">if</span> nb &lt; n_HA:
+            <span class="cmt"># Buffer region: Henderson-Hasselbalch</span>
+            nHA = n_HA - nb
+            nA  = nb
+            pH[i] = pKa + np.log10(<span class="fn">max</span>(nA, <span class="num">1e-12</span>) / <span class="fn">max</span>(nHA, <span class="num">1e-12</span>))
+        <span class="kw">elif</span> np.isclose(nb, n_HA):
+            <span class="cmt"># Equivalence: pure A- hydrolysis, pH &gt; 7</span>
+            C_A = n_HA / V
+            Kb  = <span class="num">1e-14</span> / Ka
+            x   = np.sqrt(Kb * C_A)
+            pH[i] = <span class="num">14</span> + np.log10(<span class="fn">max</span>(x, <span class="num">1e-14</span>))
+        <span class="kw">else</span>:
+            <span class="cmt"># Excess strong base</span>
+            C_OH = (nb - n_HA) / V
+            pH[i] = <span class="num">14</span> + np.log10(C_OH)
+    <span class="kw">return</span> pH
+
+V = np.linspace(<span class="num">0.1</span>, <span class="num">100</span>, <span class="num">200</span>)
+curve = titration_curve(<span class="num">0.10</span>, <span class="num">50</span>, <span class="num">0.10</span>, <span class="num">4.76</span>, V)
+<span class="fn">print</span>(<span class="str">"half-equiv pH ="</span>, <span class="fn">float</span>(curve[<span class="num">49</span>]))     <span class="cmt"># ~ pKa = 4.76</span>
+</code></pre></div>
+
+      <div class="ct-panel" data-tab="py"><pre><code><span class="kw">import</span> math
+
+<span class="cmt"># Same ideas, plain Python.</span>
+
+<span class="kw">def</span> <span class="fn">pH_weak_acid</span>(C, Ka):
+    disc = Ka * Ka + <span class="num">4</span> * Ka * C
+    x = (-Ka + math.<span class="fn">sqrt</span>(disc)) / <span class="num">2</span>
+    <span class="kw">return</span> -math.<span class="fn">log10</span>(x)
+
+<span class="kw">def</span> <span class="fn">pH_buffer</span>(pKa, ratio_A_to_HA):
+    <span class="kw">return</span> pKa + math.<span class="fn">log10</span>(ratio_A_to_HA)
+
+<span class="kw">def</span> <span class="fn">ksp_molar_solubility</span>(Ksp, n_cation, n_anion):
+    <span class="cmt"># e.g. Ca3(PO4)2: n_cat=3, n_an=2</span>
+    <span class="cmt"># Ksp = (n_cat s)^n_cat * (n_an s)^n_an</span>
+    prefactor = (n_cation ** n_cation) * (n_anion ** n_anion)
+    total_order = n_cation + n_anion
+    <span class="kw">return</span> (Ksp / prefactor) ** (<span class="num">1</span> / total_order)
+
+<span class="fn">print</span>(<span class="str">f"0.10 M acetic pH: {pH_weak_acid(0.10, 1.8e-5):.2f}"</span>)
+<span class="fn">print</span>(<span class="str">f"pH 4.8 buffer ratio: {pH_buffer(4.76, 1.10):.3f}"</span>)
+<span class="fn">print</span>(<span class="str">f"Ca3(PO4)2 solubility: {ksp_molar_solubility(2e-29, 3, 2):.2e} M"</span>)
+</code></pre></div>
+    </div>
+
+    <p>A few practical notes:</p>
+
+    <ul>
+      <li>Real chemistry packages like <code>PHREEQC</code> and <code>CHEMKIN</code> do not solve one equilibrium at a time — they solve large coupled systems of equilibria, often hundreds of species, by minimizing total free energy under mass-balance constraints. The underlying math is the same. Your toy routines above are pedagogical, not production.</li>
+      <li>The quadratic approach breaks down if $K$ is comparable to $C_0$ or if multiple equilibria interact (e.g. polyprotic acids). Use iterative solvers for those.</li>
+      <li>Activity corrections (finite-concentration effects) become important above ~0.01 M. At high ionic strength, plug in activity coefficients from Debye-Hückel or specific-ion theory.</li>
+    </ul>
+
+    <!-- ========================================================== -->
+    <h2 id="summary">12. Cheat sheet</h2>
+
+    <div class="grid">
+      <div class="card">
+        <h4>Equilibrium constant</h4>
+        <p>$K = \dfrac{[C]^c[D]^d}{[A]^a[B]^b}$</p>
+        <p class="meta">Products over reactants, each to its stoichiometric power.</p>
+      </div>
+      <div class="card">
+        <h4>Reaction quotient</h4>
+        <p>Same formula as $K$ with current concentrations</p>
+        <p class="meta">$Q < K$ forward. $Q > K$ reverse. $Q = K$ equilibrium.</p>
+      </div>
+      <div class="card">
+        <h4>$K_p$ vs $K_c$</h4>
+        <p>$K_p = K_c (RT)^{\Delta n}$</p>
+        <p class="meta">$\Delta n$ = moles gas products minus moles gas reactants.</p>
+      </div>
+      <div class="card">
+        <h4>van't Hoff</h4>
+        <p>$\ln(K_2/K_1) = -\dfrac{\Delta H^\circ}{R}\!\left(\dfrac{1}{T_2} - \dfrac{1}{T_1}\right)$</p>
+        <p class="meta">How $K$ changes with temperature.</p>
+      </div>
+      <div class="card">
+        <h4>$K_a$, $K_b$, $K_w$</h4>
+        <p>$K_a K_b = K_w = 10^{-14}$</p>
+        <p class="meta">Conjugate pair link. True at 25°C.</p>
+      </div>
+      <div class="card">
+        <h4>pH</h4>
+        <p>$pH = -\log_{10}[H^+]$</p>
+        <p class="meta">Log of hydronium. $pH + pOH = 14$.</p>
+      </div>
+      <div class="card">
+        <h4>Henderson-Hasselbalch</h4>
+        <p>$pH = pK_a + \log([A^-]/[HA])$</p>
+        <p class="meta">Buffer design. Max capacity at $pH = pK_a$.</p>
+      </div>
+      <div class="card">
+        <h4>$K_{sp}$</h4>
+        <p>Product of ion concentrations at saturation</p>
+        <p class="meta">$Q_{sp} > K_{sp}$ precipitates. $< $ undersaturated.</p>
+      </div>
+      <div class="card">
+        <h4>ICE method</h4>
+        <p>Initial, Change, Equilibrium rows</p>
+        <p class="meta">The universal equilibrium-problem framework.</p>
+      </div>
+      <div class="card">
+        <h4>Le Chatelier</h4>
+        <p>System opposes disturbances</p>
+        <p class="meta">Add reactant $\Rightarrow$ forward. Compress gases $\Rightarrow$ fewer-mole side.</p>
+      </div>
+    </div>
+
+    <h3>See also</h3>
+    <div class="see-also">
+      <div class="card">
+        <h4><a href="./biochemistry.html">Biochemistry</a></h4>
+        <p>Enzyme kinetics and metabolism are equilibrium and steady-state chemistry on top of protein scaffolds. Michaelis-Menten is literally $K$ renamed.</p>
+      </div>
+      <div class="card">
+        <h4><a href="./organic-chemistry.html">Organic chemistry</a></h4>
+        <p>Many organic syntheses need equilibrium-shifting tricks — excess reagent, product removal, Le Chatelier — to push yields up.</p>
+      </div>
+      <div class="card">
+        <h4><a href="../physics/index.html">Thermodynamics</a></h4>
+        <p>$\Delta G^\circ = -RT \ln K$ links Gibbs free energy to equilibrium. Chemical equilibrium is thermodynamics speaking the chemist's dialect.</p>
+      </div>
+      <div class="card">
+        <h4><a href="../math/calculus.html">Calculus (logs)</a></h4>
+        <p>Most equilibrium math is logs and exponents. If $\ln$ and $\log_{10}$ feel slippery, revisit them before tackling buffer problems.</p>
+      </div>
+    </div>
+
+    <div class="bib">
+      <h4>Further reading</h4>
+      <ul>
+        <li>Peter Atkins and Julio de Paula — <em>Physical Chemistry</em>. The canonical graduate-level treatment of chemical equilibrium and thermodynamics. Chapters 6 and 7 cover everything on this page with full rigor.</li>
+        <li>Ira Levine — <em>Physical Chemistry</em>. An alternate standard with more worked examples.</li>
+        <li>James Butler — <em>Ionic Equilibrium: Solubility and pH Calculations</em> (Wiley, 1998). Old but still the clearest reference for aqueous equilibrium calculations, including polyprotic and mixed-ion systems.</li>
+        <li>Wikipedia — <a href="https://en.wikipedia.org/wiki/Chemical_equilibrium">Chemical equilibrium</a>. A surprisingly thorough article with history, derivations, and links to modern computational approaches.</li>
+        <li>David Parkhurst and C. A. J. Appelo — <em>PHREEQC documentation</em> (<a href="https://www.usgs.gov/software/phreeqc-version-3">usgs.gov</a>). The open-source geochemical equilibrium solver that real water-chemistry modelers use.</li>
+      </ul>
+    </div>
+
+    <div class="next-card">
+      <div class="label">NEXT UP</div>
+      <a href="./organic-chemistry.html">→ Organic Chemistry</a>
+      <p>Once you can track thermodynamic equilibria, you're ready for the subject where the equilibrium is usually pushed hard by the arrow-pushing of electrons: organic reactions.</p>
+    </div>
+
+  </article>
+</div>
+
+<script>
+// =========================================================
+// Code tabs
+document.querySelectorAll('.code-tabs').forEach(root => {
+  const tabs = root.querySelectorAll('.ct-tab');
+  const panels = root.querySelectorAll('.ct-panel');
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const target = tab.getAttribute('data-tab');
+      tabs.forEach(t => t.classList.toggle('active', t === tab));
+      panels.forEach(p => p.classList.toggle('active', p.getAttribute('data-tab') === target));
+    });
+  });
+});
+
+// =========================================================
+// Titration curve visualization
+(function() {
+  const svg = document.getElementById('titrationSvg');
+  if (!svg) return;
+  const NS = 'http://www.w3.org/2000/svg';
+  const sKa = document.getElementById('tpKa');
+  const lKa = document.getElementById('tpKaLabel');
+  const sC0 = document.getElementById('tC0');
+  const lC0 = document.getElementById('tC0Label');
+  const caption = document.getElementById('titrationCaption');
+
+  const W = 720, H = 360;
+  const ml = 60, mr = 30, mt = 20, mb = 40;
+  const plotW = W - ml - mr;
+  const plotH = H - mt - mb;
+
+  // x: mL of 0.10 M NaOH added to 50 mL of weak acid (fixed C_NaOH = 0.10 M)
+  const Vmin = 0, Vmax = 100;
+  const pHmin = 0, pHmax = 14;
+
+  function xOf(v) { return ml + (v - Vmin) / (Vmax - Vmin) * plotW; }
+  function yOf(p) { return mt + plotH - (p - pHmin) / (pHmax - pHmin) * plotH; }
+
+  function mkText(x, y, txt, color, size, anchor) {
+    const t = document.createElementNS(NS, 'text');
+    t.setAttribute('x', x); t.setAttribute('y', y);
+    t.setAttribute('fill', color || '#7a8a9a');
+    t.setAttribute('font-size', size || 11);
+    t.setAttribute('font-family', 'ui-monospace, monospace');
+    if (anchor) t.setAttribute('text-anchor', anchor);
+    t.textContent = txt;
+    return t;
+  }
+  function mkLine(x1, y1, x2, y2, stroke, w, dash) {
+    const l = document.createElementNS(NS, 'line');
+    l.setAttribute('x1', x1); l.setAttribute('y1', y1);
+    l.setAttribute('x2', x2); l.setAttribute('y2', y2);
+    l.setAttribute('stroke', stroke);
+    l.setAttribute('stroke-width', w || 1);
+    if (dash) l.setAttribute('stroke-dasharray', dash);
+    return l;
+  }
+  function mkRect(x, y, w, h, fill, stroke) {
+    const r = document.createElementNS(NS, 'rect');
+    r.setAttribute('x', x); r.setAttribute('y', y);
+    r.setAttribute('width', w); r.setAttribute('height', h);
+    r.setAttribute('fill', fill);
+    if (stroke) { r.setAttribute('stroke', stroke); r.setAttribute('stroke-width', 1); }
+    return r;
+  }
+  function mkCircle(cx, cy, r, fill, stroke) {
+    const c = document.createElementNS(NS, 'circle');
+    c.setAttribute('cx', cx); c.setAttribute('cy', cy); c.setAttribute('r', r);
+    c.setAttribute('fill', fill);
+    if (stroke) { c.setAttribute('stroke', stroke); c.setAttribute('stroke-width', 1.5); }
+    return c;
+  }
+  function mkPath(d, stroke, w) {
+    const p = document.createElementNS(NS, 'path');
+    p.setAttribute('d', d);
+    p.setAttribute('stroke', stroke);
+    p.setAttribute('stroke-width', w || 2);
+    p.setAttribute('fill', 'none');
+    p.setAttribute('stroke-linejoin', 'round');
+    return p;
+  }
+
+  function pHAt(V, C_HA, V_HA, C_NaOH, pKa) {
+    const Ka = Math.pow(10, -pKa);
+    const n_HA = C_HA * V_HA / 1000;
+    const n_OH = C_NaOH * V / 1000;
+    const V_tot = (V_HA + V) / 1000;
+    if (V <= 1e-6) {
+      // Pure weak acid
+      const disc = Ka * Ka + 4 * Ka * C_HA;
+      const x = (-Ka + Math.sqrt(disc)) / 2;
+      return -Math.log10(Math.max(x, 1e-14));
+    }
+    const eps = 1e-6;
+    if (n_OH < n_HA - eps) {
+      const nHA = n_HA - n_OH;
+      const nA  = n_OH;
+      if (nHA < 1e-12 || nA < 1e-12) {
+        // fall through to limits
+        return pKa + Math.log10(Math.max(nA, 1e-12) / Math.max(nHA, 1e-12));
+      }
+      return pKa + Math.log10(nA / nHA);
+    }
+    if (Math.abs(n_OH - n_HA) < eps) {
+      const C_A = n_HA / V_tot;
+      const Kb  = 1e-14 / Ka;
+      const x   = Math.sqrt(Kb * C_A);
+      return 14 + Math.log10(Math.max(x, 1e-14));
+    }
+    const C_OH = (n_OH - n_HA) / V_tot;
+    return 14 + Math.log10(C_OH);
+  }
+
+  function draw() {
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+    const pKa = parseFloat(sKa.value);
+    const C0  = parseFloat(sC0.value);
+    lKa.textContent = pKa.toFixed(2);
+    lC0.textContent = C0.toFixed(3);
+
+    svg.appendChild(mkRect(ml, mt, plotW, plotH, '#0f131a', '#2a3446'));
+
+    // gridlines: pH every 2
+    for (let p = 0; p <= 14; p += 2) {
+      const y = yOf(p);
+      svg.appendChild(mkLine(ml, y, ml + plotW, y, '#1a212e', 1));
+      svg.appendChild(mkText(ml - 6, y + 3, p.toString(), '#7a8a9a', 10, 'end'));
+    }
+    for (let v = 0; v <= 100; v += 20) {
+      const x = xOf(v);
+      svg.appendChild(mkLine(x, mt, x, mt + plotH, '#1a212e', 1));
+      svg.appendChild(mkText(x, mt + plotH + 14, v.toString(), '#7a8a9a', 10, 'middle'));
+    }
+
+    // pH = 7 neutral line
+    svg.appendChild(mkLine(ml, yOf(7), ml + plotW, yOf(7), '#384050', 1, '3,3'));
+    // pH = pKa reference
+    svg.appendChild(mkLine(ml, yOf(pKa), ml + plotW, yOf(pKa), '#7c5cff', 1, '4,4'));
+
+    // Titration curve (C_NaOH = 0.10 M, V_HA = 50 mL)
+    const N = 400;
+    let d = '';
+    for (let i = 0; i <= N; i++) {
+      const v = Vmin + (i / N) * (Vmax - Vmin);
+      const p = pHAt(v, C0, 50, 0.10, pKa);
+      const px = xOf(v);
+      const py = yOf(Math.max(pHmin, Math.min(pHmax, p)));
+      d += (i === 0 ? 'M' : 'L') + px.toFixed(2) + ',' + py.toFixed(2) + ' ';
+    }
+    svg.appendChild(mkPath(d, '#22d3ee', 2.5));
+
+    // Equivalence volume: V_eq (mL) such that 0.10 * V_eq = C0 * 50
+    const Veq = C0 * 50 / 0.10;
+    const Vhalf = Veq / 2;
+    if (Veq >= 0 && Veq <= 100) {
+      svg.appendChild(mkLine(xOf(Veq), mt, xOf(Veq), mt + plotH, '#f472b6', 1, '2,3'));
+    }
+    // Half-equivalence dot at pH = pKa
+    if (Vhalf >= 0 && Vhalf <= 100) {
+      svg.appendChild(mkCircle(xOf(Vhalf), yOf(pKa), 5, '#f472b6', '#fff'));
+    }
+
+    // Axis labels
+    svg.appendChild(mkText(ml + plotW / 2, H - 8, 'mL of 0.100 M NaOH added', '#b4c4d4', 11, 'middle'));
+    svg.appendChild(mkText(18, mt + plotH / 2, 'pH', '#b4c4d4', 11));
+
+    // Title
+    svg.appendChild(mkText(ml + 8, mt + 14,
+      'Titration of ' + (C0 * 50).toFixed(1) + ' mmol weak acid (50.0 mL at ' + C0.toFixed(3) + ' M)',
+      '#b4c4d4', 11));
+
+    caption.textContent =
+      'pKₐ = ' + pKa.toFixed(2) + '.  V_eq = ' + Veq.toFixed(1) +
+      ' mL.  At half-equiv (V = ' + Vhalf.toFixed(1) + ' mL), pH = pKₐ = ' +
+      pKa.toFixed(2) + '.';
+  }
+
+  sKa.addEventListener('input', draw);
+  sC0.addEventListener('input', draw);
+  draw();
+})();
+</script>
+<script defer src="../problem-set.js"></script>
+<script defer src="equilibrium-problems.js"></script>
+</body>
+</html>

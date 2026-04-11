@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mathematics — A Pragmatic Tour for Programmers</title>
+<title>Mathematics — The Language of Quantitative Reasoning</title>
 <link rel="stylesheet" href="../styles.css">
 </head>
 <body>
@@ -31,8 +31,8 @@
 <div class="hero">
   <div class="hero-inner">
     <span class="chip">UPDATED APRIL 2026</span>
-    <h1>Mathematics for Modern Computing</h1>
-    <p class="lede">A working tour of the seven math subjects you actually need to read AI papers, debug training loops, and understand why your probability intuition keeps lying to you. Hover any <span class="term" data-label="Term" data-def="Words with a dotted underline have definitions you can hover. Try it on the ones throughout this page.">dotted term</span>. Poke at the interactive figures. When a section feels too thin, click its Deep Dive link — every subject here has a full textbook-length lesson one click away.</p>
+    <h1>Mathematics — The Language of Quantitative Reasoning</h1>
+    <p class="lede">A working tour of the seven math subjects that power physics, chemistry, engineering, finance, and AI. Differential equations for motion and fields, linear algebra for quantum states and structural analysis, probability for statistical mechanics and inference, optimization for every kind of design tradeoff. Hover any <span class="term" data-label="Term" data-def="Words with a dotted underline have definitions you can hover. Try it on the ones throughout this page.">dotted term</span>. Poke at the interactive figures. When a section feels too thin, click its Deep Dive link for the full lesson.</p>
   </div>
 </div>
 
@@ -186,39 +186,39 @@
       <!-- ============================================================ -->
       <section id="overview">
         <h2>What math you actually need <span class="era">// big picture</span></h2>
-        <p>You don't need to remember everything from your last math class. You need a working command of about seven subjects — the ones the rest of computing is built on top of. If you know calculus well enough to believe the chain rule, linear algebra well enough to read a matrix multiplication without panic, and probability well enough to not confuse P(A|B) with P(B|A), you can read ninety percent of the AI papers published this year.</p>
+        <p>Math is the shared language across quantitative fields. A physicist, a chemist, a structural engineer, a quant trader, and a machine-learning researcher all reach for the same seven subjects when the work gets serious. You don't need to remember everything from your last math class. You need a working command of those seven, because calculus describes motion and rates, linear algebra describes states and transformations, and probability describes uncertainty — and every quantitative field is built on some combination of the three.</p>
 
-        <p>The other ten percent use tools from statistics, discrete math, or numerical analysis. Those tools show up less often, but when they do they are unavoidable — you cannot build a <span class="term" data-label="Bayesian model" data-def="A probability model that treats unknown parameters as random variables and updates them with observed data via Bayes' theorem.">Bayesian model</span> without statistics, you cannot reason about a graph algorithm without graph theory, and you cannot explain why your square-root function returns 0.9999999999 without floating-point arithmetic.</p>
+        <p>The other four show up the moment the problem gets concrete. You can't do statistical mechanics or climate modelling without statistics, you can't reason about molecular graphs or network effects without discrete math, and you can't explain why a finite-element simulation diverges without numerical analysis. These tools are less glamorous than the big three, but they're the ones that stop a model from silently lying to you.</p>
 
-        <p>This page is a fast tour of all seven. Each section is a 3–5 paragraph summary with one interactive figure you can poke at, followed by a link to the full deep-dive page. Read the ones you need, skip the ones you don't, come back when ML humbles you. What you don't need, mostly: abstract algebra past "groups exist," real analysis past "limits are a pain to formalize," Galois theory (unless you're doing cryptography), category theory (unless you're writing Haskell), and most of olympiad-style problem-solving. Fun, but not on the critical path.</p>
+        <p>This page is a fast tour of all seven. Each section is a 3–5 paragraph summary with one interactive figure you can poke at, followed by a link to the full deep-dive page. Read the ones you need, skip the ones you don't, come back when the work demands another piece. What you don't need unless your specific field asks for it: abstract algebra past "groups exist," real analysis past "limits are a pain to formalize," Galois theory (unless you're doing cryptography or coding theory), category theory (unless you're writing Haskell), and most of olympiad-style problem-solving. Fun, but not on the critical path.</p>
 
         <div class="callout">
           <div class="label">The 60-second summary</div>
           <p style="margin:6px 0">
-            <strong>Calculus</strong> — instantaneous change. The chain rule is the secret behind every training loop.<br>
-            <strong>Multivariable calculus</strong> — change in many directions at once. Gradients, Jacobians, Hessians.<br>
-            <strong>Linear algebra</strong> — the language of ML. Vectors, matrices, eigenvalues, SVD.<br>
-            <strong>Probability</strong> — reasoning under uncertainty. Random variables, Bayes, entropy.<br>
-            <strong>Statistics</strong> — from a pile of data to a defensible claim. Estimation, testing, regression.<br>
-            <strong>Discrete mathematics</strong> — the grammar of CS. Sets, logic, counting, graphs.<br>
-            <strong>Numerical analysis</strong> — what a real computer does when asked to do math it cannot do exactly.
+            <strong>Calculus</strong> — instantaneous change. The chain rule runs every training loop, and differential equations describe every physical system that moves.<br>
+            <strong>Multivariable calculus</strong> — change in many directions at once. Gradients, Jacobians, Hessians. The mechanics of fields, optimizers, and thermodynamic potentials.<br>
+            <strong>Linear algebra</strong> — the universal language of states and transformations. Vectors, matrices, eigenvalues, SVD. Quantum states, rigid-body motion, and neural-network weights all live here.<br>
+            <strong>Probability</strong> — reasoning under uncertainty. Random variables, Bayes, entropy. The backbone of statistical mechanics, insurance, and inference.<br>
+            <strong>Statistics</strong> — from a pile of data to a defensible claim. Estimation, testing, regression. Used by everyone from epidemiologists to particle physicists.<br>
+            <strong>Discrete mathematics</strong> — the grammar of structure. Sets, logic, counting, graphs. Shows up in chemistry (molecular graphs), logistics (scheduling), and CS.<br>
+            <strong>Numerical analysis</strong> — what a real computer does when asked to do math it cannot do exactly. Finite-element methods, climate simulations, and orbital integrators all depend on it.
           </p>
         </div>
 
-        <h3>What modern ML actually asks of you</h3>
+        <h3>What quantitative work actually asks of you</h3>
         <ul class="checked">
-          <li><strong>Derivatives.</strong> Training a model is minimizing a loss — the <span class="term" data-label="Loss" data-def="A number that measures how wrong a model's predictions are. Training is the process of making it smaller by adjusting weights.">loss</span> — and the only tool for pointing the knobs in the right direction is the derivative.</li>
-          <li><strong>Matrix shapes.</strong> Every bug in a training script is eventually a shape mismatch. Knowing what a matrix means, not just what its <code>shape</code> attribute is, prevents hours of staring.</li>
-          <li><strong>Probabilities that sum to one.</strong> Every classifier, every language model, every diffusion model is ultimately outputting a probability distribution. Softmax, cross-entropy, and KL divergence are the same idea in three costumes.</li>
-          <li><strong>Sample size intuition.</strong> If your benchmark uses 50 prompts, your confidence interval is enormous. Statistics tells you how enormous.</li>
-          <li><strong>Floating-point sanity.</strong> Mixed-precision training, quantization, and "why does my loss go to NaN" are all numerical-analysis problems in disguise.</li>
+          <li><strong>Derivatives.</strong> Rates of change describe motion in physics, reaction rates in chemistry, marginal cost in economics, and <span class="term" data-label="Loss" data-def="A number that measures how wrong a model's predictions are. Training is the process of making it smaller by adjusting weights.">loss</span> in machine learning. All the same calculus.</li>
+          <li><strong>Matrix shapes.</strong> A matrix is a linear map from one space to another. The same object describes a rotation in robotics, a Hamiltonian in quantum mechanics, an adjacency structure in a chemical graph, and a weight layer in a neural network. If you know what a matrix <em>means</em>, you can read any of them.</li>
+          <li><strong>Distributions that sum to one.</strong> Classifiers, polling models, particle distributions in statistical mechanics, and option-pricing models all output probabilities. Softmax, cross-entropy, and KL divergence are the same idea in three costumes.</li>
+          <li><strong>Sample size intuition.</strong> A clinical trial with 50 patients and a benchmark with 50 prompts both have enormous confidence intervals. Statistics tells you how enormous.</li>
+          <li><strong>Floating-point sanity.</strong> Climate simulations that diverge, finite-element stresses that explode, and training losses that go to NaN are all numerical-analysis problems in disguise.</li>
         </ul>
       </section>
 
       <!-- ============================================================ -->
       <section id="how-to-use">
         <h2>How to use this track <span class="era">// four goal-driven paths</span></h2>
-        <p>The seven subjects interlock. You can read them in any order, but if you have a specific goal in mind, here are the shortest paths through. Each one points at sections on this page plus the deep-dive pages that flesh them out.</p>
+        <p>The seven subjects interlock. You can read them in any order, but if you have a specific goal in mind — modelling a physical system, reading a finance paper, passing a chemistry exam, following a machine-learning paper — here are the shortest paths through. Each one points at sections on this page plus the deep-dive pages that flesh them out.</p>
         <div class="grid">
           <div class="card">
             <h4>"I want to understand backpropagation."</h4>
@@ -333,8 +333,8 @@
 
       <!-- ============================================================ -->
       <section id="multivar">
-        <h2>Multivariable Calculus <span class="era">// the ML gradient</span></h2>
-        <p class="lede">Once a function has more than one input, "slope" splits into a whole vector of slopes — one per input. That vector is the gradient, and it is the single most-used object in machine learning.</p>
+        <h2>Multivariable Calculus <span class="era">// gradients, fields, and surfaces</span></h2>
+        <p class="lede">Once a function has more than one input, "slope" splits into a whole vector of slopes — one per input. That vector is the gradient, and it shows up everywhere from electromagnetism to thermodynamics to the core of every machine-learning optimizer.</p>
 
         <p>A machine learning model is a function with a huge number of inputs: every weight is an input, and the output is a single number (the loss). For GPT-4 that's roughly a trillion inputs and one output. Single-variable calculus handles one-in, one-out. For a trillion-in, one-out you need multivariable calculus — which mostly means learning the right vocabulary for "derivatives in many directions at once."</p>
 
@@ -419,8 +419,8 @@
 
       <!-- ============================================================ -->
       <section id="linalg">
-        <h2>Linear Algebra <span class="era">// the language of ML</span></h2>
-        <p class="lede">Every modern ML paper is written in linear algebra. Get comfortable reading it and the notation stops being a wall.</p>
+        <h2>Linear Algebra <span class="era">// the language of states and transformations</span></h2>
+        <p class="lede">Quantum mechanics, structural engineering, and modern ML papers are all written in linear algebra. Get comfortable reading it and the notation stops being a wall.</p>
 
         <p>Linear algebra begins from a simple observation: most of the operations you want to do on lists of numbers — rotations, projections, weighted sums, changes of coordinates — can be written using two primitive operations (adding vectors and multiplying by a scalar) combined into a third (multiplying by a matrix). Once you accept that framing, every "transformer attention" diagram, every "embedding lookup," every "projection into residual stream" becomes a well-defined piece of linear algebra instead of a vague metaphor.</p>
 
@@ -506,7 +506,7 @@
       <!-- ============================================================ -->
       <section id="probability">
         <h2>Probability <span class="era">// from dice to Bayes</span></h2>
-        <p class="lede">Probability is how you do math on uncertainty. Skip it and every loss function, every generative model, and every discussion of model calibration will read like a foreign language.</p>
+        <p class="lede">Probability is how you do math on uncertainty. Statistical mechanics, quantum measurement, clinical trials, and machine-learning loss functions all speak it.</p>
 
         <p>Start with the simplest object: a <span class="term" data-label="Random variable" data-def="A number whose value comes from a random process. The weather, a coin flip, the output of a neural net on noisy input — all random variables.">random variable</span>, which is just "a number whose value depends on chance." A fair die roll is a random variable with values 1..6. A user's click-through is a random variable with values 0 or 1. A model's predicted logit for "cat" is a random variable because the input image might be noisy. Probability assigns weights to the possible values — the <span class="term" data-label="Distribution" data-def="The full specification of which values a random variable can take and with what probabilities.">distribution</span> — and everything else follows.</p>
 
@@ -653,8 +653,8 @@
 
       <!-- ============================================================ -->
       <section id="discrete">
-        <h2>Discrete Mathematics <span class="era">// the grammar of CS</span></h2>
-        <p class="lede">Sets, logic, proofs, counting, graphs. This is the subject that teaches you to <em>reason</em> about algorithms, not just use them.</p>
+        <h2>Discrete Mathematics <span class="era">// the grammar of structure</span></h2>
+        <p class="lede">Sets, logic, proofs, counting, graphs. The subject that teaches you to <em>reason</em> about structure, whether it's a molecule, a supply chain, or an algorithm.</p>
 
         <p>Continuous math — calculus, probability, linear algebra — is about quantities that can slide smoothly. Discrete math is about things you can count: sets, permutations, logical statements, graph vertices. It's where computer science gets its backbone. Every proof of algorithm correctness, every induction argument, every complexity analysis, and every crypto protocol lives in discrete-math territory.</p>
 

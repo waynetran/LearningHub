@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Special Relativity — Deep Dive</title>
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError: false});"></script>
+</head>
+<body>
+<div id="tooltip"></div>
+
+<nav class="topic-nav">
+  <a class="back" href="./index.html">← Physics</a>
+  <div class="crumb">Physics / <span class="topic-name">Special Relativity</span></div>
+</nav>
+
+<div class="topic-layout">
+  <aside class="topic-toc">
+    <h4>ON THIS PAGE</h4>
+    <ul>
+      <li><a href="#why">1. Why special relativity exists</a></li>
+      <li><a href="#vocab">2. Vocabulary cheat sheet</a></li>
+      <li><a href="#postulates">3. The two postulates</a></li>
+      <li><a href="#dilation">4. Time dilation and length contraction</a></li>
+      <li><a href="#lorentz">5. Lorentz transformations</a></li>
+      <li><a href="#demo">6. Interactive: Lorentz boost</a></li>
+      <li><a href="#energy">7. Momentum, energy, $E = mc^2$</a></li>
+      <li><a href="#fourvec">8. Four-vectors and invariants</a></li>
+      <li><a href="#paradox">9. Paradoxes resolved</a></li>
+      <li><a href="#code">10. Special relativity in code</a></li>
+      <li><a href="#summary">11. Cheat sheet</a></li>
+    </ul>
+  </aside>
+
+  <article class="topic-content">
+    <h1>Special Relativity</h1>
+    <p class="subtitle">Demand that the speed of light be the same for every observer, and the familiar Newtonian world — absolute time, simple velocity addition, rigid rulers — falls apart. What replaces it is a geometry of spacetime in which moving clocks run slow, moving meter sticks shrink, and mass is a kind of frozen energy.</p>
+    <div class="meta-tags">
+      <span>Prereq: <a href="../math/algebra.html">algebra</a>, <a href="../math/linear-algebra.html">linear algebra</a>, a little <a href="../math/calculus.html">calculus</a></span>
+      <span>Read time: ~35 min</span>
+      <span>Interactive figures: 1</span>
+      <span>Code: NumPy, Python</span>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="why">1. Why special relativity exists</h2>
+
+    <p>By the 1890s, physics had a problem it couldn't look away from. Maxwell's equations — the laws of electricity and magnetism, written down in the 1860s — predicted electromagnetic waves that travel at exactly one speed, about $3 \times 10^8$ meters per second. Every physicist assumed that speed was measured relative to some medium, the same way the speed of sound is relative to air. They named the medium the <em>luminiferous ether</em> and went looking for it.</p>
+
+    <p>In 1887, Albert Michelson and Edward Morley built a precision interferometer in the basement of a Cleveland chemistry building. The Earth rotates and orbits the Sun, so their lab had to be moving through the ether at tens of kilometers per second. An interferometer should see a fringe shift as the apparatus rotates. They found nothing. Not "a small shift." Not "something subtle." Nothing to the precision of their instrument. They rebuilt the experiment, refined it, and kept finding nothing.</p>
+
+    <p>Something was very wrong. Lorentz and Fitzgerald tried to patch the ether theory by proposing that objects physically contract in the direction of motion, by just the right factor, to hide the effect. Einstein, in 1905, went the other way. Instead of rescuing the ether, he threw it out. His paper "On the Electrodynamics of Moving Bodies" started from two assumptions and rederived everything.</p>
+
+    <div class="callout">
+      <div class="label">THE PUNCHLINE</div>
+      <p>If the speed of light really is the same for every observer — no matter how fast they are moving — then time and space cannot both be absolute. They mix. A moving clock ticks slower, a moving rod gets shorter, and two events that are simultaneous in one frame happen at different times in another. The geometry of the universe is not Euclidean three-space plus a universal clock. It is a four-dimensional <strong>spacetime</strong> with its own notion of "distance."</p>
+    </div>
+
+    <p>Why should you, in 2026, care? Three reasons:</p>
+
+    <ul>
+      <li><strong>GPS.</strong> The satellites in your phone's location service carry atomic clocks that run at a different rate than clocks on the ground, partly because of special relativity, partly because of general relativity. Without relativistic corrections, GPS would drift by about 10 km per day and would have been useless on day one.</li>
+      <li><strong>Particle physics.</strong> Anything more energetic than a flu shot is doing relativistic physics. The LHC accelerates protons to 99.9999991% of the speed of light. Their effective mass, collision energy, and lifetime are all relativistic.</li>
+      <li><strong>Electromagnetism itself.</strong> Magnetic forces are what you see when you Lorentz-transform an electric field. The magnet on your fridge is a relativistic effect you can touch.</li>
+    </ul>
+
+    <p>This page assumes you remember basic algebra, a little trigonometry, and the idea that graphs can have axes. We will build the ideas from scratch and keep the math honest.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="vocab">2. Vocabulary cheat sheet</h2>
+
+    <p>These are the symbols you'll see repeatedly. Glance at them now.</p>
+
+    <table class="rank-table">
+      <thead><tr><th>Symbol</th><th>Read as</th><th>Means</th></tr></thead>
+      <tbody>
+        <tr><td>$c$</td><td>"speed of light"</td><td>$299{,}792{,}458$ m/s. The same in every inertial frame, by postulate.</td></tr>
+        <tr><td>$v$</td><td>"velocity"</td><td>The relative velocity between two inertial frames, along the $x$ axis in most formulas.</td></tr>
+        <tr><td>$\beta$</td><td>"beta"</td><td>Dimensionless speed: $\beta = v/c$. Between $0$ and $1$ for anything slower than light.</td></tr>
+        <tr><td>$\gamma$</td><td>"gamma"</td><td>The Lorentz factor: $\gamma = 1/\sqrt{1 - \beta^2}$. Equals 1 at rest, grows without bound as $v \to c$.</td></tr>
+        <tr><td>$\tau$</td><td>"tau"</td><td>Proper time: the time measured by a clock that is present at both events.</td></tr>
+        <tr><td>$\Delta s^2$</td><td>"spacetime interval"</td><td>$c^2 \Delta t^2 - \Delta x^2 - \Delta y^2 - \Delta z^2$. Same value in every inertial frame.</td></tr>
+        <tr><td>$E$</td><td>"energy"</td><td>Relativistic energy, including the rest-mass contribution $mc^2$.</td></tr>
+        <tr><td>$p$</td><td>"momentum"</td><td>Relativistic momentum, $\gamma m v$. Reduces to $mv$ when $v \ll c$.</td></tr>
+        <tr><td>$m$</td><td>"rest mass"</td><td>The mass of a particle as measured in its own rest frame. A Lorentz invariant.</td></tr>
+        <tr><td>$(t, x, y, z)$</td><td>"spacetime coordinates"</td><td>The labels of an event: when it happened and where. Different frames assign different labels.</td></tr>
+      </tbody>
+    </table>
+
+    <p>One warning: a lot of introductory books use a "relativistic mass" $m_{\text{rel}} = \gamma m$ that grows with speed. Modern physics does not. Mass means rest mass, full stop. Energy is what grows.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="postulates">3. The two postulates</h2>
+
+    <p>Einstein's 1905 paper starts from two assumptions. They look innocent. They are not.</p>
+
+    <div class="defn">
+      <strong>Postulate 1 — Relativity.</strong> The laws of physics take the same form in every inertial frame. There is no preferred state of rest; no experiment can tell you your absolute velocity.
+    </div>
+
+    <div class="defn">
+      <strong>Postulate 2 — Invariance of $c$.</strong> The speed of light in vacuum is the same value, $c$, in every inertial frame, independent of the motion of the source or the observer.
+    </div>
+
+    <p>The first postulate is Galileo's old idea: physics on a smoothly moving ship is the same as physics in port. Newton had already assumed this. The second one is the bomb. If you are at rest and I drive past you at half the speed of light while shining a flashlight forward, common sense says the beam leaves me at $c$ and reaches you at $c + v/2$. Postulate 2 flatly denies this. You measure the beam at $c$, and I measure the beam at $c$, full stop.</p>
+
+    <p>Something has to give. What gives is the comfortable notion that "the time between two events" and "the distance between two events" are the same in every frame. They are not. Let's see how fast that unravels.</p>
+
+    <p>Consider a simple thought experiment: a "light clock." Inside a rocket moving past you with velocity $v$, a pulse of light bounces between two mirrors separated by a height $L$. In the rocket's frame, the round-trip time is</p>
+
+    <div class="math-display">$$\Delta t_{\text{rocket}} = \frac{2 L}{c}.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Round-trip time in the rocket frame</p>
+      <dl>
+        <dt>$\Delta t_{\text{rocket}}$</dt><dd>Time for the light pulse to go up and come back down, measured by a clock on board the rocket (a proper time).</dd>
+        <dt>$L$</dt><dd>The distance between the two mirrors, measured at rest inside the rocket.</dd>
+        <dt>$c$</dt><dd>Speed of light. Light covers distance $2L$ in time $2L/c$.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>The setup.</strong> Picture two parallel mirrors one meter apart inside a railway car. A flashbulb fires at the bottom, the pulse hits the top mirror, and reflects back. To anyone in the car, this is completely ordinary.</p>
+    </div>
+
+    <p>Now you watch the rocket fly past. In your frame, the pulse does not travel straight up and down. During the time the pulse is rising, the rocket has moved forward. The light takes a diagonal path. Since it must still travel at speed $c$ (that's postulate 2), the diagonal takes longer than the vertical trip would. So the clock on the rocket, as seen from outside, ticks slower than a clock next to you. That is time dilation. We'll derive the exact factor in the next section.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="dilation">4. Time dilation and length contraction</h2>
+
+    <p>Let's make the light-clock argument quantitative. In the rocket frame, the pulse covers $2L$ in time $\Delta \tau = 2L/c$. In your frame — call it the lab frame — the pulse travels a diagonal of length $D$ during a time $\Delta t$. During that time, the rocket has moved forward by $v\,\Delta t/2$ (for the upward leg of the trip). By the Pythagorean theorem,</p>
+
+    <div class="math-display">$$\left(\frac{c \Delta t}{2}\right)^2 = L^2 + \left(\frac{v \Delta t}{2}\right)^2.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Light clock seen from outside</p>
+      <dl>
+        <dt>$c \Delta t / 2$</dt><dd>How far the pulse travels in your frame during the upward leg. Since it moves at speed $c$ for a time $\Delta t / 2$, the distance is this.</dd>
+        <dt>$L$</dt><dd>The vertical separation of the mirrors — unchanged, because the motion is horizontal.</dd>
+        <dt>$v \Delta t / 2$</dt><dd>How far the rocket has moved sideways while the pulse was going up.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why Pythagoras.</strong> The light took a straight diagonal from where the bottom mirror was (when the pulse fired) to where the top mirror is (when the pulse arrives). In your frame, that diagonal has a vertical component $L$ and a horizontal component $v \Delta t/2$. Straight-line distance is the hypotenuse.</p>
+    </div>
+
+    <p>Solve for $\Delta t$. Multiply out, collect terms, and you get</p>
+
+    <div class="math-display">$$\Delta t = \frac{2L}{\sqrt{c^2 - v^2}} = \frac{2L/c}{\sqrt{1 - v^2/c^2}} = \gamma \, \Delta \tau.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Time dilation</p>
+      <dl>
+        <dt>$\Delta t$</dt><dd>Duration in the lab frame — between the emission of the pulse and its return to the bottom mirror.</dd>
+        <dt>$\Delta \tau$</dt><dd>Duration in the rocket frame — the proper time, measured by a clock that is at both events.</dd>
+        <dt>$\gamma = 1/\sqrt{1 - v^2/c^2}$</dt><dd>The Lorentz factor. Always $\ge 1$. Equals $1$ at $v = 0$ and blows up as $v \to c$.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Plain English.</strong> A clock that moves relative to you ticks more slowly than an identical clock at rest next to you — by the factor $\gamma$. If the rocket flies past at $v = 0.6 c$, $\gamma = 1.25$, and one of its seconds equals 1.25 of yours. This is not a measurement error. It is what "time" means.</p>
+    </div>
+
+    <p><strong>Length contraction</strong> is the geometric companion. A rod of length $L_0$ at rest has that length only in its own frame. Viewed from a frame where the rod is moving along its length at speed $v$, its length shrinks:</p>
+
+    <div class="math-display">$$L = \frac{L_0}{\gamma} = L_0 \sqrt{1 - v^2/c^2}.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Length contraction</p>
+      <dl>
+        <dt>$L_0$</dt><dd>The <em>proper length</em> — length of the rod as measured in its rest frame. An intrinsic property of the rod.</dd>
+        <dt>$L$</dt><dd>The length measured in a frame where the rod is moving at speed $v$ along its axis.</dd>
+        <dt>$\gamma$</dt><dd>Same Lorentz factor as before. Since $\gamma \ge 1$, we always have $L \le L_0$.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why.</strong> "Length of a moving rod" means "positions of the two ends measured at the same time in your frame." Because simultaneity is frame-dependent, the two measurements you call "simultaneous" are not simultaneous in the rod's frame. By the time both measurements happen in the rod's frame, the rod has shifted, and the endpoints end up closer together than $L_0$.</p>
+    </div>
+
+    <h3>Worked example — muons from the sky</h3>
+
+    <p>Muons are unstable particles with a mean lifetime of $\tau_0 \approx 2.2 \ \mu\text{s}$ when at rest. Cosmic rays hitting the upper atmosphere create muons at altitudes of about 15 km. Without relativity, a muon moving at nearly $c$ would travel at most $c \tau_0 \approx (3 \times 10^8)(2.2 \times 10^{-6}) \approx 660$ m before decaying. It should never reach the ground. But muon detectors at sea level see a flood of them. Why?</p>
+
+    <p>Time dilation. At a typical energy the muons have $\gamma \approx 20$. In the lab frame, their lifetime is stretched to $20 \times 2.2 \ \mu\text{s} = 44 \ \mu\text{s}$, and their reach to $c \gamma \tau_0 \approx 13$ km. A respectable fraction survives.</p>
+
+    <p>In the muon's own frame, the muon lives for its usual $2.2 \ \mu\text{s}$. But length contraction squeezes the 15 km atmosphere down to $15/\gamma \approx 0.75$ km, which the muon covers easily. Different explanations in the two frames, identical physical outcome: the muon reaches the detector. This is the <strong>Rossi–Hall experiment</strong> (Mount Washington, 1941) and it has been reproduced thousands of times since.</p>
+
+    <h3>Worked example — GPS clocks</h3>
+
+    <p>A GPS satellite orbits at about 3.87 km/s. That gives $\beta \approx 1.29 \times 10^{-5}$ and $\gamma - 1 \approx 8.3 \times 10^{-11}$. Over a day of $86{,}400$ seconds, the satellite clock lags the ground clock by roughly $7 \ \mu\text{s}$ from special relativity alone. (General relativity adds a larger, opposite correction we'll cover on the next page.) Uncorrected, that would corrupt your position fix by hundreds of meters a day.</p>
+
+    <div class="problem-set" data-topic="phys-sr-dilation"></div>
+
+    <!-- ========================================================== -->
+    <h2 id="lorentz">5. Lorentz transformations and simultaneity</h2>
+
+    <p>Time dilation and length contraction are consequences of a deeper rule — the <strong>Lorentz transformation</strong>, which tells you how to convert the coordinates of an event from one inertial frame to another. Let $S$ and $S'$ be two frames; $S'$ moves at velocity $v$ along the $x$-axis of $S$. An event has coordinates $(t, x, y, z)$ in $S$ and $(t', x', y', z')$ in $S'$. Then</p>
+
+    <div class="math-display">$$\begin{aligned} t' &= \gamma \left( t - \frac{v x}{c^2} \right), \\ x' &= \gamma (x - v t), \\ y' &= y, \quad z' = z. \end{aligned}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Lorentz transformation (boost along $x$)</p>
+      <dl>
+        <dt>$t, x, y, z$</dt><dd>Coordinates of the event in frame $S$: when and where it happened, according to $S$'s rulers and clocks.</dd>
+        <dt>$t', x', y', z'$</dt><dd>Coordinates of the same event in frame $S'$, which moves with velocity $v\hat{x}$ relative to $S$.</dd>
+        <dt>$v x / c^2$</dt><dd>The "leading-edge" term that makes simultaneity relative. Events at different $x$ get different time shifts when you boost.</dd>
+        <dt>$\gamma$</dt><dd>The Lorentz factor, $1/\sqrt{1 - v^2/c^2}$. Both the time and space equations share the same overall prefactor.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Compared to Galileo.</strong> Newtonian physics uses $t' = t$, $x' = x - vt$. Lorentz agrees for small $v/c$ but mixes time and space at high speeds. You can think of it as a rotation in spacetime that preserves the speed of light.</p>
+    </div>
+
+    <p>The inverse transformation just flips the sign of $v$ — same formulas with $v \to -v$.</p>
+
+    <h3>Relativity of simultaneity</h3>
+
+    <p>Set $\Delta t = 0$ between two events separated by $\Delta x$ in frame $S$. In $S'$, the time between them is</p>
+
+    <div class="math-display">$$\Delta t' = -\gamma \frac{v \, \Delta x}{c^2}.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Simultaneity depends on the frame</p>
+      <dl>
+        <dt>$\Delta t'$</dt><dd>Time between the two events in $S'$. Not zero unless $\Delta x = 0$ or $v = 0$.</dd>
+        <dt>$\Delta x$</dt><dd>Spatial separation of the two events in $S$, along the boost direction.</dd>
+        <dt>$v$</dt><dd>Velocity of frame $S'$ as seen from $S$.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>What this means.</strong> Two events that happen at the same time in one frame generally happen at different times in another. "Now" is not a universal plane slicing spacetime. Different observers slice spacetime at different tilts.</p>
+    </div>
+
+    <h3>Velocity addition</h3>
+
+    <p>Applying the Lorentz transformation to both a position and a displacement gives the correct rule for adding velocities. If frame $S'$ moves at $v$ relative to $S$, and an object moves at $u'$ along $x$ in $S'$, then in $S$ the object moves at</p>
+
+    <div class="math-display">$$u = \frac{u' + v}{1 + u' v / c^2}.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Relativistic velocity addition</p>
+      <dl>
+        <dt>$u$</dt><dd>Velocity of the object measured in the "unprimed" frame $S$.</dd>
+        <dt>$u'$</dt><dd>Velocity of the object measured in the "primed" frame $S'$.</dd>
+        <dt>$v$</dt><dd>Velocity of $S'$ relative to $S$ (along $x$).</dd>
+        <dt>$1 + u'v/c^2$</dt><dd>The relativistic correction in the denominator. Reduces to $1$ when speeds are much less than $c$.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Nothing beats light.</strong> Plug in $u' = c$: the numerator is $c + v$, the denominator is $1 + v/c = (c + v)/c$, and the ratio is exactly $c$. Light keeps its speed no matter what. You cannot add your way past $c$. Two rockets approaching each other at $0.9c$ each measure their relative speed as $(0.9 + 0.9)/(1 + 0.81) c \approx 0.994 c$, not $1.8c$.</p>
+    </div>
+
+    <div class="problem-set" data-topic="phys-sr-lorentz"></div>
+
+    <!-- ========================================================== -->
+    <h2 id="demo">6. Interactive: Lorentz boost</h2>
+
+    <p>Drag the slider to change $\beta = v/c$ and watch the spacetime grid tilt. The cyan lines are lines of constant $t'$ (events the boosted observer calls "simultaneous"), and the violet lines are lines of constant $x'$ (events at fixed location in the boosted frame). Both tilt by the same angle, so the diagonal $x = ct$ (the light cone) is preserved. The fixed pink dot is an event $E$ at $(t, x) = (1.0, 0.0)$ in the lab frame — watch how its boosted coordinates $(t', x')$ change.</p>
+
+    <div class="viz-3d">
+      <svg id="srSvg" viewBox="0 0 720 400" preserveAspectRatio="xMidYMid meet"></svg>
+      <div class="v3-controls">
+        <label>$\beta = v/c$: <input type="range" id="srBeta" min="-0.95" max="0.95" step="0.01" value="0.5"></label>
+        <span class="v3-label">$\beta$ = <span id="srBetaLabel">0.50</span>, $\gamma$ = <span id="srGammaLabel">1.155</span></span>
+      </div>
+      <div class="v3-caption" id="srCaption"></div>
+    </div>
+
+    <p>A few things the picture teaches you that words don't:</p>
+
+    <ul>
+      <li>The boosted time axis tilts toward the light line; so does the boosted space axis. Both tilt by the same angle from their unboosted versions.</li>
+      <li>At $\beta = 0$ the grid is upright — no boost.</li>
+      <li>As $\beta \to \pm 1$ the grid collapses onto the light line; the geometry is degenerate because nothing with mass can travel at $c$.</li>
+      <li>The event $E$ sits still while the grid moves underneath it. That is the whole point: the event is fixed in the universe, but its <em>labels</em> depend on who is labeling.</li>
+    </ul>
+
+    <!-- ========================================================== -->
+    <h2 id="energy">7. Momentum, energy, and $E = mc^2$</h2>
+
+    <p>Newton's definitions of momentum ($p = mv$) and kinetic energy ($\tfrac{1}{2} m v^2$) are not conserved in all inertial frames once you take Lorentz transformations seriously. The quantities that <em>are</em> conserved, and that reduce to the Newtonian ones for small speeds, are</p>
+
+    <div class="math-display">$$p = \gamma m v, \qquad E = \gamma m c^2.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Relativistic momentum and energy</p>
+      <dl>
+        <dt>$p$</dt><dd>Relativistic momentum of a particle with rest mass $m$ moving at velocity $v$. A three-vector.</dd>
+        <dt>$E$</dt><dd>Total relativistic energy: the energy you would measure in the frame where the particle is moving. Includes the rest-energy piece.</dd>
+        <dt>$m$</dt><dd>Rest mass — a Lorentz invariant property of the particle.</dd>
+        <dt>$\gamma$</dt><dd>Same Lorentz factor, $1/\sqrt{1 - v^2/c^2}$.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Low-speed limit.</strong> Expand $\gamma \approx 1 + \tfrac{1}{2}(v/c)^2$. Momentum becomes $mv$ to leading order, and energy becomes $mc^2 + \tfrac{1}{2}mv^2$. The second term is Newtonian kinetic energy; the first is new — the rest energy. Even a motionless particle has energy $mc^2$.</p>
+    </div>
+
+    <p>Set $v = 0$ and you get the most famous equation in physics:</p>
+
+    <div class="math-display">$$E_0 = m c^2.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Rest energy</p>
+      <dl>
+        <dt>$E_0$</dt><dd>The energy a particle has when it is not moving. Not kinetic energy, not potential energy — an intrinsic energy tied to its mass.</dd>
+        <dt>$m$</dt><dd>The rest mass.</dd>
+        <dt>$c^2$</dt><dd>A conversion factor between mass and energy. About $9 \times 10^{16} \ \text{m}^2/\text{s}^2$.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>What it means in the lab.</strong> Mass and energy are the same quantity in different clothes. If a nuclear reactor gives off heat, the products weigh slightly less than the reactants. If you slam an electron into a positron, both masses vanish and come out as photons. The fission energy in a kilogram of uranium is $mc^2$ scaled by the fraction that actually converts — roughly $8 \times 10^{13}$ joules. That is why nuclear energy is big.</p>
+    </div>
+
+    <p>There is a useful identity relating energy, momentum, and mass, with no $\gamma$ in sight:</p>
+
+    <div class="math-display">$$E^2 = (pc)^2 + (m c^2)^2.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Energy–momentum relation</p>
+      <dl>
+        <dt>$E$</dt><dd>Total energy, as above.</dd>
+        <dt>$p$</dt><dd>Magnitude of the relativistic momentum three-vector.</dd>
+        <dt>$m$</dt><dd>Rest mass. This version of the equation is frame-independent: $m$ and $c$ are invariants.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why this form matters.</strong> For a photon, $m = 0$ and so $E = pc$. For a slow massive particle, $pc \ll mc^2$ and $E \approx mc^2 + p^2/(2m)$. For an ultra-relativistic particle, $pc \gg mc^2$ and $E \approx pc$. One equation, three physical regimes. Particle physicists live in this formula.</p>
+    </div>
+
+    <h3>Worked example — LHC proton energy</h3>
+
+    <p>A proton at the Large Hadron Collider has total energy $E = 6.5 \ \text{TeV}$. Its rest energy is $m c^2 \approx 0.938 \ \text{GeV} = 0.000938 \ \text{TeV}$. So $\gamma = E / (m c^2) \approx 6928$. Its speed comes from $\gamma = 1/\sqrt{1 - \beta^2}$, giving $\beta \approx 1 - 1/(2 \gamma^2) \approx 1 - 1.04 \times 10^{-8}$. That's about 2.7 meters per second slower than light. In 27 km, the beam finishes its lap in about $89.6 \ \mu\text{s}$ — but a beam of light would finish only $2.4 \ \text{fm}$ sooner. Relativity is what the accelerator engineers work in, every shift.</p>
+
+    <div class="problem-set" data-topic="phys-sr-energy"></div>
+
+    <!-- ========================================================== -->
+    <h2 id="fourvec">8. Four-vectors and invariants</h2>
+
+    <p>The algebra of special relativity becomes much easier if you stop treating time and space as separate things and write them as a single four-component object. A <strong>four-vector</strong> is any quantity that transforms like the spacetime coordinates under a Lorentz boost. The two you'll meet first are the position four-vector and the energy-momentum four-vector:</p>
+
+    <div class="math-display">$$X^\mu = (ct, x, y, z), \qquad P^\mu = (E/c, p_x, p_y, p_z).$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Two essential four-vectors</p>
+      <dl>
+        <dt>$X^\mu$</dt><dd>The position four-vector. The Greek index $\mu$ runs over $0, 1, 2, 3$: zero is the time component, one through three the spatial components.</dd>
+        <dt>$ct$</dt><dd>Why $c$ times $t$ and not just $t$? So every component has the same units (meters).</dd>
+        <dt>$P^\mu$</dt><dd>The energy-momentum four-vector. Lumps energy and momentum together.</dd>
+        <dt>$E/c$</dt><dd>Again, units: dividing energy by $c$ gives a momentum-like quantity.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why bother.</strong> Lorentz transformations are matrix multiplications acting on four-vectors. Any expression built from four-vectors and invariant operations is automatically the same in every frame. This is not a tool for physicists only; it is a sanity check. If your calculation fails to transform correctly, you have a bug.</p>
+    </div>
+
+    <p>The <strong>Minkowski inner product</strong> is how you take the "length" of a four-vector. It is not the Euclidean dot product; it has a minus sign:</p>
+
+    <div class="math-display">$$A \cdot B = A^0 B^0 - A^1 B^1 - A^2 B^2 - A^3 B^3.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Minkowski inner product</p>
+      <dl>
+        <dt>$A \cdot B$</dt><dd>The Minkowski dot product of two four-vectors. A Lorentz invariant.</dd>
+        <dt>$A^0 B^0$</dt><dd>The product of the time components — this one comes with a plus sign.</dd>
+        <dt>$A^i B^i$</dt><dd>The spatial component products ($i = 1, 2, 3$) — these come in with a minus sign.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>The signature.</strong> This minus sign is the whole difference between Euclidean and Minkowski geometry. It makes "distance" in spacetime take three possible signs: positive (timelike), negative (spacelike), and zero (lightlike). Causally connected events are timelike-separated. Unreachable events are spacelike-separated. Light rays mark the boundary.</p>
+    </div>
+
+    <p>Apply it to the position four-vector and you get the <strong>spacetime interval</strong>:</p>
+
+    <div class="math-display">$$\Delta s^2 = c^2 \Delta t^2 - \Delta x^2 - \Delta y^2 - \Delta z^2.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Spacetime interval</p>
+      <dl>
+        <dt>$\Delta s^2$</dt><dd>The invariant "distance" between two events in spacetime. Same value in every inertial frame.</dd>
+        <dt>$c^2 \Delta t^2$</dt><dd>Temporal part. The factor of $c^2$ makes it dimensionally match the spatial terms.</dd>
+        <dt>$\Delta x^2 + \Delta y^2 + \Delta z^2$</dt><dd>Ordinary Euclidean spatial distance squared.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Think of it like this.</strong> Euclidean rotations preserve $x^2 + y^2 + z^2$. Lorentz boosts preserve $c^2 t^2 - x^2 - y^2 - z^2$. Both are "rotations" — but in different geometries. Time dilation and length contraction are just what happens to the $c \Delta t$ and $\Delta x$ pieces when you rotate, keeping the interval fixed.</p>
+    </div>
+
+    <p>Similarly, $P \cdot P = (E/c)^2 - p^2 = (mc)^2$. That's the energy–momentum relation again, one line. The algebra loves four-vectors.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="paradox">9. Paradoxes resolved</h2>
+
+    <h3>The twin paradox</h3>
+
+    <p>Alice stays on Earth. Bob gets in a rocket, flies to Proxima Centauri at $\beta = 0.8$, and comes back. Each twin "sees" the other's clock running slow by $\gamma = 1.667$. Who is actually older when Bob returns?</p>
+
+    <p>Bob. Bob is demonstrably younger. There is no symmetry between the twins, because Bob accelerates — he turns his rocket around. Alice stays in a single inertial frame the whole time; Bob does not. The spacetime path Alice takes between "Bob leaves" and "Bob returns" is a straight line in spacetime. Bob's path is an out-and-back kink. In Minkowski geometry, <em>straight-line paths maximize proper time</em> (note: maximize, not minimize — the minus sign flips the intuition from Euclidean geometry). Bob's bent path covers less proper time than Alice's straight one. He has aged less.</p>
+
+    <p>Numerically: if the round trip takes 12.5 years in Alice's frame (Proxima is 4 light-years away, out and back at $0.8 c$ is $2 \times 4 / 0.8 = 10$ light-years of travel, plus a turnaround), Bob ages only $12.5 / \gamma = 7.5$ years. Alice is 5 years older when they hug. This is not a thought experiment with ambiguities. It has been verified with atomic clocks flown on airliners (Hafele–Keating, 1971) and atomic clocks flown on satellites every day.</p>
+
+    <h3>The barn and the pole</h3>
+
+    <p>A runner carries a 10-meter pole and runs at $\beta = 0.6$ ($\gamma = 1.25$) toward a barn whose front and back doors are 8 meters apart. In the barn's frame, the pole is length-contracted to $10/1.25 = 8$ m and just barely fits. We close both doors at the same instant, and for a moment the pole is fully inside. In the runner's frame, the barn is length-contracted to $8/1.25 = 6.4$ m and the 10-meter pole does not fit. Who's right?</p>
+
+    <p>Both. The doors are not closed "at the same instant" in the runner's frame — simultaneity is relative. In the barn's frame the back door opens as the front door closes, but in the runner's frame the back door opens <em>first</em>, the pole starts emerging, and only later does the front door close on the trailing end. Events that the barn calls simultaneous, the runner calls sequential. No paradox once you stop assuming a universal "now."</p>
+
+    <h3>See also</h3>
+    <div class="see-also">
+      <div class="card">
+        <h4><a href="./general-relativity.html">General Relativity</a></h4>
+        <p>Special relativity handles inertial frames in flat spacetime. Drop the inertial-frame restriction and let spacetime curve, and you get gravity. The next step up.</p>
+      </div>
+      <div class="card">
+        <h4><a href="./quantum-mechanics.html">Quantum Mechanics</a></h4>
+        <p>Merging quantum mechanics with special relativity gives quantum field theory and antimatter. The Dirac equation fell out of the attempt and predicted the positron.</p>
+      </div>
+      <div class="card">
+        <h4><a href="../math/linear-algebra.html">Linear Algebra</a></h4>
+        <p>Lorentz transformations are linear maps on four-vectors. The whole algebra of special relativity is matrix multiplication over the Minkowski metric.</p>
+      </div>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="code">10. Special relativity in code</h2>
+
+    <p>Three quick primitives: a Lorentz factor, a boost applied to a four-vector, and a velocity-addition function. None is more than a handful of lines, and each is the exact formula you've been reading.</p>
+
+    <div class="code-tabs" id="ct-sr">
+      <div class="ct-header">
+        <button class="ct-tab active" data-tab="np">NumPy</button>
+        <button class="ct-tab" data-tab="py">Plain Python</button>
+        <span class="ct-label">special-relativity primitives</span>
+      </div>
+
+      <div class="ct-panel active" data-tab="np"><pre><code><span class="kw">import</span> numpy <span class="kw">as</span> np
+
+C = <span class="num">299792458.0</span>   <span class="cmt"># speed of light in m/s</span>
+
+<span class="cmt"># ---------- 1. Lorentz factor ----------</span>
+<span class="kw">def</span> <span class="fn">gamma</span>(v):
+    beta = v / C
+    <span class="kw">return</span> <span class="num">1.0</span> / np.<span class="fn">sqrt</span>(<span class="num">1.0</span> - beta * beta)
+
+<span class="cmt"># ---------- 2. Lorentz boost along x ----------</span>
+<span class="kw">def</span> <span class="fn">boost_x</span>(four_vec, v):
+    <span class="cmt"># four_vec = (ct, x, y, z) in some frame S.</span>
+    <span class="cmt"># Returns the same event's coordinates in S', moving at +v along x.</span>
+    g = <span class="fn">gamma</span>(v)
+    beta = v / C
+    ct, x, y, z = four_vec
+    ct_p = g * (ct - beta * x)
+    x_p  = g * (x - beta * ct)
+    <span class="kw">return</span> np.<span class="fn">array</span>([ct_p, x_p, y, z])
+
+<span class="cmt"># ---------- 3. Relativistic velocity addition ----------</span>
+<span class="kw">def</span> <span class="fn">add_velocities</span>(u_prime, v):
+    <span class="kw">return</span> (u_prime + v) / (<span class="num">1.0</span> + (u_prime * v) / (C * C))
+
+<span class="cmt"># Demo: two rockets approaching, each at 0.9 c</span>
+v_rel = <span class="fn">add_velocities</span>(<span class="num">0.9</span> * C, <span class="num">0.9</span> * C)
+<span class="fn">print</span>(<span class="str">f"relative speed / c = {v_rel / C:.6f}"</span>)  <span class="cmt"># ~0.994475</span>
+
+<span class="cmt"># Demo: muon lifetime dilated at gamma = 20</span>
+tau0 = <span class="num">2.2e-6</span>
+v_mu = C * np.<span class="fn">sqrt</span>(<span class="num">1</span> - <span class="num">1</span> / <span class="num">400.0</span>)        <span class="cmt"># gamma=20</span>
+<span class="fn">print</span>(<span class="str">f"dilated lifetime = {gamma(v_mu) * tau0 * 1e6:.2f} us"</span>)
+</code></pre></div>
+
+      <div class="ct-panel" data-tab="py"><pre><code><span class="kw">import</span> math
+
+C = <span class="num">299792458.0</span>
+
+<span class="kw">def</span> <span class="fn">gamma</span>(v):
+    beta = v / C
+    <span class="kw">return</span> <span class="num">1.0</span> / math.<span class="fn">sqrt</span>(<span class="num">1.0</span> - beta * beta)
+
+<span class="kw">def</span> <span class="fn">time_dilation</span>(tau_proper, v):
+    <span class="cmt"># Return the duration in the lab frame for a proper time tau_proper</span>
+    <span class="kw">return</span> <span class="fn">gamma</span>(v) * tau_proper
+
+<span class="kw">def</span> <span class="fn">length_contraction</span>(L0, v):
+    <span class="kw">return</span> L0 / <span class="fn">gamma</span>(v)
+
+<span class="kw">def</span> <span class="fn">rel_energy</span>(m_kg, v):
+    <span class="kw">return</span> <span class="fn">gamma</span>(v) * m_kg * C * C
+
+<span class="cmt"># A 6.5 TeV proton at the LHC</span>
+E_target = <span class="num">6.5e12</span> * <span class="num">1.602e-19</span>               <span class="cmt"># joules</span>
+m_p      = <span class="num">1.6726e-27</span>                         <span class="cmt"># kg</span>
+g_lhc    = E_target / (m_p * C * C)
+<span class="fn">print</span>(<span class="str">f"LHC gamma ~ {g_lhc:.0f}"</span>)
+<span class="fn">print</span>(<span class="str">f"1 - beta ~ {1 / (2 * g_lhc * g_lhc):.2e}"</span>)
+</code></pre></div>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="summary">11. Cheat sheet</h2>
+
+    <div class="grid">
+      <div class="card">
+        <h4>Lorentz factor</h4>
+        <p>$\gamma = \dfrac{1}{\sqrt{1 - v^2/c^2}}$</p>
+        <p class="meta">$\ge 1$ always. Governs every relativistic effect.</p>
+      </div>
+      <div class="card">
+        <h4>Time dilation</h4>
+        <p>$\Delta t = \gamma \, \Delta \tau$</p>
+        <p class="meta">Moving clocks run slow by a factor of $\gamma$.</p>
+      </div>
+      <div class="card">
+        <h4>Length contraction</h4>
+        <p>$L = L_0 / \gamma$</p>
+        <p class="meta">Moving rods shrink along the direction of motion.</p>
+      </div>
+      <div class="card">
+        <h4>Lorentz boost</h4>
+        <p>$t' = \gamma(t - vx/c^2)$,<br>$x' = \gamma(x - vt)$</p>
+        <p class="meta">Coordinate transformation along $x$.</p>
+      </div>
+      <div class="card">
+        <h4>Velocity addition</h4>
+        <p>$u = \dfrac{u' + v}{1 + u' v/c^2}$</p>
+        <p class="meta">Never exceeds $c$ for any $u', v \in (-c, c)$.</p>
+      </div>
+      <div class="card">
+        <h4>Energy</h4>
+        <p>$E = \gamma m c^2$</p>
+        <p class="meta">Reduces to $mc^2 + \tfrac{1}{2}mv^2$ at low speed.</p>
+      </div>
+      <div class="card">
+        <h4>Momentum</h4>
+        <p>$p = \gamma m v$</p>
+        <p class="meta">Three-vector component of the four-momentum.</p>
+      </div>
+      <div class="card">
+        <h4>Energy–momentum</h4>
+        <p>$E^2 = (pc)^2 + (mc^2)^2$</p>
+        <p class="meta">Frame-independent. Mass is the invariant length of the four-momentum.</p>
+      </div>
+      <div class="card">
+        <h4>Spacetime interval</h4>
+        <p>$\Delta s^2 = c^2 \Delta t^2 - \Delta x^2 - \Delta y^2 - \Delta z^2$</p>
+        <p class="meta">The Lorentz-invariant "distance" in spacetime.</p>
+      </div>
+    </div>
+
+    <div class="bib">
+      <h4>Further reading</h4>
+      <ul>
+        <li>Albert Einstein — <em>On the Electrodynamics of Moving Bodies</em> (1905). The original paper. Short, readable, and still the cleanest introduction ever written. An <a href="https://www.fourmilab.ch/etexts/einstein/specrel/www/">English translation</a> is freely available online.</li>
+        <li>Edwin Taylor and John Archibald Wheeler — <em>Spacetime Physics</em>. The undergraduate classic. Treats Minkowski geometry as the main character and makes four-vectors feel natural.</li>
+        <li>David Morin — <em>Special Relativity: For the Enthusiastic Beginner</em>. Modern, problem-rich, friendly. A great companion if you're reading this page and want more drill.</li>
+        <li>Bruno Rossi and David Hall — <em>Variation of the Rate of Decay of Mesotrons with Momentum</em>, Physical Review 59 (1941). The Mount Washington muon experiment.</li>
+        <li>Neil Ashby — <em>Relativity in the Global Positioning System</em>, Living Reviews in Relativity 6 (2003). A clean writeup of how GPS actually uses both special and general relativity.</li>
+      </ul>
+    </div>
+
+    <div class="next-card">
+      <div class="label">NEXT UP</div>
+      <a href="./general-relativity.html">→ General Relativity</a>
+      <p>Special relativity is flat spacetime. What happens if spacetime itself curves? Einstein's answer was that the curvature <em>is</em> gravity. You will meet the equivalence principle, metric tensors, and black holes.</p>
+    </div>
+
+  </article>
+</div>
+
+<script>
+// =========================================================
+// Code tabs
+document.querySelectorAll('.code-tabs').forEach(root => {
+  const tabs = root.querySelectorAll('.ct-tab');
+  const panels = root.querySelectorAll('.ct-panel');
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const target = tab.getAttribute('data-tab');
+      tabs.forEach(t => t.classList.toggle('active', t === tab));
+      panels.forEach(p => p.classList.toggle('active', p.getAttribute('data-tab') === target));
+    });
+  });
+});
+
+// =========================================================
+// Lorentz boost visualization
+(function() {
+  const svg = document.getElementById('srSvg');
+  if (!svg) return;
+  const NS = 'http://www.w3.org/2000/svg';
+  const slider = document.getElementById('srBeta');
+  const betaLabel = document.getElementById('srBetaLabel');
+  const gammaLabel = document.getElementById('srGammaLabel');
+  const caption = document.getElementById('srCaption');
+
+  const W = 720, H = 400;
+  const ml = 60, mr = 30, mt = 30, mb = 50;
+  const plotW = W - ml - mr;
+  const plotH = H - mt - mb;
+
+  // Coordinate range: (x, t) each from -2 to 2 (units of c*t on the time axis).
+  const xmin = -2.2, xmax = 2.2;
+  const tmin = -2.2, tmax = 2.2;
+
+  function xOf(x) { return ml + (x - xmin) / (xmax - xmin) * plotW; }
+  function yOf(t) { return mt + plotH - (t - tmin) / (tmax - tmin) * plotH; }
+
+  function mkLine(x1, y1, x2, y2, stroke, w, dash) {
+    const l = document.createElementNS(NS, 'line');
+    l.setAttribute('x1', x1); l.setAttribute('y1', y1);
+    l.setAttribute('x2', x2); l.setAttribute('y2', y2);
+    l.setAttribute('stroke', stroke);
+    l.setAttribute('stroke-width', w || 1);
+    if (dash) l.setAttribute('stroke-dasharray', dash);
+    return l;
+  }
+  function mkRect(x, y, w, h, fill, stroke) {
+    const r = document.createElementNS(NS, 'rect');
+    r.setAttribute('x', x); r.setAttribute('y', y);
+    r.setAttribute('width', w); r.setAttribute('height', h);
+    r.setAttribute('fill', fill);
+    if (stroke) { r.setAttribute('stroke', stroke); r.setAttribute('stroke-width', 1); }
+    return r;
+  }
+  function mkText(x, y, txt, color, size, anchor) {
+    const t = document.createElementNS(NS, 'text');
+    t.setAttribute('x', x); t.setAttribute('y', y);
+    t.setAttribute('fill', color || '#7a8a9a');
+    t.setAttribute('font-size', size || 11);
+    t.setAttribute('font-family', 'ui-monospace, monospace');
+    if (anchor) t.setAttribute('text-anchor', anchor);
+    t.textContent = txt;
+    return t;
+  }
+  function mkCircle(cx, cy, r, fill, stroke) {
+    const c = document.createElementNS(NS, 'circle');
+    c.setAttribute('cx', cx); c.setAttribute('cy', cy); c.setAttribute('r', r);
+    c.setAttribute('fill', fill);
+    if (stroke) { c.setAttribute('stroke', stroke); c.setAttribute('stroke-width', 1.5); }
+    return c;
+  }
+
+  // Clip a line segment (x1,t1)-(x2,t2) to the plot rectangle in data coords.
+  function clipped(x1, t1, x2, t2) {
+    // Very loose: just clamp to the box by scaling. Parameterize and intersect.
+    function inside(p, edge) {
+      // edges: 0=left x>=xmin, 1=right x<=xmax, 2=bot t>=tmin, 3=top t<=tmax
+      if (edge === 0) return p[0] >= xmin;
+      if (edge === 1) return p[0] <= xmax;
+      if (edge === 2) return p[1] >= tmin;
+      if (edge === 3) return p[1] <= tmax;
+    }
+    function intersect(p, q, edge) {
+      var dx = q[0] - p[0], dt = q[1] - p[1];
+      var s;
+      if (edge === 0) { s = (xmin - p[0]) / dx; return [xmin, p[1] + s * dt]; }
+      if (edge === 1) { s = (xmax - p[0]) / dx; return [xmax, p[1] + s * dt]; }
+      if (edge === 2) { s = (tmin - p[1]) / dt; return [p[0] + s * dx, tmin]; }
+      if (edge === 3) { s = (tmax - p[1]) / dt; return [p[0] + s * dx, tmax]; }
+    }
+    var poly = [[x1, t1], [x2, t2]];
+    // Use Cohen-Sutherland style: clip segment against each edge
+    for (var e = 0; e < 4; e++) {
+      if (poly.length < 2) return null;
+      var p = poly[0], q = poly[1];
+      var pin = inside(p, e), qin = inside(q, e);
+      if (pin && qin) continue;
+      if (!pin && !qin) return null;
+      if (pin && !qin) poly = [p, intersect(p, q, e)];
+      else poly = [intersect(p, q, e), q];
+    }
+    return poly;
+  }
+
+  function drawLine(x1, t1, x2, t2, stroke, w) {
+    var cp = clipped(x1, t1, x2, t2);
+    if (!cp) return null;
+    return mkLine(xOf(cp[0][0]), yOf(cp[0][1]), xOf(cp[1][0]), yOf(cp[1][1]), stroke, w);
+  }
+
+  function draw() {
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+    const beta = parseFloat(slider.value);
+    const g = 1 / Math.sqrt(1 - beta * beta);
+    betaLabel.textContent = beta.toFixed(2);
+    gammaLabel.textContent = g.toFixed(3);
+
+    // Background panel
+    svg.appendChild(mkRect(ml, mt, plotW, plotH, '#0a0d12', '#2a3446'));
+
+    // Unboosted grid (dim)
+    for (var i = -2; i <= 2; i++) {
+      if (i === 0) continue;
+      // Vertical (constant x)
+      svg.appendChild(mkLine(xOf(i), yOf(tmin), xOf(i), yOf(tmax), '#1a2030', 1));
+      // Horizontal (constant t)
+      svg.appendChild(mkLine(xOf(xmin), yOf(i), xOf(xmax), yOf(i), '#1a2030', 1));
+    }
+
+    // Lab axes
+    svg.appendChild(mkLine(xOf(0), yOf(tmin), xOf(0), yOf(tmax), '#384050', 1.5));
+    svg.appendChild(mkLine(xOf(xmin), yOf(0), xOf(xmax), yOf(0), '#384050', 1.5));
+
+    // Light cone (the diagonals x = +/- ct)
+    var lc1 = drawLine(-2.2, -2.2, 2.2, 2.2, '#f472b6', 1.5);
+    var lc2 = drawLine(-2.2, 2.2, 2.2, -2.2, '#f472b6', 1.5);
+    if (lc1) svg.appendChild(lc1);
+    if (lc2) svg.appendChild(lc2);
+
+    // Boosted "constant t'" lines: t = beta x + t0'/gamma, for several t0'.
+    // t = beta * x + C, where C depends on the label t0' value.
+    // Lines of constant x': x = beta * t + x0'/gamma, so t = (x - C) / beta when beta != 0.
+    // Easier: pick endpoints by sweeping the boosted-frame coordinate and inverting.
+    // For a grid line t' = k (k integer), in lab coords: t = gamma*(t' + beta x'),
+    // x = gamma*(x' + beta t'). As x' varies over [-2,2], we get a line.
+    for (var k = -2; k <= 2; k++) {
+      if (k === 0) continue;
+      // constant t' = k: parameterize by x' in [-2.5, 2.5]
+      var ax1 = g * (-2.5 + beta * k), at1 = g * (k + beta * (-2.5));
+      var ax2 = g * ( 2.5 + beta * k), at2 = g * (k + beta * ( 2.5));
+      var ln = drawLine(ax1, at1, ax2, at2, '#22d3ee55', 1.2);
+      if (ln) svg.appendChild(ln);
+      // constant x' = k: parameterize by t' in [-2.5, 2.5]
+      var bx1 = g * (k + beta * (-2.5)), bt1 = g * (-2.5 + beta * k);
+      var bx2 = g * (k + beta * ( 2.5)), bt2 = g * ( 2.5 + beta * k);
+      var ln2 = drawLine(bx1, bt1, bx2, bt2, '#7c5cff55', 1.2);
+      if (ln2) svg.appendChild(ln2);
+    }
+    // Highlighted boosted axes (t' = 0 is the x' axis; x' = 0 is the t' axis)
+    // x' axis: t' = 0 means t = beta x (line through origin with slope beta)
+    var axp = drawLine(-2.2, -2.2 * beta, 2.2, 2.2 * beta, '#7c5cff', 2);
+    if (axp) svg.appendChild(axp);
+    // t' axis: x' = 0 means x = beta t
+    var atp = drawLine(-2.2 * beta, -2.2, 2.2 * beta, 2.2, '#22d3ee', 2);
+    if (atp) svg.appendChild(atp);
+
+    // Fixed event E at lab (t, x) = (1.0, 0.0). Note: here "t" is actually ct
+    // for drawing purposes; we label accordingly.
+    var Ex = 0.0, Et = 1.0;
+    svg.appendChild(mkCircle(xOf(Ex), yOf(Et), 6, '#f472b6', '#fff'));
+    // Its boosted coordinates
+    var tP = g * (Et - beta * Ex);
+    var xP = g * (Ex - beta * Et);
+
+    // Axis labels
+    svg.appendChild(mkText(xOf(xmax) - 4, yOf(0) - 6, 'x (lab)', '#b4c4d4', 11, 'end'));
+    svg.appendChild(mkText(xOf(0) + 6, yOf(tmax) + 12, 'ct (lab)', '#b4c4d4', 11));
+    svg.appendChild(mkText(xOf(2.0 * beta) + 6, yOf(2.0) + 4, "ct'", '#22d3ee', 11));
+    svg.appendChild(mkText(xOf(2.0) - 4, yOf(2.0 * beta) - 6, "x'", '#7c5cff', 11, 'end'));
+
+    // x tick labels (lab)
+    for (var j = -2; j <= 2; j++) {
+      svg.appendChild(mkText(xOf(j), yOf(0) + 14, j.toString(), '#7a8a9a', 10, 'middle'));
+      if (j !== 0) svg.appendChild(mkText(xOf(0) - 6, yOf(j) + 3, j.toString(), '#7a8a9a', 10, 'end'));
+    }
+
+    caption.textContent =
+      "Event E at lab (ct, x) = (1.00, 0.00). Boosted: (ct', x') = (" +
+      tP.toFixed(3) + ", " + xP.toFixed(3) + ").  gamma = " + g.toFixed(3) +
+      ". Cyan = boosted time axis, violet = boosted space axis, pink = light cone.";
+  }
+
+  slider.addEventListener('input', draw);
+  draw();
+})();
+</script>
+<script defer src="../problem-set.js"></script>
+<script defer src="special-relativity-problems.js"></script>
+<script defer src="../search-index.js"></script>
+<script defer src="../search.js"></script>
+</body>
+</html>

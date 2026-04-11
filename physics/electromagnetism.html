@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Electromagnetism — Deep Dive</title>
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError: false});"></script>
+</head>
+<body>
+<div id="tooltip"></div>
+
+<nav class="topic-nav">
+  <a class="back" href="./index.html">← Physics</a>
+  <div class="crumb">Physics / <span class="topic-name">Electromagnetism</span></div>
+</nav>
+
+<div class="topic-layout">
+  <aside class="topic-toc">
+    <h4>ON THIS PAGE</h4>
+    <ul>
+      <li><a href="#why">1. Why electromagnetism</a></li>
+      <li><a href="#vocab">2. Vocabulary cheat sheet</a></li>
+      <li><a href="#efield">3. Electric field and Coulomb's law</a></li>
+      <li><a href="#gauss">4. Gauss's law</a></li>
+      <li><a href="#potential">5. Potential and capacitance</a></li>
+      <li><a href="#circuits">6. Current and DC circuits</a></li>
+      <li><a href="#magnetic">7. Magnetic field and Lorentz force</a></li>
+      <li><a href="#faraday">8. Faraday's law and induction</a></li>
+      <li><a href="#demo">9. Interactive: charge field map</a></li>
+      <li><a href="#maxwell">10. Maxwell's equations</a></li>
+      <li><a href="#waves">11. Electromagnetic waves</a></li>
+      <li><a href="#code">12. EM in code</a></li>
+      <li><a href="#summary">13. Cheat sheet and see also</a></li>
+    </ul>
+  </aside>
+
+  <article class="topic-content">
+    <h1>Electromagnetism</h1>
+    <p class="subtitle">Four equations, one unification, and the realization that light is a ripple in the same field that holds a magnet to your fridge. After reading you will see why motors spin, why antennas work, and why every piece of electronics on Earth rests on Maxwell's 1865 math.</p>
+    <div class="meta-tags">
+      <span>Prereq: <a href="../math/calculus.html">calculus</a>, <a href="../math/linear-algebra.html">linear algebra</a>, <a href="./classical-mechanics.html">classical mechanics</a></span>
+      <span>Read time: ~45 min</span>
+      <span>Interactive figures: 1</span>
+      <span>Code: NumPy, Python</span>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="why">1. Why electromagnetism is the engineering workhorse</h2>
+
+    <p>Classical mechanics handles things you can push and pull directly. Electromagnetism handles the forces that reach across empty space — the pull of a magnet, the shock from a doorknob on a dry winter day, the spark of a lightning bolt. For two centuries before 1820 these were thought to be separate phenomena. Then Hans Christian Ørsted noticed that a current-carrying wire deflected a compass needle, and within half a century electricity and magnetism had been fused into a single theory that also explained light. It is one of the cleanest unifications in the history of physics.</p>
+
+    <p>The practical payoff is enormous. Every generator, motor, transformer, and power line is an application of Faraday's law. Every antenna, radio, and fiber-optic cable is an application of Maxwell's wave equation. Every transistor and memory cell in every chip depends on how electrons move in electric and magnetic fields inside crystalline lattices. The computer you are reading this on is an electromagnetism problem from the power supply outward.</p>
+
+    <div class="callout">
+      <div class="label">THE PUNCHLINE</div>
+      <p>Charges create electric fields. Moving charges create magnetic fields. Changing electric fields create magnetic fields, and changing magnetic fields create electric fields. Put those four ideas together and you get Maxwell's equations, whose solutions include waves that propagate at a speed you can compute from two constants in the lab. That speed turns out to be the speed of light. That is not a coincidence — light <em>is</em> an electromagnetic wave.</p>
+    </div>
+
+    <p>Three reasons to care if you are not a physicist:</p>
+
+    <ul>
+      <li><strong>Hardware.</strong> If you design, debug, or just want to understand any electrical device, you need a working command of fields, circuits, and Ohm's law.</li>
+      <li><strong>Communications.</strong> Wi-Fi, 5G, radar, optical fiber, satellite links — all are engineered solutions to Maxwell's equations with specific boundary conditions.</li>
+      <li><strong>Chemistry and materials.</strong> Chemical bonds are electrostatic. Semiconductors, superconductors, and batteries are all electromagnetism inside matter.</li>
+    </ul>
+
+    <!-- ========================================================== -->
+    <h2 id="vocab">2. Vocabulary cheat sheet</h2>
+
+    <p>The symbols you will see repeatedly. Defined more carefully below.</p>
+
+    <table class="rank-table">
+      <thead><tr><th>Symbol</th><th>Read as</th><th>Means</th></tr></thead>
+      <tbody>
+        <tr><td>$q$, $Q$</td><td>"q" or "Q"</td><td>Electric charge. SI unit: coulomb (C). Comes in integer multiples of $e = 1.6\times 10^{-19}$ C.</td></tr>
+        <tr><td>$\mathbf{E}$</td><td>"E (bold)"</td><td>Electric field — force per unit test charge. Units: V/m or N/C.</td></tr>
+        <tr><td>$\mathbf{B}$</td><td>"B (bold)"</td><td>Magnetic field. Units: tesla (T). The name is from Nikola Tesla; 1 T is a huge magnet.</td></tr>
+        <tr><td>$V$, $\varphi$</td><td>"V" or "phi"</td><td>Electric potential — potential energy per unit charge. Unit: volt.</td></tr>
+        <tr><td>$I$</td><td>"I"</td><td>Electric current. Charge per unit time. Unit: ampere (A), $1\,\text{A} = 1\,\text{C/s}$.</td></tr>
+        <tr><td>$\epsilon_0$</td><td>"epsilon nought"</td><td>Permittivity of free space, $\approx 8.85 \times 10^{-12}\,\text{F/m}$. Measures how easily electric fields form in vacuum.</td></tr>
+        <tr><td>$\mu_0$</td><td>"mu nought"</td><td>Permeability of free space, $4\pi\times 10^{-7}\,\text{T}\cdot\text{m/A}$. Measures how easily magnetic fields form in vacuum.</td></tr>
+        <tr><td>$c$</td><td>"c"</td><td>Speed of light in vacuum, $c = 1/\sqrt{\mu_0 \epsilon_0} \approx 3\times 10^8\,\text{m/s}$.</td></tr>
+        <tr><td>$\Phi_B$</td><td>"phi-B"</td><td>Magnetic flux through a surface. Unit: weber (Wb).</td></tr>
+        <tr><td>$\nabla\cdot$, $\nabla\times$</td><td>"div" and "curl"</td><td>Vector calculus operators — divergence and curl — that measure how fields spread out and circulate.</td></tr>
+      </tbody>
+    </table>
+
+    <p>One warning about units: this page uses SI (Système International), which is what engineers and most modern textbooks use. Older physics textbooks, especially Jackson, use Gaussian units where Coulomb's law has no $4\pi\epsilon_0$ and factors of $c$ appear in Maxwell's equations instead. The physics is the same; the constants are shuffled around. If you see a formula that looks slightly wrong, check the units.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="efield">3. Electric field and Coulomb's law</h2>
+
+    <p>Two charges at rest attract or repel each other with a force that falls off as the square of the distance between them. Like charges repel, unlike charges attract. Charles-Augustin de Coulomb measured this law with a torsion balance in 1785. In modern notation:</p>
+
+    <div class="math-display">$$\mathbf{F}_{12} = \frac{1}{4\pi\epsilon_0}\frac{q_1 q_2}{r^2}\,\hat{\mathbf{r}}.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Coulomb's law</p>
+      <dl>
+        <dt>$\mathbf{F}_{12}$</dt><dd>Force on charge 1 due to charge 2. A vector. By Newton's third law, the force on charge 2 due to charge 1 is equal and opposite.</dd>
+        <dt>$q_1, q_2$</dt><dd>The two charges, in coulombs. Can be positive or negative.</dd>
+        <dt>$r$</dt><dd>Distance between them, in meters.</dd>
+        <dt>$\hat{\mathbf{r}}$</dt><dd>Unit vector pointing from charge 2 to charge 1. Tells you the direction; the magnitude is encoded in the scalar part.</dd>
+        <dt>$1/(4\pi\epsilon_0)$</dt><dd>Coulomb's constant, $k_e \approx 8.99 \times 10^9\,\text{N}\cdot\text{m}^2/\text{C}^2$. The $4\pi$ is there so that Gauss's law below looks clean; it is a bookkeeping choice.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Sign convention.</strong> If $q_1 q_2 > 0$ (same signs), the force is along $+\hat{\mathbf{r}}$, pushing them apart. If $q_1 q_2 < 0$ (opposite signs), the force is along $-\hat{\mathbf{r}}$, pulling them together. Coulomb's law looks exactly like Newton's inverse-square law for gravity, with charge replacing mass. The difference is that charges come in two flavors and can cancel, while mass only attracts.</p>
+    </div>
+
+    <p>Rather than talk about forces between pairs of charges, it is usually cleaner to introduce the <strong>electric field</strong> $\mathbf{E}$, defined as the force per unit positive test charge:</p>
+
+    <div class="math-display">$$\mathbf{E}(\mathbf{r}) = \frac{\mathbf{F}}{q_\text{test}} = \frac{1}{4\pi\epsilon_0}\sum_i \frac{q_i}{|\mathbf{r} - \mathbf{r}_i|^2}\,\hat{\mathbf{r}}_i.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Electric field from point charges</p>
+      <dl>
+        <dt>$\mathbf{E}(\mathbf{r})$</dt><dd>The electric field vector at the field point $\mathbf{r}$. Tells you the force a unit positive charge would feel if placed there.</dd>
+        <dt>$q_i$</dt><dd>The $i$-th source charge.</dd>
+        <dt>$\mathbf{r}_i$</dt><dd>Position of the $i$-th source charge.</dd>
+        <dt>$|\mathbf{r} - \mathbf{r}_i|$</dt><dd>Distance from the $i$-th source charge to the field point.</dd>
+        <dt>$\hat{\mathbf{r}}_i$</dt><dd>Unit vector from the $i$-th source charge to the field point.</dd>
+        <dt>$\sum_i$</dt><dd>Sum over all source charges — this is the principle of <strong>superposition</strong>: fields from multiple charges simply add vectorially.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why fields, not forces.</strong> The field is a property of the region of space, independent of whether there is a test charge there to feel it. You can compute $\mathbf{E}$ once, then ask about the force on any charge just by multiplying: $\mathbf{F} = q\mathbf{E}$. It also sets up the mental picture you'll need for Maxwell's equations and for the idea that fields carry energy and momentum of their own, independent of any particles.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="gauss">4. Gauss's law — symmetry makes the integrals trivial</h2>
+
+    <p>Summing Coulomb's law over a complicated charge distribution is painful. Gauss's law is a shortcut that works whenever the problem has enough symmetry. It relates the total electric flux through a closed surface to the charge enclosed:</p>
+
+    <div class="math-display">$$\oint_{\partial \mathcal V} \mathbf{E}\cdot d\mathbf{A} = \frac{Q_\text{enc}}{\epsilon_0}.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Gauss's law (integral form)</p>
+      <dl>
+        <dt>$\oint$</dt><dd>A closed-surface integral — integrate over the entire boundary of some 3D region.</dd>
+        <dt>$\mathbf{E}\cdot d\mathbf{A}$</dt><dd>The electric field dotted with an outward-pointing area element. Measures how much field is piercing through that patch of surface.</dd>
+        <dt>$\partial\mathcal V$</dt><dd>The boundary of the volume $\mathcal V$ — the Gaussian surface. You are free to choose any closed surface; symmetry tells you which choice makes the integral trivial.</dd>
+        <dt>$Q_\text{enc}$</dt><dd>The total charge enclosed inside that surface. Charges outside the surface contribute nothing to the total flux, though they contribute plenty to the local field.</dd>
+        <dt>$\epsilon_0$</dt><dd>Permittivity of free space — the same constant from Coulomb's law.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>The trick.</strong> Gauss's law is always true, but it is only <em>useful</em> when the symmetry of the problem lets you pull $\mathbf{E}$ out of the integral. For a spherical charge distribution, a concentric spherical Gaussian surface gives $|\mathbf{E}| \cdot 4\pi r^2 = Q/\epsilon_0$, so $|\mathbf{E}| = Q/(4\pi\epsilon_0 r^2)$ — you just recovered Coulomb's law in one line. For an infinite line of charge, a coaxial cylinder gives $|\mathbf{E}| \propto 1/r$. For an infinite sheet, a pillbox gives $|\mathbf{E}| = \sigma/(2\epsilon_0)$, independent of distance. Three problems, three symmetry choices, three trivial integrals.</p>
+    </div>
+
+    <h3>Worked example: uniformly charged sphere</h3>
+
+    <p>A solid sphere of radius $R$ carries total charge $Q$ spread uniformly through its volume. Find the field inside and outside.</p>
+
+    <p><strong>Outside</strong> ($r > R$): draw a concentric spherical surface of radius $r$. By symmetry, $\mathbf{E}$ points radially outward and has the same magnitude everywhere on the surface. Flux is $|\mathbf{E}|\cdot 4\pi r^2$, and enclosed charge is $Q$. So:</p>
+
+    <div class="math-display">$$|\mathbf{E}|_\text{outside} = \frac{Q}{4\pi\epsilon_0 r^2}.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Field outside a uniform sphere</p>
+      <dl>
+        <dt>$Q$</dt><dd>Total enclosed charge.</dd>
+        <dt>$4\pi r^2$</dt><dd>Surface area of the Gaussian sphere.</dd>
+        <dt>$r$</dt><dd>Distance from the sphere's center to the field point.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>The shell theorem.</strong> This looks exactly like the field of a point charge $Q$ at the sphere's center. Outside any spherically symmetric distribution, the field is <em>identical</em> to a point charge at the center. Newton proved the same thing for gravity. It is a happy consequence of the inverse-square law and spherical symmetry.</p>
+    </div>
+
+    <p><strong>Inside</strong> ($r < R$): the same Gaussian surface, but now it only encloses a fraction of the charge. The fraction is the ratio of volumes, $r^3/R^3$. So:</p>
+
+    <div class="math-display">$$|\mathbf{E}|_\text{inside} = \frac{Q r}{4\pi\epsilon_0 R^3}.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Field inside a uniform sphere</p>
+      <dl>
+        <dt>$Qr^3/R^3$</dt><dd>The enclosed charge inside a Gaussian sphere of radius $r$ — total charge times the volume fraction.</dd>
+        <dt>$r$</dt><dd>Same as before, but now $r < R$.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Linear inside, inverse-square outside.</strong> Inside, the field grows <em>linearly</em> with $r$ — it is zero at the center (by symmetry) and rises to $Q/(4\pi\epsilon_0 R^2)$ at the surface. Outside, it falls off as $1/r^2$. The two pieces match at $r = R$, so the field is continuous even though its functional form changes. Plot it and you see a triangle rising to a peak then decaying.</p>
+    </div>
+
+    <div class="problem-set" data-topic="phys-em-coulomb"></div>
+
+    <div class="problem-set" data-topic="phys-em-gauss"></div>
+
+    <!-- ========================================================== -->
+    <h2 id="potential">5. Electric potential and capacitance</h2>
+
+    <p>For static electric fields (no time dependence), the work done moving a charge from one point to another depends only on the endpoints, not the path. This lets you define a scalar potential $V$ from which the field is derivable:</p>
+
+    <div class="math-display">$$\mathbf{E} = -\nabla V, \qquad V(\mathbf{r}) = \frac{1}{4\pi\epsilon_0}\sum_i \frac{q_i}{|\mathbf{r}-\mathbf{r}_i|}.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Electric potential</p>
+      <dl>
+        <dt>$V(\mathbf{r})$</dt><dd>Electric potential at point $\mathbf{r}$, in volts. Potential energy per unit charge.</dd>
+        <dt>$-\nabla V$</dt><dd>Negative gradient of $V$. Same relation as force from potential energy in mechanics — electric field "points downhill" on the potential landscape.</dd>
+        <dt>$1/|\mathbf{r}-\mathbf{r}_i|$</dt><dd>Notice the single inverse power, not inverse-square. Integrating $E \sim 1/r^2$ gives $V \sim 1/r$.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why scalar fields are nice.</strong> Adding potentials from many charges is a simple scalar sum — no vector components to juggle. You compute $V$ from a point-charge distribution by adding, then take the gradient to get $\mathbf{E}$. Much easier than vector superposition of fields, especially for complicated geometries. The potential is also what voltmeters measure: a voltage reading is a difference in electric potential between two probe points.</p>
+    </div>
+
+    <p>A <strong>capacitor</strong> is two conductors that store opposite charges $+Q$ and $-Q$ separated by a gap. The relationship $Q = C V$ defines the capacitance $C$, measured in farads. For a parallel-plate capacitor with plate area $A$ and separation $d$:</p>
+
+    <div class="math-display">$$C = \frac{\epsilon_0 A}{d}, \qquad U = \tfrac{1}{2} C V^2 = \tfrac{1}{2}\frac{Q^2}{C}.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Parallel-plate capacitor</p>
+      <dl>
+        <dt>$C$</dt><dd>Capacitance. How much charge you can store per volt of potential difference.</dd>
+        <dt>$A$</dt><dd>Plate area.</dd>
+        <dt>$d$</dt><dd>Plate separation.</dd>
+        <dt>$U$</dt><dd>Energy stored in the capacitor — equivalent to the energy stored in the electric field between the plates.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Where the energy goes.</strong> Filling a capacitor takes work because you have to push like charges together against their own repulsion. That work is stored in the electric field in the gap. The energy density of an electric field is $u_E = \tfrac{1}{2}\epsilon_0 |\mathbf{E}|^2$, so electric fields themselves carry energy — not just the particles in them. This is the first hint that fields are physical objects, not mathematical conveniences.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="circuits">6. Current, resistance, and DC circuits</h2>
+
+    <p>When charges move through a conductor, the flow is called electric current. For steady flow, Ohm's law relates the voltage drop $V$ across a resistor to the current $I$ through it:</p>
+
+    <div class="math-display">$$V = I R, \qquad P = I V = I^2 R = V^2 / R.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Ohm's law and power</p>
+      <dl>
+        <dt>$V$</dt><dd>Voltage drop (potential difference) across the resistor, in volts.</dd>
+        <dt>$I$</dt><dd>Current through the resistor, in amperes. One ampere is one coulomb per second.</dd>
+        <dt>$R$</dt><dd>Resistance, in ohms. Depends on the material, geometry, and temperature.</dd>
+        <dt>$P$</dt><dd>Power dissipated — the rate at which electrical energy is turned into heat. Units: watts.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>The water analogy.</strong> Voltage is pressure, current is flow rate, and resistance is pipe narrowness. More pressure pushes more water through a pipe of fixed narrowness. A thin pipe resists more. The power $I^2 R$ dissipated is like the heat you'd generate forcing water through a small hole — the resistor's job description is "convert electrical work into heat." This is what every electric heater and incandescent bulb does deliberately, and what every CPU does by accident.</p>
+    </div>
+
+    <p>For circuits, you combine Ohm's law with <strong>Kirchhoff's laws</strong>: at any node, current in equals current out (conservation of charge); around any loop, the voltage drops sum to zero (conservation of energy). Resistors in series add: $R_\text{tot} = R_1 + R_2$. Resistors in parallel combine via reciprocals: $1/R_\text{tot} = 1/R_1 + 1/R_2$. With these three rules you can analyze any DC resistor network, though for large networks you'd turn to linear algebra — every DC circuit is a sparse linear system in the node voltages.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="magnetic">7. Magnetic field and the Lorentz force</h2>
+
+    <p>Moving charges create magnetic fields and feel forces from them. The <strong>Lorentz force law</strong> gives the total force on a charge $q$ moving with velocity $\mathbf{v}$ in fields $\mathbf{E}$ and $\mathbf{B}$:</p>
+
+    <div class="math-display">$$\mathbf{F} = q(\mathbf{E} + \mathbf{v}\times\mathbf{B}).$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Lorentz force</p>
+      <dl>
+        <dt>$q$</dt><dd>The charge feeling the force.</dd>
+        <dt>$\mathbf{E}$</dt><dd>Local electric field.</dd>
+        <dt>$\mathbf{v}\times\mathbf{B}$</dt><dd>Cross product of the particle's velocity with the local magnetic field. Perpendicular to both $\mathbf{v}$ and $\mathbf{B}$.</dd>
+        <dt>$\mathbf{B}$</dt><dd>Local magnetic field.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Three things the Lorentz law tells you.</strong> First, a stationary charge feels no magnetic force — magnetic fields only act on moving charges. Second, the magnetic force is always perpendicular to the velocity, so it changes the direction of motion but not the speed — magnetic fields do no work on point charges. Third, charges moving in a uniform magnetic field travel in circles (or helixes if they have a velocity component along the field). This is the principle behind cyclotrons, mass spectrometers, and the funnels that guide electron beams in old CRT televisions.</p>
+    </div>
+
+    <p>For a charged particle moving perpendicular to a uniform magnetic field, the circular-motion condition $qvB = mv^2/r$ gives the <strong>cyclotron radius</strong> and frequency:</p>
+
+    <div class="math-display">$$r = \frac{mv}{qB}, \qquad \omega_c = \frac{qB}{m}.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Cyclotron motion</p>
+      <dl>
+        <dt>$r$</dt><dd>Radius of the circular orbit. Proportional to speed, inversely proportional to field strength. Fast particles orbit larger circles.</dd>
+        <dt>$\omega_c$</dt><dd>Angular frequency of the circular motion, independent of the particle's speed. This speed-independence is what made the cyclotron work.</dd>
+        <dt>$m, q$</dt><dd>Mass and charge of the particle.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why mass spectrometers work.</strong> For two particles with the same charge but different masses sent through the same field at the same speed, the heavier one traces a bigger circle. Fire a beam of ionized atoms into a magnetic field and each isotope lands at a different place on the detector plate. This is how isotope abundances are measured and how trace chemicals are identified by their characteristic mass spectra.</p>
+    </div>
+
+    <p><strong>Ampère's law</strong> is the magnetic analog of Gauss's law: the line integral of $\mathbf{B}$ around a closed loop equals $\mu_0$ times the enclosed current.</p>
+
+    <div class="math-display">$$\oint_C \mathbf{B}\cdot d\boldsymbol{\ell} = \mu_0 I_\text{enc}.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Ampère's law (static form)</p>
+      <dl>
+        <dt>$\oint_C$</dt><dd>Integral around a closed loop $C$ — an Amperian loop, chosen for symmetry.</dd>
+        <dt>$\mathbf{B}\cdot d\boldsymbol{\ell}$</dt><dd>Magnetic field dotted with an infinitesimal directed segment of the loop.</dd>
+        <dt>$\mu_0$</dt><dd>Permeability of free space, $4\pi\times 10^{-7}\,\text{T}\cdot\text{m/A}$.</dd>
+        <dt>$I_\text{enc}$</dt><dd>Current piercing any surface bounded by the loop.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Same trick as Gauss.</strong> For a long straight wire, draw a circular loop around it: $|\mathbf{B}|\cdot 2\pi r = \mu_0 I$, so $|\mathbf{B}| = \mu_0 I / (2\pi r)$. For a solenoid, draw a rectangle with one side inside and one outside: $|\mathbf{B}| = \mu_0 n I$ inside, 0 outside. Two problems, two symmetry choices, two trivial integrals. Maxwell later added a correction term (the displacement current) to make Ampère's law work when fields change in time — that correction is what makes electromagnetic waves possible.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="faraday">8. Faraday's law and induction</h2>
+
+    <p>In 1831, Michael Faraday discovered that a changing magnetic flux through a loop induces an electric field around the loop. This is the principle behind every electric generator and transformer ever built. In equation form:</p>
+
+    <div class="math-display">$$\oint \mathbf{E}\cdot d\boldsymbol{\ell} = -\frac{d\Phi_B}{dt}, \qquad \Phi_B = \int_S \mathbf{B}\cdot d\mathbf{A}.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Faraday's law</p>
+      <dl>
+        <dt>$\Phi_B$</dt><dd>Magnetic flux through surface $S$ — integrate $\mathbf{B}\cdot d\mathbf{A}$ over the surface.</dd>
+        <dt>$d\Phi_B/dt$</dt><dd>Rate of change of that flux with time.</dd>
+        <dt>$\oint \mathbf{E}\cdot d\boldsymbol{\ell}$</dt><dd>Electromotive force (EMF) around a closed loop — the line integral of the induced electric field.</dd>
+        <dt>The minus sign</dt><dd>Lenz's law: the induced current flows in whichever direction opposes the change in flux. If the flux through a loop is increasing, the induced current tries to create a flux that cancels the increase.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why generators work.</strong> Spin a coil of wire inside a fixed magnet (or a fixed magnet inside a stationary coil). The flux through the coil varies sinusoidally, so the induced EMF is sinusoidal, and alternating current flows in the wire. This is every power plant's output stage. The energy comes from whatever is doing the spinning — steam from nuclear or coal, water from a dam, wind from a turbine. The physics is identical. A transformer uses the same principle with two coils sharing flux through an iron core: the primary's varying current creates varying flux which induces an EMF in the secondary. Voltage ratios match turn ratios.</p>
+    </div>
+
+    <p>Faraday's discovery is what unified electricity and magnetism into a single subject. Before 1831 you could still pretend they were separate phenomena that just happened to interact; after 1831 it was clear they were inseparable. The electric field and the magnetic field are two aspects of one object: the electromagnetic field.</p>
+
+    <div class="problem-set" data-topic="phys-em-induction"></div>
+
+    <!-- ========================================================== -->
+    <h2 id="demo">9. Interactive: field from a small charge array</h2>
+
+    <p>Below is a snapshot of the electric field produced by up to three point charges. Drag the charge-strength sliders to change each charge (positive or negative). The small arrows show the field direction and relative magnitude at a grid of sample points.</p>
+
+    <div class="viz-3d">
+      <div class="v3-controls">
+        <span class="v3-label">Charge 1 (left):</span>
+        <input id="emQ1" type="range" min="-4" max="4" value="2" step="0.5" style="flex:1;max-width:220px;">
+        <span id="emQ1Label" style="min-width:60px;color:#22d3ee;font-family:ui-monospace,monospace;">+2.0</span>
+      </div>
+      <div class="v3-controls">
+        <span class="v3-label">Charge 2 (right):</span>
+        <input id="emQ2" type="range" min="-4" max="4" value="-2" step="0.5" style="flex:1;max-width:220px;">
+        <span id="emQ2Label" style="min-width:60px;color:#f472b6;font-family:ui-monospace,monospace;">-2.0</span>
+      </div>
+      <div class="v3-controls">
+        <span class="v3-label">Charge 3 (top):</span>
+        <input id="emQ3" type="range" min="-4" max="4" value="0" step="0.5" style="flex:1;max-width:220px;">
+        <span id="emQ3Label" style="min-width:60px;color:#7c5cff;font-family:ui-monospace,monospace;">0.0</span>
+      </div>
+      <svg id="emSvg" viewBox="0 0 720 360" style="width:100%;height:auto;background:#0a0d12;border-radius:6px;"></svg>
+      <p class="v3-caption" id="emCaption">Electric field vectors from up to three point charges. Arrow length is proportional to field magnitude (capped for readability). Positive charges render cyan, negative pink, dipole neutral.</p>
+    </div>
+
+    <p>Things to try:</p>
+
+    <ul>
+      <li><strong>Equal and opposite charges.</strong> Set $q_1 = +2$, $q_2 = -2$, $q_3 = 0$ for a classic dipole. You will see field lines emerging from the positive charge, curving through space, and terminating at the negative.</li>
+      <li><strong>Equal same-sign charges.</strong> Set $q_1 = q_2 = +2$. The field between them cancels near the midpoint and is purely repulsive outside.</li>
+      <li><strong>Three-charge configuration.</strong> Add charge 3 and watch how the field rearranges. Notice that superposition means you can almost predict the result by imagining adding the individual fields one at a time.</li>
+    </ul>
+
+    <!-- ========================================================== -->
+    <h2 id="maxwell">10. Maxwell's equations</h2>
+
+    <p>James Clerk Maxwell collected the laws of electricity and magnetism into four equations, added one crucial correction term to Ampère's law (the <strong>displacement current</strong>), and published the full theory in 1865. In SI units and differential form:</p>
+
+    <div class="math-display">$$\nabla\cdot\mathbf{E} = \frac{\rho}{\epsilon_0}, \qquad \nabla\cdot\mathbf{B} = 0,$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Gauss's laws (for E and B)</p>
+      <dl>
+        <dt>$\nabla\cdot\mathbf{E}$</dt><dd>Divergence of the electric field — measures how much the field "spreads out" from a point.</dd>
+        <dt>$\rho$</dt><dd>Electric charge density, in coulombs per cubic meter. Local amount of charge per unit volume.</dd>
+        <dt>$\nabla\cdot\mathbf{B} = 0$</dt><dd>The magnetic field has no divergence anywhere. In other words, magnetic monopoles do not exist — every magnetic field line that enters a closed region must also leave it. If you cut a bar magnet in half, you get two smaller bar magnets, not an isolated north and south pole.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>What divergence means.</strong> Think of a fluid. The divergence of its velocity field at a point tells you whether fluid is being created or destroyed there. $\nabla\cdot\mathbf{E} = \rho/\epsilon_0$ says electric field lines are created at positive charges and destroyed at negative charges, with strength proportional to the local charge density. $\nabla\cdot\mathbf{B} = 0$ says magnetic field lines have nowhere to start or end — they always form closed loops.</p>
+    </div>
+
+    <div class="math-display">$$\nabla\times\mathbf{E} = -\frac{\partial\mathbf{B}}{\partial t}, \qquad \nabla\times\mathbf{B} = \mu_0 \mathbf{J} + \mu_0\epsilon_0\frac{\partial\mathbf{E}}{\partial t}.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Faraday's and Ampère-Maxwell laws</p>
+      <dl>
+        <dt>$\nabla\times\mathbf{E}$</dt><dd>Curl of the electric field — measures how much the field circulates around a point.</dd>
+        <dt>$-\partial\mathbf{B}/\partial t$</dt><dd>Negative time derivative of the magnetic field. A changing $\mathbf{B}$ drives a curling $\mathbf{E}$. This is Faraday's law in differential form.</dd>
+        <dt>$\mathbf{J}$</dt><dd>Electric current density, in amperes per square meter.</dd>
+        <dt>$\mu_0 \mathbf{J}$</dt><dd>Ampère's original source term: currents produce curling magnetic fields.</dd>
+        <dt>$\mu_0 \epsilon_0\,\partial\mathbf{E}/\partial t$</dt><dd>Maxwell's displacement current — a changing electric field also produces a curling magnetic field, even in empty space with no actual current. Without this term, the equations would be mathematically inconsistent and electromagnetic waves would not exist.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>What Maxwell noticed.</strong> Ampère's original law said only real currents produced magnetic fields. Maxwell realized that if you apply this to a capacitor being charged — current flows into the plates but not <em>through</em> the gap — you get a contradiction at the capacitor gap. His fix: the changing electric field between the plates acts like a current for the purpose of magnetic generation. Add this term and the four equations together become self-consistent <em>and</em> predict that ripples in the field propagate as transverse waves at speed $1/\sqrt{\mu_0\epsilon_0}$. Maxwell computed this number and got $3\times 10^8$ m/s, matching measurements of the speed of light. "We can scarcely avoid the inference," he wrote, "that light consists in the transverse undulations of the same medium which is the cause of electric and magnetic phenomena." Unification.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="waves">11. Electromagnetic waves</h2>
+
+    <p>In a region with no charges or currents ($\rho = 0$, $\mathbf{J} = \mathbf{0}$), Maxwell's equations reduce to coupled curl equations for $\mathbf{E}$ and $\mathbf{B}$. Take the curl of one and substitute the other and you get separate wave equations for each field:</p>
+
+    <div class="math-display">$$\nabla^2 \mathbf{E} = \mu_0\epsilon_0\frac{\partial^2\mathbf{E}}{\partial t^2}, \qquad c = \frac{1}{\sqrt{\mu_0\epsilon_0}}.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Electromagnetic wave equation</p>
+      <dl>
+        <dt>$\nabla^2$</dt><dd>The Laplacian — sum of second partial derivatives, $\partial^2/\partial x^2 + \partial^2/\partial y^2 + \partial^2/\partial z^2$.</dd>
+        <dt>$\partial^2/\partial t^2$</dt><dd>Second partial derivative with respect to time.</dd>
+        <dt>$c$</dt><dd>The speed of light in vacuum, $2.998 \times 10^8$ m/s. Comes out of the equations as $1/\sqrt{\mu_0\epsilon_0}$, with no reference to light.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why this is a wave equation.</strong> The standard form $\nabla^2 f = (1/c^2) \partial^2 f/\partial t^2$ describes any quantity that propagates as a wave at speed $c$. Plane-wave solutions like $\mathbf{E} = \mathbf{E}_0 \cos(kx - \omega t)$ with $\omega/k = c$ satisfy it immediately. The $\mathbf{E}$ and $\mathbf{B}$ fields are perpendicular to each other and to the direction of propagation, with amplitudes related by $|\mathbf{B}| = |\mathbf{E}|/c$. They oscillate in step, shedding energy as they go.</p>
+    </div>
+
+    <p>Different frequencies of electromagnetic wave get different names: radio, microwave, infrared, visible, ultraviolet, X-ray, gamma ray. It is one continuous spectrum, differing only in wavelength. Human eyes evolved to detect the narrow band where the Sun emits most of its power and Earth's atmosphere is transparent — roughly 400–700 nm. Everything we call "light" and everything we call "radio" is the same phenomenon: ripples in the electromagnetic field, propagating at the speed $c$.</p>
+
+    <div class="problem-set" data-topic="phys-em-maxwell"></div>
+
+    <!-- ========================================================== -->
+    <h2 id="code">12. Electromagnetism in code</h2>
+
+    <p>Here is the most basic simulation of EM fields — computing the electric field of a small collection of point charges on a grid and rendering it as a vector field. This is the same calculation the interactive figure above does, but laid out for reading.</p>
+
+    <div class="code-tabs" id="ct-em">
+      <div class="ct-header">
+        <button class="ct-tab active" data-tab="np">NumPy</button>
+        <button class="ct-tab" data-tab="py">Plain Python</button>
+        <span class="ct-label">point-charge field map</span>
+      </div>
+
+      <div class="ct-panel active" data-tab="np"><pre><code><span class="kw">import</span> numpy <span class="kw">as</span> np
+
+<span class="cmt"># ---------- Electric field of a set of point charges ----------</span>
+<span class="kw">def</span> <span class="fn">efield</span>(charges, positions, X, Y):
+    <span class="cmt"># charges : array of scalars (coulombs or arbitrary units)</span>
+    <span class="cmt"># positions: array of shape (N, 2) with (x_i, y_i)</span>
+    <span class="cmt"># X, Y : meshgrid of field-point coordinates</span>
+    <span class="cmt"># Returns Ex, Ey arrays with same shape as X.</span>
+    Ex = np.zeros_like(X)
+    Ey = np.zeros_like(Y)
+    k  = <span class="num">1.0</span>  <span class="cmt"># 1 / (4 pi eps0), set to 1 for illustration</span>
+    <span class="kw">for</span> q, (qx, qy) <span class="kw">in</span> <span class="fn">zip</span>(charges, positions):
+        dx = X - qx
+        dy = Y - qy
+        r2 = dx * dx + dy * dy + <span class="num">1e-6</span>   <span class="cmt"># soften at the charge itself</span>
+        r3 = r2 ** <span class="num">1.5</span>
+        Ex += k * q * dx / r3
+        Ey += k * q * dy / r3
+    <span class="kw">return</span> Ex, Ey
+
+<span class="cmt"># Dipole on a 40x40 grid</span>
+gx = np.linspace(-<span class="num">3</span>, <span class="num">3</span>, <span class="num">40</span>)
+gy = np.linspace(-<span class="num">2</span>, <span class="num">2</span>, <span class="num">40</span>)
+X, Y = np.meshgrid(gx, gy)
+Ex, Ey = <span class="fn">efield</span>(charges=[<span class="num">1</span>, -<span class="num">1</span>], positions=[(-<span class="num">1</span>, <span class="num">0</span>), (<span class="num">1</span>, <span class="num">0</span>)], X=X, Y=Y)
+mag = np.sqrt(Ex ** <span class="num">2</span> + Ey ** <span class="num">2</span>)
+<span class="fn">print</span>(<span class="str">f"max |E| = {mag.max():.3f}, min = {mag.min():.3f}"</span>)
+
+<span class="cmt"># ---------- Gauss's law check (in 2D, integrate over a disk) ----------</span>
+<span class="cmt"># For a single point charge q at the origin, integrate E dot n dA</span>
+<span class="cmt"># over a circle of radius R. Should equal 2 pi q (the 2D analog).</span>
+q = <span class="num">1.0</span>
+R = <span class="num">1.5</span>
+Nang = <span class="num">400</span>
+th = np.linspace(<span class="num">0</span>, <span class="num">2</span> * np.pi, Nang, endpoint=<span class="kw">False</span>)
+dtheta = <span class="num">2</span> * np.pi / Nang
+xs = R * np.cos(th)
+ys = R * np.sin(th)
+Ex_c, Ey_c = <span class="fn">efield</span>([q], [(<span class="num">0</span>, <span class="num">0</span>)], xs, ys)
+<span class="cmt"># Outward normal = (cos th, sin th); line element = R dtheta.</span>
+flux = np.<span class="fn">sum</span>((Ex_c * np.cos(th) + Ey_c * np.sin(th)) * R * dtheta)
+<span class="fn">print</span>(<span class="str">f"enclosed flux = {flux:.4f}, 2 pi q = {2 * np.pi * q:.4f}"</span>)
+</code></pre></div>
+
+      <div class="ct-panel" data-tab="py"><pre><code><span class="kw">import</span> math
+
+<span class="cmt"># Same dipole field without NumPy.</span>
+
+<span class="kw">def</span> <span class="fn">efield_at</span>(charges, positions, x, y):
+    Ex = Ey = <span class="num">0.0</span>
+    <span class="kw">for</span> q, (qx, qy) <span class="kw">in</span> <span class="fn">zip</span>(charges, positions):
+        dx = x - qx
+        dy = y - qy
+        r2 = dx * dx + dy * dy + <span class="num">1e-6</span>
+        r3 = r2 ** <span class="num">1.5</span>
+        Ex += q * dx / r3
+        Ey += q * dy / r3
+    <span class="kw">return</span> Ex, Ey
+
+charges   = [<span class="num">1</span>, -<span class="num">1</span>]
+positions = [(-<span class="num">1</span>, <span class="num">0</span>), (<span class="num">1</span>, <span class="num">0</span>)]
+Ex, Ey = <span class="fn">efield_at</span>(charges, positions, x=<span class="num">0</span>, y=<span class="num">1</span>)
+<span class="fn">print</span>(<span class="str">f"Field at (0, 1): Ex={Ex:.3f}, Ey={Ey:.3f}"</span>)
+
+<span class="cmt"># Rough Gauss flux around a unit circle centered at a single charge</span>
+<span class="kw">def</span> <span class="fn">gauss_flux</span>(q, R, N=<span class="num">400</span>):
+    total = <span class="num">0.0</span>
+    <span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(N):
+        th = <span class="num">2</span> * math.pi * i / N
+        x, y = R * math.cos(th), R * math.sin(th)
+        Ex, Ey = <span class="fn">efield_at</span>([q], [(<span class="num">0</span>, <span class="num">0</span>)], x, y)
+        total += (Ex * math.cos(th) + Ey * math.sin(th)) * R * (<span class="num">2</span> * math.pi / N)
+    <span class="kw">return</span> total
+
+<span class="fn">print</span>(<span class="str">f"flux = {gauss_flux(1, 1.5):.4f}  (expected {2 * math.pi:.4f})"</span>)
+</code></pre></div>
+    </div>
+
+    <p>A couple of notes:</p>
+
+    <ul>
+      <li><strong>Softening at the source.</strong> The $r^{-2}$ divergence at a point charge would give infinities on a grid that happens to land near a charge. The small additive $10^{-6}$ in $r^2$ is a standard numerical trick that keeps the answer finite at the cost of a tiny bias near the source. Real plasma simulations and N-body gravity codes use similar regularizations.</li>
+      <li><strong>Numerical Gauss check.</strong> The second block shows that the numerical flux around a loop really does match the analytical expectation. This is a quick sanity test you can always run when you are not sure your field code is correct.</li>
+    </ul>
+
+    <!-- ========================================================== -->
+    <h2 id="summary">13. Cheat sheet and see also</h2>
+
+    <div class="grid">
+      <div class="card">
+        <h4>Coulomb's law</h4>
+        <p>$\mathbf{F} = \dfrac{k_e q_1 q_2}{r^2}\hat{\mathbf{r}}$</p>
+        <p class="meta">Inverse-square force between point charges.</p>
+      </div>
+      <div class="card">
+        <h4>Electric field</h4>
+        <p>$\mathbf{E} = \mathbf{F}/q$</p>
+        <p class="meta">Force per unit test charge.</p>
+      </div>
+      <div class="card">
+        <h4>Gauss's law</h4>
+        <p>$\oint\mathbf{E}\cdot d\mathbf{A} = Q_\text{enc}/\epsilon_0$</p>
+        <p class="meta">Symmetry reduces it to algebra.</p>
+      </div>
+      <div class="card">
+        <h4>Potential</h4>
+        <p>$\mathbf{E} = -\nabla V$</p>
+        <p class="meta">Scalar field; easier to add than vectors.</p>
+      </div>
+      <div class="card">
+        <h4>Ohm's law</h4>
+        <p>$V = IR$</p>
+        <p class="meta">Voltage equals current times resistance.</p>
+      </div>
+      <div class="card">
+        <h4>Lorentz force</h4>
+        <p>$\mathbf{F} = q(\mathbf{E} + \mathbf{v}\times\mathbf{B})$</p>
+        <p class="meta">Total force on a moving charge.</p>
+      </div>
+      <div class="card">
+        <h4>Ampère's law</h4>
+        <p>$\oint\mathbf{B}\cdot d\boldsymbol{\ell} = \mu_0 I_\text{enc}$</p>
+        <p class="meta">Currents curl the magnetic field.</p>
+      </div>
+      <div class="card">
+        <h4>Faraday's law</h4>
+        <p>$\text{EMF} = -d\Phi_B/dt$</p>
+        <p class="meta">Changing flux drives an EMF.</p>
+      </div>
+      <div class="card">
+        <h4>Maxwell's equations</h4>
+        <p>Four coupled field laws</p>
+        <p class="meta">The entirety of classical electromagnetism.</p>
+      </div>
+      <div class="card">
+        <h4>Speed of light</h4>
+        <p>$c = 1/\sqrt{\mu_0 \epsilon_0}$</p>
+        <p class="meta">Light = electromagnetic wave.</p>
+      </div>
+    </div>
+
+    <h3>See also</h3>
+    <div class="see-also">
+      <div class="card">
+        <h4><a href="./classical-mechanics.html">Physics: Classical Mechanics</a></h4>
+        <p>The Lorentz force acts on charged particles; to know how they move you combine it with Newton's second law. Lagrangians for charged particles pick up a velocity-dependent potential $q\mathbf{v}\cdot\mathbf{A}$.</p>
+      </div>
+      <div class="card">
+        <h4><a href="./special-relativity.html">Physics: Special Relativity</a></h4>
+        <p>Maxwell's equations were already Lorentz-invariant, which is how Einstein got pushed toward relativity. $\mathbf{E}$ and $\mathbf{B}$ transform into each other under boosts; they are really one object, the electromagnetic field tensor.</p>
+      </div>
+      <div class="card">
+        <h4><a href="./quantum-mechanics.html">Physics: Quantum Mechanics</a></h4>
+        <p>Atomic spectra, photons, and the photoelectric effect all force you to quantize the electromagnetic field. Do that cleanly and you get quantum electrodynamics (QED), the most precisely tested theory in physics.</p>
+      </div>
+      <div class="card">
+        <h4><a href="../math/calculus.html">Math: Calculus</a></h4>
+        <p>Divergence, curl, gradient, and the Laplacian — the vector calculus that Maxwell wrote his equations in — is a chapter of multivariable calculus.</p>
+      </div>
+      <div class="card">
+        <h4><a href="../math/linear-algebra.html">Math: Linear Algebra</a></h4>
+        <p>Circuits are linear systems; field theory uses tensors; Fourier analysis of waves is linear algebra in disguise.</p>
+      </div>
+      <div class="card">
+        <h4><a href="../topics/foundation-models.html">AI: Foundation Models</a></h4>
+        <p>Training runs on hardware that is one giant electromagnetism problem — power delivery, signal integrity, and heat extraction. Data center design is Maxwell's equations plus thermodynamics.</p>
+      </div>
+    </div>
+
+    <div class="bib">
+      <h4>Further reading</h4>
+      <ul>
+        <li>Richard Feynman, Robert Leighton, Matthew Sands — <em>The Feynman Lectures on Physics, Vol. 2</em> (1964). Feynman's take on electromagnetism; conceptually the clearest undergraduate text written in English, and free at <a href="https://www.feynmanlectures.caltech.edu/II_toc.html">feynmanlectures.caltech.edu</a>.</li>
+        <li>David Griffiths — <em>Introduction to Electrodynamics</em> (4th ed., 2012). The standard undergraduate textbook. Excellent problem sets; readable voice.</li>
+        <li>John David Jackson — <em>Classical Electrodynamics</em> (3rd ed., 1999). The graduate-level bible. Uses SI in the 3rd edition; the 2nd edition used Gaussian. Dense but comprehensive.</li>
+        <li>James Clerk Maxwell — <em>A Treatise on Electricity and Magnetism</em> (1873). Two-volume original in (mostly) quaternion notation. Of historical and philosophical interest; do not try to learn from it.</li>
+        <li>Wikipedia — <a href="https://en.wikipedia.org/wiki/Maxwell%27s_equations">Maxwell's equations</a>. Good modern summary with history, units, and reformulations.</li>
+        <li>MIT OCW — <em>Electricity and Magnetism</em> (<a href="https://ocw.mit.edu/courses/8-02-physics-ii-electricity-and-magnetism-spring-2007/">8.02</a>). Walter Lewin's famous demonstrations are on YouTube and still the best video introduction for engineers.</li>
+      </ul>
+    </div>
+
+    <div class="next-card">
+      <div class="label">NEXT UP</div>
+      <a href="./thermodynamics.html">→ Thermodynamics</a>
+      <p>Electromagnetism runs your devices; thermodynamics tells you why they get hot. Heat, work, entropy, and the second law — the framework that limits what any engine or refrigerator can ever achieve.</p>
+    </div>
+
+  </article>
+</div>
+
+<script>
+// =========================================================
+// Code tabs
+document.querySelectorAll('.code-tabs').forEach(root => {
+  const tabs = root.querySelectorAll('.ct-tab');
+  const panels = root.querySelectorAll('.ct-panel');
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const target = tab.getAttribute('data-tab');
+      tabs.forEach(t => t.classList.toggle('active', t === tab));
+      panels.forEach(p => p.classList.toggle('active', p.getAttribute('data-tab') === target));
+    });
+  });
+});
+
+// =========================================================
+// Charge field visualization
+(function() {
+  const svg = document.getElementById('emSvg');
+  if (!svg) return;
+  const NS = 'http://www.w3.org/2000/svg';
+  const sQ1 = document.getElementById('emQ1');
+  const sQ2 = document.getElementById('emQ2');
+  const sQ3 = document.getElementById('emQ3');
+  const lQ1 = document.getElementById('emQ1Label');
+  const lQ2 = document.getElementById('emQ2Label');
+  const lQ3 = document.getElementById('emQ3Label');
+  const caption = document.getElementById('emCaption');
+
+  const W = 720, H = 360;
+  const cx = W / 2, cy = H / 2;
+  const scale = 60; // pixels per physical unit
+
+  // Physical positions of the three charges (unit = "meter")
+  const positions = [
+    [-1.8, 0.0],   // left
+    [ 1.8, 0.0],   // right
+    [ 0.0, 1.3],   // top
+  ];
+
+  function mkLine(x1,y1,x2,y2,stroke,w) {
+    const l = document.createElementNS(NS, 'line');
+    l.setAttribute('x1',x1); l.setAttribute('y1',y1);
+    l.setAttribute('x2',x2); l.setAttribute('y2',y2);
+    l.setAttribute('stroke',stroke);
+    l.setAttribute('stroke-width',w||1);
+    return l;
+  }
+  function mkCircle(x,y,r,fill,stroke) {
+    const c = document.createElementNS(NS, 'circle');
+    c.setAttribute('cx',x); c.setAttribute('cy',y); c.setAttribute('r',r);
+    c.setAttribute('fill',fill);
+    if (stroke) { c.setAttribute('stroke',stroke); c.setAttribute('stroke-width',1.5); }
+    return c;
+  }
+  function mkText(x,y,txt,color,size,anchor) {
+    const t = document.createElementNS(NS, 'text');
+    t.setAttribute('x', x); t.setAttribute('y', y);
+    t.setAttribute('fill', color || '#7a8a9a');
+    t.setAttribute('font-size', size || 11);
+    t.setAttribute('font-family', 'ui-monospace, monospace');
+    if (anchor) t.setAttribute('text-anchor', anchor);
+    t.textContent = txt;
+    return t;
+  }
+
+  function toScreen(x, y) {
+    return [cx + x * scale, cy - y * scale];
+  }
+
+  function field(qs, x, y) {
+    let Ex = 0, Ey = 0;
+    for (let i = 0; i < qs.length; i++) {
+      const q = qs[i];
+      if (q === 0) continue;
+      const [qx, qy] = positions[i];
+      const dx = x - qx, dy = y - qy;
+      const r2 = dx * dx + dy * dy + 0.05;
+      const r3 = Math.pow(r2, 1.5);
+      Ex += q * dx / r3;
+      Ey += q * dy / r3;
+    }
+    return [Ex, Ey];
+  }
+
+  function draw() {
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+
+    const q1 = parseFloat(sQ1.value);
+    const q2 = parseFloat(sQ2.value);
+    const q3 = parseFloat(sQ3.value);
+    const qs = [q1, q2, q3];
+    lQ1.textContent = (q1 >= 0 ? '+' : '') + q1.toFixed(1);
+    lQ2.textContent = (q2 >= 0 ? '+' : '') + q2.toFixed(1);
+    lQ3.textContent = (q3 >= 0 ? '+' : '') + q3.toFixed(1);
+
+    // Frame
+    const frame = document.createElementNS(NS, 'rect');
+    frame.setAttribute('x', 20); frame.setAttribute('y', 20);
+    frame.setAttribute('width', W - 40); frame.setAttribute('height', H - 40);
+    frame.setAttribute('fill', '#0f131a'); frame.setAttribute('stroke', '#2a3446');
+    frame.setAttribute('stroke-width', 1);
+    svg.appendChild(frame);
+
+    // Grid of sample points
+    const cols = 24, rows = 12;
+    const xmin = -4.5, xmax = 4.5;
+    const ymin = -2.2, ymax = 2.2;
+    for (let j = 0; j < rows; j++) {
+      for (let i = 0; i < cols; i++) {
+        const x = xmin + (i + 0.5) * (xmax - xmin) / cols;
+        const y = ymin + (j + 0.5) * (ymax - ymin) / rows;
+        // Skip points too close to a charge
+        let skip = false;
+        for (let k = 0; k < qs.length; k++) {
+          if (qs[k] === 0) continue;
+          const [qx, qy] = positions[k];
+          const d = Math.sqrt((x - qx) * (x - qx) + (y - qy) * (y - qy));
+          if (d < 0.35) { skip = true; break; }
+        }
+        if (skip) continue;
+        const [Ex, Ey] = field(qs, x, y);
+        const mag = Math.sqrt(Ex * Ex + Ey * Ey);
+        if (mag < 1e-3) continue;
+        // Normalize direction; cap length for display.
+        const capped = Math.min(mag, 3);
+        const lenPix = 8 + capped * 5;
+        const ux = Ex / mag, uy = Ey / mag;
+        const [sx, sy] = toScreen(x, y);
+        const ex = sx + ux * lenPix;
+        const ey = sy - uy * lenPix;  // y flipped
+        const color = '#22d3ee';
+        svg.appendChild(mkLine(sx, sy, ex, ey, color, 1.2));
+        // Small arrowhead
+        const ahx = ex - 2 * ux;
+        const ahy = ey + 2 * uy;
+        svg.appendChild(mkCircle(ex, ey, 1.6, color, null));
+      }
+    }
+
+    // Draw the charges
+    const colors = ['#22d3ee', '#f472b6', '#7c5cff'];
+    for (let k = 0; k < qs.length; k++) {
+      if (qs[k] === 0) continue;
+      const [qx, qy] = positions[k];
+      const [sx, sy] = toScreen(qx, qy);
+      const r = 10 + 2 * Math.abs(qs[k]);
+      const col = qs[k] > 0 ? '#22d3ee' : '#f472b6';
+      svg.appendChild(mkCircle(sx, sy, r, col, '#fff'));
+      const sign = qs[k] > 0 ? '+' : '−';
+      svg.appendChild(mkText(sx, sy + 4, sign, '#0a0d12', 14, 'middle'));
+    }
+
+    // Title
+    svg.appendChild(mkText(30, 36,
+      'Electric field of ' + qs.filter(q => q !== 0).length + ' charges',
+      '#b4c4d4', 11));
+
+    caption.textContent =
+      'q1 = ' + (q1 >= 0 ? '+' : '') + q1.toFixed(1) + ', ' +
+      'q2 = ' + (q2 >= 0 ? '+' : '') + q2.toFixed(1) + ', ' +
+      'q3 = ' + (q3 >= 0 ? '+' : '') + q3.toFixed(1) +
+      '.  Arrows show field direction at each grid point.';
+  }
+
+  sQ1.addEventListener('input', draw);
+  sQ2.addEventListener('input', draw);
+  sQ3.addEventListener('input', draw);
+  draw();
+})();
+</script>
+<script defer src="../problem-set.js"></script>
+<script defer src="electromagnetism-problems.js"></script>
+<script defer src="../search-index.js"></script>
+<script defer src="../search.js"></script>
+</body>
+</html>
+</content>
+</invoke>

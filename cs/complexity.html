@@ -269,6 +269,8 @@
 
     <p>Here's the lesson buried in that plot: the order of the curves doesn't change. $O(\log n)$ stays below $O(n)$ stays below $O(n \log n)$ stays below $O(n^2)$. <em>Always.</em> Once you cross the crossover point, the higher-order term dominates forever and the gap only widens. That's why we say "$n^2$ is asymptotically worse than $n \log n$" without needing to specify how big $n$ is.</p>
 
+    <div class="problem-set" data-topic="cplx-bigo"></div>
+
     <!-- ========================================================== -->
     <h2 id="classes">7. Common growth classes</h2>
 
@@ -498,6 +500,8 @@
       <p><strong>What the master theorem can't do.</strong> It needs $f(n)$ to be polynomially bounded relative to $n^{\log_b a}$. If $f(n) = n \log n$ and $n^{\log_b a} = n$, you're in the gap and the basic master theorem fails — you need an extended version (Akra–Bazzi). Also, the recurrence has to have the form $a T(n/b) + f(n)$ — uneven splits like $T(n) = T(n/3) + T(2n/3) + n$ need other tools.</p>
     </div>
 
+    <div class="problem-set" data-topic="cplx-masters"></div>
+
     <!-- ========================================================== -->
     <h2 id="amortized">11. Amortized analysis</h2>
 
@@ -557,6 +561,8 @@
     <div class="callout">
       <p><strong>Time-space tradeoff.</strong> Many algorithms let you trade one for the other. Memoization spends memory to save time. Streaming algorithms throw away inputs to save memory. Knowing both bounds tells you which trade you can make.</p>
     </div>
+
+    <div class="problem-set" data-topic="cplx-amortized"></div>
 
     <!-- ========================================================== -->
     <h2 id="cases">13. Best, average, worst</h2>
@@ -806,6 +812,8 @@ arr = <span class="fn">DoublingArray</span>()
     <p>The general rule: anywhere you see "$L^2$" in machine learning, someone is trying to make it $L \log L$ or even $L$. The history of every long-context paper is the history of attacking a quadratic bound.</p>
 
     <p>And it's not just attention. KV cache size is $O(L)$ per layer, total inference memory is $O(\ell L d)$, training memory is dominated by activations at $O(\ell L d)$. The complexity story is everywhere.</p>
+
+    <div class="problem-set" data-topic="cplx-pvsnp"></div>
 
     <!-- ========================================================== -->
     <h2 id="summary">18. Summary</h2>
@@ -1108,6 +1116,8 @@ document.querySelectorAll('.code-tabs').forEach(root => {
   draw();
 })();
 </script>
+<script defer src="../problem-set.js"></script>
+<script defer src="complexity-problems.js"></script>
 <script defer src="../search-index.js"></script>
 <script defer src="../search.js"></script>
 </body>

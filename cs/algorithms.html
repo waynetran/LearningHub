@@ -135,6 +135,8 @@
 
     <p>When you see a running time like "amortized $O(1)$", that means the average cost per operation is constant, even if individual operations occasionally take longer. Dynamic arrays and hash tables are the canonical examples — we'll see both below.</p>
 
+    <div class="problem-set" data-topic="algo-bigo"></div>
+
     <!-- ========================================================== -->
     <h2 id="s3">3. Arrays and dynamic arrays</h2>
 
@@ -584,6 +586,8 @@
 
     <p>A sort is <strong>stable</strong> if elements that compare equal keep their relative order from the input. Mergesort is stable. Quicksort and heapsort are not (without extra bookkeeping). Stability matters when you sort by a secondary key and want the primary-key order preserved — e.g., "sort employees by department, keeping alphabetical order within each department". Python's <code>sorted()</code> is stable by default, which is one of the reasons it's so pleasant to use.</p>
 
+    <div class="problem-set" data-topic="algo-sorting"></div>
+
     <!-- ========================================================== -->
     <h2 id="s14">14. Searching</h2>
 
@@ -688,6 +692,8 @@
     <p><strong>Negative weights?</strong> Dijkstra fails on graphs with negative-weight edges — you can't assume extracted distances are final. Use the Bellman-Ford algorithm instead. It's slower ($O(VE)$) but handles negative weights and even detects negative cycles.</p>
 
     <p>Dijkstra is the core of every routing system you use: GPS driving directions, network routers (OSPF is Dijkstra under the hood), flight search, game AI pathfinding. The variant <em>A*</em> adds a heuristic estimate of remaining distance to guide the search toward the target faster — same skeleton, different priority key. You can think of it this way: Dijkstra expands vertices in order of $\text{dist}[u]$; A* expands them in order of $\text{dist}[u] + h(u, t)$, where $h$ is a lower bound on the remaining distance to the target $t$. As long as $h$ never overestimates (an <em>admissible</em> heuristic), A* still returns the true shortest path but usually explores far fewer vertices.</p>
+
+    <div class="problem-set" data-topic="algo-graphs"></div>
 
     <!-- ========================================================== -->
     <h2 id="s17">17. Dynamic programming</h2>
@@ -801,6 +807,8 @@ def F(state):
       <li><strong>Order the computation.</strong> Either top-down with memoization (natural but uses recursion stack) or bottom-up with a table (iterative, often faster).</li>
       <li><strong>Reconstruct the solution.</strong> If you need the actual choices, not just the objective value, store back-pointers as you fill the table.</li>
     </ol>
+
+    <div class="problem-set" data-topic="algo-dp"></div>
 
     <!-- ========================================================== -->
     <h2 id="s18">18. Greedy algorithms</h2>
@@ -1397,6 +1405,8 @@ document.querySelectorAll('.code-tabs').forEach(root => {
   reset();
 })();
 </script>
+<script defer src="../problem-set.js"></script>
+<script defer src="algorithms-problems.js"></script>
 <script defer src="../search-index.js"></script>
 <script defer src="../search.js"></script>
 </body>

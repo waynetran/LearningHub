@@ -427,6 +427,8 @@
       <p class="mg-why">Associativity is how frameworks like PyTorch save compute: a chain like $ABC\mathbf{x}$ of sizes $(n\times n)(n\times n)(n\times n)(n \times 1)$ should be computed right-to-left as $A(B(C\mathbf{x}))$, which is three matrix-vector products ($O(n^2)$ each) instead of two matrix-matrix products ($O(n^3)$ each).</p>
     </div>
 
+    <div class="problem-set" data-topic="linalg-matmul"></div>
+
     <!-- ========================================================== -->
     <h2 id="demo">7. Interactive: 2×2 transformations</h2>
 
@@ -629,6 +631,8 @@
       <p><strong>A note on what people actually use.</strong> No one solves medium-to-large linear systems with raw Gaussian elimination. They use LU decomposition (essentially the same algorithm, stored more cleverly), or QR for least squares, or iterative methods (conjugate gradient, GMRES) for truly huge sparse systems. That's the subject of <a href="numerical-analysis.html">numerical analysis</a>. Gaussian elimination is still how you understand what's going on.</p>
     </div>
 
+    <div class="problem-set" data-topic="linalg-linsys"></div>
+
     <!-- ========================================================== -->
     <h2 id="spaces">10. Vector spaces</h2>
 
@@ -812,6 +816,8 @@
 
     <p>Once you've done this a few times, you'll never want to do it for anything bigger than 3×3 again. Everything larger gets computed numerically.</p>
 
+    <div class="problem-set" data-topic="linalg-eigen"></div>
+
     <!-- ========================================================== -->
     <h2 id="diag">14. Diagonalization</h2>
 
@@ -935,6 +941,8 @@
       </dl>
       <p class="mg-analogy"><strong>Practical meaning</strong>. If the singular values decay fast, a rank-$k$ approximation with tiny $k$ captures almost all of $A$. That is why low-rank compression works: real-world data matrices (word co-occurrences, user-item ratings, image patches, neural network weights) are approximately low-rank. LoRA is literally this: store $A \approx A_k$ as $UV^T$ of rank $k = 8$ or 16.</p>
     </div>
+
+    <div class="problem-set" data-topic="linalg-svd"></div>
 
     <!-- ========================================================== -->
     <h2 id="pca">17. PCA in 30 lines</h2>
@@ -1393,6 +1401,8 @@ document.querySelectorAll('.code-tabs').forEach(root => {
   draw();
 })();
 </script>
+<script defer src="../problem-set.js"></script>
+<script defer src="linear-algebra-problems.js"></script>
 <script defer src="../search-index.js"></script>
 <script defer src="../search.js"></script>
 </body>

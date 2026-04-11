@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Thermodynamics — Deep Dive</title>
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError: false});"></script>
+</head>
+<body>
+<div id="tooltip"></div>
+
+<nav class="topic-nav">
+  <a class="back" href="./index.html">← Physics</a>
+  <div class="crumb">Physics / <span class="topic-name">Thermodynamics</span></div>
+</nav>
+
+<div class="topic-layout">
+  <aside class="topic-toc">
+    <h4>ON THIS PAGE</h4>
+    <ul>
+      <li><a href="#why">1. Why thermodynamics</a></li>
+      <li><a href="#vocab">2. Vocabulary cheat sheet</a></li>
+      <li><a href="#temp-heat">3. Temperature, heat, and work</a></li>
+      <li><a href="#first-law">4. The first law</a></li>
+      <li><a href="#second-law">5. The second law and entropy</a></li>
+      <li><a href="#ideal-gas">6. Ideal gas and PV diagrams</a></li>
+      <li><a href="#engines">7. Heat engines and Carnot</a></li>
+      <li><a href="#statmech">8. Statistical mechanics</a></li>
+      <li><a href="#demo">9. Interactive: Maxwell-Boltzmann</a></li>
+      <li><a href="#free-energy">10. Free energy and chemical potential</a></li>
+      <li><a href="#code">11. Simulation in code</a></li>
+      <li><a href="#summary">12. Cheat sheet and see also</a></li>
+    </ul>
+  </aside>
+
+  <article class="topic-content">
+    <h1>Thermodynamics</h1>
+    <p class="subtitle">Four laws — one of them so obvious it's the zeroth, one of them called "the most profound law of physics" by the people who mean it — that tell you what engines can do, why ice melts, why your laptop needs a fan, and why the universe is slowly running out of usable energy even though total energy is conserved.</p>
+    <div class="meta-tags">
+      <span>Prereq: <a href="./classical-mechanics.html">classical mechanics</a>, <a href="../math/calculus.html">calculus</a>, <a href="../math/probability.html">probability</a></span>
+      <span>Read time: ~45 min</span>
+      <span>Interactive figures: 1</span>
+      <span>Code: NumPy, Python</span>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="why">1. Why thermodynamics runs every engine on the planet</h2>
+
+    <p>Thermodynamics is the physics of heat, work, and the invisible constraint called <em>entropy</em> that quietly vetoes half the perpetual-motion machines ever proposed. It was worked out in the nineteenth century by engineers trying to make steam engines burn less coal, and the rules they found turned out to be general enough to describe refrigerators, chemical reactions, neutron stars, black holes, and — more recently — the power budget of a GPU cluster.</p>
+
+    <p>Here is the scale of the thing. A 2024 H100 GPU dissipates about 700 watts under load. A rack of 8 of them is 5.6 kilowatts of heat you have to move out of a closet. A 50,000-GPU training cluster dumps 35 megawatts continuously. That heat does not magically vanish; it must be pumped into water or air and then dumped to the atmosphere, and the laws that govern how well that pumping can be done were written down by Rudolf Clausius and Sadi Carnot before anyone had ever seen a transistor. If you work on AI infrastructure, energy, chemistry, climate, or biology, you are doing thermodynamics whether or not the word appears in your job title.</p>
+
+    <div class="callout">
+      <div class="label">THE PUNCHLINE</div>
+      <p>Energy is conserved (first law). But the <em>usefulness</em> of that energy decreases every time something real happens (second law). The gap between "energy exists" and "energy can be turned into work" is entropy, and it grows. Every engine, refrigerator, chemical reaction, and living cell is a local fight against that trend, powered by a larger entropy increase somewhere else.</p>
+    </div>
+
+    <p>Three reasons to care if you are not a mechanical engineer:</p>
+
+    <ul>
+      <li><strong>Infrastructure.</strong> Power plants, HVAC, refrigeration, jet engines, rocket nozzles, and data-center cooling are direct applications. Carnot's bound on efficiency is the reason you cannot make a gasoline engine better than about 40 percent without exotic tricks.</li>
+      <li><strong>Chemistry and biology.</strong> Chemical equilibria, reaction rates, protein folding, and membrane transport are governed by Gibbs and Helmholtz free energies — direct descendants of the second law.</li>
+      <li><strong>Information.</strong> Shannon entropy in information theory is Boltzmann entropy renamed. Landauer's principle ties the minimum energy to erase a bit to $k_B T \ln 2$. Thermodynamics puts a hard floor under the efficiency of every computation ever performed.</li>
+    </ul>
+
+    <!-- ========================================================== -->
+    <h2 id="vocab">2. Vocabulary cheat sheet</h2>
+
+    <p>The symbols you will see repeatedly. Glance now; each is defined properly in the sections below.</p>
+
+    <table class="rank-table">
+      <thead><tr><th>Symbol</th><th>Read as</th><th>Means</th></tr></thead>
+      <tbody>
+        <tr><td>$T$</td><td>"T"</td><td>Temperature. Measured in kelvins ($\text{K}$). Not the same as "heat" — a spark is hot but carries almost no energy.</td></tr>
+        <tr><td>$U$</td><td>"U"</td><td>Internal energy of a system — the total kinetic plus potential energy of all its microscopic parts. SI unit: joule.</td></tr>
+        <tr><td>$Q$</td><td>"Q"</td><td>Heat — energy transferred because of a temperature difference. Joules. $Q > 0$ when heat flows <em>into</em> the system.</td></tr>
+        <tr><td>$W$</td><td>"W"</td><td>Work — energy transferred by a force moving through a distance. Joules. Sign conventions vary; we use $W > 0$ for work <em>done by</em> the system on its surroundings.</td></tr>
+        <tr><td>$S$</td><td>"S"</td><td>Entropy. A measure of how many microscopic arrangements are compatible with the macroscopic state. Units: joules per kelvin.</td></tr>
+        <tr><td>$P$, $V$</td><td>"P, V"</td><td>Pressure (pascals) and volume (cubic meters). The two handles you grab a gas by.</td></tr>
+        <tr><td>$n$, $N$</td><td>"n, N"</td><td>Amount of substance: $n$ is moles, $N$ is the number of molecules. $N = n N_A$ with $N_A \approx 6.022 \times 10^{23}$.</td></tr>
+        <tr><td>$R$, $k_B$</td><td>"R, k-B"</td><td>Gas constant $R \approx 8.314\,\text{J/(mol·K)}$ and Boltzmann constant $k_B \approx 1.381 \times 10^{-23}\,\text{J/K}$. Related by $R = N_A k_B$.</td></tr>
+        <tr><td>$F$, $G$</td><td>"F, G"</td><td>Helmholtz and Gibbs free energies — the "available work" at fixed $T$ and fixed $(T, P)$ respectively.</td></tr>
+        <tr><td>$Z$</td><td>"Z"</td><td>Partition function. The sum over states that ties statistical mechanics to thermodynamics.</td></tr>
+      </tbody>
+    </table>
+
+    <!-- ========================================================== -->
+    <h2 id="temp-heat">3. Temperature, heat, and work — three words that are not synonyms</h2>
+
+    <p>Confusion about thermodynamics almost always starts with the words <em>temperature</em>, <em>heat</em>, and <em>work</em> being used interchangeably in English. In physics they mean three different things, and getting them straight is half the battle.</p>
+
+    <p><strong>Temperature</strong> is a property of a system in equilibrium. Microscopically it is (up to a factor) the average kinetic energy per degree of freedom. Macroscopically it is what a thermometer measures. The key fact, so obvious it is called the <em>zeroth law</em>, is that if system A is in thermal equilibrium with B, and B is in equilibrium with C, then A is in equilibrium with C. That is what licenses the existence of a temperature scale at all.</p>
+
+    <p><strong>Heat</strong> is not a substance. It is an amount of energy transferred from one body to another <em>because</em> they were at different temperatures. You cannot "have" heat sitting in a box. You can have internal energy sitting in a box, and some of it may leave as heat if you open the lid to something colder. The distinction matters because "heat" and "work" are the two channels through which energy crosses a system boundary, and the first law depends on knowing which is which.</p>
+
+    <p><strong>Work</strong> is energy transferred by any other mechanism: a piston pushed, a shaft turned, a charge moved through a potential difference. Mechanical work on a gas in a cylinder is the familiar $P\,dV$:</p>
+
+    <div class="math-display">$$ W = \int_{V_1}^{V_2} P\, dV $$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Work done by a gas during expansion</p>
+      <dl>
+        <dt>$W$</dt><dd>Work done <em>by</em> the gas on the surroundings, in joules. Positive when the gas expands and pushes on whatever contains it.</dd>
+        <dt>$P$</dt><dd>Pressure of the gas during the process, in pascals. It may vary as volume changes, so it lives inside the integral.</dd>
+        <dt>$dV$</dt><dd>An infinitesimal change in the gas's volume, in cubic meters.</dd>
+        <dt>$\int_{V_1}^{V_2}$</dt><dd>Integral from the starting volume $V_1$ to the ending volume $V_2$. Graphically: the area under the curve on a $P$-vs-$V$ diagram.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Analogy.</strong> Think of pushing a syringe. The force is pressure times area, the distance moved is small, and the tiny bit of work is pressure times the tiny change in volume. Total work is the sum (integral) of all those tiny bits.</p>
+    </div>
+
+    <p>For a gas expanding at constant pressure the integral collapses to $W = P\Delta V$. For an <em>isothermal</em> expansion of an ideal gas, you need the ideal gas law (coming in section 6) and the result is $W = nRT \ln(V_2/V_1)$, which we will derive in context.</p>
+
+    <div class="defn">
+      <strong>Sign conventions.</strong> Physics texts differ. In this page: $Q > 0$ means heat flows into the system; $W > 0$ means work is done by the system on its surroundings. So $\Delta U = Q - W$ in the first law below. Chemistry texts often write $\Delta U = Q + W$ with $W$ meaning "work done on the system." Both are correct, just bookkeeping.
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="first-law">4. The first law — energy bookkeeping, nothing more</h2>
+
+    <p>The first law of thermodynamics says that energy cannot be created or destroyed; any change in a system's internal energy comes from heat added or work done.</p>
+
+    <div class="math-display">$$ \Delta U = Q - W $$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">First law of thermodynamics</p>
+      <dl>
+        <dt>$\Delta U$</dt><dd>Change in the internal energy of the system, in joules. Positive means the system gained energy.</dd>
+        <dt>$Q$</dt><dd>Heat added to the system, in joules. Positive means heat flowed in.</dd>
+        <dt>$W$</dt><dd>Work done <em>by</em> the system on the surroundings, in joules. Positive means the system pushed outward.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Analogy.</strong> A bank account. Heat is a deposit. Work-by-the-system is a withdrawal. Internal energy is the balance. You cannot spend what you did not deposit, and no interest is ever paid.</p>
+    </div>
+
+    <p>That is it. The first law is a conservation statement, nothing more. What makes it useful is that it lets you track the energy budget of any process, no matter how complicated, as long as you are careful about which flows are heat and which are work.</p>
+
+    <p>A few named processes fall out of the first law by holding one variable fixed:</p>
+
+    <ul>
+      <li><strong>Isothermal</strong> (constant $T$). For an ideal gas, $U$ depends only on $T$, so $\Delta U = 0$, and therefore $Q = W$: every bit of heat added is converted directly to work done by the gas.</li>
+      <li><strong>Adiabatic</strong> (no heat exchanged, $Q = 0$). Then $\Delta U = -W$: the gas cools when it expands because the work comes out of its internal energy. This is why a can of compressed air gets cold when you discharge it.</li>
+      <li><strong>Isobaric</strong> (constant $P$). Work is $P\Delta V$, heat is $nC_P \Delta T$, and internal-energy change is $nC_V \Delta T$, where $C_P$ and $C_V$ are molar heat capacities.</li>
+      <li><strong>Isochoric</strong> (constant $V$). No work, so $\Delta U = Q$ and all added heat goes into internal energy.</li>
+    </ul>
+
+    <p>The key relation between the two heat capacities of an ideal gas is:</p>
+
+    <div class="math-display">$$ C_P - C_V = R $$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Mayer's relation</p>
+      <dl>
+        <dt>$C_P$</dt><dd>Molar heat capacity at constant pressure: how much heat per mole per kelvin it takes to warm the gas when pressure is held fixed.</dd>
+        <dt>$C_V$</dt><dd>Molar heat capacity at constant volume: same, but volume held fixed instead.</dd>
+        <dt>$R$</dt><dd>Universal gas constant, $\approx 8.314\,\text{J/(mol·K)}$. The extra $R$ accounts for the work done pushing back the atmosphere when the gas is allowed to expand.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Analogy.</strong> Heating a gas at constant pressure costs more because part of your heat budget goes into pushing the piston outward, not just into warming the gas. That extra cost is exactly $R$ per kelvin per mole.</p>
+    </div>
+
+    <div class="problem-set" data-topic="phys-thermo-firstlaw"></div>
+
+    <!-- ========================================================== -->
+    <h2 id="second-law">5. The second law — the rule that kills perpetual motion</h2>
+
+    <p>The first law forbids getting energy out of nothing. The second law forbids something subtler: getting <em>work</em> out of energy that is already there, unless some of it is thrown away as waste heat. Clausius's original 1850 statement:</p>
+
+    <div class="defn">
+      <strong>Clausius statement.</strong> Heat does not flow spontaneously from a colder body to a hotter one.
+    </div>
+
+    <p>Kelvin gave an equivalent version focused on engines:</p>
+
+    <div class="defn">
+      <strong>Kelvin-Planck statement.</strong> No process is possible whose sole result is the complete conversion of heat from a reservoir into work. You always have to dump some of it into a colder reservoir.
+    </div>
+
+    <p>These two statements look different and sound like folk wisdom. Clausius showed they are equivalent and extracted from them a new state function, <em>entropy</em>, defined for a reversible process by:</p>
+
+    <div class="math-display">$$ dS = \frac{\delta Q_{\text{rev}}}{T} $$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Clausius's definition of entropy</p>
+      <dl>
+        <dt>$dS$</dt><dd>Infinitesimal change in the system's entropy, in joules per kelvin.</dd>
+        <dt>$\delta Q_{\text{rev}}$</dt><dd>Infinitesimal amount of heat added <em>reversibly</em>. "Reversible" is an idealization: the process is slow enough that the system is always in equilibrium. The delta is written $\delta$ instead of $d$ because $Q$ is not a state function.</dd>
+        <dt>$T$</dt><dd>Temperature of the system at the moment the heat was added, in kelvins.</dd>
+      </dl>
+      <p class="mg-why"><strong>Why this matters.</strong> Despite the awkward definition, $S$ turns out to depend only on the current state of the system, not on how it got there. That is what makes it a state function like $U$, $P$, $V$, and $T$. Section 8 below will give a much more intuitive definition in terms of counting microstates.</p>
+    </div>
+
+    <p>The second law then states, in its cleanest form:</p>
+
+    <div class="math-display">$$ \Delta S_{\text{universe}} \ge 0 $$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">The second law as an inequality</p>
+      <dl>
+        <dt>$\Delta S_{\text{universe}}$</dt><dd>Total entropy change of the system plus its surroundings, in joules per kelvin.</dd>
+        <dt>$\ge 0$</dt><dd>Entropy never decreases. It stays constant for ideal reversible processes and strictly increases for any real (irreversible) process.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Analogy.</strong> Imagine dropping food coloring into a glass of water. It diffuses out until the glass is uniformly tinted, and you never see the reverse — coloring spontaneously regathering into a blob. No law of conservation is violated by the reverse; the atoms could in principle all swim the other way. But the number of configurations that look "spread out" vastly outnumbers the ones that look "concentrated," so the system evolves toward what there is more of. That is the whole second law.</p>
+    </div>
+
+    <p>A consequence: when heat $Q$ flows from a hot reservoir at $T_H$ to a cold one at $T_C$, the hot side loses entropy $Q/T_H$ and the cold side gains $Q/T_C$. Since $T_H > T_C$, the cold gain is larger, and total entropy grows. Reversing that flow would shrink total entropy — forbidden.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="ideal-gas">6. The ideal gas law and $PV$ diagrams</h2>
+
+    <p>The simplest system you can do real calculations with is the <em>ideal gas</em>: a dilute collection of non-interacting particles. The equation of state that ties its four variables together is:</p>
+
+    <div class="math-display">$$ PV = nRT $$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">The ideal gas law</p>
+      <dl>
+        <dt>$P$</dt><dd>Pressure of the gas, in pascals.</dd>
+        <dt>$V$</dt><dd>Volume, in cubic meters.</dd>
+        <dt>$n$</dt><dd>Amount of gas, in moles. One mole is $6.022\times 10^{23}$ molecules.</dd>
+        <dt>$R$</dt><dd>Universal gas constant, $8.314\,\text{J/(mol·K)}$.</dd>
+        <dt>$T$</dt><dd>Absolute temperature, in kelvins. Note: must be absolute — not Celsius, not Fahrenheit.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Analogy.</strong> Imagine a box of bouncing billiard balls. Pressure is how hard they collectively slam the walls; temperature is how fast they are moving on average; volume is how much room they have. If you crank the temperature, the balls move faster and slam harder — so $P$ grows if $V$ is fixed. If you shrink the box, they hit the walls more often — so $P$ grows if $T$ is fixed. The equation is that intuition made precise.</p>
+    </div>
+
+    <p>The microscopic derivation, which we do carefully in section 8, shows that temperature in an ideal gas is literally a measure of average kinetic energy: $\frac{1}{2} m \langle v^2 \rangle = \frac{3}{2} k_B T$.</p>
+
+    <p>A <strong>PV diagram</strong> plots pressure on the vertical axis against volume on the horizontal axis. Each point is a state. A curve is a process. The area under a curve is $\int P\,dV$, the work done by the gas. A closed loop is a cycle, and the area it encloses is the net work done per cycle — the basis of every heat engine on the planet.</p>
+
+    <p>An isothermal process at temperature $T$ traces out a hyperbola $P = nRT/V$. An adiabatic process for an ideal gas traces out a steeper curve $PV^\gamma = \text{const}$, where $\gamma = C_P/C_V$ is the heat-capacity ratio ($\gamma \approx 1.4$ for air at room temperature). A simple isothermal expansion from $V_1$ to $V_2$ gives work:</p>
+
+    <div class="math-display">$$ W_{\text{iso}} = nRT \ln\!\left(\frac{V_2}{V_1}\right) $$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Isothermal work for an ideal gas</p>
+      <dl>
+        <dt>$W_{\text{iso}}$</dt><dd>Work done by the gas during the isothermal expansion, in joules.</dd>
+        <dt>$n$</dt><dd>Moles of gas.</dd>
+        <dt>$R$</dt><dd>Universal gas constant.</dd>
+        <dt>$T$</dt><dd>Constant temperature at which the expansion happens.</dd>
+        <dt>$V_1$, $V_2$</dt><dd>Initial and final volumes.</dd>
+        <dt>$\ln$</dt><dd>Natural logarithm. Comes from integrating $1/V$.</dd>
+      </dl>
+      <p class="mg-why"><strong>Why this matters.</strong> Since $\Delta U = 0$ for an isothermal process on an ideal gas, the first law gives $Q = W$. So the same formula also tells you how much heat had to flow in to keep $T$ constant during the expansion.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="engines">7. Heat engines and the Carnot bound</h2>
+
+    <p>A heat engine is any device that takes heat $Q_H$ from a hot reservoir at $T_H$, converts some of it to work $W$, and dumps the rest $Q_C$ into a cold reservoir at $T_C$. Its efficiency is the fraction of input heat that turns into useful work:</p>
+
+    <div class="math-display">$$ \eta = \frac{W}{Q_H} = 1 - \frac{Q_C}{Q_H} $$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Heat engine efficiency</p>
+      <dl>
+        <dt>$\eta$</dt><dd>Efficiency — a dimensionless number between $0$ and $1$. Often expressed as a percentage.</dd>
+        <dt>$W$</dt><dd>Net work output per cycle, in joules.</dd>
+        <dt>$Q_H$</dt><dd>Heat absorbed from the hot reservoir per cycle, in joules.</dd>
+        <dt>$Q_C$</dt><dd>Heat dumped to the cold reservoir per cycle, in joules. By the first law (the engine returns to its starting state), $W = Q_H - Q_C$.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Analogy.</strong> A water wheel. The water drops from a high reservoir to a low one, and part of the fall is captured as useful work (turning the wheel) while the rest continues downstream. You cannot capture it all — the water has to keep moving. An engine is the same: some heat must keep flowing to the cold side or the whole thing stops.</p>
+    </div>
+
+    <p>In 1824, twenty-five years before the first law was written down, Sadi Carnot asked a sharp question: <em>What is the best efficiency possible for a given $T_H$ and $T_C$?</em> His answer, now called <strong>Carnot's theorem</strong>, is that the maximum is achieved by a reversible cycle of two isothermal steps (at $T_H$ and $T_C$) and two adiabatic steps connecting them:</p>
+
+    <div class="math-display">$$ \eta_{\text{Carnot}} = 1 - \frac{T_C}{T_H} $$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Carnot efficiency</p>
+      <dl>
+        <dt>$\eta_{\text{Carnot}}$</dt><dd>The <em>maximum</em> possible efficiency of any heat engine operating between reservoirs at $T_H$ and $T_C$. Dimensionless.</dd>
+        <dt>$T_C$</dt><dd>Absolute temperature of the cold reservoir, in kelvins. Must be absolute — measuring in Celsius breaks the formula.</dd>
+        <dt>$T_H$</dt><dd>Absolute temperature of the hot reservoir, in kelvins.</dd>
+      </dl>
+      <p class="mg-why"><strong>Why this matters.</strong> This is one of the hardest limits in physics. No engine — gasoline, steam, turbine, fusion reactor, thermoelectric, nothing — can exceed it. A coal plant burning at $T_H = 800\,\text{K}$ dumping to a cooling tower at $T_C = 300\,\text{K}$ has theoretical maximum efficiency $1 - 300/800 = 62.5\%$. Real plants run at about 40% because real cycles are not reversible and real materials fail at high temperatures.</p>
+    </div>
+
+    <p><strong>Worked example — the coal plant.</strong> A 1 GW electric output power plant running at 40 percent thermal efficiency must burn $1/0.40 = 2.5$ gigawatts of coal continuously, which means it must dump $2.5 - 1.0 = 1.5$ gigawatts of waste heat into a river or cooling tower. At the Carnot limit of 62.5 percent it would still dump $0.6$ gigawatts. You cannot design that waste heat away; it is required by the second law. This is also why <em>combined cycle</em> plants (gas turbine feeding a steam turbine) beat 60 percent efficiency: the exhaust of the gas turbine, at around 900 K, is still hot enough to usefully drive a second Carnot-like cycle down to 300 K.</p>
+
+    <p><strong>Refrigerators and heat pumps</strong> are engines run backward: you do work $W$ to pump heat $Q_C$ <em>out</em> of a cold space into a hot one, moving $Q_H = Q_C + W$ total. Their figure of merit is the <em>coefficient of performance</em>, $\text{COP}_{\text{ref}} = Q_C/W$, with a Carnot-style upper bound of $T_C/(T_H - T_C)$. A home freezer with $T_C = 260\,\text{K}$ and $T_H = 300\,\text{K}$ has a theoretical maximum COP of $260/40 = 6.5$ — each joule of electricity could in principle move $6.5$ joules of heat out. Real freezers hit about half that.</p>
+
+    <div class="problem-set" data-topic="phys-thermo-secondlaw"></div>
+
+    <!-- ========================================================== -->
+    <h2 id="statmech">8. Statistical mechanics — why any of this works</h2>
+
+    <p>Thermodynamics, as we have presented it, is a phenomenological theory. It tells you what is allowed and what is forbidden, but it does not explain where the rules come from. Statistical mechanics is the bridge from microscopic physics to those rules. It was Boltzmann's contribution, and it is the reason entropy can be defined without waving your hands at "reversibility."</p>
+
+    <p>The central idea is simple. A macroscopic state (say: a mole of gas at temperature $T$, volume $V$, pressure $P$) corresponds to an astronomical number of compatible microscopic states — individual positions and velocities of all $10^{23}$ molecules. Call the number of microstates consistent with a given macrostate $\Omega$. Then:</p>
+
+    <div class="math-display">$$ S = k_B \ln \Omega $$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Boltzmann's entropy formula</p>
+      <dl>
+        <dt>$S$</dt><dd>Entropy of the macrostate, in joules per kelvin.</dd>
+        <dt>$k_B$</dt><dd>Boltzmann's constant, $1.381\times 10^{-23}\,\text{J/K}$. Converts microscopic counting to macroscopic units.</dd>
+        <dt>$\ln$</dt><dd>Natural logarithm. The log turns a multiplicative count into an additive quantity, so entropies of independent systems just add.</dd>
+        <dt>$\Omega$</dt><dd>The number of microstates compatible with the given macrostate. Typically an astronomical integer.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Analogy.</strong> Shuffle a deck. There is exactly one "all spades, all hearts, all diamonds, all clubs in order" macrostate, but $52!/(13!)^4 \approx 5.4 \times 10^{28}$ equally likely "random-looking" macrostates. You never see the ordered one after shuffling because there are so many more ways to be disordered. The universe runs on the same principle, just with $10^{23}$ particles instead of 52 cards.</p>
+    </div>
+
+    <p>This formula is engraved on Boltzmann's tombstone in Vienna. It is the most succinct statement of the microscopic origin of the second law. Entropy increases because the system wanders through state space and state space is overwhelmingly dominated by high-entropy configurations.</p>
+
+    <p>From here you can derive the <strong>Boltzmann distribution</strong>. A small system in contact with a large heat reservoir at temperature $T$ has probability of being in a given microstate $i$ (with energy $E_i$) equal to:</p>
+
+    <div class="math-display">$$ p_i = \frac{1}{Z}\, e^{-E_i / k_B T} $$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Boltzmann distribution</p>
+      <dl>
+        <dt>$p_i$</dt><dd>Probability that the system is in microstate $i$. Dimensionless.</dd>
+        <dt>$E_i$</dt><dd>Energy of microstate $i$, in joules.</dd>
+        <dt>$k_B T$</dt><dd>The thermal energy scale. At room temperature, $k_B T \approx 4.1 \times 10^{-21}\,\text{J} \approx 0.025\,\text{eV}$. This is the natural unit of "how much energy is lying around in the ambient thermal bath."</dd>
+        <dt>$Z$</dt><dd>Partition function: $Z = \sum_i e^{-E_i/k_B T}$. The normalization that makes the probabilities sum to one.</dd>
+      </dl>
+      <p class="mg-why"><strong>Why this matters.</strong> The factor $e^{-E/k_B T}$ shows up everywhere — in chemical reaction rates (Arrhenius), semiconductor carrier densities, protein folding, nuclear fusion cross sections, atmospheric density profiles, magnet ordering transitions, and the cosmic microwave background spectrum. It is the most-cited exponential in physics.</p>
+    </div>
+
+    <p>The partition function $Z$ is the magic object. Once you have it you can get <em>everything</em>:</p>
+
+    <div class="math-display">$$ \langle E \rangle = -\frac{\partial \ln Z}{\partial \beta}, \qquad F = -k_B T \ln Z, \qquad S = -\left(\frac{\partial F}{\partial T}\right)_V $$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Everything from the partition function</p>
+      <dl>
+        <dt>$\langle E \rangle$</dt><dd>Average internal energy — what thermodynamics calls $U$.</dd>
+        <dt>$\beta$</dt><dd>Shorthand for $1/(k_B T)$, called inverse temperature. Units of $1/\text{J}$.</dd>
+        <dt>$F$</dt><dd>Helmholtz free energy — the thermodynamic potential for systems at fixed $T$ and $V$. In joules.</dd>
+        <dt>$\ln Z$</dt><dd>Natural log of the partition function. A dimensionless quantity that encodes the whole thermodynamics.</dd>
+        <dt>$\left(\partial F/\partial T\right)_V$</dt><dd>Partial derivative of $F$ with respect to $T$, holding $V$ fixed. Gives entropy up to a sign.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Analogy.</strong> Think of $Z$ as the master key. The thermodynamic functions $U$, $F$, $S$ are all rooms you can enter by turning it different ways (differentiating it differently). Statistical mechanics is basically "write down $Z$, then take derivatives until you have the answer."</p>
+    </div>
+
+    <p>For the ideal gas, the single-particle partition function gives $\langle E \rangle = \frac{3}{2} k_B T$ per particle — the equipartition theorem in its simplest form. Multiply by $N$ and differentiate: you recover $PV = Nk_B T = nRT$. Thermodynamics was right, and we now know why.</p>
+
+    <p>One more classic application: the <strong>Maxwell-Boltzmann speed distribution</strong>. The probability density that a molecule in an ideal gas has speed $v$ is:</p>
+
+    <div class="math-display">$$ f(v) = 4\pi\! \left(\frac{m}{2\pi k_B T}\right)^{\!3/2}\! v^2\, e^{-m v^2 / 2 k_B T} $$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Maxwell-Boltzmann distribution</p>
+      <dl>
+        <dt>$f(v)$</dt><dd>Probability density of molecular speeds, in $\text{s/m}$. Integrating $f(v)\,dv$ from $v_1$ to $v_2$ gives the fraction of molecules with speeds in that range.</dd>
+        <dt>$m$</dt><dd>Mass of one molecule, in kilograms.</dd>
+        <dt>$k_B$</dt><dd>Boltzmann's constant.</dd>
+        <dt>$T$</dt><dd>Absolute temperature, in kelvins.</dd>
+        <dt>$v^2 e^{-mv^2/2k_B T}$</dt><dd>The core of the distribution: the $v^2$ factor is the surface area of a sphere of radius $v$ in velocity space (more directions available at higher speed); the exponential is the Boltzmann weight of the kinetic energy $mv^2/2$.</dd>
+        <dt>$4\pi (m/2\pi k_B T)^{3/2}$</dt><dd>Normalization so that $\int_0^\infty f(v)\,dv = 1$.</dd>
+      </dl>
+      <p class="mg-why"><strong>Why this matters.</strong> The shape of $f(v)$ explains why reaction rates and atmospheric escape depend exponentially on temperature. Even though the <em>average</em> speed is modest, the high-speed tail contains the molecules energetic enough to climb out of a potential well — to escape Earth's gravity, ionize another molecule, or fuse with a neighbor. Small changes in $T$ shift that tail enormously.</p>
+    </div>
+
+    <div class="problem-set" data-topic="phys-thermo-statmech"></div>
+
+    <!-- ========================================================== -->
+    <h2 id="demo">9. Interactive: the Maxwell-Boltzmann distribution</h2>
+
+    <p>Pull the temperature slider below and watch how the speed distribution of nitrogen molecules (the dominant component of air) changes. Notice two things. First, the peak shifts to the right as $T$ grows — hotter gas has a faster "most probable" speed. Second, the whole curve gets wider and shorter, preserving total area. The high-speed tail, where interesting chemistry and escape physics live, grows much faster than the peak does. A small temperature bump produces a dramatic increase in the fraction of molecules above any fixed "activation" threshold.</p>
+
+    <div class="viz-3d" id="mb-demo">
+      <div class="v3-controls">
+        <label>Temperature $T$ (K): <input type="range" id="mb-T" min="100" max="2000" value="300" step="10"></label>
+        <span class="v3-label" id="mb-T-val">300 K</span>
+      </div>
+      <svg viewBox="0 0 720 360" id="mb-svg" width="100%" height="100%" style="background:#0a0d12"></svg>
+      <div class="v3-caption" id="mb-caption"></div>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="free-energy">10. Free energy and chemical potential — when $T$ and $P$ are fixed</h2>
+
+    <p>Most real-world thermodynamics does not happen in closed boxes at fixed energy. It happens in beakers at fixed temperature and pressure, or in cells at fixed temperature and chemical environment. In those settings, the quantity that tells you what a system can actually <em>do</em> is not internal energy but <em>free energy</em>.</p>
+
+    <p>The <strong>Helmholtz free energy</strong> $F$ is relevant at fixed $T$ and $V$:</p>
+
+    <div class="math-display">$$ F = U - TS $$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Helmholtz free energy</p>
+      <dl>
+        <dt>$F$</dt><dd>Helmholtz free energy, in joules. The maximum work a system at fixed $T$ can deliver.</dd>
+        <dt>$U$</dt><dd>Internal energy.</dd>
+        <dt>$T$</dt><dd>Absolute temperature of the surrounding bath.</dd>
+        <dt>$S$</dt><dd>Entropy of the system.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Analogy.</strong> Think of internal energy as the cash in your wallet. Entropy times $T$ is the "tax" the environment collects whenever you try to spend it. Free energy is the after-tax spending power. You cannot extract more work than $F$, no matter how clever your engine.</p>
+    </div>
+
+    <p>The <strong>Gibbs free energy</strong> $G$ is relevant at fixed $T$ and $P$ — the natural setting for chemistry, biology, and anything open to the atmosphere:</p>
+
+    <div class="math-display">$$ G = U + PV - TS = H - TS $$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Gibbs free energy</p>
+      <dl>
+        <dt>$G$</dt><dd>Gibbs free energy, in joules. Minimized at equilibrium for a system at fixed $T$ and $P$.</dd>
+        <dt>$H = U + PV$</dt><dd>Enthalpy — internal energy plus the work $PV$ needed to make room for the system against atmospheric pressure. Chemists use it constantly; it is what a calorimeter measures at constant pressure.</dd>
+        <dt>$TS$</dt><dd>The entropy contribution, subtracted because the bath gets to collect it back.</dd>
+      </dl>
+      <p class="mg-why"><strong>Why this matters.</strong> A chemical reaction runs spontaneously at fixed $(T,P)$ if and only if $\Delta G < 0$. The equilibrium constant and reaction rates are set by $\Delta G$. ATP hydrolysis in your cells releases about $-30\,\text{kJ/mol}$ of Gibbs free energy; that is where the energy for every muscle twitch and every enzymatic step comes from.</p>
+    </div>
+
+    <p>For systems that can exchange particles — chemical reactions, phase transitions, electrochemical cells, the interior of a star — you also need the <strong>chemical potential</strong>:</p>
+
+    <div class="math-display">$$ \mu_i = \left(\frac{\partial G}{\partial N_i}\right)_{T,P,N_{j\ne i}} $$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Chemical potential</p>
+      <dl>
+        <dt>$\mu_i$</dt><dd>Chemical potential of species $i$, in joules per particle (or joules per mole, depending on conventions). The free-energy cost of adding one more particle of species $i$.</dd>
+        <dt>$G$</dt><dd>Gibbs free energy of the whole system.</dd>
+        <dt>$N_i$</dt><dd>Number of particles of species $i$.</dd>
+        <dt>$\left(\partial G/\partial N_i\right)_{T,P,N_{j\ne i}}$</dt><dd>Partial derivative of $G$ with respect to $N_i$, holding $T$, $P$, and all other particle numbers fixed.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Analogy.</strong> If free energy is wealth, chemical potential is the price per particle at the margin. Particles flow from high-$\mu$ to low-$\mu$ the same way water flows downhill or money flows between markets with different prices — always toward equilibrium, which is reached when $\mu$ is the same everywhere.</p>
+    </div>
+
+    <p>Equilibrium conditions fall out immediately. Thermal equilibrium: $T$ equal throughout. Mechanical equilibrium: $P$ equal throughout. Chemical equilibrium: $\mu$ equal throughout for every species that can move. These three conditions, along with the second law, determine every phase diagram, every chemical equilibrium constant, and every osmotic pressure in biology.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="code">11. Simulation in code</h2>
+
+    <p>Two small programs. The first samples the Maxwell-Boltzmann distribution for nitrogen and reports the mean speed and rms speed, checking them against theory. The second runs a toy Carnot cycle on an ideal gas and prints the efficiency.</p>
+
+    <div class="code-tabs">
+      <div class="ct-header">
+        <span class="ct-tab active" data-tab="mb">Maxwell-Boltzmann sampling</span>
+        <span class="ct-tab" data-tab="carnot">Carnot cycle</span>
+        <span class="ct-label">NumPy / Python</span>
+      </div>
+      <pre class="ct-panel active" data-tab="mb"><span class="kw">import</span> numpy <span class="kw">as</span> np
+
+<span class="cmt"># Physical constants</span>
+<span class="cmt"># ----------------</span>
+kB = <span class="num">1.380649e-23</span>   <span class="cmt"># J/K</span>
+amu = <span class="num">1.66054e-27</span>   <span class="cmt"># kg</span>
+m_N2 = <span class="num">28.0</span> * amu   <span class="cmt"># nitrogen molecule mass</span>
+
+T = <span class="num">300.0</span>           <span class="cmt"># kelvin — room temperature</span>
+N = <span class="num">200000</span>          <span class="cmt"># number of molecules</span>
+
+<span class="cmt"># Sample each Cartesian velocity component from a zero-mean Gaussian</span>
+<span class="cmt"># of width sqrt(kB T / m). This is the Maxwell-Boltzmann distribution</span>
+<span class="cmt"># factored into three independent 1D Gaussians.</span>
+sigma = np.<span class="fn">sqrt</span>(kB * T / m_N2)
+vx = np.random.<span class="fn">normal</span>(<span class="num">0.0</span>, sigma, N)
+vy = np.random.<span class="fn">normal</span>(<span class="num">0.0</span>, sigma, N)
+vz = np.random.<span class="fn">normal</span>(<span class="num">0.0</span>, sigma, N)
+
+<span class="cmt"># Speed is the magnitude of the velocity vector</span>
+v = np.<span class="fn">sqrt</span>(vx**<span class="num">2</span> + vy**<span class="num">2</span> + vz**<span class="num">2</span>)
+
+v_mean_theory = np.<span class="fn">sqrt</span>(<span class="num">8</span> * kB * T / (np.pi * m_N2))
+v_rms_theory  = np.<span class="fn">sqrt</span>(<span class="num">3</span> * kB * T / m_N2)
+v_peak_theory = np.<span class="fn">sqrt</span>(<span class="num">2</span> * kB * T / m_N2)
+
+<span class="fn">print</span>(<span class="str">f"mean speed  (measured): {v.mean():8.2f} m/s"</span>)
+<span class="fn">print</span>(<span class="str">f"mean speed  (theory):   {v_mean_theory:8.2f} m/s"</span>)
+<span class="fn">print</span>(<span class="str">f"rms speed   (measured): {np.sqrt((v**2).mean()):8.2f} m/s"</span>)
+<span class="fn">print</span>(<span class="str">f"rms speed   (theory):   {v_rms_theory:8.2f} m/s"</span>)
+<span class="fn">print</span>(<span class="str">f"most-probable (theory): {v_peak_theory:8.2f} m/s"</span>)
+
+<span class="cmt"># For N2 at 300 K: mean ~ 476 m/s, rms ~ 517 m/s, peak ~ 422 m/s.</span>
+<span class="cmt"># These numbers are faster than the speed of sound in air (~343 m/s)</span>
+<span class="cmt"># — the sound speed is smaller because it is an average with a factor of gamma in it.</span>
+</pre>
+      <pre class="ct-panel" data-tab="carnot"><span class="kw">import</span> numpy <span class="kw">as</span> np
+
+<span class="cmt"># Ideal-gas Carnot cycle</span>
+<span class="cmt"># ----------------------</span>
+<span class="cmt"># 1 mole of ideal gas, gamma = 5/3 (monatomic)</span>
+R = <span class="num">8.314</span>        <span class="cmt"># J/(mol K)</span>
+n = <span class="num">1.0</span>          <span class="cmt"># mole</span>
+gamma = <span class="num">5.0</span> / <span class="num">3.0</span>
+
+T_H = <span class="num">800.0</span>      <span class="cmt"># hot reservoir, K</span>
+T_C = <span class="num">300.0</span>      <span class="cmt"># cold reservoir, K</span>
+
+<span class="cmt"># Stage A: isothermal expansion at T_H from V1 to V2</span>
+V1 = <span class="num">1.0e-3</span>      <span class="cmt"># m^3 (1 liter)</span>
+V2 = <span class="num">3.0e-3</span>      <span class="cmt"># m^3 (3 liters)</span>
+Q_H = n * R * T_H * np.<span class="fn">log</span>(V2 / V1)   <span class="cmt"># heat absorbed</span>
+W_A = Q_H                                  <span class="cmt"># U unchanged at constant T</span>
+
+<span class="cmt"># Stage B: adiabatic expansion from T_H, V2 to T_C, V3</span>
+<span class="cmt"># For an adiabat: T V^(gamma-1) = const</span>
+V3 = V2 * (T_H / T_C) ** (<span class="num">1.0</span> / (gamma - <span class="num">1.0</span>))
+W_B = n * R * (T_H - T_C) / (gamma - <span class="num">1.0</span>)
+
+<span class="cmt"># Stage C: isothermal compression at T_C from V3 to V4</span>
+<span class="cmt"># V4 chosen so stage D closes the loop back to (T_H, V1)</span>
+V4 = V1 * (T_H / T_C) ** (<span class="num">1.0</span> / (gamma - <span class="num">1.0</span>))
+Q_C = n * R * T_C * np.<span class="fn">log</span>(V4 / V3)   <span class="cmt"># negative — heat rejected</span>
+W_C = Q_C
+
+<span class="cmt"># Stage D: adiabatic compression from T_C, V4 to T_H, V1</span>
+W_D = -W_B   <span class="cmt"># adiabats are symmetric in sign</span>
+
+W_net = W_A + W_B + W_C + W_D
+eta   = W_net / Q_H
+eta_carnot = <span class="num">1.0</span> - T_C / T_H
+
+<span class="fn">print</span>(<span class="str">f"Q_H = {Q_H:.1f} J   (heat in from hot reservoir)"</span>)
+<span class="fn">print</span>(<span class="str">f"Q_C = {Q_C:.1f} J   (heat out to cold reservoir, negative)"</span>)
+<span class="fn">print</span>(<span class="str">f"W_net = {W_net:.1f} J   (work out, = |Q_H| - |Q_C|)"</span>)
+<span class="fn">print</span>(<span class="str">f"eta (cycle)  = {eta:.4f}"</span>)
+<span class="fn">print</span>(<span class="str">f"eta (Carnot) = {eta_carnot:.4f}"</span>)
+
+<span class="cmt"># Output:</span>
+<span class="cmt">#   eta (cycle)  = 0.6250</span>
+<span class="cmt">#   eta (Carnot) = 0.6250</span>
+<span class="cmt"># A real Carnot cycle saturates the bound exactly — that's the whole point.</span>
+</pre>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="summary">12. Cheat sheet and see also</h2>
+
+    <div class="callout math">
+      <div class="label">PORTABLE FORMULAS</div>
+      <p>First law: $\Delta U = Q - W$.<br>
+      Second law: $\Delta S_{\text{universe}} \ge 0$.<br>
+      Ideal gas: $PV = nRT = N k_B T$.<br>
+      Isothermal work: $W = nRT\ln(V_2/V_1)$.<br>
+      Adiabatic: $PV^\gamma = \text{const}$, $TV^{\gamma-1} = \text{const}$.<br>
+      Carnot efficiency: $\eta = 1 - T_C/T_H$.<br>
+      Boltzmann entropy: $S = k_B \ln\Omega$.<br>
+      Boltzmann distribution: $p_i \propto e^{-E_i / k_B T}$.<br>
+      Equipartition: $\frac{1}{2} k_B T$ per quadratic degree of freedom.<br>
+      Gibbs free energy: $G = H - TS$. Spontaneous at fixed $(T,P)$ iff $\Delta G < 0$.</p>
+    </div>
+
+    <h3>See also</h3>
+    <div class="grid">
+      <a class="card card-link" href="./classical-mechanics.html">
+        <h4>Classical Mechanics</h4>
+        <p class="meta">kinetic energy and work</p>
+        <p>The microscopic picture of a gas is billions of classical particles bouncing around. $\frac{1}{2} m v^2$ is the same quantity everywhere.</p>
+      </a>
+      <a class="card card-link" href="./electromagnetism.html">
+        <h4>Electromagnetism</h4>
+        <p class="meta">blackbody radiation</p>
+        <p>Thermal emission of EM waves is thermodynamics meeting Maxwell. The Stefan-Boltzmann law $P = \sigma T^4$ and the Planck spectrum both come from this crossroads.</p>
+      </a>
+      <a class="card card-link" href="./quantum-mechanics.html">
+        <h4>Quantum Mechanics</h4>
+        <p class="meta">quantum statistics</p>
+        <p>Bose-Einstein and Fermi-Dirac distributions replace Maxwell-Boltzmann when quantum effects matter. Lasers, superconductors, and neutron stars live here.</p>
+      </a>
+      <a class="card card-link" href="../math/probability.html">
+        <h4>Math: Probability</h4>
+        <p class="meta">prerequisite</p>
+        <p>Statistical mechanics is probability over phase space. Expected values, marginals, and large-deviation theory all appear in the thermodynamic limit.</p>
+      </a>
+      <a class="card card-link" href="../math/calculus.html">
+        <h4>Math: Calculus</h4>
+        <p class="meta">prerequisite</p>
+        <p>Thermodynamic potentials are functions; differentiating them gives physical quantities. Partial derivatives and the chain rule are the daily tools.</p>
+      </a>
+      <a class="card card-link" href="../topics/foundation-models.html">
+        <h4>AI: Foundation Models</h4>
+        <p class="meta">training cost</p>
+        <p>The power draw of a training run is pure thermodynamics. Carnot sets the limit on how efficiently a data center can dump its waste heat.</p>
+      </a>
+    </div>
+
+    <h3>Further reading</h3>
+    <div class="bib">
+      <p>Enrico Fermi, <em>Thermodynamics</em> (Dover, 1937). Seventy pages. Still the clearest classical introduction, written by a working experimentalist.</p>
+      <p>Kerson Huang, <em>Statistical Mechanics</em> (Wiley, 2nd ed. 1987). The standard graduate text. Develops the machinery carefully.</p>
+      <p>Daniel Schroeder, <em>An Introduction to Thermal Physics</em> (Addison-Wesley, 2000). The undergraduate text most people actually like. Worked examples are excellent.</p>
+      <p>David Chandler, <em>Introduction to Modern Statistical Mechanics</em> (Oxford, 1987). The book that taught a generation of chemists and biophysicists how to think about free energies.</p>
+      <p>Rolf Landauer, "Irreversibility and heat generation in the computing process," <em>IBM Journal of Research and Development</em>, 5(3), 1961. The paper that tied computation to thermodynamics.</p>
+    </div>
+
+    <div class="next-card">
+      <div class="label">NEXT UP</div>
+      <a href="./special-relativity.html">→ Special Relativity</a>
+      <p>You now understand the framework that governs engines, data centers, and chemistry. Next, a different kind of limit: not the second law, but the speed of light. Einstein's 1905 reworking of space and time — and why $E = mc^2$ is a corollary, not an assumption.</p>
+    </div>
+
+  </article>
+</div>
+
+<script>
+// ---------- code tab switcher ----------
+(function () {
+  document.querySelectorAll('.code-tabs').forEach(function (blk) {
+    var tabs = blk.querySelectorAll('.ct-tab');
+    var panels = blk.querySelectorAll('.ct-panel');
+    tabs.forEach(function (t) {
+      t.addEventListener('click', function () {
+        var name = t.getAttribute('data-tab');
+        tabs.forEach(function (x) { x.classList.toggle('active', x === t); });
+        panels.forEach(function (p) {
+          p.classList.toggle('active', p.getAttribute('data-tab') === name);
+        });
+      });
+    });
+  });
+})();
+</script>
+
+<script>
+// ---------- Maxwell-Boltzmann interactive ----------
+(function () {
+  const svg = document.getElementById('mb-svg');
+  const sT = document.getElementById('mb-T');
+  const lT = document.getElementById('mb-T-val');
+  const caption = document.getElementById('mb-caption');
+  if (!svg || !sT) return;
+
+  const W = 720, H = 360;
+  const ml = 60, mr = 20, mt = 30, mb = 40;
+  const plotW = W - ml - mr;
+  const plotH = H - mt - mb;
+
+  // Constants (SI)
+  const kB = 1.380649e-23;
+  const amu = 1.66054e-27;
+  const m = 28.0 * amu; // nitrogen
+
+  // Plot axes: speed 0 .. 3000 m/s (fixed), density auto-scaled so 300 K fits comfortably.
+  const vMax = 3000; // m/s
+
+  function mbPDF(v, T) {
+    const a = m / (2 * kB * T);
+    return 4 * Math.PI * Math.pow(a / Math.PI, 1.5) * v * v * Math.exp(-a * v * v);
+  }
+
+  function mkEl(n) { return document.createElementNS('http://www.w3.org/2000/svg', n); }
+  function mkLine(x1, y1, x2, y2, stroke, w, dash) {
+    const e = mkEl('line');
+    e.setAttribute('x1', x1); e.setAttribute('y1', y1);
+    e.setAttribute('x2', x2); e.setAttribute('y2', y2);
+    e.setAttribute('stroke', stroke);
+    e.setAttribute('stroke-width', w || 1);
+    if (dash) e.setAttribute('stroke-dasharray', dash);
+    return e;
+  }
+  function mkText(x, y, t, fill, size, anchor) {
+    const e = mkEl('text');
+    e.setAttribute('x', x); e.setAttribute('y', y);
+    e.setAttribute('fill', fill || '#b4c4d4');
+    e.setAttribute('font-size', size || 11);
+    e.setAttribute('font-family', 'ui-monospace, monospace');
+    if (anchor) e.setAttribute('text-anchor', anchor);
+    e.textContent = t;
+    return e;
+  }
+  function mkPath(d, stroke, w, fill) {
+    const e = mkEl('path');
+    e.setAttribute('d', d);
+    e.setAttribute('fill', fill || 'none');
+    e.setAttribute('stroke', stroke);
+    e.setAttribute('stroke-width', w || 2);
+    e.setAttribute('stroke-linejoin', 'round');
+    return e;
+  }
+  function mkCircle(cx, cy, r, fill, stroke) {
+    const e = mkEl('circle');
+    e.setAttribute('cx', cx); e.setAttribute('cy', cy);
+    e.setAttribute('r', r);
+    e.setAttribute('fill', fill || 'none');
+    if (stroke) e.setAttribute('stroke', stroke);
+    return e;
+  }
+
+  // Fix a y-scale once and for all so temperature changes are visually meaningful.
+  // Peak of the distribution at T=100K determines the top of the y axis.
+  const T_ref = 100;
+  const v_peak_ref = Math.sqrt(2 * kB * T_ref / m);
+  const f_peak_ref = mbPDF(v_peak_ref, T_ref);
+  const yMax = f_peak_ref * 1.1;
+
+  function draw() {
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+    const T = parseFloat(sT.value);
+    lT.textContent = T + ' K';
+
+    // Grid + ticks (x ticks every 500 m/s, y ticks every 20% of yMax)
+    const xTicks = 6;
+    for (let i = 0; i <= xTicks; i++) {
+      const vv = (i / xTicks) * vMax;
+      const sx = ml + (vv / vMax) * plotW;
+      svg.appendChild(mkLine(sx, mt, sx, mt + plotH, '#1a212e', 1));
+      svg.appendChild(mkText(sx, mt + plotH + 16, vv.toFixed(0), '#7a8a9a', 10, 'middle'));
+    }
+    const yTicks = 5;
+    for (let i = 0; i <= yTicks; i++) {
+      const sy = mt + plotH - (i / yTicks) * plotH;
+      svg.appendChild(mkLine(ml, sy, ml + plotW, sy, '#1a212e', 1));
+    }
+    // Axis lines
+    svg.appendChild(mkLine(ml, mt + plotH, ml + plotW, mt + plotH, '#384050', 1));
+    svg.appendChild(mkLine(ml, mt, ml, mt + plotH, '#384050', 1));
+
+    // Reference distribution at 300 K in faded pink for comparison
+    const T_ref2 = 300;
+    let dRef = '';
+    const N = 300;
+    for (let i = 0; i <= N; i++) {
+      const vv = (i / N) * vMax;
+      const f = mbPDF(vv, T_ref2);
+      const sx = ml + (vv / vMax) * plotW;
+      const sy = mt + plotH - Math.min(f / yMax, 1) * plotH;
+      dRef += (i === 0 ? 'M' : 'L') + sx.toFixed(2) + ',' + sy.toFixed(2) + ' ';
+    }
+    svg.appendChild(mkPath(dRef, '#f472b633', 1.5));
+
+    // Current distribution curve
+    let d = '';
+    for (let i = 0; i <= N; i++) {
+      const vv = (i / N) * vMax;
+      const f = mbPDF(vv, T);
+      const sx = ml + (vv / vMax) * plotW;
+      const sy = mt + plotH - Math.min(f / yMax, 1) * plotH;
+      d += (i === 0 ? 'M' : 'L') + sx.toFixed(2) + ',' + sy.toFixed(2) + ' ';
+    }
+    svg.appendChild(mkPath(d, '#22d3ee', 2.5));
+
+    // Mark the most-probable speed
+    const v_peak = Math.sqrt(2 * kB * T / m);
+    const f_peak = mbPDF(v_peak, T);
+    const pxPeak = ml + (v_peak / vMax) * plotW;
+    const pyPeak = mt + plotH - Math.min(f_peak / yMax, 1) * plotH;
+    svg.appendChild(mkLine(pxPeak, pyPeak, pxPeak, mt + plotH, '#7c5cff', 1.5, '4,3'));
+    svg.appendChild(mkCircle(pxPeak, pyPeak, 4, '#7c5cff', '#fff'));
+
+    // Mean speed
+    const v_mean = Math.sqrt(8 * kB * T / (Math.PI * m));
+    const pxMean = ml + (v_mean / vMax) * plotW;
+    svg.appendChild(mkLine(pxMean, mt, pxMean, mt + plotH, '#f472b6', 1, '3,3'));
+
+    // Axis labels
+    svg.appendChild(mkText(ml + plotW / 2, H - 8, 'speed v (m/s)', '#b4c4d4', 11, 'middle'));
+    svg.appendChild(mkText(12, mt + plotH / 2, 'f(v)', '#b4c4d4', 11, 'middle'));
+    svg.appendChild(mkText(ml + 8, mt + 14, 'N₂ at T = ' + Math.round(T) + ' K', '#b4c4d4', 11));
+    svg.appendChild(mkText(ml + plotW - 8, mt + 14, '(faint pink = 300 K reference)', '#f472b6aa', 10, 'end'));
+
+    caption.textContent =
+      'Most-probable speed = ' + v_peak.toFixed(0) + ' m/s.  ' +
+      'Mean speed = ' + v_mean.toFixed(0) + ' m/s.  ' +
+      'rms speed = ' + Math.sqrt(3 * kB * T / m).toFixed(0) + ' m/s.';
+  }
+
+  sT.addEventListener('input', draw);
+  draw();
+})();
+</script>
+<script defer src="../problem-set.js"></script>
+<script defer src="thermodynamics-problems.js"></script>
+<script defer src="../search-index.js"></script>
+<script defer src="../search.js"></script>
+</body>
+</html>

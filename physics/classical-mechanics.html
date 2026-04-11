@@ -1,0 +1,880 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Classical Mechanics — Deep Dive</title>
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError: false});"></script>
+</head>
+<body>
+<div id="tooltip"></div>
+
+<nav class="topic-nav">
+  <a class="back" href="./index.html">← Physics</a>
+  <div class="crumb">Physics / <span class="topic-name">Classical Mechanics</span></div>
+</nav>
+
+<div class="topic-layout">
+  <aside class="topic-toc">
+    <h4>ON THIS PAGE</h4>
+    <ul>
+      <li><a href="#why">1. Why classical mechanics</a></li>
+      <li><a href="#vocab">2. Vocabulary cheat sheet</a></li>
+      <li><a href="#kinematics">3. Kinematics</a></li>
+      <li><a href="#newton">4. Newton's laws</a></li>
+      <li><a href="#energy">5. Work and energy</a></li>
+      <li><a href="#demo">6. Interactive: projectile motion</a></li>
+      <li><a href="#momentum">7. Momentum and collisions</a></li>
+      <li><a href="#rotation">8. Rotational dynamics</a></li>
+      <li><a href="#lagrangian">9. Lagrangian mechanics</a></li>
+      <li><a href="#code">10. Simulation in code</a></li>
+      <li><a href="#summary">11. Cheat sheet and see also</a></li>
+    </ul>
+  </aside>
+
+  <article class="topic-content">
+    <h1>Classical Mechanics</h1>
+    <p class="subtitle">Three laws, one conservation principle repeated in four costumes, and a single reformulation by Lagrange that makes it all elegant. After reading you will see why cars skid, why rockets work, and why every physicist eventually stops writing $F = ma$ and starts writing $L = T - V$.</p>
+    <div class="meta-tags">
+      <span>Prereq: <a href="../math/calculus.html">calculus</a>, <a href="../math/linear-algebra.html">linear algebra</a> (vectors)</span>
+      <span>Read time: ~40 min</span>
+      <span>Interactive figures: 1</span>
+      <span>Code: NumPy, Python</span>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="why">1. Why classical mechanics is still the right place to start</h2>
+
+    <p>Classical mechanics is the physics of things you can see and touch without needing a microscope or a particle accelerator. Apples, pendulums, planets, cars, rockets, spinning tops, colliding billiard balls. It is the oldest branch of physics, the one Isaac Newton hammered out in the <em>Principia</em> in 1687, and it remains the entry point for one simple reason: it is the only framework in which your intuition already works. You have been doing classical mechanics since the first time you caught a thrown ball. What we will do now is hand you the vocabulary and the machinery to make that intuition quantitative.</p>
+
+    <p>Every other branch of physics generalizes or contradicts classical mechanics in a controlled way. Special relativity says it is wrong when things move near the speed of light. Quantum mechanics says it is wrong for things smaller than a hydrogen atom. General relativity says it is wrong near a black hole. But over a comically wide range of everyday scales — from bacteria to planets, from seconds to centuries — classical mechanics agrees with experiment to more decimal places than any engineer will ever need. When you design a bridge, a car engine, a robot arm, or a satellite orbit, this is the framework you use.</p>
+
+    <div class="callout">
+      <div class="label">THE PUNCHLINE</div>
+      <p>If you know the net force on a thing, you know its acceleration. If you know its acceleration, you know its future. Classical mechanics is the unfolding of that one idea into every imaginable consequence: conservation laws, collision formulas, rotation, oscillation, and finally the Lagrangian reformulation that takes "forces" out of the picture entirely and replaces them with energies.</p>
+    </div>
+
+    <p>Three reasons to care if you are not a physicist:</p>
+
+    <ul>
+      <li><strong>Engineering.</strong> Structural analysis, vehicle dynamics, robotics, aerospace, and most of mechanical engineering are classical mechanics with fancier boundary conditions. If you design anything that moves or holds up a load, you are doing this.</li>
+      <li><strong>Simulation.</strong> Molecular dynamics, computer graphics, game physics engines, and animation all rest on numerical integration of Newton's equations. The <a href="../math/numerical-analysis.html">numerical analysis</a> that keeps those simulations stable is its own subfield.</li>
+      <li><strong>Everything later.</strong> Quantum mechanics, statistical mechanics, and field theory all reuse the Hamiltonian and Lagrangian that classical mechanics introduces. Skip this chapter and the rest of the book stops making sense.</li>
+    </ul>
+
+    <!-- ========================================================== -->
+    <h2 id="vocab">2. Vocabulary cheat sheet</h2>
+
+    <p>The symbols you will see repeatedly. Glance now; every symbol is defined properly in the sections below.</p>
+
+    <table class="rank-table">
+      <thead><tr><th>Symbol</th><th>Read as</th><th>Means</th></tr></thead>
+      <tbody>
+        <tr><td>$\mathbf{r}$, $\mathbf{v}$, $\mathbf{a}$</td><td>"r, v, a (bold)"</td><td>Position, velocity, and acceleration — each a vector in 3D space. SI units: meters, m/s, m/s².</td></tr>
+        <tr><td>$m$</td><td>"m"</td><td>Mass. A scalar measure of inertia — how hard it is to change an object's velocity. SI unit: kilogram.</td></tr>
+        <tr><td>$\mathbf{F}$</td><td>"F (bold)"</td><td>Force. A vector that pushes or pulls. SI unit: newton, $1\,\text{N} = 1\,\text{kg}\cdot\text{m/s}^2$.</td></tr>
+        <tr><td>$\mathbf{p}$</td><td>"p (bold)"</td><td>Linear momentum, equal to $m\mathbf{v}$. The quantity Newton actually wrote his second law in terms of.</td></tr>
+        <tr><td>$T$</td><td>"T" or "kinetic energy"</td><td>Kinetic energy — energy of motion, equal to $\tfrac{1}{2} m v^2$. SI unit: joule.</td></tr>
+        <tr><td>$V$, $U$</td><td>"V" or "U"</td><td>Potential energy — stored energy that depends only on position. Different authors use $V$ or $U$; we will use $V$.</td></tr>
+        <tr><td>$W$</td><td>"W"</td><td>Work — energy transferred by a force over a displacement. Scalar.</td></tr>
+        <tr><td>$\boldsymbol{\tau}$</td><td>"tau (bold)"</td><td>Torque — the rotational analog of force. Equal to $\mathbf{r} \times \mathbf{F}$.</td></tr>
+        <tr><td>$I$</td><td>"I" or "moment of inertia"</td><td>The rotational analog of mass. Depends on shape and the axis of rotation.</td></tr>
+        <tr><td>$\omega$</td><td>"omega"</td><td>Angular velocity. Radians per second around some axis.</td></tr>
+        <tr><td>$L$</td><td>"L" or "Lagrangian"</td><td>The Lagrangian, $L = T - V$. The quantity whose extremum picks out the true trajectory.</td></tr>
+      </tbody>
+    </table>
+
+    <p>One warning: classical mechanics uses single letters for everything. $T$ is kinetic energy in one paragraph and period of oscillation in the next; $L$ is the Lagrangian here and angular momentum elsewhere; $p$ is momentum but also pressure in fluid mechanics. Context almost always disambiguates, but expect to re-read an equation the first time you see a symbol in a new role.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="kinematics">3. Kinematics — describing motion</h2>
+
+    <p>Kinematics is mechanics with the forces left out. You describe <em>how</em> things move — their positions, velocities, and accelerations — without asking yet <em>why</em>. Think of it as the vocabulary exercise before the sentences.</p>
+
+    <p>Pick a reference point and call it the origin. The position of a particle at time $t$ is the vector from the origin to the particle, written $\mathbf{r}(t)$. Velocity is the time derivative of position, and acceleration is the time derivative of velocity:</p>
+
+    <div class="math-display">$$\mathbf{v}(t) = \frac{d\mathbf{r}}{dt}, \qquad \mathbf{a}(t) = \frac{d\mathbf{v}}{dt} = \frac{d^2 \mathbf{r}}{dt^2}.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Position, velocity, acceleration</p>
+      <dl>
+        <dt>$\mathbf{r}(t)$</dt><dd>The position vector at time $t$ — three numbers $(x, y, z)$ that locate the particle. Bold letters mean "vector, not a single number."</dd>
+        <dt>$\dfrac{d\mathbf{r}}{dt}$</dt><dd>The time derivative of position — how fast each component of $\mathbf{r}$ is changing with time. A vector, called the velocity.</dd>
+        <dt>$\dfrac{d^2 \mathbf{r}}{dt^2}$</dt><dd>The second time derivative of position — the derivative of the velocity. Also a vector, called the acceleration.</dd>
+        <dt>$t$</dt><dd>Time. A single real number. In classical mechanics, every observer shares the same clock.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why two derivatives.</strong> Velocity tells you where the particle is heading <em>right now</em>. Acceleration tells you how that heading is changing — whether you are speeding up, slowing down, or turning. A car driving in a straight line at 60 mph has velocity but zero acceleration. A car going around a curve at a steady 60 mph still has acceleration, because the <em>direction</em> of $\mathbf{v}$ is changing even though its magnitude is not.</p>
+    </div>
+
+    <h3>Uniform acceleration in one dimension</h3>
+
+    <p>When the acceleration $a$ is a constant, you can integrate twice to get the two SUVAT equations every physics student memorizes. Starting from $a = dv/dt$ and integrating:</p>
+
+    <div class="math-display">$$v(t) = v_0 + a t, \qquad x(t) = x_0 + v_0 t + \tfrac{1}{2} a t^2.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Uniformly accelerated motion</p>
+      <dl>
+        <dt>$v_0$, $x_0$</dt><dd>Initial velocity and position (at $t = 0$). These are the constants of integration that the antiderivatives leave behind.</dd>
+        <dt>$a$</dt><dd>The (constant) acceleration.</dd>
+        <dt>$v(t)$</dt><dd>Velocity at time $t$ — a linear function of time.</dd>
+        <dt>$x(t)$</dt><dd>Position at time $t$ — a quadratic function of time. The $\tfrac{1}{2} a t^2$ comes from integrating the linear $v_0 + at$ once more.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>The one near the Earth's surface.</strong> Freely falling objects near the Earth have $a = g \approx 9.81\,\text{m/s}^2$ pointing downward. Drop a rock from rest ($v_0 = 0$) and after $t$ seconds it has fallen $\tfrac{1}{2} g t^2$ meters with speed $g t$. You can check the first second: you fall about 4.9 meters and are moving at about 9.8 m/s by the end. Galileo verified this rolling balls down inclined planes in the early 1600s, long before anyone had a stopwatch accurate to tenths of a second.</p>
+    </div>
+
+    <h3>Projectile motion</h3>
+
+    <p>A projectile launched with initial speed $v_0$ at angle $\theta$ above the horizontal, ignoring air resistance, has two independent motions: constant horizontal velocity and uniformly accelerated vertical motion. Split the initial velocity into components $v_{0x} = v_0 \cos\theta$ and $v_{0y} = v_0 \sin\theta$, then apply the uniform-acceleration formulas in each direction:</p>
+
+    <div class="math-display">$$x(t) = v_0 \cos\theta \, t, \qquad y(t) = v_0 \sin\theta \, t - \tfrac{1}{2} g t^2.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Projectile trajectory</p>
+      <dl>
+        <dt>$\theta$</dt><dd>Launch angle above the horizontal, in radians (or degrees if you convert).</dd>
+        <dt>$v_0 \cos\theta$, $v_0 \sin\theta$</dt><dd>Horizontal and vertical components of the initial velocity, via elementary trigonometry.</dd>
+        <dt>$g$</dt><dd>Gravitational acceleration near Earth's surface, $9.81\,\text{m/s}^2$.</dd>
+        <dt>$-\tfrac{1}{2} g t^2$</dt><dd>Vertical drop due to gravity. Negative because up is positive and gravity pulls down.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>The shape.</strong> Eliminating $t$ between the two equations gives $y$ as a quadratic function of $x$ — a parabola. The projectile rises, peaks, and falls symmetrically. Maximum range (on flat ground) occurs at $\theta = 45^\circ$, where horizontal and vertical components are balanced. You will verify this in the interactive figure below.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="newton">4. Newton's laws</h2>
+
+    <p>Newton's three laws, published in 1687 in <em>Philosophiae Naturalis Principia Mathematica</em>, are the content of classical mechanics. Every other result in this section is a consequence. We state them in modern notation.</p>
+
+    <div class="callout math">
+      <div class="label">NEWTON'S FIRST LAW</div>
+      <p>A body at rest stays at rest, and a body in uniform motion continues in uniform motion, unless acted on by a net force. Restated: a frame in which this is true is called an <strong>inertial frame</strong>, and Newton's laws are postulated to hold in inertial frames.</p>
+    </div>
+
+    <p>The first law is often described as a special case of the second ($\mathbf{F} = 0 \Rightarrow \mathbf{a} = 0$), but historically it was the big conceptual break with Aristotle. Aristotle thought the natural state of a body was rest — you had to keep pushing to keep it moving. Galileo and then Newton said no: the natural state of a body is constant velocity. Rest is just the special case where that velocity is zero. Friction is what hides this from everyday observation on Earth; in outer space you can see it directly.</p>
+
+    <div class="callout math">
+      <div class="label">NEWTON'S SECOND LAW</div>
+      <p>The rate of change of momentum equals the net force. In the common case where mass is constant, this reduces to $\mathbf{F} = m\mathbf{a}$.</p>
+    </div>
+
+    <div class="math-display">$$\mathbf{F} = \frac{d\mathbf{p}}{dt} = m\,\mathbf{a} \quad (\text{constant } m).$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Newton's second law</p>
+      <dl>
+        <dt>$\mathbf{F}$</dt><dd>The net force — the vector sum of all forces acting on the body.</dd>
+        <dt>$\mathbf{p} = m\mathbf{v}$</dt><dd>Linear momentum. A vector quantity, pointing in the direction of motion.</dd>
+        <dt>$\dfrac{d\mathbf{p}}{dt}$</dt><dd>Time derivative of momentum. If mass is constant, this is $m \, d\mathbf{v}/dt = m\mathbf{a}$.</dd>
+        <dt>$m\mathbf{a}$</dt><dd>Mass times acceleration. The familiar high-school form, valid only when $m$ is constant.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>When mass isn't constant.</strong> The full form with $d\mathbf{p}/dt$ matters when you have systems whose mass is changing — rockets ejecting fuel, conveyor belts catching falling sand, accreting black holes. For those, use the momentum form. For everyday engineering where mass stays put, $\mathbf{F} = m\mathbf{a}$ is fine.</p>
+    </div>
+
+    <div class="callout math">
+      <div class="label">NEWTON'S THIRD LAW</div>
+      <p>If body A exerts a force on body B, then B exerts a force on A that is equal in magnitude and opposite in direction. "For every action there is an equal and opposite reaction."</p>
+    </div>
+
+    <p>The third law is the reason rockets work, the reason you can walk (your foot pushes the Earth backward; the Earth pushes you forward), and the reason a hovering helicopter needs to throw air downward. It is also the origin of conservation of momentum: the internal forces inside a closed system come in equal-and-opposite pairs that cancel in the total.</p>
+
+    <h3>Worked example: the Atwood machine</h3>
+
+    <p>Two masses $m_1$ and $m_2$ hang from the two ends of a light inextensible string that passes over a frictionless pulley. This device, invented by George Atwood in 1784 to measure $g$, is the canonical first application of Newton's laws.</p>
+
+    <p>Let the tension in the string be $T$ and let upward be positive. Because the string is inextensible, the two masses have accelerations of equal magnitude and opposite sign. Call the acceleration of $m_1$ (upward) $a$, and that of $m_2$ is then $-a$. Apply Newton's second law to each mass:</p>
+
+    <div class="math-display">$$m_1 a = T - m_1 g, \qquad m_2 (-a) = T - m_2 g.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Atwood machine force balance</p>
+      <dl>
+        <dt>$T$</dt><dd>Tension in the string. Because the string is massless and the pulley frictionless, the tension is the same everywhere along the string.</dd>
+        <dt>$m_i g$</dt><dd>Weight of mass $i$ — the downward gravitational force, with $g = 9.81\,\text{m/s}^2$.</dd>
+        <dt>$a$</dt><dd>The (signed) acceleration of $m_1$; the acceleration of $m_2$ is $-a$ because the string constrains them.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>The trick.</strong> Two unknowns ($T$ and $a$), two equations. Add the two equations to eliminate $T$, or subtract to eliminate $a$. This "draw a free-body diagram, write $\mathbf{F} = m\mathbf{a}$ for each body, then solve the system" procedure is how essentially every classical mechanics problem starts.</p>
+    </div>
+
+    <p>Adding the two equations eliminates the tension:</p>
+
+    <div class="math-display">$$a = \frac{m_2 - m_1}{m_1 + m_2}\, g.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Atwood acceleration</p>
+      <dl>
+        <dt>$m_2 - m_1$</dt><dd>Difference in masses. When the masses are equal this is zero, and so is the acceleration — the system is in equilibrium.</dd>
+        <dt>$m_1 + m_2$</dt><dd>Total mass the force has to accelerate.</dd>
+        <dt>$g$</dt><dd>The gravitational acceleration that ultimately drives everything.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why Atwood liked this.</strong> By choosing $m_1$ and $m_2$ close in value, you can make $a$ arbitrarily smaller than $g$. Atwood used this to slow down free fall enough to time it with 1780s-era clocks and confirm Galileo's $x = \tfrac{1}{2} g t^2$. It was an early triumph of experimental precision.</p>
+    </div>
+
+    <h3>Worked example: block on an incline</h3>
+
+    <p>A block of mass $m$ sits on a frictionless ramp tilted at angle $\theta$ above horizontal. What is its acceleration down the slope?</p>
+
+    <p>Choose axes along and perpendicular to the slope. Gravity $m g$ points straight down; decompose it into components $m g \sin\theta$ along the slope (down the hill) and $m g \cos\theta$ perpendicular (into the ramp, balanced by the normal force). Only the along-slope component accelerates the block:</p>
+
+    <div class="math-display">$$a = g \sin\theta.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Incline acceleration</p>
+      <dl>
+        <dt>$\theta$</dt><dd>Incline angle. $\theta = 0$ is flat ground; $\theta = 90^\circ$ is a vertical drop.</dd>
+        <dt>$g \sin\theta$</dt><dd>The component of gravitational acceleration along the slope. At $\theta = 0$ this is zero (nothing happens); at $\theta = 90^\circ$ it is $g$ (free fall).</dd>
+        <dt>$m g \cos\theta$</dt><dd>The perpendicular component — squashed into the ramp and cancelled by the ramp's normal force.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why it does not depend on mass.</strong> The same logic as Galileo's leaning tower: doubling the mass doubles both the gravitational force and the inertia, and they cancel in $F = ma$. Heavy and light blocks on a frictionless slope slide side by side.</p>
+    </div>
+
+    <div class="problem-set" data-topic="phys-cm-kinematics"></div>
+
+    <div class="problem-set" data-topic="phys-cm-newton"></div>
+
+    <!-- ========================================================== -->
+    <h2 id="energy">5. Work and energy — conservation in its most useful form</h2>
+
+    <p>Newton's laws tell you the acceleration. Integrating them twice to get trajectories is often painful. Enter energy methods — a trick that lets you bypass the integration when you only want to know speeds at specific positions.</p>
+
+    <p>Work is force times displacement, with the displacement projected onto the force direction:</p>
+
+    <div class="math-display">$$W = \int_{\mathbf{r}_1}^{\mathbf{r}_2} \mathbf{F} \cdot d\mathbf{r}.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Work done by a force</p>
+      <dl>
+        <dt>$W$</dt><dd>Work — a scalar (single number), with SI unit joule, $1\,\text{J} = 1\,\text{N}\cdot\text{m}$.</dd>
+        <dt>$\mathbf{F} \cdot d\mathbf{r}$</dt><dd>The dot product of the force with a tiny displacement along the path. The dot product extracts the component of force that is parallel to the motion.</dd>
+        <dt>$\int_{\mathbf{r}_1}^{\mathbf{r}_2}$</dt><dd>A line integral along the actual path from position $\mathbf{r}_1$ to position $\mathbf{r}_2$.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why the dot product.</strong> If you push sideways on a refrigerator you are sliding straight ahead, you do no work. The force component perpendicular to the motion accomplishes nothing. Only the component in the direction of travel transfers energy, and the dot product $\mathbf{F} \cdot d\mathbf{r} = |\mathbf{F}||d\mathbf{r}|\cos\phi$ pulls out exactly that component.</p>
+    </div>
+
+    <p>Kinetic energy is the scalar quantity that bookkeeps motion:</p>
+
+    <div class="math-display">$$T = \tfrac{1}{2} m v^2.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Kinetic energy</p>
+      <dl>
+        <dt>$T$</dt><dd>Kinetic energy — a scalar with units of joules. Some textbooks call it $K$ or $E_k$; we use $T$ because it is the Lagrangian-mechanics convention.</dd>
+        <dt>$m$</dt><dd>Mass of the particle.</dd>
+        <dt>$v^2$</dt><dd>Speed squared — the dot product $\mathbf{v} \cdot \mathbf{v}$. Always nonnegative.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why squared.</strong> Kinetic energy grows with the <em>square</em> of speed, not linearly. Double the speed of a car and it has four times the kinetic energy to dissipate on a crash. This is why highway crashes at 100 km/h are not just "twice as bad" as 50 km/h crashes — they're four times as bad. The $v^2$ is also why braking distance grows quadratically with speed.</p>
+    </div>
+
+    <p>The <strong>work-energy theorem</strong> says the total work done on a body equals its change in kinetic energy:</p>
+
+    <div class="math-display">$$W_\text{net} = \Delta T = T_\text{final} - T_\text{initial}.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Work-energy theorem</p>
+      <dl>
+        <dt>$W_\text{net}$</dt><dd>The total work done by the net force along the path.</dd>
+        <dt>$\Delta T$</dt><dd>The change in kinetic energy between the start and end of the path.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Where it comes from.</strong> Take Newton's second law $\mathbf{F} = m\,d\mathbf{v}/dt$, dot both sides with $d\mathbf{r} = \mathbf{v}\,dt$, integrate along the path, and the right side is $\int m \mathbf{v}\cdot d\mathbf{v} = \tfrac{1}{2} m v^2$ evaluated between the endpoints. It is Newton's second law rewritten so only endpoints matter.</p>
+    </div>
+
+    <h3>Potential energy and conservative forces</h3>
+
+    <p>For some forces — gravity, spring forces, electrostatic forces in a static field — the work done depends only on the endpoints of the path, not on the detailed route taken. Such forces are called <strong>conservative</strong>, and for each one there is a <strong>potential energy</strong> function $V(\mathbf{r})$ whose negative gradient is the force:</p>
+
+    <div class="math-display">$$\mathbf{F} = -\nabla V.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Force from a potential</p>
+      <dl>
+        <dt>$V(\mathbf{r})$</dt><dd>Potential energy as a function of position. A scalar field — one number per point in space.</dd>
+        <dt>$\nabla V$</dt><dd>The gradient of $V$ — a vector pointing in the direction of steepest <em>increase</em> of $V$.</dd>
+        <dt>$-\nabla V$</dt><dd>The force — pointing in the direction of steepest <em>decrease</em>. Objects "roll downhill" in the potential.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>The hill picture.</strong> Imagine $V$ as the height of a landscape. The force on a marble placed on that landscape points downhill, in the direction where the height drops fastest. Gravity near Earth gives $V = m g h$ (a tilted plane); a spring gives $V = \tfrac{1}{2} k x^2$ (a parabolic bowl); a planet orbiting the sun sits in a $V \propto -1/r$ well. All three have their forces given by $-\nabla V$.</p>
+    </div>
+
+    <p>For conservative forces, the total mechanical energy $E = T + V$ is constant along the motion:</p>
+
+    <div class="math-display">$$E = T + V = \tfrac{1}{2} m v^2 + V(\mathbf{r}) = \text{const}.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Conservation of mechanical energy</p>
+      <dl>
+        <dt>$E$</dt><dd>Total mechanical energy — kinetic plus potential. In joules.</dd>
+        <dt>$T = \tfrac{1}{2} m v^2$</dt><dd>Kinetic energy: energy of motion.</dd>
+        <dt>$V(\mathbf{r})$</dt><dd>Potential energy: energy of position, stored in whatever field the force comes from.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>The trade.</strong> As a ball falls, $V$ decreases and $T$ increases by the same amount. At the bottom of a swing a pendulum is moving fastest and has minimum potential; at the top of the swing it has maximum potential and zero speed. The sum stays put. This is the single most useful equation in elementary mechanics — it lets you find speeds at specific positions without ever integrating a differential equation.</p>
+    </div>
+
+    <h3>Worked example: ball rolling down a ramp</h3>
+
+    <p>A ball of mass $m = 0.5\,\text{kg}$ starts at rest at the top of a frictionless ramp of height $h = 2\,\text{m}$. What is its speed at the bottom?</p>
+
+    <p>At the top, $v = 0$ so $T = 0$, and $V = m g h = 0.5 \cdot 9.81 \cdot 2 \approx 9.81\,\text{J}$. At the bottom, take $V = 0$ (we are free to pick the zero of potential energy wherever we want). Conservation of energy gives $T_\text{bot} = 9.81\,\text{J}$, so $\tfrac{1}{2} (0.5) v^2 = 9.81$, giving $v \approx 6.26\,\text{m/s}$. Notice the answer does not depend on the ramp's shape — only on the height. You could walk the ball through a zigzag or a helical slide and get the same final speed, as long as friction stays out of the picture. This is the power of energy methods.</p>
+
+    <div class="problem-set" data-topic="phys-cm-energy"></div>
+
+    <!-- ========================================================== -->
+    <h2 id="demo">6. Interactive: projectile motion</h2>
+
+    <p>Slide the launch speed and angle below. The cyan parabola is the trajectory. Dashed markers show the apex and landing point. The numbers on the side update live so you can compare ranges and maximum heights for different parameters.</p>
+
+    <div class="viz-3d">
+      <div class="v3-controls">
+        <span class="v3-label">Speed $v_0$ (m/s):</span>
+        <input id="cmV0" type="range" min="5" max="50" value="25" step="0.5" style="flex:1;max-width:220px;">
+        <span id="cmV0Label" style="min-width:60px;color:#22d3ee;font-family:ui-monospace,monospace;">25.0</span>
+      </div>
+      <div class="v3-controls">
+        <span class="v3-label">Angle $\theta$ (deg):</span>
+        <input id="cmAng" type="range" min="5" max="85" value="45" step="1" style="flex:1;max-width:220px;">
+        <span id="cmAngLabel" style="min-width:60px;color:#22d3ee;font-family:ui-monospace,monospace;">45</span>
+      </div>
+      <svg id="cmSvg" viewBox="0 0 720 360" style="width:100%;height:auto;background:#0a0d12;border-radius:6px;"></svg>
+      <p class="v3-caption" id="cmCaption">Trajectory of a projectile launched from ground level at speed $v_0$ and angle $\theta$, ignoring air resistance. The dashed horizontal line marks the maximum height.</p>
+    </div>
+
+    <p>Things to notice:</p>
+
+    <ul>
+      <li><strong>Range is maximized at 45°.</strong> Set the angle to 45° and try others — 30° and 60° give the same range (they are complementary), and the range drops off symmetrically around 45°.</li>
+      <li><strong>Height scales as $v_0^2 \sin^2\theta / (2g)$.</strong> Doubling the speed quadruples the max height; halving the angle past the peak cuts height fast.</li>
+      <li><strong>Time of flight is independent of horizontal speed.</strong> For a fixed angle, increasing $v_0$ increases both height and range — but the shape of the parabola stays the same.</li>
+    </ul>
+
+    <!-- ========================================================== -->
+    <h2 id="momentum">7. Momentum, impulse, and collisions</h2>
+
+    <p>Linear momentum is $\mathbf{p} = m\mathbf{v}$, and Newton's second law in its original form says $\mathbf{F} = d\mathbf{p}/dt$. Integrating over a time interval gives the <strong>impulse-momentum theorem</strong>:</p>
+
+    <div class="math-display">$$\Delta \mathbf{p} = \int_{t_1}^{t_2} \mathbf{F}\,dt \equiv \mathbf{J}.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Impulse</p>
+      <dl>
+        <dt>$\mathbf{J}$</dt><dd>The impulse delivered by a force over a time interval — a vector with units of kg·m/s (or equivalently N·s).</dd>
+        <dt>$\Delta \mathbf{p}$</dt><dd>The change in momentum of the object.</dd>
+        <dt>$\int \mathbf{F}\,dt$</dt><dd>The time integral of the force. If the force is constant, this is just $\mathbf{F}\Delta t$; if not, you integrate whatever time profile you have.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why engineers love impulse.</strong> For short collisions (airbags, bumpers, catching a ball with bent knees), the change in momentum is fixed — it equals the final momentum minus the initial momentum. But the <em>peak force</em> depends on how long the collision lasts. Spread the same impulse over a longer time and the peak force drops. That is what crumple zones, bike helmets, and trampolines all exploit.</p>
+    </div>
+
+    <p>When no external force acts, momentum is conserved: $\sum_i \mathbf{p}_i = \text{const}$. This is the cleanest way to handle collisions, because you can apply it without knowing the messy details of the forces during contact.</p>
+
+    <h3>Elastic vs inelastic collisions</h3>
+
+    <p>A collision is <strong>elastic</strong> if total kinetic energy is conserved and <strong>inelastic</strong> if some kinetic energy is lost to heat, sound, or deformation. In a <strong>perfectly inelastic</strong> collision, the two objects stick together afterward. Momentum is conserved in all collisions; kinetic energy is conserved only in elastic ones.</p>
+
+    <p>For a 1D elastic collision between masses $m_1$ (speed $v_1$) and $m_2$ (at rest), conservation of momentum and kinetic energy together give the final speeds:</p>
+
+    <div class="math-display">$$v_1' = \frac{m_1 - m_2}{m_1 + m_2}\, v_1, \qquad v_2' = \frac{2 m_1}{m_1 + m_2}\, v_1.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">1D elastic collision (target at rest)</p>
+      <dl>
+        <dt>$v_1, v_1'$</dt><dd>Speed of the projectile mass before and after the collision.</dd>
+        <dt>$v_2'$</dt><dd>Speed of the target mass after the collision. It was at rest before.</dd>
+        <dt>$(m_1 - m_2) / (m_1 + m_2)$</dt><dd>A dimensionless ratio between $-1$ and $+1$. Controls how much of the projectile's velocity is retained vs transferred.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Three limiting cases.</strong> Equal masses ($m_1 = m_2$): $v_1' = 0$ and $v_2' = v_1$ — the projectile stops dead and the target takes off with the original speed. This is Newton's cradle. Projectile much heavier ($m_1 \gg m_2$): $v_1' \approx v_1$ and $v_2' \approx 2 v_1$ — the target is kicked ahead at twice the incoming speed while the projectile barely slows. Projectile much lighter ($m_1 \ll m_2$): $v_1' \approx -v_1$ and $v_2' \approx 0$ — the projectile bounces back and the target is unmoved. This is a ball bouncing off a wall.</p>
+    </div>
+
+    <p>For a perfectly inelastic collision, conservation of momentum alone gives the common final velocity $v' = (m_1 v_1 + m_2 v_2)/(m_1 + m_2)$, and you can then compute how much kinetic energy was lost by comparing $\tfrac{1}{2}(m_1 + m_2)v'^2$ to the initial total.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="rotation">8. Rotational dynamics</h2>
+
+    <p>Everything we have done so far has a rotational twin. The analog of position is angle $\theta$; the analog of velocity is angular velocity $\omega$; the analog of acceleration is angular acceleration $\alpha$; the analog of mass is moment of inertia $I$; the analog of force is torque $\boldsymbol{\tau}$; the analog of momentum is angular momentum $\mathbf{L}$.</p>
+
+    <div class="math-display">$$\boldsymbol{\tau} = \mathbf{r} \times \mathbf{F}, \qquad \mathbf{L} = \mathbf{r} \times \mathbf{p}, \qquad \boldsymbol{\tau} = \frac{d\mathbf{L}}{dt}.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Torque and angular momentum</p>
+      <dl>
+        <dt>$\boldsymbol{\tau}$</dt><dd>Torque. A vector, computed as the cross product of the position vector (from the pivot) with the applied force. SI units: N·m.</dd>
+        <dt>$\mathbf{r}$</dt><dd>Position vector from the pivot point to where the force is applied.</dd>
+        <dt>$\mathbf{F}$</dt><dd>Applied force.</dd>
+        <dt>$\mathbf{L}$</dt><dd>Angular momentum — the rotational analog of linear momentum.</dd>
+        <dt>$\times$</dt><dd>Vector cross product. The result is perpendicular to both inputs, with magnitude $|\mathbf{r}||\mathbf{F}|\sin\phi$ where $\phi$ is the angle between them.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why the lever arm.</strong> Pushing a door at the hinge does nothing; pushing at the handle swings it easily. The torque depends on the distance from the pivot ($|\mathbf{r}|$), the force magnitude, and the <em>sine</em> of the angle between them — pushing along the door does nothing, pushing perpendicular to it is maximally effective. Cross products were invented exactly to bookkeep this geometry.</p>
+    </div>
+
+    <p>For rotation about a fixed axis, Newton's second law becomes:</p>
+
+    <div class="math-display">$$\tau = I \alpha, \qquad L = I \omega, \qquad T_\text{rot} = \tfrac{1}{2} I \omega^2.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Rotation about a fixed axis</p>
+      <dl>
+        <dt>$I$</dt><dd>Moment of inertia — the rotational analog of mass. For a point mass $m$ at distance $r$ from the axis, $I = m r^2$. For extended bodies, integrate $\int r^2\,dm$ over the mass distribution.</dd>
+        <dt>$\alpha$</dt><dd>Angular acceleration — the time derivative of $\omega$, in rad/s².</dd>
+        <dt>$\omega$</dt><dd>Angular velocity — how fast the body is rotating, in rad/s.</dd>
+        <dt>$T_\text{rot}$</dt><dd>Rotational kinetic energy — the energy stored in rotation.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why moment of inertia depends on shape.</strong> Two objects with the same mass can have very different moments of inertia if the mass is distributed differently. A solid disk has $I = \tfrac{1}{2} M R^2$; a hoop of the same mass and radius has $I = M R^2$, twice as large. This is why a hoop rolls down a ramp slower than a disk — more of its energy goes into rotation, less into translation.</p>
+    </div>
+
+    <p>When no external torque acts, angular momentum is conserved. This is why figure skaters spin faster when they pull their arms in (decreasing $I$, so $\omega$ has to rise to keep $I\omega$ constant), and why neutron stars, which collapsed from much larger parent stars, can rotate hundreds of times per second.</p>
+
+    <h3>Moments of inertia you should know</h3>
+
+    <p>A few standard results, with the axis through the center of mass unless otherwise noted:</p>
+
+    <ul>
+      <li>Hoop or thin cylindrical shell of mass $M$, radius $R$: $I = M R^2$.</li>
+      <li>Solid disk or solid cylinder: $I = \tfrac{1}{2} M R^2$.</li>
+      <li>Solid sphere: $I = \tfrac{2}{5} M R^2$.</li>
+      <li>Thin hollow sphere: $I = \tfrac{2}{3} M R^2$.</li>
+      <li>Thin rod of length $L$, axis through the center perpendicular to the rod: $I = \tfrac{1}{12} M L^2$.</li>
+    </ul>
+
+    <p>These are the standard lookup tables. Any textbook or Wikipedia list has them. You almost never derive them from scratch in practice — you look them up, apply the parallel-axis theorem if your axis is off-center, and move on.</p>
+
+    <div class="problem-set" data-topic="phys-cm-rotation"></div>
+
+    <!-- ========================================================== -->
+    <h2 id="lagrangian">9. Lagrangian mechanics — a glimpse of where modern physics begins</h2>
+
+    <p>By the late 1700s, physicists had noticed that Newton's laws, while correct, were unwieldy for constrained systems — pendulums on strings, beads sliding on wires, double pendulums, coupled oscillators. You had to draw free-body diagrams, introduce constraint forces, then eliminate them through careful algebra. Joseph-Louis Lagrange, in his 1788 <em>Mécanique Analytique</em>, produced a reformulation that sidestepped all that. It is the form every modern physicist actually uses.</p>
+
+    <p>Define the <strong>Lagrangian</strong> as kinetic energy minus potential energy, expressed in terms of convenient coordinates $q_i$ — not necessarily Cartesian — and their time derivatives $\dot{q}_i$:</p>
+
+    <div class="math-display">$$L(q, \dot q, t) = T - V.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">The Lagrangian</p>
+      <dl>
+        <dt>$L$</dt><dd>The Lagrangian — a single scalar function that encodes the entire dynamics. Not to be confused with angular momentum, which is also often written $L$.</dd>
+        <dt>$T$</dt><dd>Kinetic energy of the system, expressed in the chosen coordinates.</dd>
+        <dt>$V$</dt><dd>Potential energy, also expressed in the chosen coordinates.</dd>
+        <dt>$q_i$</dt><dd>Generalized coordinates — any convenient set of independent variables that describe the configuration of the system. For a pendulum, the angle $\theta$ is a natural choice; for a bead on a wire, distance along the wire.</dd>
+        <dt>$\dot{q}_i$</dt><dd>Time derivative of $q_i$. A dot means "derivative with respect to time," Newton's notation for rates.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>The minus sign.</strong> The Lagrangian is $T - V$, not $T + V$. This looks strange — it is <em>not</em> the total energy. It is a mathematical auxiliary whose stationary points pick out the true trajectory, via the principle of least action discussed below.</p>
+    </div>
+
+    <p>The <strong>Euler-Lagrange equations</strong> say that the true trajectory $q(t)$ is the one for which:</p>
+
+    <div class="math-display">$$\frac{d}{dt}\!\left(\frac{\partial L}{\partial \dot q_i}\right) - \frac{\partial L}{\partial q_i} = 0, \quad i = 1, \ldots, n.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Euler-Lagrange equations</p>
+      <dl>
+        <dt>$\dfrac{\partial L}{\partial \dot q_i}$</dt><dd>Partial derivative of the Lagrangian with respect to the velocity $\dot q_i$, treating all other variables as constant. Called the "generalized momentum" conjugate to $q_i$.</dd>
+        <dt>$\dfrac{d}{dt}$</dt><dd>Total time derivative of whatever follows.</dd>
+        <dt>$\dfrac{\partial L}{\partial q_i}$</dt><dd>Partial derivative of $L$ with respect to the coordinate $q_i$. Called the "generalized force."</dd>
+        <dt>$= 0$</dt><dd>One equation per coordinate. If you have $n$ coordinates, you get $n$ equations.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why this gives the right answer.</strong> Writing $T = \tfrac{1}{2} m \dot x^2$ and $V = V(x)$, the Euler-Lagrange equation in one dimension gives $m\ddot x + V'(x) = 0$, which is exactly $F = -dV/dx = m a$. So Lagrangian mechanics reproduces Newton's second law in the simple cases. Its power appears in constrained systems: for a pendulum, write $T$ and $V$ as functions of the angle $\theta$ (not $x$ and $y$), plug into the Euler-Lagrange equation, and out pops the pendulum equation of motion with the tension in the string automatically eliminated. You never draw a free-body diagram.</p>
+    </div>
+
+    <h3>The principle of least action</h3>
+
+    <p>There is a deeper reason the Euler-Lagrange equations are correct. Define the <strong>action</strong> along any hypothetical path from time $t_1$ to $t_2$:</p>
+
+    <div class="math-display">$$S[q] = \int_{t_1}^{t_2} L(q, \dot q, t)\,dt.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">The action</p>
+      <dl>
+        <dt>$S[q]$</dt><dd>The action — a single number assigned to each possible trajectory $q(t)$. The square brackets signal that $S$ is a function of a whole path, not of a point.</dd>
+        <dt>$\int_{t_1}^{t_2}$</dt><dd>Time integral from the start to the end of the motion.</dd>
+        <dt>$L\,dt$</dt><dd>The Lagrangian evaluated along the path, times an infinitesimal time element. Each instant contributes a little to the total action.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>The principle.</strong> Among all conceivable paths connecting fixed endpoints at $t_1$ and $t_2$, the true trajectory is the one for which $S$ is stationary — a minimum, maximum, or saddle point with respect to small perturbations of the path. This is Hamilton's principle, also called the principle of least action. The Euler-Lagrange equations are exactly the condition for $S$ to be stationary. It is a kind of optimization problem: nature picks the path whose Lagrangian integral has extremal value.</p>
+    </div>
+
+    <p>This reformulation matters because every modern physical theory — electromagnetism, general relativity, quantum field theory, the Standard Model — is specified by writing down a Lagrangian. You do not derive Newton's second law from first principles anymore. You write $L = T - V$ for the system you care about, plug into Euler-Lagrange, and get the equations of motion. When you move to quantum mechanics, the Lagrangian reappears inside Feynman's path integral. When you move to general relativity, the Einstein field equations come from extremizing the Einstein-Hilbert action. Lagrange's trick is the bridge from classical to everything else. It is also why physics grad students spend so much time reformulating the same classical problems — pendulums, oscillators, tops — in the Lagrangian language before they do anything "modern." You are training a muscle you will use forever.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="code">10. Classical mechanics in code</h2>
+
+    <p>Here is a minimal simulation of projectile motion using Euler integration, plus a small symplectic-integrator step for comparison. Both are tiny and both illustrate how analytical physics becomes a computation.</p>
+
+    <div class="code-tabs" id="ct-cm">
+      <div class="ct-header">
+        <button class="ct-tab active" data-tab="np">NumPy</button>
+        <button class="ct-tab" data-tab="py">Plain Python</button>
+        <span class="ct-label">projectile + integrator</span>
+      </div>
+
+      <div class="ct-panel active" data-tab="np"><pre><code><span class="kw">import</span> numpy <span class="kw">as</span> np
+
+<span class="cmt"># ---------- 1. Projectile motion, closed-form ----------</span>
+<span class="kw">def</span> <span class="fn">projectile</span>(v0, angle_deg, g=<span class="num">9.81</span>, dt=<span class="num">0.01</span>):
+    <span class="cmt"># Returns arrays (t, x, y) up to the moment y crosses zero again.</span>
+    th = np.deg2rad(angle_deg)
+    vx, vy = v0 * np.cos(th), v0 * np.sin(th)
+    <span class="cmt"># Analytic time of flight for a level launch: 2*vy/g.</span>
+    tf = <span class="num">2</span> * vy / g
+    t  = np.arange(<span class="num">0</span>, tf, dt)
+    x  = vx * t
+    y  = vy * t - <span class="num">0.5</span> * g * t ** <span class="num">2</span>
+    <span class="kw">return</span> t, x, y
+
+t, x, y = <span class="fn">projectile</span>(<span class="num">25</span>, <span class="num">45</span>)
+<span class="fn">print</span>(<span class="str">f"range = {x[-1]:.2f} m, peak height = {y.max():.2f} m"</span>)
+
+<span class="cmt"># ---------- 2. Euler vs symplectic Euler on a pendulum ----------</span>
+<span class="cmt"># Pendulum: theta'' = -(g/L) sin(theta). Tests whether an integrator</span>
+<span class="cmt"># conserves energy over many periods. Plain Euler doesn't; symplectic</span>
+<span class="cmt"># Euler does, which is why game and molecular-dynamics engines use it.</span>
+<span class="kw">def</span> <span class="fn">step_euler</span>(theta, omega, dt, L=<span class="num">1.0</span>, g=<span class="num">9.81</span>):
+    new_theta = theta + omega * dt
+    new_omega = omega - (g / L) * np.sin(theta) * dt
+    <span class="kw">return</span> new_theta, new_omega
+
+<span class="kw">def</span> <span class="fn">step_symplectic</span>(theta, omega, dt, L=<span class="num">1.0</span>, g=<span class="num">9.81</span>):
+    <span class="cmt"># Update velocity first, then position using the NEW velocity.</span>
+    new_omega = omega - (g / L) * np.sin(theta) * dt
+    new_theta = theta + new_omega * dt
+    <span class="kw">return</span> new_theta, new_omega
+
+<span class="kw">def</span> <span class="fn">energy</span>(theta, omega, L=<span class="num">1.0</span>, g=<span class="num">9.81</span>, m=<span class="num">1.0</span>):
+    T = <span class="num">0.5</span> * m * (L * omega) ** <span class="num">2</span>
+    V = m * g * L * (<span class="num">1</span> - np.cos(theta))
+    <span class="kw">return</span> T + V
+
+th, om = <span class="num">0.5</span>, <span class="num">0.0</span>
+th_s, om_s = th, om
+<span class="kw">for</span> _ <span class="kw">in</span> <span class="fn">range</span>(<span class="num">5000</span>):
+    th,  om  = <span class="fn">step_euler</span>(th, om, <span class="num">0.01</span>)
+    th_s, om_s = <span class="fn">step_symplectic</span>(th_s, om_s, <span class="num">0.01</span>)
+<span class="fn">print</span>(<span class="str">f"Euler E drift      = {energy(th, om) - energy(0.5, 0):.4f}"</span>)
+<span class="fn">print</span>(<span class="str">f"Symplectic E drift = {energy(th_s, om_s) - energy(0.5, 0):.4f}"</span>)
+</code></pre></div>
+
+      <div class="ct-panel" data-tab="py"><pre><code><span class="kw">import</span> math
+
+<span class="cmt"># Same simulations without NumPy.</span>
+
+<span class="kw">def</span> <span class="fn">projectile</span>(v0, angle_deg, g=<span class="num">9.81</span>, dt=<span class="num">0.01</span>):
+    th = math.radians(angle_deg)
+    vx, vy = v0 * math.cos(th), v0 * math.sin(th)
+    tf = <span class="num">2</span> * vy / g
+    xs, ys = [], []
+    t = <span class="num">0.0</span>
+    <span class="kw">while</span> t &lt; tf:
+        xs.<span class="fn">append</span>(vx * t)
+        ys.<span class="fn">append</span>(vy * t - <span class="num">0.5</span> * g * t ** <span class="num">2</span>)
+        t += dt
+    <span class="kw">return</span> xs, ys
+
+xs, ys = <span class="fn">projectile</span>(<span class="num">25</span>, <span class="num">45</span>)
+<span class="fn">print</span>(<span class="str">f"range = {xs[-1]:.2f} m, peak = {max(ys):.2f} m"</span>)
+
+<span class="kw">def</span> <span class="fn">pendulum_symplectic</span>(theta0, omega0, dt, steps, L=<span class="num">1.0</span>, g=<span class="num">9.81</span>):
+    th, om = theta0, omega0
+    <span class="kw">for</span> _ <span class="kw">in</span> <span class="fn">range</span>(steps):
+        om = om - (g / L) * math.sin(th) * dt
+        th = th + om * dt
+    <span class="kw">return</span> th, om
+
+th, om = <span class="fn">pendulum_symplectic</span>(<span class="num">0.5</span>, <span class="num">0.0</span>, <span class="num">0.01</span>, <span class="num">5000</span>)
+<span class="fn">print</span>(<span class="str">f"after 50s: theta={th:.3f}, omega={om:.3f}"</span>)
+</code></pre></div>
+    </div>
+
+    <p>A few things worth noting:</p>
+
+    <ul>
+      <li><strong>Closed-form solutions are exact.</strong> The projectile-motion code just evaluates the analytic solution. No integration error. Use closed forms whenever they exist.</li>
+      <li><strong>Plain Euler leaks energy.</strong> For a pendulum, plain Euler drifts: the amplitude grows slowly over hundreds of periods, accumulating fake energy. Symplectic Euler — updating velocity first and then position with the new velocity — conserves energy to a bounded error even over millions of steps. This property is why molecular dynamics simulations and orbital mechanics tools (like the ones that fly real spacecraft) use symplectic or higher-order symplectic integrators.</li>
+      <li><strong>Why simulation matters.</strong> Real systems have too many bodies, too many constraints, or too much nonlinearity for analytic solutions. The entire field of computational physics exists because $F = ma$ is easy to write and hard to integrate.</li>
+    </ul>
+
+    <!-- ========================================================== -->
+    <h2 id="summary">11. Cheat sheet and see also</h2>
+
+    <div class="grid">
+      <div class="card">
+        <h4>Newton's second law</h4>
+        <p>$\mathbf{F} = m\mathbf{a} = d\mathbf{p}/dt$</p>
+        <p class="meta">Force equals rate of change of momentum.</p>
+      </div>
+      <div class="card">
+        <h4>Kinetic energy</h4>
+        <p>$T = \tfrac{1}{2} m v^2$</p>
+        <p class="meta">Energy of motion. Scales as speed squared.</p>
+      </div>
+      <div class="card">
+        <h4>Work-energy theorem</h4>
+        <p>$W_\text{net} = \Delta T$</p>
+        <p class="meta">Net work done equals change in kinetic energy.</p>
+      </div>
+      <div class="card">
+        <h4>Conservative force</h4>
+        <p>$\mathbf{F} = -\nabla V$</p>
+        <p class="meta">Force from a potential energy. Energy is conserved.</p>
+      </div>
+      <div class="card">
+        <h4>Momentum conservation</h4>
+        <p>$\sum_i m_i \mathbf{v}_i = \text{const}$ (no external force)</p>
+        <p class="meta">Universal in closed systems.</p>
+      </div>
+      <div class="card">
+        <h4>Projectile range</h4>
+        <p>$R = v_0^2 \sin(2\theta)/g$</p>
+        <p class="meta">Maximized at $\theta = 45^\circ$.</p>
+      </div>
+      <div class="card">
+        <h4>Torque</h4>
+        <p>$\boldsymbol{\tau} = \mathbf{r}\times\mathbf{F}, \quad \tau = I\alpha$</p>
+        <p class="meta">Rotational Newton's second law.</p>
+      </div>
+      <div class="card">
+        <h4>Rotational KE</h4>
+        <p>$T_\text{rot} = \tfrac{1}{2} I \omega^2$</p>
+        <p class="meta">Same shape as linear, with $I$ for $m$.</p>
+      </div>
+      <div class="card">
+        <h4>Lagrangian</h4>
+        <p>$L = T - V$</p>
+        <p class="meta">Kinetic minus potential. Plug into Euler-Lagrange.</p>
+      </div>
+      <div class="card">
+        <h4>Euler-Lagrange</h4>
+        <p>$\dfrac{d}{dt}\dfrac{\partial L}{\partial \dot q} = \dfrac{\partial L}{\partial q}$</p>
+        <p class="meta">Equations of motion in generalized coordinates.</p>
+      </div>
+    </div>
+
+    <h3>See also</h3>
+    <div class="see-also">
+      <div class="card">
+        <h4><a href="../math/calculus.html">Math: Calculus</a></h4>
+        <p>Derivatives are velocities and accelerations; integrals are work, impulse, and action. Every equation on this page is ultimately a statement about rates of change.</p>
+      </div>
+      <div class="card">
+        <h4><a href="../math/linear-algebra.html">Math: Linear Algebra</a></h4>
+        <p>Vectors, dot products, and cross products power all of classical mechanics. Moments of inertia are tensors — linear algebra with three indices.</p>
+      </div>
+      <div class="card">
+        <h4><a href="./electromagnetism.html">Physics: Electromagnetism</a></h4>
+        <p>The next foundational chapter. Classical mechanics plus electromagnetism was essentially all of physics until 1905, and together they get you most of engineering.</p>
+      </div>
+      <div class="card">
+        <h4><a href="./special-relativity.html">Physics: Special Relativity</a></h4>
+        <p>What goes wrong with classical mechanics at high speeds, and the elegant fix Einstein found. Momentum gets a factor of $\gamma$; energy grows without bound.</p>
+      </div>
+      <div class="card">
+        <h4><a href="./thermodynamics.html">Physics: Thermodynamics</a></h4>
+        <p>Classical mechanics for systems so large you cannot track every particle. Statistical mechanics supplies the link: Lagrangians and Hamiltonians become partition functions.</p>
+      </div>
+      <div class="card">
+        <h4><a href="../math/numerical-analysis.html">Math: Numerical Analysis</a></h4>
+        <p>How to actually integrate $\mathbf{F} = m\mathbf{a}$ on a computer. Symplectic integrators, stability, error analysis — a subject of its own.</p>
+      </div>
+    </div>
+
+    <div class="bib">
+      <h4>Further reading</h4>
+      <ul>
+        <li>Isaac Newton — <em>Philosophiae Naturalis Principia Mathematica</em> (1687). The original. Geometric and dense, but historically priceless. Modern English translations with commentary are widely available.</li>
+        <li>Herbert Goldstein, Charles Poole, John Safko — <em>Classical Mechanics</em> (3rd ed., 2001). The standard graduate textbook. Covers Lagrangian, Hamiltonian, rigid bodies, and canonical transformations thoroughly.</li>
+        <li>David Morin — <em>Introduction to Classical Mechanics</em> (2008). Undergraduate text with hundreds of problems, a large fraction of which teach the reader a new trick. Best problem book for this level.</li>
+        <li>Walter Lewin — <em>For the Love of Physics</em> and the associated <a href="https://ocw.mit.edu/courses/8-01sc-classical-mechanics-fall-2016/">MIT 8.01 OCW lectures</a>. Lectures filmed in front of live audiences with props; rare combination of rigor and theater.</li>
+        <li>Landau and Lifshitz — <em>Mechanics</em> (Volume 1 of the Course of Theoretical Physics, 1960). The Lagrangian-first treatment. Dense but elegant; assumes you already know calculus and linear algebra cold.</li>
+        <li>Wikipedia — <a href="https://en.wikipedia.org/wiki/Lagrangian_mechanics">Lagrangian mechanics</a> and <a href="https://en.wikipedia.org/wiki/Principle_of_least_action">principle of least action</a>. Good jumping-off points with historical context.</li>
+      </ul>
+    </div>
+
+    <div class="next-card">
+      <div class="label">NEXT UP</div>
+      <a href="./electromagnetism.html">→ Electromagnetism</a>
+      <p>Classical mechanics handles forces you can see. Electromagnetism handles the forces you can't — electric and magnetic fields that reach across empty space and, via Maxwell's equations, turn out to be the same thing, propagating at the speed of light.</p>
+    </div>
+
+  </article>
+</div>
+
+<script>
+// =========================================================
+// Code tabs
+document.querySelectorAll('.code-tabs').forEach(root => {
+  const tabs = root.querySelectorAll('.ct-tab');
+  const panels = root.querySelectorAll('.ct-panel');
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const target = tab.getAttribute('data-tab');
+      tabs.forEach(t => t.classList.toggle('active', t === tab));
+      panels.forEach(p => p.classList.toggle('active', p.getAttribute('data-tab') === target));
+    });
+  });
+});
+
+// =========================================================
+// Projectile motion visualization
+(function() {
+  const svg = document.getElementById('cmSvg');
+  if (!svg) return;
+  const NS = 'http://www.w3.org/2000/svg';
+  const sV0  = document.getElementById('cmV0');
+  const sAng = document.getElementById('cmAng');
+  const lV0  = document.getElementById('cmV0Label');
+  const lAng = document.getElementById('cmAngLabel');
+  const caption = document.getElementById('cmCaption');
+
+  const W = 720, H = 360;
+  const ml = 60, mr = 30, mt = 20, mb = 40;
+  const plotW = W - ml - mr;
+  const plotH = H - mt - mb;
+
+  function mkText(x, y, txt, color, size, anchor) {
+    const t = document.createElementNS(NS, 'text');
+    t.setAttribute('x', x); t.setAttribute('y', y);
+    t.setAttribute('fill', color || '#7a8a9a');
+    t.setAttribute('font-size', size || 11);
+    t.setAttribute('font-family', 'ui-monospace, monospace');
+    if (anchor) t.setAttribute('text-anchor', anchor);
+    t.textContent = txt;
+    return t;
+  }
+  function mkLine(x1,y1,x2,y2,stroke,w,dash) {
+    const l = document.createElementNS(NS, 'line');
+    l.setAttribute('x1',x1); l.setAttribute('y1',y1);
+    l.setAttribute('x2',x2); l.setAttribute('y2',y2);
+    l.setAttribute('stroke',stroke);
+    l.setAttribute('stroke-width',w||1);
+    if (dash) l.setAttribute('stroke-dasharray',dash);
+    return l;
+  }
+  function mkRect(x,y,w,h,fill,stroke) {
+    const r = document.createElementNS(NS, 'rect');
+    r.setAttribute('x',x); r.setAttribute('y',y);
+    r.setAttribute('width',w); r.setAttribute('height',h);
+    r.setAttribute('fill',fill);
+    if (stroke) { r.setAttribute('stroke',stroke); r.setAttribute('stroke-width',1); }
+    return r;
+  }
+  function mkCircle(cx,cy,r,fill,stroke) {
+    const c = document.createElementNS(NS, 'circle');
+    c.setAttribute('cx',cx); c.setAttribute('cy',cy); c.setAttribute('r',r);
+    c.setAttribute('fill',fill);
+    if (stroke) { c.setAttribute('stroke',stroke); c.setAttribute('stroke-width',1.5); }
+    return c;
+  }
+  function mkPath(d,stroke,w,fill) {
+    const p = document.createElementNS(NS, 'path');
+    p.setAttribute('d',d);
+    p.setAttribute('stroke',stroke);
+    p.setAttribute('stroke-width',w||2);
+    p.setAttribute('fill',fill||'none');
+    p.setAttribute('stroke-linecap','round');
+    p.setAttribute('stroke-linejoin','round');
+    return p;
+  }
+
+  function draw() {
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+
+    const v0 = parseFloat(sV0.value);
+    const ang = parseFloat(sAng.value);
+    lV0.textContent = v0.toFixed(1);
+    lAng.textContent = Math.round(ang).toString();
+
+    const g = 9.81;
+    const th = ang * Math.PI / 180;
+    const vx = v0 * Math.cos(th);
+    const vy = v0 * Math.sin(th);
+    const tf = 2 * vy / g;            // time of flight
+    const range = vx * tf;            // horizontal range
+    const peak  = vy * vy / (2 * g);  // max height
+
+    // Pick a view window that scales a bit with range/peak but never too small.
+    // Max possible range at this v0 is v0^2 / g. Use that as the x-scale cap.
+    const xCap = Math.max(range * 1.1, 5);
+    const yCap = Math.max(peak * 1.4,  3);
+
+    // frame
+    svg.appendChild(mkRect(ml, mt, plotW, plotH, '#0f131a', '#2a3446'));
+
+    // gridlines + ticks
+    const xTicks = 5;
+    for (let i = 0; i <= xTicks; i++) {
+      const xv = (i / xTicks) * xCap;
+      const sx = ml + (xv / xCap) * plotW;
+      svg.appendChild(mkLine(sx, mt, sx, mt + plotH, '#1a212e', 1));
+      svg.appendChild(mkText(sx, mt + plotH + 14, xv.toFixed(0), '#7a8a9a', 10, 'middle'));
+    }
+    const yTicks = 4;
+    for (let i = 0; i <= yTicks; i++) {
+      const yv = (i / yTicks) * yCap;
+      const sy = mt + plotH - (yv / yCap) * plotH;
+      svg.appendChild(mkLine(ml, sy, ml + plotW, sy, '#1a212e', 1));
+      svg.appendChild(mkText(ml - 6, sy + 3, yv.toFixed(0), '#7a8a9a', 10, 'end'));
+    }
+    // axes
+    svg.appendChild(mkLine(ml, mt + plotH, ml + plotW, mt + plotH, '#384050', 1));
+    svg.appendChild(mkLine(ml, mt, ml, mt + plotH, '#384050', 1));
+
+    // Trajectory
+    let d = '';
+    const N = 80;
+    for (let i = 0; i <= N; i++) {
+      const t = (i / N) * tf;
+      const x = vx * t;
+      const y = vy * t - 0.5 * g * t * t;
+      if (y < 0) break;
+      const sx = ml + (x / xCap) * plotW;
+      const sy = mt + plotH - (y / yCap) * plotH;
+      d += (i === 0 ? 'M' : 'L') + sx.toFixed(2) + ',' + sy.toFixed(2) + ' ';
+    }
+    svg.appendChild(mkPath(d, '#22d3ee', 2.5));
+
+    // Launch arrow (initial velocity vector)
+    const arrowLen = 60;
+    const ax1 = ml;
+    const ay1 = mt + plotH;
+    const ax2 = ax1 + arrowLen * Math.cos(th);
+    const ay2 = ay1 - arrowLen * Math.sin(th);
+    svg.appendChild(mkLine(ax1, ay1, ax2, ay2, '#f472b6', 2.5));
+    svg.appendChild(mkCircle(ax2, ay2, 4, '#f472b6', '#fff'));
+
+    // Peak marker
+    const peakX_m = vx * (vy / g);
+    const peakY_m = peak;
+    const pkSx = ml + (peakX_m / xCap) * plotW;
+    const pkSy = mt + plotH - (peakY_m / yCap) * plotH;
+    svg.appendChild(mkLine(ml, pkSy, ml + plotW, pkSy, '#7c5cff', 1, '3,3'));
+    svg.appendChild(mkCircle(pkSx, pkSy, 4, '#7c5cff', '#fff'));
+
+    // Landing marker
+    const landSx = ml + (range / xCap) * plotW;
+    const landSy = mt + plotH;
+    svg.appendChild(mkCircle(landSx, landSy, 4, '#22d3ee', '#fff'));
+
+    // Axis labels
+    svg.appendChild(mkText(ml + plotW / 2, H - 6, 'x (m)', '#b4c4d4', 11, 'middle'));
+    svg.appendChild(mkText(12, mt + plotH / 2, 'y (m)', '#b4c4d4', 11, 'middle'));
+
+    // Title
+    svg.appendChild(mkText(ml + 8, mt + 16,
+      'v0 = ' + v0.toFixed(1) + ' m/s, angle = ' + Math.round(ang) + '°',
+      '#b4c4d4', 11));
+
+    caption.textContent =
+      'Range = ' + range.toFixed(2) + ' m,  ' +
+      'max height = ' + peak.toFixed(2) + ' m,  ' +
+      'time of flight = ' + tf.toFixed(2) + ' s.';
+  }
+
+  sV0.addEventListener('input', draw);
+  sAng.addEventListener('input', draw);
+  draw();
+})();
+</script>
+<script defer src="../problem-set.js"></script>
+<script defer src="classical-mechanics-problems.js"></script>
+<script defer src="../search-index.js"></script>
+<script defer src="../search.js"></script>
+</body>
+</html>
+</content>
+</invoke>
