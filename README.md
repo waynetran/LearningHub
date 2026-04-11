@@ -1,8 +1,8 @@
-# Charuvi
+# LearningHub
 
 A field guide to what is actually happening at the edge of math, science, and technology — and deep dives for when you want to know why.
 
-Charuvi is a static reference site for tech professionals who want to catch up on the math, CS, and AI/ML foundations behind modern computing without being talked down to, and without being assumed to remember everything. Every page defines its symbols, works through examples, ships an interactive figure, and cross-links its prerequisites.
+LearningHub is a static reference site for tech professionals who want to catch up on the math, CS, and AI/ML foundations behind modern computing without being talked down to, and without being assumed to remember everything. Every page defines its symbols, works through examples, ships an interactive figure, and cross-links its prerequisites.
 
 ## Tracks
 
@@ -64,8 +64,8 @@ If you find something wrong, please tell us — see below.
 
 Contributions are welcome and encouraged. If you spot a mistake, a typo, an outdated date, a broken link, a formula error, or a better way to explain something:
 
-- **File an issue** describing what you found: <https://github.com/waynetran/charuvi/issues>
-- **Open a pull request** with the fix: <https://github.com/waynetran/charuvi/pulls>
+- **File an issue** describing what you found: <https://github.com/waynetran/LearningHub/issues>
+- **Open a pull request** with the fix: <https://github.com/waynetran/LearningHub/pulls>
 
 Small fixes are especially welcome — correcting a date or a formula takes seconds and helps every future reader. Larger contributions (a new subject page, a new interactive demo, a rewrite of a confusing section) are also welcome; please open an issue first so we can agree on scope.
 

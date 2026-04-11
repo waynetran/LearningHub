@@ -172,6 +172,8 @@
 
     <p>A function $f$ is <strong>continuous</strong> at $a$ if three things hold: $f(a)$ exists, $\lim_{x \to a} f(x)$ exists, and the two are equal. In pictures: no gaps, no jumps, no holes — you can draw the graph without lifting your pencil. Most functions you deal with in practice (polynomials, exponentials, sines and cosines, their sums and products) are continuous everywhere. Functions with pieces glued together sometimes aren't, and that's where the interesting behavior lives.</p>
 
+    <div class="problem-set" data-topic="calc-limits"></div>
+
     <!-- ========================================================== -->
     <h2 id="derivs">4. Derivatives — instantaneous rates of change</h2>
 
@@ -314,8 +316,10 @@
 
     <p>So $f'(x) = 12 x^3 - 10 x$. That's the slope of the tangent line to $f$ at any $x$. At $x = 1$, the slope is $12 - 10 = 2$. At $x = 0$, the slope is $0$ (the curve is momentarily flat). At $x = -1$, the slope is $-12 + 10 = -2$ (the curve is descending).</p>
 
+    <div class="problem-set" data-topic="calc-derivs-basic"></div>
+
     <!-- ========================================================== -->
-    <h2 id="chain">5. The chain rule — the one rule backprop is built on</h2>
+    <h2 id="chain">5. The chain rule — differentiating compositions</h2>
 
     <p>The chain rule deserves its own section because it is the most important rule in calculus for anything computational, and because it's the one most students get wrong the first few times.</p>
 
@@ -372,6 +376,8 @@
     <p>The chain rule, applied recursively from the output backward to the input, is exactly how those derivatives are computed. This recursive application is called <a href="../topics/backpropagation.html">backpropagation</a>, and it's the algorithm that made modern deep learning tractable. Every time you see a training curve descending, the chain rule is quietly running underneath, multiplying gradients layer by layer. When it's your job to debug exploding or vanishing gradients, you are debugging long chain rule products with terms that are too big or too small.</p>
 
     <p>If you remember nothing else from this page, remember this: the chain rule is how local information (slopes of individual pieces) combines into global information (the slope of the whole composed thing). That idea is everywhere in computation.</p>
+
+    <div class="problem-set" data-topic="calc-chain"></div>
 
     <!-- ========================================================== -->
     <h2 id="demo">6. Interactive: watch the derivative trace itself out</h2>
@@ -456,6 +462,8 @@
 
     <p>Anywhere a quantity changes with respect to another, the derivative is the name of that rate. Velocity is the derivative of position with respect to time. Acceleration is the derivative of velocity. Marginal cost in economics is the derivative of total cost with respect to quantity produced. Power in physics is the derivative of energy with respect to time. Current is the derivative of charge. The derivative is a shape-shifter — the symbols stay the same and the real-world meaning comes from what function you're differentiating.</p>
 
+    <div class="problem-set" data-topic="calc-apps"></div>
+
     <!-- ========================================================== -->
     <h2 id="integrals">8. Integrals — adding up infinitely many pieces</h2>
 
@@ -512,6 +520,8 @@
       <p class="mg-analogy"><strong>Easy to confuse, important to separate.</strong> Definite integral $\int_a^b f(x) dx$ is a <em>number</em> (an area). Indefinite integral $\int f(x) dx$ is a <em>function</em> (plus a constant). They are linked by the Fundamental Theorem of Calculus, which is the next section, and which explains why both things got named "integral." Until that theorem is on the table, the link is just asserted: "reversing differentiation" and "computing areas" happen to be the same operation. Nobody would've guessed.</p>
     </div>
 
+    <div class="problem-set" data-topic="calc-integrals"></div>
+
     <!-- ========================================================== -->
     <h2 id="ftc">9. The Fundamental Theorem of Calculus</h2>
 
@@ -563,6 +573,8 @@
     <p>That's the exact area under the parabola from 0 to 3. No infinite sums, no limits — just the antiderivative at two points. It really is a miracle the first time you see it.</p>
 
     <p>Taken together, the two parts say: <strong>differentiation and integration are inverse operations</strong>. Part 1 says differentiating an area function gives back the integrand. Part 2 says integrating a derivative gives back the original function (up to endpoints). One operation undoes the other.</p>
+
+    <div class="problem-set" data-topic="calc-ftc"></div>
 
     <!-- ========================================================== -->
     <h2 id="techniques">10. Techniques of integration</h2>
@@ -623,6 +635,8 @@
 
     <p>To integrate a rational function like $\frac{1}{(x-1)(x+2)}$, split it into simpler pieces you already know how to integrate. Algebra gives $\frac{1}{(x-1)(x+2)} = \frac{1/3}{x-1} - \frac{1/3}{x+2}$, and each piece is a standard form: $\int \frac{1}{x - a}\, dx = \ln|x - a| + C$. So the integral splits into two logarithms. The technique is called <strong>partial fraction decomposition</strong>, and it's how you turn scary rational functions into sums of logarithms and inverse tangents. You won't need to master it to follow this site; just know the name and what it's for.</p>
 
+    <div class="problem-set" data-topic="calc-techniques"></div>
+
     <!-- ========================================================== -->
     <h2 id="taylor">11. Taylor series — polynomial approximation of everything</h2>
 
@@ -667,6 +681,8 @@
       <li><strong>Gradient descent</strong>'s update rule comes from a first-order Taylor expansion of the loss; Newton's method uses a second-order one.</li>
       <li><strong>Activation functions</strong> like GELU involve the error function, which is defined through its Taylor series.</li>
     </ul>
+
+    <div class="problem-set" data-topic="calc-taylor"></div>
 
     <!-- ========================================================== -->
     <h2 id="code">12. Calculus in code</h2>
@@ -1093,6 +1109,8 @@ document.querySelectorAll('.code-tabs').forEach(root => {
   draw();
 })();
 </script>
+<script defer src="../problem-set.js"></script>
+<script defer src="calculus-problems.js"></script>
 <script defer src="../search-index.js"></script>
 <script defer src="../search.js"></script>
 </body>

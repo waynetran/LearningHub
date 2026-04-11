@@ -1,4 +1,4 @@
-# Charuvi Learning Hub — Design & Authoring Principles
+# LearningHub — Design & Authoring Principles
 
 This file is the contract for anyone (human or agent) editing the site. Read it before writing any page.
 
