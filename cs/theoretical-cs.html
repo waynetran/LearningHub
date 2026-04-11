@@ -1,0 +1,1039 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Theoretical Computer Science — Deep Dive</title>
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError: false});"></script>
+</head>
+<body>
+<div id="tooltip"></div>
+
+<nav class="topic-nav">
+  <a class="back" href="../index.html">← Back to Hub</a>
+  <div class="crumb">Computer Science / <span class="topic-name">Theoretical CS</span></div>
+</nav>
+
+<div class="topic-layout">
+  <aside class="topic-toc">
+    <h4>ON THIS PAGE</h4>
+    <ul>
+      <li><a href="#s1">1. Why theoretical CS</a></li>
+      <li><a href="#s2">2. The Turing machine</a></li>
+      <li><a href="#s3">3. Church-Turing thesis</a></li>
+      <li><a href="#s4">4. Interactive: TM simulator</a></li>
+      <li><a href="#s5">5. Decidability</a></li>
+      <li><a href="#s6">6. The halting problem</a></li>
+      <li><a href="#s7">7. Reductions</a></li>
+      <li><a href="#s8">8. Complexity classes</a></li>
+      <li><a href="#s9">9. P vs NP</a></li>
+      <li><a href="#s10">10. NP-completeness</a></li>
+      <li><a href="#s11">11. Canonical NP-complete problems</a></li>
+      <li><a href="#s12">12. Why P vs NP matters</a></li>
+      <li><a href="#s13">13. Approximation algorithms</a></li>
+      <li><a href="#s14">14. Randomized complexity</a></li>
+      <li><a href="#s15">15. Quantum, briefly</a></li>
+      <li><a href="#s16">16. Other interesting classes</a></li>
+      <li><a href="#s17">17. Oracles and relativization</a></li>
+      <li><a href="#s18">18. Source code</a></li>
+      <li><a href="#s19">19. Open problems</a></li>
+      <li><a href="#s20">20. Further reading</a></li>
+    </ul>
+  </aside>
+
+  <article class="topic-content">
+    <h1>Theoretical Computer Science</h1>
+    <p class="subtitle">What can a computer do at all, and what can it do efficiently? This page walks through Turing machines, the halting problem, the complexity zoo, and the most famous open question in CS — P vs NP. The answers turn out to be "less than you'd expect," in both senses.</p>
+    <div class="meta-tags">
+      <span>Prereq: <a href="../math/discrete-math.html">discrete math</a>, <a href="complexity.html">algorithmic complexity</a></span>
+      <span>Read time: ~35 min</span>
+      <span>Interactive figures: 2</span>
+      <span>Code: Python</span>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="s1">1. Why theoretical CS</h2>
+
+    <p>Most of computer science asks "how do I build this?" Theoretical CS asks two stranger questions:</p>
+
+    <ol>
+      <li><strong>Can it be built at all?</strong> Some problems have no algorithm. Not "no efficient algorithm" — no algorithm. We can prove this. The halting problem is the textbook example.</li>
+      <li><strong>If it can be built, how cheap can we make it?</strong> Some problems clearly have algorithms but every known algorithm runs in time that grows wildly with input size. We strongly suspect — but cannot prove — that <em>no</em> algorithm can do better.</li>
+    </ol>
+
+    <p>Both answers are deflating. There exist well-defined questions that are mathematically immune to computation. And among the questions that can be computed, there's a huge class — the kind that show up in scheduling, logistics, cryptanalysis, and protein folding — for which the only known approach is, essentially, brute force. This page is about making both of those statements precise.</p>
+
+    <div class="callout">
+      <p>The two questions correspond to the two pillars of theoretical CS: <strong>computability theory</strong> (what's solvable in principle) and <strong>complexity theory</strong> (what's solvable in practice). They share a common toolkit — formal models of computation, reductions, diagonal arguments — and they share a common ancestor: a 1936 paper by a 23-year-old named Alan Turing.</p>
+    </div>
+
+    <p>Before going further, you'll want to be loosely comfortable with the language of <a href="../math/discrete-math.html">discrete math</a> (sets, functions, relations, proof by contradiction) and the basics of <a href="complexity.html">algorithmic complexity</a> (big-O notation, the difference between $O(n)$ and $O(n^2)$). Nothing exotic. If "$\{0,1\}^*$ means the set of all finite binary strings" doesn't scare you, you're ready.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="s2">2. The Turing machine</h2>
+
+    <p>In 1936 Turing wanted to formalize what a "computation" actually is. He picked the most stripped-down model he could imagine, then proved every reasonable model is equivalent to it. The model is:</p>
+
+    <ul>
+      <li>An infinite <strong>tape</strong> divided into cells. Each cell holds one symbol from a finite alphabet.</li>
+      <li>A <strong>head</strong> that points at one cell and can read or write it.</li>
+      <li>A <strong>finite control</strong> — a small set of states the machine can be in, like a flowchart with a finger on the current step.</li>
+      <li>A <strong>transition function</strong> that says, given the current state and the symbol under the head, what to write, which way to move (left or right one cell), and what state to go to next.</li>
+    </ul>
+
+    <p>Formally a Turing machine is a 7-tuple. Don't be alarmed by the notation; it's just a list:</p>
+
+    <div class="math-display">$$M = (Q, \Sigma, \Gamma, \delta, q_0, q_{\text{accept}}, q_{\text{reject}})$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Turing machine, formally</p>
+      <dl>
+        <dt>$Q$</dt><dd>The finite set of states. Think "boxes in a flowchart." Maybe 5 of them, maybe 5000 — but finite.</dd>
+        <dt>$\Sigma$</dt><dd>The input alphabet — the symbols allowed in the original input string. Often $\{0,1\}$.</dd>
+        <dt>$\Gamma$</dt><dd>The tape alphabet, which contains $\Sigma$ plus a special blank symbol $\sqcup$ and any extra working symbols you want.</dd>
+        <dt>$\delta$</dt><dd>The transition function: $\delta : Q \times \Gamma \to Q \times \Gamma \times \{L, R\}$. Read "given state $q$ and symbol $a$, write some symbol $b$, move left or right, and go to state $q'$."</dd>
+        <dt>$q_0$</dt><dd>The start state — where the machine begins before reading anything.</dd>
+        <dt>$q_{\text{accept}}$</dt><dd>If the machine ever lands here, it halts and says "yes."</dd>
+        <dt>$q_{\text{reject}}$</dt><dd>If it lands here, it halts and says "no."</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Analogy.</strong> Imagine a person with a long roll of toilet paper, a pencil, an eraser, and a one-page checklist of rules. They look at the square in front of them, find the matching row in the checklist, do what it says (write, erase, scoot left, scoot right, jump to a new row), and repeat. That's it. Everything your laptop can do, this person can do — slower, sure, but the set of computable things is exactly the same.</p>
+    </div>
+
+    <p>The machine takes an input string written on the tape, runs $\delta$ over and over, and either reaches $q_{\text{accept}}$, reaches $q_{\text{reject}}$, or runs forever. A <strong>language</strong> is the set of all strings the machine accepts. A machine <em>decides</em> a language if it always halts (accept or reject) on every input. It <em>recognizes</em> a language if it accepts every string in the language but may loop forever on strings outside it. That little distinction will turn out to matter a lot.</p>
+
+    <div class="defn">
+      <p><strong>A "configuration"</strong> of a Turing machine is the complete snapshot you'd need to resume it: (current state, position of the head, contents of the tape). Two TMs are equivalent if they go through the same sequence of configurations on every input.</p>
+    </div>
+
+    <p>Why this minimal model and not, say, a Python interpreter? Because Turing wanted to argue mathematically about <em>all possible</em> computations, and you can't reason cleanly about "all programming languages." A TM is small enough to fit on a chalkboard but expressive enough that nothing has ever been shown to outdo it.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="s3">3. The Church-Turing thesis</h2>
+
+    <p>In 1936, two answers to "what is a computation?" appeared at the same time. Turing's tape machine was one. Alonzo Church's <em>lambda calculus</em> — a tiny system of function abstraction and application, no tape at all — was the other. Within months, the two were shown to compute exactly the same set of functions. So were Kurt Gödel's recursive functions, Emil Post's rewriting systems, register machines, your laptop, the cellular automaton Rule 110, Conway's Game of Life, and Magic: The Gathering combo decks.</p>
+
+    <p>The <strong>Church-Turing thesis</strong> is the informal claim that anything you'd <em>intuitively</em> call a computation can be done by a Turing machine. It is not a theorem — you can't prove "intuitively" — but in the 90 years since 1936, every formal model anyone has invented either turns out to be Turing-equivalent or strictly weaker. No exceptions, despite many attempts.</p>
+
+    <div class="callout good">
+      <p><strong>What this buys us.</strong> It means we get to use the words "computable," "algorithm," and "decidable" without committing to a specific model. When we prove "no algorithm can do X," we mean "no Turing machine," and via Church-Turing that means no <em>thing</em> at all that we'd recognize as a computer. (Quantum computers complicate the efficiency story, but not the computability story — they compute the same set of functions, just sometimes faster.)</p>
+    </div>
+
+    <p>Heads-up on a common confusion. The thesis is about what is computable, <em>not</em> what is computable in reasonable time. A Turing machine can simulate your laptop, but it might take $10^{30}$ steps to do what your laptop does in a microsecond. Computability and efficiency are different floors. The next several sections are about computability; we get to efficiency around section 8.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="s4">4. Interactive: a tiny Turing machine simulator</h2>
+
+    <p>Below is a 5-state Turing machine that, given a unary input like <code>1111</code> (the number 4), increments it by 1 to <code>11111</code>. It works by walking right to find the end of the input and writing one more <code>1</code>. Click <strong>Step</strong> to advance one transition, or <strong>Run</strong> to play it through. Watch the head, the tape, and the current state change.</p>
+
+    <div class="viz-3d">
+      <div class="v3-controls">
+        <button id="tmStep">Step</button>
+        <button id="tmRun">Run</button>
+        <button id="tmReset">Reset</button>
+        <span class="v3-label">Input:</span>
+        <select id="tmInput">
+          <option value="111">3 (111)</option>
+          <option value="1111" selected>4 (1111)</option>
+          <option value="11111">5 (11111)</option>
+          <option value="11">2 (11)</option>
+        </select>
+        <span id="tmStateLabel" style="min-width:140px;color:#63b3ff;font-family:ui-monospace,monospace;">state: q0</span>
+      </div>
+      <svg id="tmSvg" viewBox="0 0 720 340" style="width:100%;height:auto;background:#0a0d12;border-radius:6px;"></svg>
+      <p class="v3-caption" id="tmCaption">A unary increment machine. State q0 = scan right; q1 = write a 1 and finish; q_accept = done.</p>
+    </div>
+
+    <p>The transition table is just five rules. In words: "in q0, if you see a 1, leave it alone and move right; if you see a blank, switch to q1." "In q1, write a 1, move right, switch to q_accept." The whole machine fits in your head. Yet by composing more rules, you can get a Turing machine that adds, multiplies, computes square roots, runs a Python interpreter, or simulates your phone.</p>
+
+    <div class="callout">
+      <p><strong>Below the simulator</strong> is a second interactive figure: the complexity-class hierarchy. We'll get to that in section 8 — once we have the language to describe what it means.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="s5">5. Decidability — what computers can answer at all</h2>
+
+    <p>Now that we have a formal model, we can sort problems into three buckets.</p>
+
+    <ul>
+      <li><strong>Decidable.</strong> There exists a Turing machine that always halts and gives the correct yes/no answer. Examples: "Is $n$ prime?" "Does this regular expression match this string?" "Is this graph connected?" These are problems where you can write a guaranteed-terminating algorithm.</li>
+      <li><strong>Recognizable but not decidable.</strong> There exists a TM that accepts every yes-instance, but on no-instances it might loop forever. You'll get a "yes" eventually if there is one — but if the answer is no, you'll wait forever and never know.</li>
+      <li><strong>Not even recognizable.</strong> No TM accepts exactly the right set, no matter how clever you are.</li>
+    </ul>
+
+    <p>Two big surprises live in this taxonomy. The first is that the decidable problems are the rare ones in some precise sense: there are only countably many Turing machines (each is a finite description) but uncountably many languages over $\{0,1\}^*$, so by Cantor's diagonal argument <em>most</em> languages are not even recognizable. The second is that famous, natural problems live in the "not decidable" bucket. The most famous of all is the halting problem.</p>
+
+    <div class="callout math">
+      <span class="label">Counting argument</span>
+      <p>The set of Turing machines is countable: each TM is a finite string over a finite alphabet, and finite strings can be enumerated $1, 2, 3, \dots$ The set of all subsets of $\{0,1\}^*$ — that is, the set of all languages — has cardinality $2^{\aleph_0}$, strictly larger by Cantor's theorem. So the function "which language does this TM decide?" cannot possibly be onto. There must exist languages no TM decides. We don't even need to look at a specific one to know they exist.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="s6">6. The halting problem</h2>
+
+    <p>The halting problem asks: given the description of a Turing machine $M$ and an input $w$, will $M$ eventually halt on $w$, or will it run forever? Concretely: is there a single algorithm that, given any program and any input, can tell you whether the program will eventually finish?</p>
+
+    <p>The answer is no, and Turing proved it by contradiction in 1936. The proof is short and worth following carefully. It uses a self-reference trick — a program that is given its own source code as input. This is the trickiest paragraph on the page; read it twice if you need to.</p>
+
+    <p><strong>Step 1.</strong> Suppose for contradiction that there <em>is</em> a TM called $H$ that decides halting. That is, $H$ takes as input the description of any machine $M$ and any input $w$, always halts, and outputs:</p>
+
+    <div class="math-display">$$H(\langle M\rangle, w) = \begin{cases} \text{accept} & \text{if } M \text{ halts on } w \\ \text{reject} & \text{if } M \text{ loops forever on } w \end{cases}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">The hypothetical halting decider</p>
+      <dl>
+        <dt>$H$</dt><dd>A Turing machine we're imagining exists. The proof will show it can't.</dd>
+        <dt>$M$</dt><dd>An arbitrary Turing machine — the one we're asking about.</dd>
+        <dt>$\langle M\rangle$</dt><dd>The "encoding" of $M$ as a string. Since $M$ is a finite object, you can write its transition table as a string of 0s and 1s and feed it as input. This is the idea that makes self-reference possible — programs can take other programs as input, including themselves.</dd>
+        <dt>$w$</dt><dd>The input we want to know whether $M$ halts on.</dd>
+        <dt>"accept" / "reject"</dt><dd>$H$'s yes-or-no output. Crucially, $H$ <em>always</em> reaches one of them — that's what "decides" means.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why feed a program its own source code?</strong> Because we can. Compilers read source code. A halting checker would have to read source code. There's no rule against feeding it the source code of itself, just like there's no rule against pointing a video camera at its own monitor. The interesting question is what happens when you do.</p>
+    </div>
+
+    <p><strong>Step 2.</strong> Now build a new machine $D$ that takes the description of a TM $M$ as input. $D$ does the following:</p>
+
+    <ol>
+      <li>Run $H$ on input $(\langle M\rangle, \langle M\rangle)$. (That is, ask "does $M$ halt when given itself as input?")</li>
+      <li>If $H$ says "accept" — meaning $M$ does halt on its own description — then $D$ deliberately enters an infinite loop.</li>
+      <li>If $H$ says "reject" — meaning $M$ loops forever on its own description — then $D$ halts immediately.</li>
+    </ol>
+
+    <p>$D$ is perfectly constructible. It's just a wrapper around $H$ with a small if-else. Since $H$ is total (always halts), $D$ either halts or loops forever, depending on what $H$ said.</p>
+
+    <p><strong>Step 3.</strong> Now run $D$ on its own description: ask "what does $D(\langle D\rangle)$ do?"</p>
+
+    <div class="math-display">$$D(\langle D\rangle) \text{ halts} \iff H(\langle D\rangle, \langle D\rangle) = \text{reject} \iff D \text{ loops forever on } \langle D\rangle$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">The contradiction</p>
+      <dl>
+        <dt>$D(\langle D\rangle) \text{ halts}$</dt><dd>The literal claim "this run of $D$ on input $\langle D\rangle$ eventually finishes."</dd>
+        <dt>$\iff$</dt><dd>"If and only if." The two sides are logically equivalent.</dd>
+        <dt>$H(\langle D\rangle, \langle D\rangle) = \text{reject}$</dt><dd>By construction of $D$, the only way $D$ halts on input $\langle D\rangle$ is if its internal call to $H$ returned "reject."</dd>
+        <dt>$D \text{ loops forever on } \langle D\rangle$</dt><dd>By the assumed correctness of $H$, $H$ rejects $(\langle D\rangle, \langle D\rangle)$ exactly when $D$ does not halt on input $\langle D\rangle$. Which is the opposite of what we started with.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>The squeeze.</strong> "$D$ halts on its own description" turns out to be equivalent to "$D$ does not halt on its own description." That is a contradiction in two short steps. The only assumption we made was that $H$ exists. So $H$ doesn't exist. The halting problem is undecidable.</p>
+    </div>
+
+    <p>If this feels like a magic trick, it's because it is one — the same magic trick Cantor used to show real numbers outnumber integers, and the same trick Gödel used to show some true statements about arithmetic can't be proved. The recipe: assume a complete-and-perfect oracle exists, build an object that asks the oracle about itself, then arrange that the object disagrees with whatever the oracle says. The oracle can't survive that.</p>
+
+    <div class="callout warn">
+      <p><strong>What this does and doesn't say.</strong> It does <em>not</em> say "we can never tell whether any specific program halts." For most actual programs you encounter, you can tell. Compilers do termination analysis on loops every day. What it says is that <em>no single algorithm</em> works for every program. For any halting checker you write, there is some adversarial program designed to break it. The undecidability is about the impossibility of a uniform solution, not about your specific Friday-afternoon code review.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="s7">7. Reductions — the tool for comparing problems</h2>
+
+    <p>We just showed one problem (halting) is undecidable. How do we show <em>other</em> problems are also undecidable, without redoing the diagonal argument every time? The answer is reductions, which are also the central tool of complexity theory. They're how problems get compared.</p>
+
+    <p>The slogan: <strong>"if I could solve B, I could solve A."</strong> A reduction from A to B is a way of converting any instance of A into an instance of B such that the answer to B tells you the answer to A. If reductions exist in both directions, A and B are essentially the same problem in different costumes.</p>
+
+    <div class="defn">
+      <p><strong>Many-one reduction (computability flavor).</strong> Problem $A$ reduces to problem $B$ — written $A \le_m B$ — if there's a computable function $f$ such that for every input $x$, $x \in A$ if and only if $f(x) \in B$. So you take an instance of $A$, run $f$ on it to get an instance of $B$, and you've translated the question. If you have a solver for $B$, the composition $\text{Solver}_B \circ f$ solves $A$.</p>
+    </div>
+
+    <p>The contrapositive is the workhorse. If $A \le_m B$ and $A$ is undecidable, then $B$ is undecidable too — because if you could decide $B$, you'd decide $A$, which you can't. So if you want to show some new problem $B$ is undecidable, you reduce halting (or some other known undecidable problem) <em>to</em> $B$. This is how every other undecidability proof in the field works.</p>
+
+    <p>Example: "does this program ever print the word 'hello'?" is undecidable. To show this, take any halting question "does $M$ halt on $w$?" and transform it into "does the modified program $M'$ ever print 'hello'?" — where $M'$ is $M$ with a print('hello') statement added at the very end. $M'$ prints 'hello' if and only if $M$ halts. If we could decide the print question, we could decide halting, which we can't. So the print question is undecidable too.</p>
+
+    <p>For complexity theory, we use a stricter version:</p>
+
+    <div class="defn">
+      <p><strong>Polynomial-time reduction.</strong> $A \le_p B$ if the function $f$ above can be computed in time polynomial in the size of $x$. The "polynomial" matters because reductions are how we compare problems for <em>efficiency</em>. A reduction that takes exponential time is too expensive to use as evidence that two problems are the same difficulty.</p>
+    </div>
+
+    <p>A polynomial-time reduction lets you say: if $B$ has a polynomial-time algorithm, then so does $A$ (just compose the reduction with $B$'s solver — polynomial composed with polynomial is still polynomial). And contrapositively, if $A$ is hard, then so is $B$. This is the engine that powers the next several sections.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="s8">8. Complexity classes — sorting problems by difficulty</h2>
+
+    <p>Inside the world of decidable problems, we sort by how much resource (time or space) they need. A complexity class is just a name for a set of problems that share a resource bound. The famous ones, in roughly increasing order:</p>
+
+    <ul>
+      <li><strong>P</strong> — decidable in polynomial time on a deterministic TM. "Tractable" by convention.</li>
+      <li><strong>NP</strong> — decidable in polynomial time on a <em>nondeterministic</em> TM, or equivalently, problems whose yes-answers can be verified in polynomial time given a hint.</li>
+      <li><strong>co-NP</strong> — problems whose <em>no</em>-answers can be verified in polynomial time. The complements of NP problems.</li>
+      <li><strong>PSPACE</strong> — decidable using polynomial space (memory), regardless of how much time it takes.</li>
+      <li><strong>EXPTIME</strong> — decidable in time $2^{\text{poly}(n)}$.</li>
+      <li><strong>NEXPTIME</strong> — nondeterministic version of EXPTIME.</li>
+      <li><strong>EXPSPACE</strong> — exponential space.</li>
+    </ul>
+
+    <p>What we know about how they fit together:</p>
+
+    <div class="math-display">$$\text{P} \subseteq \text{NP} \subseteq \text{PSPACE} \subseteq \text{EXPTIME} \subseteq \text{NEXPTIME} \subseteq \text{EXPSPACE}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">The complexity tower</p>
+      <dl>
+        <dt>$\subseteq$</dt><dd>"Is a subset of." Every problem in the smaller class is also in the larger one. Reading left to right: a polynomial-time algorithm is a special case of an NP algorithm (just ignore the hint), which is a special case of a PSPACE algorithm, and so on.</dd>
+        <dt>P</dt><dd>The class we believe corresponds to "can be solved in practice." Polynomial time covers $n$, $n^2$, $n^{100}$ — the constant in the exponent doesn't matter for the definition.</dd>
+        <dt>NP</dt><dd>"Nondeterministic Polynomial." Not "non-polynomial." A common confusion. NP is about being checkable in polynomial time, not about being unsolvable in polynomial time.</dd>
+        <dt>PSPACE</dt><dd>Anything you can do with a polynomial-sized scratchpad, given unbounded time. Surprisingly powerful — chess endgame analysis lives here.</dd>
+        <dt>EXPTIME</dt><dd>Exponential time: $2^n$, $2^{n^2}$, etc. Generalized chess on an $n \times n$ board lives here.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Strict or not?</strong> Most of those $\subseteq$s could in principle be $=$. We know for sure that $\text{P} \subsetneq \text{EXPTIME}$ (by the time hierarchy theorem in section 16) and $\text{NP} \subsetneq \text{NEXPTIME}$. But P vs NP, NP vs PSPACE, PSPACE vs EXPTIME — every adjacent pair you'd actually want to compare — are open. Almost everyone believes the inclusions are strict, but no one can prove it.</p>
+    </div>
+
+    <p>Below is an interactive view of the inclusion chain. Click any class to see canonical problems known to live in it (and not, as far as we know, in any smaller class).</p>
+
+    <div class="viz-3d">
+      <div class="v3-controls">
+        <span class="v3-label">Click a class:</span>
+        <span id="ccLabel" style="color:#63b3ff;font-family:ui-monospace,monospace;">P — polynomial time</span>
+      </div>
+      <svg id="ccSvg" viewBox="0 0 720 340" style="width:100%;height:auto;background:#0a0d12;border-radius:6px;"></svg>
+      <p class="v3-caption" id="ccCaption">P is the smallest, EXPSPACE the largest. Each ring contains everything inside it. Hover or click to see which class a problem belongs to.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="s9">9. P vs NP</h2>
+
+    <p>This is the centerpiece. Two equivalent definitions of NP, both worth memorizing.</p>
+
+    <p><strong>Definition 1 (verifier model).</strong> A language $L$ is in NP if there exists a polynomial-time verifier $V$ and a polynomial $p$ such that for every input $x$:</p>
+
+    <div class="math-display">$$x \in L \iff \exists\, c \in \{0,1\}^{p(|x|)} \text{ such that } V(x, c) = \text{accept}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">NP via verifiers</p>
+      <dl>
+        <dt>$L$</dt><dd>The language (set of yes-instances) we're trying to recognize.</dd>
+        <dt>$x$</dt><dd>An input string. $|x|$ is its length in symbols.</dd>
+        <dt>$c$</dt><dd>The "certificate" or "witness" — a hint that proves $x$ is a yes-instance. Crucially, $c$ has length bounded by some polynomial $p$ in $|x|$, so it's not too big to read in polynomial time.</dd>
+        <dt>$V(x, c)$</dt><dd>The verifier — a polynomial-time deterministic algorithm that checks whether $c$ really proves $x \in L$.</dd>
+        <dt>$\exists$</dt><dd>"There exists." We're saying $x$ is a yes-instance exactly when <em>some</em> short certificate exists that the verifier accepts.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Plain English.</strong> A problem is in NP if, when the answer is "yes," somebody can hand you a short proof and you can quickly check it. Sudoku: a filled-in grid is the certificate, and "is this grid valid?" is a fast check. Factoring: the prime factors are the certificate, and multiplying them back together is the check. Graph 3-coloring: the coloring is the certificate, and "does any edge have two same-colored endpoints?" is the check.</p>
+    </div>
+
+    <p><strong>Definition 2 (nondeterministic TM).</strong> Equivalently, NP is the set of languages decided in polynomial time by a <em>nondeterministic</em> Turing machine — a TM whose transition function $\delta$ can return a <em>set</em> of next moves rather than a single one. The machine accepts if <em>any</em> sequence of choices leads to an accept state. Think of it as a TM that magically guesses the right move at every fork.</p>
+
+    <p>The two definitions are equivalent because the nondeterministic guesses are exactly the certificate $c$ — you can write down the sequence of guesses as a binary string of polynomial length, and a deterministic verifier can replay them.</p>
+
+    <p><strong>P</strong> is the much smaller-feeling cousin: a problem is in P if you can <em>find</em> the answer in polynomial time, not just check it. Multiplying two numbers, sorting a list, deciding whether a graph is connected — all in P.</p>
+
+    <div class="defn">
+      <p><strong>The P vs NP question.</strong> Is every problem whose solution can be quickly verified also one whose solution can be quickly found? Does $\text{P} = \text{NP}$?</p>
+    </div>
+
+    <p>Almost everyone in the field believes the answer is no — that there are problems for which checking is fundamentally easier than finding. But after fifty years of trying, no one has a proof in either direction. The question is one of the seven Clay Millennium Problems; a correct proof is worth a million dollars and a Fields Medal in spirit if not in fact (the medal has an age cutoff).</p>
+
+    <div class="callout">
+      <p><strong>Why everyone thinks P ≠ NP.</strong> If P = NP, then SAT, traveling salesman, graph coloring, integer programming, protein folding, and most of cryptography would all collapse to polynomial time. We'd have spent decades not finding fast algorithms for any of them. You can read that as either "we haven't tried hard enough" or "they really don't exist." Most theorists go with the second.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="s10">10. NP-completeness</h2>
+
+    <p>Some problems in NP are at least as hard as <em>every other</em> problem in NP. They are called NP-complete. Formally:</p>
+
+    <div class="defn">
+      <p>A problem $B$ is <strong>NP-hard</strong> if every problem $A \in \text{NP}$ reduces to it in polynomial time: $A \le_p B$. It is <strong>NP-complete</strong> if it is both NP-hard and itself in NP. NP-complete problems are the hardest problems in NP — if any one of them is in P, then all of NP is in P, so P = NP.</p>
+    </div>
+
+    <p>For this definition to be useful, we need at least one problem to <em>be</em> NP-complete, so that future proofs can reduce <em>from</em> it. The first one was found by Stephen Cook in 1971 (and independently by Leonid Levin). Their result is the Cook-Levin theorem:</p>
+
+    <div class="callout math">
+      <span class="label">Cook-Levin (1971)</span>
+      <p>The Boolean satisfiability problem SAT is NP-complete. SAT asks: given a Boolean formula like $(x_1 \lor \neg x_2 \lor x_3) \land (\neg x_1 \lor x_2)$, is there an assignment of true/false values to the variables that makes the formula evaluate to true?</p>
+    </div>
+
+    <p>The proof of Cook-Levin is a tour de force: take any nondeterministic TM that runs in polynomial time, and encode its entire computation tableau (every cell of the tape at every time step) as a giant Boolean formula whose satisfying assignments are exactly the accepting computation paths. Since every NP problem can be decided by such a TM, every NP problem reduces to SAT. SAT is at least as hard as anything in NP.</p>
+
+    <p>Once you have one NP-complete problem, you get more by reduction. If you reduce SAT to your favorite problem $X$ in polynomial time, then $X$ is NP-hard too. And if $X$ is also in NP, it's NP-complete. Within a year of Cook-Levin, Richard Karp published a paper showing 21 problems are NP-complete by chains of reductions from SAT — the famous "Karp's 21." That paper is the reason most computer scientists believe NP-completeness is everywhere.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="s11">11. Canonical NP-complete problems</h2>
+
+    <p>The standard list. You will recognize most of these from real life.</p>
+
+    <ul>
+      <li><strong>SAT</strong> — Boolean satisfiability. Already discussed.</li>
+      <li><strong>3-SAT</strong> — SAT restricted to clauses of exactly 3 literals. Still NP-complete. Surprisingly, 2-SAT is in P.</li>
+      <li><strong>3-COLOR</strong> — given a graph, can the vertices be colored with 3 colors so no edge has both endpoints the same color? 2-COLOR is in P (it's just bipartiteness); 3-COLOR is NP-complete.</li>
+      <li><strong>HAMILTONIAN CYCLE</strong> — does a graph have a cycle that visits every vertex exactly once?</li>
+      <li><strong>TSP (decision version)</strong> — does the traveling salesman have a tour of length $\le k$?</li>
+      <li><strong>SUBSET SUM</strong> — given integers $\{a_1, \dots, a_n\}$ and a target $T$, is there a subset that sums to $T$?</li>
+      <li><strong>VERTEX COVER</strong> — given a graph, is there a set of $\le k$ vertices that touches every edge?</li>
+      <li><strong>CLIQUE</strong> — does a graph contain a clique (fully connected subset) of size $\ge k$?</li>
+      <li><strong>INDEPENDENT SET</strong> — does a graph contain an independent set of size $\ge k$? (Equivalent to CLIQUE on the complement graph.)</li>
+      <li><strong>KNAPSACK</strong> — pack items into a bag with weight limit and a value target.</li>
+      <li><strong>BIN PACKING</strong> — fit items into the fewest bins possible.</li>
+    </ul>
+
+    <p>Let's slow down on one reduction so you can see how the trick works. We'll show <strong>3-SAT $\le_p$ 3-COLOR</strong>: if you had a fast 3-COLOR solver, you could solve 3-SAT fast, by encoding any 3-SAT formula as a graph that is 3-colorable iff the formula is satisfiable.</p>
+
+    <div class="defn">
+      <p><strong>The reduction (sketch).</strong> Use three special "color" vertices $T$, $F$, $X$ joined as a triangle, so they must take all three different colors in any valid 3-coloring. Call those colors True, False, and Other. For each variable $v_i$, add two vertices $v_i$ and $\neg v_i$ connected to each other and to $X$. The triangle $\{v_i, \neg v_i, X\}$ forces $v_i$ and $\neg v_i$ to take the True/False colors in opposite assignments — exactly the "a variable is true or false but not both" structure. For each 3-SAT clause $(\ell_1 \lor \ell_2 \lor \ell_3)$, attach a small "OR gadget" of six extra vertices that is 3-colorable if and only if at least one of $\ell_1, \ell_2, \ell_3$ has color True. The whole graph is 3-colorable exactly when the formula is satisfiable.</p>
+    </div>
+
+    <p>That's a lot to take in the first time. The key intuition: the gadget for each clause acts like a tiny puzzle that can only be solved if at least one literal in the clause is true. The variable gadget guarantees consistent truth assignments. Stack everything together and you get a graph whose colorability mirrors the formula's satisfiability.</p>
+
+    <p>Reductions like this are the everyday work of complexity theory. They're confusing the first time. They're confusing the fifth time. The skill develops from doing them by hand. Sipser's textbook (linked at the bottom) walks through several in detail.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="s12">12. Why P vs NP matters</h2>
+
+    <p>The question matters because the NP-complete problems are everywhere in real applications and we strongly suspect they're irreducibly hard. If P = NP, the world looks one way; if P ≠ NP, it looks very different.</p>
+
+    <p><strong>If P = NP:</strong></p>
+    <ul>
+      <li>Most modern cryptography breaks. RSA, elliptic curves, and the discrete log all rest on the hardness of problems in NP. A polynomial-time SAT solver would crack them. Bitcoin would be a curiosity.</li>
+      <li>Every optimization problem you care about — scheduling, routing, packing, assignment — would have an efficient exact solver. No more heuristics.</li>
+      <li>Theorem proving becomes mostly automated: "is there a proof of length $\le n$?" is in NP, and a fast SAT solver would find it. Mathematics becomes weirdly mechanical.</li>
+      <li>Protein folding from sequence becomes tractable in the exact sense, not just the AlphaFold sense.</li>
+    </ul>
+
+    <p><strong>If P ≠ NP</strong> (the assumed-true case):</p>
+    <ul>
+      <li>We can confidently say "this problem is hard" about thousands of important problems and stop looking for clever fast exact algorithms.</li>
+      <li>Cryptography survives — the hardness of factoring and similar problems is consistent with P ≠ NP.</li>
+      <li>We're forced to use heuristics, approximation algorithms, and special-case methods. The next two sections are the standard escape hatches.</li>
+    </ul>
+
+    <div class="callout warn">
+      <p><strong>Subtlety.</strong> Even if P = NP, the polynomial in question might be $n^{100}$ with a constant of $10^{50}$. Theoretically efficient does not mean practically efficient. Conversely, even if P ≠ NP, many NP-complete problems have algorithms that are fast enough <em>in practice</em> on the instances people care about — modern SAT solvers handle problems with millions of variables. The theoretical worst case is not the same as the typical case.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="s13">13. Approximation algorithms</h2>
+
+    <p>For NP-hard <em>optimization</em> problems (find the minimum-cost tour, the largest independent set, the minimum vertex cover), we often settle for an approximate answer: not the optimum, but provably close to it. The quality is measured by the <strong>approximation ratio</strong>:</p>
+
+    <div class="math-display">$$\rho = \max_x \frac{\text{ALG}(x)}{\text{OPT}(x)}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Approximation ratio</p>
+      <dl>
+        <dt>$\rho$</dt><dd>The approximation ratio. For minimization problems, $\rho \ge 1$; smaller is better. $\rho = 1.5$ means the algorithm's answer is at most 50% worse than optimal.</dd>
+        <dt>$\text{ALG}(x)$</dt><dd>The cost of the solution returned by your algorithm on input $x$.</dd>
+        <dt>$\text{OPT}(x)$</dt><dd>The cost of the true optimal solution on input $x$ — what you'd find with unlimited time.</dd>
+        <dt>$\max_x$</dt><dd>The maximum over all inputs. Approximation ratios are worst-case guarantees.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>The point.</strong> Even if you can't find the best answer in polynomial time, you can sometimes find an answer that's provably within a factor of 2 or 1.5 or even $1 + \epsilon$ of optimal, in polynomial time. That's often enough for practice.</p>
+    </div>
+
+    <p><strong>Example: 2-approximation for Vertex Cover.</strong> Vertex Cover is NP-hard, but here is a stupidly simple 2-approximation:</p>
+
+    <ol>
+      <li>Repeatedly pick any uncovered edge $(u, v)$.</li>
+      <li>Add <em>both</em> $u$ and $v$ to your cover.</li>
+      <li>Remove all edges touching $u$ or $v$.</li>
+      <li>Repeat until no edges remain.</li>
+    </ol>
+
+    <p>Why is this within a factor of 2? Every edge you picked must have at least one endpoint in the optimal cover (since the optimum covers all edges). You added both endpoints, so for each "essential" optimum vertex you spent at most 2 of your own. The worst you can do is 2× optimal. That's a worst-case guarantee with no tuning, no randomness, no parameters.</p>
+
+    <p>Different problems have wildly different approximation behavior. TSP on a metric (where distances satisfy the triangle inequality) has a $\rho = 3/2$ algorithm by Christofides. General TSP can't be approximated within <em>any</em> constant unless P = NP. MAX-3-SAT has a $\rho = 8/7$ algorithm. The PCP theorem (a deep result from 1992) says many problems can't be approximated within better than some constant, ever.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="s14">14. Randomized complexity</h2>
+
+    <p>What if your algorithm is allowed to flip coins? Sometimes a random choice works dramatically better than any deterministic strategy. This gives rise to randomized complexity classes:</p>
+
+    <ul>
+      <li><strong>BPP</strong> (Bounded-error Probabilistic Polynomial). Decided in polynomial time by a randomized algorithm with error probability at most $1/3$ on every input. You can drive the error down to any $\epsilon > 0$ by repetition, so $1/3$ is not the real number — it's just chosen to be obviously less than $1/2$.</li>
+      <li><strong>RP</strong> (Randomized Polynomial). One-sided error: yes-instances are accepted with probability $\ge 1/2$, no-instances are always rejected. If the algorithm says "yes," it's certainly yes; if it says "no," maybe.</li>
+      <li><strong>co-RP</strong> — the symmetric class with the error on the no-side instead.</li>
+      <li><strong>ZPP</strong> (Zero-error Probabilistic Polynomial). Always correct, but the running time is polynomial only in expectation.</li>
+    </ul>
+
+    <p>Examples to anchor these:</p>
+
+    <ul>
+      <li><strong>Quicksort with a random pivot</strong> — the pivot choice is random; running time is $O(n \log n)$ in expectation but $O(n^2)$ worst case. A ZPP-style algorithm (always returns the right sort, expected polynomial time).</li>
+      <li><strong>Miller-Rabin primality test</strong> — randomized primality check. For decades it was a co-RP algorithm beating any deterministic alternative. (In 2002 the AKS algorithm showed primality is in P, removing the need for randomness — but Miller-Rabin is still faster in practice.)</li>
+      <li><strong>Polynomial identity testing</strong> — given two huge polynomial expressions, are they equal? Plug in random values and check. Trivially in BPP (well, co-RP). Whether it's in P is open.</li>
+    </ul>
+
+    <p>The big question in randomized complexity is whether randomness <em>actually helps</em>. For decades it looked like BPP might be strictly larger than P. But starting in the 1990s, derandomization results piled up: under reasonable hardness assumptions, $\text{P} = \text{BPP}$. Most theorists now believe the equality holds, even though it's not proven. The intuitive picture: pseudo-random generators are good enough that "real" randomness rarely buys you more than constant-factor speedup.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="s15">15. Quantum, briefly</h2>
+
+    <p>What if your algorithm can manipulate quantum amplitudes? You get a new class.</p>
+
+    <ul>
+      <li><strong>BQP</strong> (Bounded-error Quantum Polynomial). The quantum analog of BPP — problems decidable in polynomial time by a quantum computer with error probability at most $1/3$.</li>
+    </ul>
+
+    <p>BQP contains P, and is contained in PSPACE. Whether it's strictly larger than P is open in the same way P vs NP is open. BQP also has an unclear relationship to NP — it is widely believed that BQP and NP are incomparable, neither contained in the other.</p>
+
+    <p>Two famous problems where quantum gives an exponential or nearly-exponential speedup:</p>
+
+    <ul>
+      <li><strong>Shor's algorithm (1994)</strong> — factor an $n$-bit integer in time $O(n^3)$. The best known classical algorithm takes time roughly $2^{n^{1/3}}$. If a large enough quantum computer ever gets built, RSA dies. This is the original reason post-quantum cryptography matters.</li>
+      <li><strong>Grover's algorithm (1996)</strong> — search an unsorted database of $N$ items in $O(\sqrt N)$ queries instead of $O(N)$. Quadratic speedup, not exponential, but it applies to a much wider range of problems including (somewhat) NP-complete ones. Grover gives you a $2^{n/2}$-time SAT solver instead of $2^n$, which is meaningful but does not collapse anything.</li>
+    </ul>
+
+    <div class="callout">
+      <p><strong>What quantum doesn't do.</strong> Quantum computers are not magic NP solvers. The general consensus is BQP does not contain NP — Grover is the best general quantum speedup we expect for NP problems, and it's quadratic, not exponential. Quantum specifically helps with structured problems like factoring, discrete log, and certain simulation tasks. It does not give you a free pass on the entire NP-completeness wall.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="s16">16. Other interesting classes — and a real theorem</h2>
+
+    <p>Some classes worth knowing the names of, even if you never use them:</p>
+
+    <ul>
+      <li><strong>L</strong> — logarithmic space. Tiny, but enough to decide things like graph reachability in undirected graphs (a result from 2004).</li>
+      <li><strong>NL</strong> — nondeterministic logspace. Directed graph reachability lives here. NL is closed under complement (Immerman-Szelepcsényi, 1987 — a surprising result).</li>
+      <li><strong>#P</strong> — counting. Instead of "does a 3-SAT formula have a solution?" the #P version asks "how many solutions does it have?" Counting is at least as hard as deciding and often strictly harder.</li>
+      <li><strong>PH</strong> — the polynomial hierarchy. Generalizes NP and co-NP into an infinite tower of classes built by alternating $\exists$ and $\forall$ quantifiers. Collapsing any level of PH is a famous open problem.</li>
+      <li><strong>PSPACE-complete</strong> problems include generalized chess, Go, and quantified Boolean formulas (QBF).</li>
+      <li><strong>EXPTIME-complete</strong> problems include generalized chess on an $n \times n$ board (yes, both — chess is PSPACE-complete or EXPTIME-complete depending on the rule for draws).</li>
+    </ul>
+
+    <p>One thing we <em>can</em> prove cleanly: more time really does let you solve more problems.</p>
+
+    <div class="callout math">
+      <span class="label">Time hierarchy theorem (Hartmanis-Stearns, 1965)</span>
+      <p>If $f$ and $g$ are time-constructible and $f(n) \log f(n) = o(g(n))$, then $\text{DTIME}(f(n)) \subsetneq \text{DTIME}(g(n))$. In English: there are problems that can be solved in $O(g(n))$ time that genuinely cannot be solved in $O(f(n))$ time. As a corollary, $\text{P} \subsetneq \text{EXPTIME}$ — proven, no asterisks.</p>
+    </div>
+
+    <p>This is one of the few "X is strictly harder than Y" statements we have a real proof of. The proof also uses diagonalization — building a problem that explicitly defeats every $f(n)$-time machine. It does not extend to P vs NP because nondeterminism breaks the diagonalization step in subtle ways. Which is why P vs NP is so much harder than it looks.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="s17">17. Oracles and relativization</h2>
+
+    <p>There's a deep methodological point worth knowing. In 1975 Baker, Gill, and Solovay proved a result that explains why P vs NP has resisted attack for so long. They constructed two oracles — imaginary devices a Turing machine can consult for free — such that:</p>
+
+    <ul>
+      <li>Relative to oracle $A$, $\text{P}^A = \text{NP}^A$.</li>
+      <li>Relative to oracle $B$, $\text{P}^B \ne \text{NP}^B$.</li>
+    </ul>
+
+    <p>Why does this matter? Because most proof techniques in complexity theory <em>relativize</em> — they go through unchanged when you add an oracle to both sides. Diagonalization, in particular, relativizes. Baker-Gill-Solovay tells us: any proof of P vs NP that relativizes must give different answers depending on the oracle, which is inconsistent with proving P = NP or P ≠ NP unconditionally. So any actual proof of P vs NP <em>cannot</em> relativize — it has to be sensitive to the internal structure of computations in a way diagonalization isn't.</p>
+
+    <div class="callout warn">
+      <p><strong>The current state of barriers.</strong> Beyond relativization, two more barriers have been identified: the "natural proofs" barrier (Razborov-Rudich, 1994) and the "algebrization" barrier (Aaronson-Wigderson, 2008). Together they rule out almost every proof technique we know how to use. A successful resolution of P vs NP will need to invent something genuinely new.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="s18">18. Source code</h2>
+
+    <p>Two pieces of working Python: a Turing machine simulator (the same one as the SVG above, but in code), and a small recursive SAT solver demonstrating the brute-force baseline that polynomial-time algorithms try to beat.</p>
+
+    <div class="code-tabs" id="ct-tcs">
+      <div class="ct-header">
+        <button class="ct-tab active" data-tab="tm">Turing machine simulator</button>
+        <button class="ct-tab" data-tab="sat">Brute-force SAT</button>
+        <button class="ct-tab" data-tab="red">3-SAT to clauses</button>
+        <span class="ct-label">Python · pedagogical, not optimized</span>
+      </div>
+
+      <div class="ct-panel active" data-tab="tm"><pre><code><span class="cmt"># A Turing machine that increments a unary number.</span>
+<span class="cmt"># Input: '1111' (= 4 in unary). Output: '11111'.</span>
+
+<span class="kw">class</span> <span class="fn">TM</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, transitions, start, accept, reject, blank=<span class="str">'_'</span>):
+        self.delta  = transitions   <span class="cmt"># dict (state, symbol) -> (state, symbol, dir)</span>
+        self.state  = start
+        self.accept = accept
+        self.reject = reject
+        self.blank  = blank
+        self.tape   = []
+        self.head   = <span class="num">0</span>
+
+    <span class="kw">def</span> <span class="fn">load</span>(self, input_string):
+        self.tape  = <span class="fn">list</span>(input_string) + [self.blank] * <span class="num">10</span>
+        self.head  = <span class="num">0</span>
+
+    <span class="kw">def</span> <span class="fn">step</span>(self):
+        <span class="kw">if</span> self.state <span class="kw">in</span> (self.accept, self.reject):
+            <span class="kw">return</span> <span class="kw">False</span>
+        symbol = self.tape[self.head]
+        key = (self.state, symbol)
+        <span class="kw">if</span> key <span class="kw">not</span> <span class="kw">in</span> self.delta:
+            self.state = self.reject
+            <span class="kw">return</span> <span class="kw">False</span>
+        new_state, new_symbol, direction = self.delta[key]
+        self.tape[self.head] = new_symbol
+        self.state = new_state
+        <span class="kw">if</span> direction == <span class="str">'R'</span>:
+            self.head += <span class="num">1</span>
+            <span class="kw">if</span> self.head &gt;= <span class="fn">len</span>(self.tape):
+                self.tape.<span class="fn">append</span>(self.blank)
+        <span class="kw">elif</span> direction == <span class="str">'L'</span>:
+            self.head = <span class="fn">max</span>(<span class="num">0</span>, self.head - <span class="num">1</span>)
+        <span class="kw">return</span> <span class="kw">True</span>
+
+    <span class="kw">def</span> <span class="fn">run</span>(self, max_steps=<span class="num">1000</span>):
+        <span class="kw">for</span> _ <span class="kw">in</span> <span class="fn">range</span>(max_steps):
+            <span class="kw">if</span> <span class="kw">not</span> self.<span class="fn">step</span>():
+                <span class="kw">break</span>
+        <span class="kw">return</span> self.state == self.accept, <span class="str">''</span>.<span class="fn">join</span>(self.tape).<span class="fn">rstrip</span>(self.blank)
+
+<span class="cmt"># Unary increment: walk right past all 1s, then write one more 1.</span>
+delta = {
+    (<span class="str">'q0'</span>, <span class="str">'1'</span>): (<span class="str">'q0'</span>, <span class="str">'1'</span>, <span class="str">'R'</span>),   <span class="cmt"># keep scanning right</span>
+    (<span class="str">'q0'</span>, <span class="str">'_'</span>): (<span class="str">'q1'</span>, <span class="str">'_'</span>, <span class="str">'L'</span>),   <span class="cmt"># found the end, prep to write</span>
+    (<span class="str">'q1'</span>, <span class="str">'1'</span>): (<span class="str">'q2'</span>, <span class="str">'1'</span>, <span class="str">'R'</span>),   <span class="cmt"># step back onto last 1</span>
+    (<span class="str">'q2'</span>, <span class="str">'_'</span>): (<span class="str">'qA'</span>, <span class="str">'1'</span>, <span class="str">'R'</span>),   <span class="cmt"># write the new 1, accept</span>
+}
+
+machine = <span class="fn">TM</span>(delta, start=<span class="str">'q0'</span>, accept=<span class="str">'qA'</span>, reject=<span class="str">'qR'</span>)
+machine.<span class="fn">load</span>(<span class="str">'1111'</span>)
+ok, tape = machine.<span class="fn">run</span>()
+<span class="fn">print</span>(<span class="str">f"accepted={ok}, tape={tape!r}"</span>)
+<span class="cmt"># accepted=True, tape='11111'</span>
+</code></pre></div>
+
+      <div class="ct-panel" data-tab="sat"><pre><code><span class="cmt"># Brute-force SAT solver. Exponential in the number of variables.</span>
+<span class="cmt"># This is the dumbest possible algorithm; it's the baseline a polynomial-time</span>
+<span class="cmt"># SAT solver (which would prove P = NP) would have to beat in the worst case.</span>
+
+<span class="kw">from</span> itertools <span class="kw">import</span> product
+
+<span class="kw">def</span> <span class="fn">evaluate</span>(formula, assignment):
+    <span class="cmt"># formula is a list of clauses; each clause is a list of literals.</span>
+    <span class="cmt"># A literal is an int: 3 means x_3, -3 means NOT x_3.</span>
+    <span class="kw">for</span> clause <span class="kw">in</span> formula:
+        satisfied = <span class="kw">False</span>
+        <span class="kw">for</span> lit <span class="kw">in</span> clause:
+            v = <span class="fn">abs</span>(lit)
+            value = assignment[v - <span class="num">1</span>] <span class="kw">if</span> lit &gt; <span class="num">0</span> <span class="kw">else</span> <span class="kw">not</span> assignment[v - <span class="num">1</span>]
+            <span class="kw">if</span> value:
+                satisfied = <span class="kw">True</span>
+                <span class="kw">break</span>
+        <span class="kw">if</span> <span class="kw">not</span> satisfied:
+            <span class="kw">return</span> <span class="kw">False</span>
+    <span class="kw">return</span> <span class="kw">True</span>
+
+<span class="kw">def</span> <span class="fn">brute_force_sat</span>(formula, n_vars):
+    <span class="kw">for</span> assignment <span class="kw">in</span> <span class="fn">product</span>([<span class="kw">False</span>, <span class="kw">True</span>], repeat=n_vars):
+        <span class="kw">if</span> <span class="fn">evaluate</span>(formula, assignment):
+            <span class="kw">return</span> <span class="fn">list</span>(assignment)
+    <span class="kw">return</span> <span class="kw">None</span>
+
+<span class="cmt"># Example: (x1 OR NOT x2) AND (NOT x1 OR x2 OR x3) AND (NOT x3)</span>
+formula = [
+    [<span class="num">1</span>, -<span class="num">2</span>],
+    [-<span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>],
+    [-<span class="num">3</span>],
+]
+<span class="fn">print</span>(<span class="fn">brute_force_sat</span>(formula, n_vars=<span class="num">3</span>))
+<span class="cmt"># [False, False, False]  -- one valid assignment</span>
+
+<span class="cmt"># For n_vars = 30, this loop is 2^30 = 1 billion iterations.</span>
+<span class="cmt"># For n_vars = 100, it's 2^100, which is hopeless. Modern SAT solvers use</span>
+<span class="cmt"># conflict-driven clause learning, watched literals, and a hundred other</span>
+<span class="cmt"># tricks to skip most of the search tree. But the worst case is still 2^n.</span>
+</code></pre></div>
+
+      <div class="ct-panel" data-tab="red"><pre><code><span class="cmt"># A small reduction sketch: convert any 3-SAT instance into a graph</span>
+<span class="cmt"># for 3-COLOR. We build the gadgets described in section 11.</span>
+<span class="cmt"># This is illustrative; production reductions handle edge cases.</span>
+
+<span class="kw">def</span> <span class="fn">three_sat_to_three_color</span>(clauses, n_vars):
+    <span class="cmt"># Returns a graph as an edge list, plus a label dict for inspection.</span>
+    edges = []
+    labels = {}
+    <span class="cmt"># Palette triangle: True, False, Other</span>
+    T, F, X = <span class="str">'T'</span>, <span class="str">'F'</span>, <span class="str">'X'</span>
+    edges += [(T, F), (F, X), (X, T)]
+    <span class="kw">for</span> name <span class="kw">in</span> (T, F, X): labels[name] = name
+
+    <span class="cmt"># Variable gadgets: v_i and not v_i form a triangle with X</span>
+    <span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(<span class="num">1</span>, n_vars + <span class="num">1</span>):
+        v  = <span class="str">f'v{i}'</span>
+        nv = <span class="str">f'~v{i}'</span>
+        edges += [(v, nv), (v, X), (nv, X)]
+        labels[v]  = <span class="fn">f'</span>x_{i}<span class="fn">'</span>
+        labels[nv] = <span class="fn">f'</span>¬x_{i}<span class="fn">'</span>
+
+    <span class="cmt"># Clause gadgets: a 6-vertex OR gadget is connected to the three literal</span>
+    <span class="cmt"># vertices and to F so that 3-coloring exists iff at least one literal is T.</span>
+    <span class="kw">for</span> ci, clause <span class="kw">in</span> <span class="fn">enumerate</span>(clauses):
+        <span class="kw">assert</span> <span class="fn">len</span>(clause) == <span class="num">3</span>
+        a, b, c = (<span class="fn">f'v{l}'</span> <span class="kw">if</span> l &gt; <span class="num">0</span> <span class="kw">else</span> <span class="fn">f'~v{-l}'</span> <span class="kw">for</span> l <span class="kw">in</span> clause)
+        <span class="cmt"># 6 helper nodes per clause</span>
+        h = [<span class="fn">f'c{ci}_{j}'</span> <span class="kw">for</span> j <span class="kw">in</span> <span class="fn">range</span>(<span class="num">6</span>)]
+        edges += [(a, h[<span class="num">0</span>]), (b, h[<span class="num">1</span>]), (h[<span class="num">0</span>], h[<span class="num">1</span>]),
+                  (h[<span class="num">0</span>], h[<span class="num">2</span>]), (h[<span class="num">1</span>], h[<span class="num">2</span>]),
+                  (h[<span class="num">2</span>], h[<span class="num">3</span>]), (c, h[<span class="num">3</span>]), (h[<span class="num">3</span>], h[<span class="num">4</span>]),
+                  (h[<span class="num">4</span>], F), (h[<span class="num">4</span>], h[<span class="num">5</span>]), (h[<span class="num">5</span>], X)]
+    <span class="kw">return</span> edges, labels
+
+<span class="cmt"># Try it on (x1 OR x2 OR x3) AND (NOT x1 OR NOT x2 OR x3)</span>
+clauses = [[<span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>], [-<span class="num">1</span>, -<span class="num">2</span>, <span class="num">3</span>]]
+edges, labels = <span class="fn">three_sat_to_three_color</span>(clauses, n_vars=<span class="num">3</span>)
+<span class="fn">print</span>(<span class="fn">len</span>(edges), <span class="str">"edges in the reduced graph"</span>)
+<span class="cmt"># The graph is 3-colorable iff the formula is satisfiable.</span>
+</code></pre></div>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="s19">19. Open problems</h2>
+
+    <p>The famous unresolved questions in this corner of CS:</p>
+
+    <ul>
+      <li><strong>P vs NP.</strong> The big one. Almost certainly P ≠ NP, no proof either way.</li>
+      <li><strong>NP vs co-NP.</strong> Is the class of "easily verifiable yes" the same as "easily verifiable no"? Believed not, no proof. If NP = co-NP, the polynomial hierarchy collapses.</li>
+      <li><strong>P vs PSPACE.</strong> Strict containment is suspected, not proved.</li>
+      <li><strong>P vs BPP.</strong> Believed to be equal (so randomness adds nothing in polynomial time), still open.</li>
+      <li><strong>NP vs BQP.</strong> Believed incomparable. Whether quantum gives an exponential speedup for any NP-complete problem is one of the great open questions in quantum computing.</li>
+      <li><strong>The unique games conjecture (UGC).</strong> A strong hardness assumption that, if true, would settle the optimal approximation ratio for many problems. Proposed by Khot in 2002. Whether it's true is itself open and a major research program.</li>
+      <li><strong>The exponential time hypothesis (ETH).</strong> A stronger assumption than P ≠ NP — that 3-SAT actually requires time $2^{\Omega(n)}$. ETH lets you derive much sharper hardness results than P ≠ NP alone.</li>
+      <li><strong>Permanent vs determinant.</strong> Valiant's algebraic analog of P vs NP. The matrix determinant is in P; the very similar-looking permanent is #P-complete. Why?</li>
+    </ul>
+
+    <p>That's the field. Computability tells you what can ever be done; complexity tells you what can be done cheaply; reductions tell you which problems are secretly the same. The whole edifice is built on a 1936 paper, a few diagonal arguments, and the patient accumulation of results from there. Most of the deepest questions remain open. Welcome to theoretical CS.</p>
+
+    <h3>See also</h3>
+    <div class="grid">
+      <div class="card">
+        <h4><a href="../math/discrete-math.html">Discrete math</a></h4>
+        <p>Sets, functions, relations, proof techniques. The grammar of everything on this page.</p>
+        <div class="meta">prereq</div>
+      </div>
+      <div class="card">
+        <h4><a href="complexity.html">Algorithmic complexity</a></h4>
+        <p>Big-O notation, time and space analysis, the complexity of standard algorithms. The "applied" side of section 8.</p>
+        <div class="meta">prereq</div>
+      </div>
+      <div class="card">
+        <h4><a href="optimization.html">Optimization</a></h4>
+        <p>What you do when the exact problem is NP-hard. LP relaxations, gradient methods, heuristics, metaheuristics.</p>
+        <div class="meta">next</div>
+      </div>
+      <div class="card">
+        <h4><a href="../topics/reasoning.html">Reasoning models</a></h4>
+        <p>Modern LLMs that solve SAT-like problems via chain-of-thought search. The link between theoretical hardness and practical AI.</p>
+        <div class="meta">related</div>
+      </div>
+      <div class="card">
+        <h4><a href="../topics/agi.html">AGI</a></h4>
+        <p>The Church-Turing thesis sets a floor on what any general intelligence — biological or artificial — can compute.</p>
+        <div class="meta">related</div>
+      </div>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="s20">20. Further reading</h2>
+
+    <div class="bib">
+      <h4>Textbooks</h4>
+      <ul>
+        <li>Sipser, M. (2012) — <em>Introduction to the Theory of Computation</em>, 3rd ed. The standard undergraduate text. Clear, slow, exhaustive on Turing machines, decidability, and reductions. Read this first.</li>
+        <li>Arora, S. &amp; Barak, B. (2009) — <em>Computational Complexity: A Modern Approach</em>. Graduate-level. Goes deep into PH, PCP, derandomization, circuit complexity. Free draft online.</li>
+        <li>Papadimitriou, C. (1993) — <em>Computational Complexity</em>. The classic complexity textbook, slightly older than Arora-Barak but still excellent for the foundations.</li>
+        <li>Hopcroft, Motwani &amp; Ullman (2006) — <em>Introduction to Automata Theory, Languages, and Computation</em>. The other standard. Heavy on automata and formal languages.</li>
+      </ul>
+      <h4>Papers</h4>
+      <ul>
+        <li>Turing, A. (1936) — <em>On Computable Numbers, with an Application to the Entscheidungsproblem</em>. The original Turing machine paper. Surprisingly readable.</li>
+        <li>Cook, S. (1971) — <em>The Complexity of Theorem-Proving Procedures</em>. The Cook-Levin theorem.</li>
+        <li>Karp, R. (1972) — <em>Reducibility Among Combinatorial Problems</em>. The 21 NP-complete problems.</li>
+        <li>Baker, T., Gill, J. &amp; Solovay, R. (1975) — <em>Relativizations of the P =? NP question</em>.</li>
+        <li>Razborov, A. &amp; Rudich, S. (1997) — <em>Natural Proofs</em>. The second great barrier.</li>
+        <li>Aaronson, S. &amp; Wigderson, A. (2008) — <em>Algebrization: A New Barrier in Complexity Theory</em>.</li>
+      </ul>
+      <h4>Surveys and lectures</h4>
+      <ul>
+        <li>Aaronson, S. — <em>P =? NP</em> survey (2017). A friendly modern overview of why we believe what we believe.</li>
+        <li>Wigderson, A. (2019) — <em>Mathematics and Computation</em>. A book-length view of complexity from a leading practitioner. Free online.</li>
+      </ul>
+    </div>
+
+    <div class="next-card">
+      <div class="label">NEXT UP</div>
+      <a href="optimization.html">→ Optimization</a>
+      <p>Now that you know NP-hard problems are everywhere and exact solutions are out of reach, the next question is how to actually solve them in practice. Linear programming, gradient methods, and the metaheuristic toolbox.</p>
+    </div>
+
+  </article>
+</div>
+
+<script>
+// =========================================================
+// Code tabs
+document.querySelectorAll('.code-tabs').forEach(root => {
+  const tabs = root.querySelectorAll('.ct-tab');
+  const panels = root.querySelectorAll('.ct-panel');
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const target = tab.getAttribute('data-tab');
+      tabs.forEach(t => t.classList.toggle('active', t === tab));
+      panels.forEach(p => p.classList.toggle('active', p.getAttribute('data-tab') === target));
+    });
+  });
+});
+
+// =========================================================
+// Turing machine simulator (unary increment)
+(function() {
+  const svg = document.getElementById('tmSvg');
+  if (!svg) return;
+  const NS = 'http://www.w3.org/2000/svg';
+  const stepBtn   = document.getElementById('tmStep');
+  const runBtn    = document.getElementById('tmRun');
+  const resetBtn  = document.getElementById('tmReset');
+  const inputSel  = document.getElementById('tmInput');
+  const stateLbl  = document.getElementById('tmStateLabel');
+  const captionEl = document.getElementById('tmCaption');
+
+  // Transition table: (state, symbol) -> [newState, newSymbol, dir]
+  // Walk right over 1s, find blank, back up one, write 1, accept.
+  const delta = {
+    'q0,1': ['q0', '1', 'R'],
+    'q0,_': ['q1', '_', 'L'],
+    'q1,1': ['q2', '1', 'R'],
+    'q2,_': ['qA', '1', 'R'],
+  };
+  const ACCEPT = 'qA';
+  const REJECT = 'qR';
+
+  let tape = [];
+  let head = 0;
+  let state = 'q0';
+  let halted = false;
+  let runTimer = null;
+
+  function reset() {
+    if (runTimer) { clearInterval(runTimer); runTimer = null; }
+    const inp = inputSel.value;
+    tape = inp.split('').concat(['_','_','_','_','_','_','_','_']);
+    head = 0;
+    state = 'q0';
+    halted = false;
+    draw();
+  }
+
+  function step() {
+    if (halted) return;
+    const sym = tape[head] || '_';
+    const key = state + ',' + sym;
+    const rule = delta[key];
+    if (!rule) {
+      state = REJECT;
+      halted = true;
+      draw();
+      return;
+    }
+    state = rule[0];
+    tape[head] = rule[1];
+    if (rule[2] === 'R') {
+      head++;
+      if (head >= tape.length) tape.push('_');
+    } else if (rule[2] === 'L') {
+      head = Math.max(0, head - 1);
+    }
+    if (state === ACCEPT || state === REJECT) halted = true;
+    draw();
+  }
+
+  function runAll() {
+    if (runTimer) { clearInterval(runTimer); runTimer = null; runBtn.textContent = 'Run'; return; }
+    runBtn.textContent = 'Stop';
+    runTimer = setInterval(() => {
+      if (halted) { clearInterval(runTimer); runTimer = null; runBtn.textContent = 'Run'; return; }
+      step();
+    }, 500);
+  }
+
+  function draw() {
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+    const W = 720, H = 340;
+    const cellW = 50, cellH = 56;
+    const tapeY = 130;
+    const startX = 30;
+    const visible = Math.min(tape.length, 13);
+
+    // Title
+    const title = document.createElementNS(NS, 'text');
+    title.setAttribute('x', W / 2); title.setAttribute('y', 30);
+    title.setAttribute('text-anchor', 'middle');
+    title.setAttribute('fill', '#b4c4d4');
+    title.setAttribute('font-size', 14);
+    title.setAttribute('font-family', 'ui-monospace, monospace');
+    title.textContent = 'Unary increment Turing machine';
+    svg.appendChild(title);
+
+    // Tape cells
+    for (let i = 0; i < visible; i++) {
+      const x = startX + i * cellW;
+      const cell = document.createElementNS(NS, 'rect');
+      cell.setAttribute('x', x);
+      cell.setAttribute('y', tapeY);
+      cell.setAttribute('width', cellW);
+      cell.setAttribute('height', cellH);
+      cell.setAttribute('fill', i === head ? '#1c2942' : '#0f131a');
+      cell.setAttribute('stroke', i === head ? '#22d3ee' : '#2a3446');
+      cell.setAttribute('stroke-width', i === head ? 2 : 1);
+      svg.appendChild(cell);
+
+      const t = document.createElementNS(NS, 'text');
+      t.setAttribute('x', x + cellW / 2);
+      t.setAttribute('y', tapeY + cellH / 2 + 8);
+      t.setAttribute('text-anchor', 'middle');
+      t.setAttribute('fill', tape[i] === '_' ? '#4a5566' : '#e6edf5');
+      t.setAttribute('font-size', 22);
+      t.setAttribute('font-family', 'ui-monospace, monospace');
+      t.textContent = tape[i] || '_';
+      svg.appendChild(t);
+    }
+
+    // Head arrow
+    const headX = startX + head * cellW + cellW / 2;
+    const arrow = document.createElementNS(NS, 'polygon');
+    arrow.setAttribute('points',
+      `${headX},${tapeY - 8} ${headX - 10},${tapeY - 28} ${headX + 10},${tapeY - 28}`);
+    arrow.setAttribute('fill', '#22d3ee');
+    svg.appendChild(arrow);
+
+    const headLbl = document.createElementNS(NS, 'text');
+    headLbl.setAttribute('x', headX);
+    headLbl.setAttribute('y', tapeY - 36);
+    headLbl.setAttribute('text-anchor', 'middle');
+    headLbl.setAttribute('fill', '#22d3ee');
+    headLbl.setAttribute('font-size', 11);
+    headLbl.setAttribute('font-family', 'ui-monospace, monospace');
+    headLbl.textContent = 'head';
+    svg.appendChild(headLbl);
+
+    // State display
+    const stateBox = document.createElementNS(NS, 'rect');
+    stateBox.setAttribute('x', 30);
+    stateBox.setAttribute('y', 240);
+    stateBox.setAttribute('width', 660);
+    stateBox.setAttribute('height', 70);
+    stateBox.setAttribute('fill', '#0f131a');
+    stateBox.setAttribute('stroke', '#2a3446');
+    svg.appendChild(stateBox);
+
+    const stateText = document.createElementNS(NS, 'text');
+    stateText.setAttribute('x', 50);
+    stateText.setAttribute('y', 268);
+    stateText.setAttribute('fill', state === ACCEPT ? '#7cf07c' : (state === REJECT ? '#f47272' : '#63b3ff'));
+    stateText.setAttribute('font-size', 14);
+    stateText.setAttribute('font-family', 'ui-monospace, monospace');
+    stateText.textContent = `current state: ${state}`;
+    svg.appendChild(stateText);
+
+    // Show the rule that will fire next
+    const sym = tape[head] || '_';
+    const key = state + ',' + sym;
+    const rule = delta[key];
+    let ruleDesc;
+    if (state === ACCEPT) ruleDesc = 'HALT — accepted';
+    else if (state === REJECT) ruleDesc = 'HALT — rejected';
+    else if (!rule) ruleDesc = 'no rule for this configuration → reject';
+    else ruleDesc = `δ(${state}, ${sym}) = (${rule[0]}, ${rule[1]}, ${rule[2]})`;
+
+    const ruleText = document.createElementNS(NS, 'text');
+    ruleText.setAttribute('x', 50);
+    ruleText.setAttribute('y', 292);
+    ruleText.setAttribute('fill', '#b4c4d4');
+    ruleText.setAttribute('font-size', 13);
+    ruleText.setAttribute('font-family', 'ui-monospace, monospace');
+    ruleText.textContent = ruleDesc;
+    svg.appendChild(ruleText);
+
+    stateLbl.textContent = `state: ${state}`;
+  }
+
+  stepBtn.addEventListener('click', step);
+  runBtn.addEventListener('click', runAll);
+  resetBtn.addEventListener('click', reset);
+  inputSel.addEventListener('change', reset);
+  reset();
+})();
+
+// =========================================================
+// Complexity class hierarchy (concentric rings)
+(function() {
+  const svg = document.getElementById('ccSvg');
+  if (!svg) return;
+  const NS = 'http://www.w3.org/2000/svg';
+  const labelEl = document.getElementById('ccLabel');
+  const captionEl = document.getElementById('ccCaption');
+
+  const classes = [
+    { name: 'P',        color: '#22d3ee', desc: 'P — polynomial time',
+      examples: 'sorting, shortest path, primality (AKS), max flow, 2-SAT, linear programming' },
+    { name: 'NP',       color: '#7c5cff', desc: 'NP — nondeterministic poly / verifiable',
+      examples: 'SAT, 3-COLOR, Hamiltonian cycle, factoring, subset sum, graph isomorphism' },
+    { name: 'PSPACE',   color: '#f472b6', desc: 'PSPACE — polynomial space',
+      examples: 'QBF, generalized geography, n×n chess, regular expression equivalence' },
+    { name: 'EXPTIME',  color: '#f59e0b', desc: 'EXPTIME — exponential time',
+      examples: 'generalized chess (with no draw rule), some game-playing problems' },
+    { name: 'EXPSPACE', color: '#7cf07c', desc: 'EXPSPACE — exponential space',
+      examples: 'extended regular expression equivalence, certain decision procedures' },
+  ];
+
+  const W = 720, H = 340;
+  const cx = W / 2, cy = H / 2 + 8;
+  const radii = [40, 70, 100, 130, 160];
+
+  function draw(highlight) {
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+
+    // Title
+    const title = document.createElementNS(NS, 'text');
+    title.setAttribute('x', W / 2); title.setAttribute('y', 24);
+    title.setAttribute('text-anchor', 'middle');
+    title.setAttribute('fill', '#b4c4d4');
+    title.setAttribute('font-size', 14);
+    title.setAttribute('font-family', 'ui-monospace, monospace');
+    title.textContent = 'P ⊆ NP ⊆ PSPACE ⊆ EXPTIME ⊆ EXPSPACE';
+    svg.appendChild(title);
+
+    // Draw rings outside-in so smaller ones overlap larger
+    for (let i = classes.length - 1; i >= 0; i--) {
+      const c = classes[i];
+      const r = radii[i];
+      const ring = document.createElementNS(NS, 'circle');
+      ring.setAttribute('cx', cx);
+      ring.setAttribute('cy', cy);
+      ring.setAttribute('r', r);
+      ring.setAttribute('fill', highlight === i ? c.color + '33' : '#0f131a');
+      ring.setAttribute('stroke', c.color);
+      ring.setAttribute('stroke-width', highlight === i ? 3 : 1.5);
+      ring.style.cursor = 'pointer';
+      ring.addEventListener('click', () => { draw(i); update(i); });
+      svg.appendChild(ring);
+
+      // Label on the right side of each ring
+      const lt = document.createElementNS(NS, 'text');
+      lt.setAttribute('x', cx + r + 8);
+      lt.setAttribute('y', cy - r + 14);
+      lt.setAttribute('fill', c.color);
+      lt.setAttribute('font-size', 12);
+      lt.setAttribute('font-family', 'ui-monospace, monospace');
+      lt.textContent = c.name;
+      svg.appendChild(lt);
+    }
+
+    // P label inside the smallest ring
+    const pl = document.createElementNS(NS, 'text');
+    pl.setAttribute('x', cx);
+    pl.setAttribute('y', cy + 4);
+    pl.setAttribute('text-anchor', 'middle');
+    pl.setAttribute('fill', '#22d3ee');
+    pl.setAttribute('font-size', 14);
+    pl.setAttribute('font-family', 'ui-monospace, monospace');
+    pl.textContent = 'P';
+    svg.appendChild(pl);
+  }
+
+  function update(i) {
+    const c = classes[i];
+    labelEl.textContent = c.desc;
+    captionEl.textContent = `${c.name}: ${c.examples}.`;
+  }
+
+  draw(0);
+  update(0);
+})();
+</script>
+<script defer src="../search-index.js"></script>
+<script defer src="../search.js"></script>
+</body>
+</html>

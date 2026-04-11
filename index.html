@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Charuvi — Learning Hub</title>
+<meta name="description" content="Direct-access reference to the math, computer science, and AI/ML topics behind modern computing.">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div id="tooltip"></div>
+
+<div class="hero">
+  <div class="hero-inner">
+    <span class="chip">UPDATED APRIL 2026</span>
+    <p class="lede">A field guide to what is actually happening at the edge of math, science, and technology — and deep dives for when you want to know why.</p>
+  </div>
+</div>
+
+<main>
+  <div class="container">
+
+    <!-- ============================================================ -->
+    <section id="math">
+      <h2>Mathematics</h2>
+      <a class="track-banner tb-math" href="math/index.html">
+        <div class="tb-main">
+          <div class="tb-label">Start here · Track hub</div>
+          <div class="tb-title">Mathematics</div>
+          <div class="tb-desc">Seven subjects, one guided tour. Interactive figures inline. The through-line that makes the rest of the hub make sense.</div>
+        </div>
+        <div class="tb-arrow">→</div>
+      </a>
+      <div class="grid">
+        <a class="card card-link" href="math/calculus.html">
+          <h4>Calculus</h4>
+          <p class="meta">single-variable · foundation</p>
+          <p>Limits, derivatives, integrals, the chain rule, Taylor series, the Fundamental Theorem.</p>
+          <span class="tag">core</span>
+        </a>
+        <a class="card card-link" href="math/multivariable-calculus.html">
+          <h4>Multivariable Calculus</h4>
+          <p class="meta">prereq: calculus</p>
+          <p>Partial derivatives, gradients, Jacobians, Hessians, the multivariable chain rule.</p>
+          <span class="tag hot">ML essential</span>
+        </a>
+        <a class="card card-link" href="math/linear-algebra.html">
+          <h4>Linear Algebra</h4>
+          <p class="meta">foundation</p>
+          <p>Vectors, matrices, dot products, projections, eigenvalues, SVD, PCA.</p>
+          <span class="tag hot">ML essential</span>
+        </a>
+        <a class="card card-link" href="math/probability.html">
+          <h4>Probability</h4>
+          <p class="meta">foundation</p>
+          <p>Random variables, distributions, expectation, Bayes, entropy, KL divergence.</p>
+          <span class="tag hot">ML essential</span>
+        </a>
+        <a class="card card-link" href="math/statistics.html">
+          <h4>Statistics</h4>
+          <p class="meta">prereq: probability</p>
+          <p>Estimation, maximum likelihood, confidence intervals, hypothesis testing, regression.</p>
+          <span class="tag">core</span>
+        </a>
+        <a class="card card-link" href="math/discrete-math.html">
+          <h4>Discrete Mathematics</h4>
+          <p class="meta">foundation</p>
+          <p>Sets, logic, proof techniques, combinatorics, graph theory, number theory.</p>
+          <span class="tag">core</span>
+        </a>
+        <a class="card card-link" href="math/numerical-analysis.html">
+          <h4>Numerical Analysis</h4>
+          <p class="meta">prereq: calculus, linear algebra</p>
+          <p>Floating-point, conditioning, Newton's method, interpolation, quadrature.</p>
+          <span class="tag">advanced</span>
+        </a>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section id="cs">
+      <h2>Computer Science</h2>
+      <a class="track-banner tb-cs" href="cs/index.html">
+        <div class="tb-main">
+          <div class="tb-label">Start here · Track hub</div>
+          <div class="tb-title">Computer Science</div>
+          <div class="tb-desc">Algorithms, complexity, theory, and optimization — the classical toolkit every practitioner eventually needs, with runnable demos.</div>
+        </div>
+        <div class="tb-arrow">→</div>
+      </a>
+      <div class="grid">
+        <a class="card card-link" href="cs/algorithms.html">
+          <h4>Algorithms &amp; Data Structures</h4>
+          <p class="meta">interview staple</p>
+          <p>Arrays, hash tables, trees, heaps, graphs. Sorting, BFS/DFS, Dijkstra, DP, greedy methods.</p>
+          <span class="tag hot">core</span>
+        </a>
+        <a class="card card-link" href="cs/complexity.html">
+          <h4>Complexity &amp; Big-O</h4>
+          <p class="meta">reading algorithms at scale</p>
+          <p>Formal Big-O, amortized analysis, the Master Theorem, decision-tree lower bounds.</p>
+          <span class="tag">core</span>
+        </a>
+        <a class="card card-link" href="cs/theoretical-cs.html">
+          <h4>Theoretical CS</h4>
+          <p class="meta">advanced</p>
+          <p>Turing machines, the halting problem, P vs NP, NP-completeness, Cook-Levin.</p>
+          <span class="tag">advanced</span>
+        </a>
+        <a class="card card-link" href="cs/optimization.html">
+          <h4>Mathematical Optimization</h4>
+          <p class="meta">prereq: multivar calc, linear algebra</p>
+          <p>Convexity, GD/SGD/Adam, KKT conditions, linear programming, duality.</p>
+          <span class="tag hot">ML essential</span>
+        </a>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section id="ai-ml">
+      <h2>AI / Machine Learning</h2>
+      <a class="track-banner tb-ai" href="ai-ml.html">
+        <div class="tb-main">
+          <div class="tb-label">Start here · Track hub</div>
+          <div class="tb-title">AI / Machine Learning</div>
+          <div class="tb-desc">A pragmatic tour of the whole field, from the 1957 perceptron to 2026 reasoning models. Timeline, vocabulary, and interactive demos inline.</div>
+        </div>
+        <div class="tb-arrow">→</div>
+      </a>
+      <div class="grid">
+        <a class="card card-link" href="topics/perceptron.html">
+          <h4>The Perceptron</h4>
+          <p class="meta">Rosenblatt, 1957</p>
+          <p>The first learning algorithm that worked on a machine. One neuron, a weight vector, a threshold.</p>
+          <span class="tag">origin</span>
+        </a>
+        <a class="card card-link" href="topics/activations.html">
+          <h4>Activation Functions</h4>
+          <p class="meta">the nonlinearity</p>
+          <p>Sigmoid, tanh, ReLU, GELU, SwiGLU. The nonlinearity that makes depth meaningful.</p>
+          <span class="tag">core</span>
+        </a>
+        <a class="card card-link" href="topics/gradient-descent.html">
+          <h4>Gradient Descent</h4>
+          <p class="meta">prereq: multivariable calc</p>
+          <p>Three lines of math, one idea, every neural network on Earth.</p>
+          <span class="tag hot">core</span>
+        </a>
+        <a class="card card-link" href="topics/backpropagation.html">
+          <h4>Backpropagation</h4>
+          <p class="meta">Rumelhart-Hinton-Williams, 1986</p>
+          <p>The chain rule applied efficiently through a network. Derived with worked numbers.</p>
+          <span class="tag hot">core</span>
+        </a>
+        <a class="card card-link" href="topics/convolution.html">
+          <h4>Convolution (CNN)</h4>
+          <p class="meta">LeCun, 1989</p>
+          <p>The operation that taught neural networks to see. Kernels, strides, feature maps.</p>
+          <span class="tag">vision</span>
+        </a>
+        <a class="card card-link" href="topics/rnn-lstm.html">
+          <h4>RNNs &amp; LSTMs</h4>
+          <p class="meta">1990s – 2017</p>
+          <p>Hidden state, vanishing gradients, and the gates that made sequence learning work.</p>
+          <span class="tag old">historical</span>
+        </a>
+        <a class="card card-link" href="topics/embeddings.html">
+          <h4>Word Embeddings</h4>
+          <p class="meta">Mikolov, 2013</p>
+          <p>king − man + woman ≈ queen. How strings became geometry.</p>
+          <span class="tag">NLP</span>
+        </a>
+        <a class="card card-link" href="topics/self-attention.html">
+          <h4>Self-Attention</h4>
+          <p class="meta">Vaswani et al., 2017</p>
+          <p>Every token looks at every token. The core operation of the transformer.</p>
+          <span class="tag hot">core</span>
+        </a>
+        <a class="card card-link" href="topics/state-space.html">
+          <h4>State Space Models &amp; Mamba</h4>
+          <p class="meta">Gu &amp; Dao, 2023</p>
+          <p>Attention's O(n²) is too expensive for long contexts. SSMs give you O(n).</p>
+          <span class="tag hot">frontier</span>
+        </a>
+        <a class="card card-link" href="topics/gan.html">
+          <h4>GANs</h4>
+          <p class="meta">Goodfellow, 2014</p>
+          <p>A forger and a detective locked in a zero-sum game.</p>
+          <span class="tag old">historical</span>
+        </a>
+        <a class="card card-link" href="topics/diffusion.html">
+          <h4>Diffusion Models</h4>
+          <p class="meta">Ho et al., 2020</p>
+          <p>Start with noise, unwind it into an image. The math behind Stable Diffusion and Sora.</p>
+          <span class="tag hot">production</span>
+        </a>
+        <a class="card card-link" href="topics/foundation-models.html">
+          <h4>Foundation Models</h4>
+          <p class="meta">term coined Stanford, 2021</p>
+          <p>Pretrain once, adapt everywhere. GPT, Claude, Gemini. Scaling laws.</p>
+          <span class="tag hot">production</span>
+        </a>
+        <a class="card card-link" href="topics/rag.html">
+          <h4>Retrieval-Augmented Generation</h4>
+          <p class="meta">Lewis et al., 2020</p>
+          <p>Look up facts in a vector DB, then generate. The cheapest productivity win.</p>
+          <span class="tag hot">production</span>
+        </a>
+        <a class="card card-link" href="topics/moe.html">
+          <h4>Mixture of Experts</h4>
+          <p class="meta">Shazeer et al., 2017</p>
+          <p>Trillion-parameter models that run as cheap as a 30B one.</p>
+          <span class="tag hot">frontier</span>
+        </a>
+        <a class="card card-link" href="topics/reasoning.html">
+          <h4>Reasoning &amp; Test-Time Compute</h4>
+          <p class="meta">o1, R1, 2024</p>
+          <p>Models that think before answering. The new scaling axis.</p>
+          <span class="tag hot">frontier</span>
+        </a>
+        <a class="card card-link" href="topics/neuro-symbolic.html">
+          <h4>Neuro-Symbolic AI</h4>
+          <p class="meta">ongoing</p>
+          <p>Neural networks that learn plus symbolic systems that reason.</p>
+          <span class="tag">research</span>
+        </a>
+        <a class="card card-link" href="topics/edge-ai.html">
+          <h4>Edge &amp; On-Device AI</h4>
+          <p class="meta">deployment</p>
+          <p>Quantization, pruning, distillation, compilation. Fit an LLM on a phone.</p>
+          <span class="tag">deployment</span>
+        </a>
+        <a class="card card-link" href="topics/ai-safety.html">
+          <h4>AI Safety &amp; Alignment</h4>
+          <p class="meta">RLHF, DPO, constitutional AI</p>
+          <p>Making a trained model act the way you meant to ask.</p>
+          <span class="tag">safety</span>
+        </a>
+        <a class="card card-link" href="topics/agi.html">
+          <h4>AGI — The Goal</h4>
+          <p class="meta">speculative</p>
+          <p>What AGI means, what the benchmarks show, and how close we might be.</p>
+          <span class="tag">speculative</span>
+        </a>
+        <a class="card card-link" href="topics/singularity.html">
+          <h4>The Singularity</h4>
+          <p class="meta">speculative</p>
+          <p>Recursive self-improvement, takeoff speeds, the asymptotic case.</p>
+          <span class="tag">speculative</span>
+        </a>
+        <a class="card card-link" href="topics/society.html">
+          <h4>AI &amp; Society</h4>
+          <p class="meta">ongoing</p>
+          <p>Measured effects on jobs, information, democracy, and warfare.</p>
+          <span class="tag">policy</span>
+        </a>
+      </div>
+    </section>
+
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="sf-inner">
+    <p class="sf-disclaimer">
+      <strong>AI-generated content.</strong> Every page on this site was written by
+      <a href="https://claude.com/claude-code" target="_blank" rel="noopener">Claude Code</a>
+      running Anthropic's Claude Opus 4.6 model. Large language models make mistakes —
+      treat this as a study aid, not a primary reference, and verify anything load-bearing.
+      Spot an error? Please
+      <a href="https://github.com/waynetran/charuvi/issues" target="_blank" rel="noopener">file an issue</a>
+      or
+      <a href="https://github.com/waynetran/charuvi/pulls" target="_blank" rel="noopener">open a PR</a>.
+    </p>
+    <p class="sf-meta">
+      MIT licensed · Source on
+      <a href="https://github.com/waynetran/charuvi" target="_blank" rel="noopener">GitHub</a>
+    </p>
+  </div>
+</footer>
+
+<script defer src="search-index.js"></script>
+<script defer src="search.js"></script>
+</body>
+</html>

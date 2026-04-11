@@ -1,0 +1,1111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Probability — Deep Dive</title>
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError: false});"></script>
+</head>
+<body>
+<div id="tooltip"></div>
+
+<nav class="topic-nav">
+  <a class="back" href="../index.html">← Learning Hub</a>
+  <div class="crumb">Mathematics / <span class="topic-name">Probability</span></div>
+</nav>
+
+<div class="topic-layout">
+  <aside class="topic-toc">
+    <h4>ON THIS PAGE</h4>
+    <ul>
+      <li><a href="#why">1. Why probability</a></li>
+      <li><a href="#spaces">2. Sample spaces &amp; events</a></li>
+      <li><a href="#axioms">3. Kolmogorov's axioms</a></li>
+      <li><a href="#conditional">4. Conditional probability</a></li>
+      <li><a href="#bayes">5. Bayes' theorem</a></li>
+      <li><a href="#rvs">6. Random variables</a></li>
+      <li><a href="#discrete">7. Discrete distributions</a></li>
+      <li><a href="#continuous">8. Continuous distributions</a></li>
+      <li><a href="#gauss-demo">9. Gaussian sandbox</a></li>
+      <li><a href="#moments">10. Expectation &amp; variance</a></li>
+      <li><a href="#joint">11. Joint &amp; conditional</a></li>
+      <li><a href="#mvn">12. Multivariate Gaussian</a></li>
+      <li><a href="#lln-clt">13. LLN and CLT</a></li>
+      <li><a href="#info">14. Entropy, cross-entropy, KL</a></li>
+      <li><a href="#worked">15. Worked Bayes example</a></li>
+      <li><a href="#code">16. Code</a></li>
+      <li><a href="#ml">17. Connections to ML</a></li>
+      <li><a href="#refs">18. Further reading</a></li>
+    </ul>
+  </aside>
+
+  <article class="topic-content">
+    <h1>Probability</h1>
+    <p class="subtitle">Probability is the mathematics of uncertainty. It gives you a language for "how much should I believe this?" and a ruleset for updating that belief when new evidence arrives. By the end of this page you should be able to read any modern ML paper that talks about distributions, losses, or sampling without flinching.</p>
+    <div class="meta-tags">
+      <span>Prereq: arithmetic, set notation, basic <a href="calculus.html">calculus</a> (for continuous distributions)</span>
+      <span>Read time: ~35 min</span>
+      <span>Interactive figures: 1</span>
+      <span>Code: NumPy / SciPy</span>
+    </div>
+
+    <div class="callout">
+      <p>This is a long page. It is structured so you can stop at any section and still have something usable. Sections 1–5 are the absolute core (sample spaces, axioms, conditional probability, Bayes). Sections 6–9 add the vocabulary of random variables. Sections 10–14 are what you need to read ML papers. The rest is worked examples and code.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="why">1. Why probability</h2>
+
+    <p>You already reason probabilistically all day. When you check the weather, decide whether to bring an umbrella, estimate how long a commute will take, or guess why your build is failing — you are doing informal inference under uncertainty. Probability is the formal version of that reasoning. It is the language in which you can say "how sure am I?" without waving your hands.</p>
+
+    <p>Three things probability is especially good at:</p>
+
+    <ul>
+      <li><strong>Describing uncertainty.</strong> Not every quantity you care about has a single true value you can read off. Measurements are noisy, data is incomplete, and the future hasn't happened yet. Probability gives you a way to hold a whole range of possibilities at once and weigh them by plausibility.</li>
+      <li><strong>Making decisions.</strong> Once you can quantify "how likely" and "how costly," you can rank actions by expected value. Every practical decision — from medical treatment to portfolio allocation to whether to ship a build — is, secretly, an expected-value calculation.</li>
+      <li><strong>Learning from data.</strong> The entire machinery of modern machine learning is built on probability. Every loss function you've ever minimized is, in disguise, the negative log-likelihood of some probabilistic model. Cross-entropy, mean squared error, KL divergence — all probability.</li>
+    </ul>
+
+    <div class="defn">
+      <strong>A tiny bit of history.</strong> Probability was born from gambling. In 1654 the French gambler Antoine Gombaud asked Blaise Pascal about a dice-game payout problem, and Pascal's correspondence with Pierre de Fermat laid down the first rules. In 1812 Pierre-Simon Laplace published <em>Théorie Analytique des Probabilités</em>, framing probability as a way to reason under incomplete knowledge — essentially the modern Bayesian view. In 1933 Andrey Kolmogorov finally put the whole subject on firm axiomatic ground with three short rules that we'll see in §3. Everything since is machinery built on top of those three rules.</div>
+
+    <!-- ========================================================== -->
+    <h2 id="spaces">2. Sample spaces and events</h2>
+
+    <p>To talk about probability you need to pin down what "something could happen" even means. The setup has three pieces.</p>
+
+    <p><strong>The sample space</strong>, usually written $\Omega$ (capital omega), is the set of <em>every</em> possible outcome of the random process you care about. For one coin flip, $\Omega = \{\text{H}, \text{T}\}$. For one die roll, $\Omega = \{1, 2, 3, 4, 5, 6\}$. For the temperature at noon tomorrow, $\Omega$ is the real numbers (or at least some reasonable subset). The only rule is that exactly one element of $\Omega$ happens per run of the experiment.</p>
+
+    <p><strong>An outcome</strong>, written $\omega$ (lowercase omega), is a single element of $\Omega$ — one specific thing that happened. A single coin flip that came up heads is $\omega = \text{H}$.</p>
+
+    <p><strong>An event</strong>, usually a capital letter like $A$ or $B$, is a <em>set</em> of outcomes — a question you can ask about the experiment that has a yes/no answer. "The die came up even" is the event $A = \{2, 4, 6\}$. "At least one head in two coin flips" is $A = \{\text{HH}, \text{HT}, \text{TH}\}$. Events are subsets of $\Omega$, and the three set operations you already know translate cleanly to English:</p>
+
+    <ul>
+      <li>$A \cup B$ — the <strong>union</strong>, "A or B (or both) happened."</li>
+      <li>$A \cap B$ — the <strong>intersection</strong>, "both A and B happened."</li>
+      <li>$A^c$ (or $\bar{A}$) — the <strong>complement</strong>, "A did not happen."</li>
+      <li>$\emptyset$ — the <strong>empty set</strong>, an impossible event.</li>
+      <li>$\Omega$ itself — the <strong>certain event</strong>, something in $\Omega$ must happen.</li>
+    </ul>
+
+    <p>Two events are <strong>disjoint</strong> (or mutually exclusive) if $A \cap B = \emptyset$ — they can't both happen. "The die came up 2" and "the die came up 5" are disjoint. "The die is even" and "the die is prime" are not, because 2 is in both.</p>
+
+    <div class="callout">
+      <p><strong>Mental model.</strong> The sample space is the board. Outcomes are the squares. Events are regions you can draw on the board. Probabilities are the "amount of paint" you spread over each region. The axioms in the next section are just the rules for how the paint is allowed to be spread.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="axioms">3. Kolmogorov's axioms</h2>
+
+    <p>In 1933 Kolmogorov wrote down the whole of probability theory in three axioms. A <strong>probability measure</strong> $P$ is a function that assigns a real number $P(A)$ to each event $A$ in your sample space, satisfying:</p>
+
+    <div class="math-display">$$\text{(1)} \; P(A) \ge 0 \quad \text{(2)} \; P(\Omega) = 1 \quad \text{(3)} \; P\!\left(\bigcup_{i=1}^\infty A_i\right) = \sum_{i=1}^\infty P(A_i) \;\;\text{if the } A_i \text{ are disjoint}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Kolmogorov's three axioms</p>
+      <dl>
+        <dt>$P$</dt><dd>The probability measure — a function that takes an event (a set of outcomes) and returns a real number in $[0, 1]$.</dd>
+        <dt>$A$, $A_i$</dt><dd>Events — subsets of the sample space $\Omega$.</dd>
+        <dt>$P(A) \ge 0$</dt><dd><strong>Non-negativity.</strong> Probabilities can't be negative. There is no such thing as "minus twenty percent chance of rain."</dd>
+        <dt>$P(\Omega) = 1$</dt><dd><strong>Normalization.</strong> The probability that <em>something</em> in the sample space happens is exactly 1. Your paint has to cover the whole board.</dd>
+        <dt>$\bigcup_{i=1}^\infty A_i$</dt><dd>The union of infinitely many events — "at least one of them happens."</dd>
+        <dt>$\sum_{i=1}^\infty P(A_i)$</dt><dd>The sum of their individual probabilities.</dd>
+        <dt>disjoint</dt><dd>"Non-overlapping." No two of the $A_i$ can both happen at the same time.</dd>
+        <dt>axiom (3)</dt><dd><strong>Countable additivity.</strong> For non-overlapping events, the probability of "any of them" is the sum of their individual probabilities. This is the only non-obvious axiom and it's what lets you add up paint without double counting.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why so minimal?</strong> From these three rules you can derive every classical result in probability — $P(A^c) = 1 - P(A)$, $P(A \cup B) = P(A) + P(B) - P(A \cap B)$, monotonicity, the whole thing. Kolmogorov's trick was to stop arguing about what probability "really is" (frequency? belief? a limit?) and just say: here are the rules any reasonable probability must obey. Everything else is a consequence.</p>
+    </div>
+
+    <p>A few consequences worth naming, because you'll use them constantly:</p>
+
+    <ul>
+      <li><strong>Complement rule.</strong> $P(A^c) = 1 - P(A)$. If there's a 30% chance of rain, there's a 70% chance of no rain.</li>
+      <li><strong>Inclusion–exclusion.</strong> $P(A \cup B) = P(A) + P(B) - P(A \cap B)$. Add, then subtract the overlap you double-counted.</li>
+      <li><strong>Monotonicity.</strong> If $A \subseteq B$ then $P(A) \le P(B)$. A smaller set can't have more probability than a bigger one that contains it.</li>
+      <li><strong>Upper bound.</strong> $P(A) \le 1$ for every event. This falls out of normalization plus non-negativity of the complement.</li>
+    </ul>
+
+    <!-- ========================================================== -->
+    <h2 id="conditional">4. Conditional probability</h2>
+
+    <p>So far every event stands alone. But the interesting questions almost always have the form "given that X happened, how likely is Y?" That's <strong>conditional probability</strong>, written $P(A \mid B)$ and read "the probability of A given B."</p>
+
+    <div class="math-display">$$P(A \mid B) = \frac{P(A \cap B)}{P(B)} \quad \text{whenever } P(B) > 0$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Conditional probability</p>
+      <dl>
+        <dt>$P(A \mid B)$</dt><dd>The probability that event $A$ happens, <em>given that</em> we already know $B$ happened. The vertical bar $\mid$ is read "given."</dd>
+        <dt>$P(A \cap B)$</dt><dd>The probability that <em>both</em> $A$ and $B$ happen — the overlap.</dd>
+        <dt>$P(B)$</dt><dd>The probability of the event we're conditioning on.</dd>
+        <dt>$P(B) > 0$</dt><dd>A technicality: you can't condition on something that was impossible to begin with, because you'd be dividing by zero.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Paint intuition.</strong> Conditioning on $B$ is "zooming in" on the region $B$ on the board and asking what fraction of <em>that</em> region is also in $A$. You throw away everything outside $B$ and renormalize so that $B$ is the new "certain event." The ratio $P(A \cap B) / P(B)$ is literally "how much of B's paint is also A's."</p>
+    </div>
+
+    <p>Rearranging the definition gives the <strong>multiplication rule</strong>:</p>
+
+    <div class="math-display">$$P(A \cap B) = P(A \mid B)\, P(B) = P(B \mid A)\, P(A)$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Multiplication rule</p>
+      <dl>
+        <dt>$P(A \cap B)$</dt><dd>Joint probability — both events occurring.</dd>
+        <dt>$P(A \mid B)\, P(B)$</dt><dd>First $B$ happens (with probability $P(B)$), then $A$ happens given $B$ (with probability $P(A \mid B)$). Their product is the joint.</dd>
+      </dl>
+      <p class="mg-why"><strong>Why care.</strong> This is the single identity from which Bayes' theorem falls out in two lines. Memorize this one.</p>
+    </div>
+
+    <p><strong>Independence</strong> is the special case where conditioning on $B$ tells you nothing new about $A$:</p>
+
+    <div class="math-display">$$A \perp B \iff P(A \mid B) = P(A) \iff P(A \cap B) = P(A)\, P(B)$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Independence</p>
+      <dl>
+        <dt>$A \perp B$</dt><dd>Shorthand for "$A$ is independent of $B$." Some texts write $A \!\perp\!\!\!\perp B$ (two bars) instead.</dd>
+        <dt>$P(A \mid B) = P(A)$</dt><dd>Knowing $B$ didn't change your belief about $A$.</dd>
+        <dt>$P(A \cap B) = P(A)\, P(B)$</dt><dd>Equivalent statement: for independent events, the joint is the product of the marginals.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Warning.</strong> "Independent" is a mathematical statement, not a physical one. Two events can be physically caused by the same thing and still be statistically independent; two events can be physically unrelated and still be statistically dependent through a common ancestor in your sample space. The math only cares about $P$, not about the story you tell about it.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="bayes">5. Bayes' theorem</h2>
+
+    <p>This is the single most important formula on the page. It's what lets you turn evidence into updated beliefs, and it underlies every probabilistic inference technique you will ever use.</p>
+
+    <p>The derivation is one line. Start from the multiplication rule above, which says the joint $P(A \cap B)$ can be written two ways: $P(A \mid B)\, P(B) = P(B \mid A)\, P(A)$. Divide both sides by $P(B)$ and you get Bayes' theorem:</p>
+
+    <div class="math-display">$$P(A \mid B) = \frac{P(B \mid A)\, P(A)}{P(B)}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Bayes' theorem</p>
+      <dl>
+        <dt>$P(A)$</dt><dd><strong>Prior.</strong> What you believed about $A$ before you saw any evidence.</dd>
+        <dt>$P(B \mid A)$</dt><dd><strong>Likelihood.</strong> How probable the evidence $B$ would be <em>if</em> $A$ were true. This is a function of $A$ for fixed $B$, not a probability in $A$.</dd>
+        <dt>$P(B)$</dt><dd><strong>Evidence</strong> (or marginal likelihood). The total probability of observing $B$ under any hypothesis, computed as $P(B) = P(B \mid A)P(A) + P(B \mid A^c)P(A^c)$. It's the normalizing constant that makes the whole thing add up to 1.</dd>
+        <dt>$P(A \mid B)$</dt><dd><strong>Posterior.</strong> Your updated belief about $A$ after seeing the evidence $B$. This is what you actually care about.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>The slogan.</strong> <em>Posterior is proportional to likelihood times prior.</em> In symbols, $P(A \mid B) \propto P(B \mid A)\, P(A)$. The evidence $P(B)$ is just the constant that rescales everything to sum to 1. Most of Bayesian inference in practice is computing the top of the fraction and worrying about the bottom later.</p>
+    </div>
+
+    <h3>The disease-test example</h3>
+
+    <p>This is the classic Bayes exercise. The numbers are engineered to shock people on first read, and they should.</p>
+
+    <p>A disease affects 1 in 1000 people. There is a test that is 99% accurate in both directions: if you have the disease it comes back positive 99% of the time, and if you don't have the disease it comes back negative 99% of the time. You take the test. It's positive. What's the probability you actually have the disease?</p>
+
+    <p>Naive intuition: "the test is 99% accurate, so I'm about 99% sure I have it." Let's see what Bayes says. Let $D$ = "you have the disease" and $+$ = "the test is positive."</p>
+
+    <div class="math-display">$$P(D \mid +) = \frac{P(+ \mid D)\, P(D)}{P(+ \mid D)\, P(D) + P(+ \mid D^c)\, P(D^c)}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Disease-test Bayes</p>
+      <dl>
+        <dt>$P(D) = 0.001$</dt><dd>Prior: the base rate of the disease (1 in 1000).</dd>
+        <dt>$P(D^c) = 0.999$</dt><dd>Prior that you don't have it.</dd>
+        <dt>$P(+ \mid D) = 0.99$</dt><dd>Likelihood: test is 99% sensitive — true positive rate.</dd>
+        <dt>$P(+ \mid D^c) = 0.01$</dt><dd>The false positive rate: 1% of healthy people also test positive.</dd>
+        <dt>$P(+)$</dt><dd>The total probability of a positive test — this is the sum in the denominator, computed using the law of total probability.</dd>
+      </dl>
+      <p class="mg-why"><strong>Why this formula has two terms in the denominator.</strong> You need $P(+)$, but $+$ can happen two ways: either you have the disease and the test caught it, or you don't and the test gave a false alarm. You add those two mutually exclusive paths to get the total.</p>
+    </div>
+
+    <p>Plug in the numbers:</p>
+
+    <div class="math-display">$$P(D \mid +) = \frac{0.99 \times 0.001}{0.99 \times 0.001 + 0.01 \times 0.999} = \frac{0.00099}{0.01098} \approx 0.090$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">The answer</p>
+      <dl>
+        <dt>$0.00099$</dt><dd>The probability of "truly sick AND tested positive."</dd>
+        <dt>$0.01098$</dt><dd>The total probability of any positive test — sick-and-positive plus healthy-and-false-positive.</dd>
+        <dt>$0.090$</dt><dd>About 9%. Despite the test being 99% accurate, a positive result means you have only a 9% chance of actually being sick.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why this is counterintuitive.</strong> The rare disease is rare. In a population of 100,000 people, about 100 have it (all of whom test positive), but 999 × 100 = 999 healthy people <em>also</em> test positive from the 1% false-positive rate. So out of ~1099 positive tests, only ~100 are real. Most positives are false alarms, not because the test is bad, but because the prior is tiny. This is called <em>base-rate neglect</em> and it is the single most common error doctors make when interpreting screening tests. Every time you see a Bayesian update, remember: the prior has teeth.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="rvs">6. Random variables</h2>
+
+    <p>Events are great for yes/no questions, but most of what you care about in practice is a <em>number</em>: the value of a measurement, the number of requests per second, the height of a person. Enter the random variable.</p>
+
+    <div class="defn">A <strong>random variable</strong> $X$ is a function from the sample space to the real numbers: $X : \Omega \to \mathbb{R}$. For each outcome $\omega$, it returns some number $X(\omega)$. It's not really a "variable" in the algebraic sense; it's a rule for reading a number off an experiment.</div>
+
+    <p>Example. Flip a coin twice. $\Omega = \{\text{HH}, \text{HT}, \text{TH}, \text{TT}\}$. Let $X$ be the number of heads. Then $X(\text{HH}) = 2$, $X(\text{HT}) = X(\text{TH}) = 1$, $X(\text{TT}) = 0$. The random variable $X$ has turned the messy outcome space into the clean set $\{0, 1, 2\}$.</p>
+
+    <p>Random variables come in two flavors.</p>
+
+    <h3>Discrete random variables and the PMF</h3>
+
+    <p>A <strong>discrete</strong> random variable takes values in a countable set — finite or countably infinite. Its distribution is described by a <strong>probability mass function</strong> (PMF):</p>
+
+    <div class="math-display">$$p_X(k) = P(X = k)$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Probability mass function</p>
+      <dl>
+        <dt>$p_X(k)$</dt><dd>The probability that the random variable $X$ takes the specific value $k$.</dd>
+        <dt>$P(X = k)$</dt><dd>Shorthand for $P(\{\omega : X(\omega) = k\})$ — the probability of the event "$X$ equals $k$."</dd>
+        <dt>rule</dt><dd>Must satisfy $p_X(k) \ge 0$ and $\sum_k p_X(k) = 1$. The masses are non-negative and add up to 1.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Paint intuition.</strong> You have one unit of paint. You drop a lump of size $p_X(k)$ on each value $k$. The lumps sum to 1.</p>
+    </div>
+
+    <h3>Continuous random variables and the PDF</h3>
+
+    <p>A <strong>continuous</strong> random variable can take any value in an interval or in all of $\mathbb{R}$ — uncountably many options. That breaks the PMF approach, because for a continuous $X$ the probability of hitting any exact value is zero. Instead you have a <strong>probability density function</strong> (PDF) $f_X(x)$, and probabilities come from integrating it:</p>
+
+    <div class="math-display">$$P(a \le X \le b) = \int_a^b f_X(x)\, dx$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Probability density function</p>
+      <dl>
+        <dt>$f_X(x)$</dt><dd>The density of probability at the point $x$ — <em>not</em> a probability itself. It can be bigger than 1. The units are "probability per unit x."</dd>
+        <dt>$\int_a^b f_X(x)\, dx$</dt><dd>The area under the density curve between $a$ and $b$. See <a href="calculus.html">calculus.html</a> if the integral notation is rusty — it's the continuous cousin of summing.</dd>
+        <dt>total mass</dt><dd>Must satisfy $f_X(x) \ge 0$ and $\int_{-\infty}^{\infty} f_X(x)\, dx = 1$.</dd>
+        <dt>$P(X = x) = 0$</dt><dd>For continuous $X$, the probability of hitting any single point exactly is zero. Probability lives on intervals, not on points.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Density, not probability.</strong> Height doesn't tell you probability; area does. A PDF can spike to 10 at $x = 0$ and that's fine, because "how much paint is near $x=0$" is $f(0) \cdot dx$, a product with a tiny $dx$. The only rule is that the total area under the curve is 1.</p>
+    </div>
+
+    <h3>The CDF — the universal description</h3>
+
+    <p>The <strong>cumulative distribution function</strong> works for any random variable, discrete or continuous:</p>
+
+    <div class="math-display">$$F_X(x) = P(X \le x)$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Cumulative distribution function</p>
+      <dl>
+        <dt>$F_X(x)$</dt><dd>The probability that $X$ is at most $x$ — "how much paint is to the left of $x$?"</dd>
+        <dt>monotone</dt><dd>Non-decreasing: as $x$ increases, $F_X(x)$ can only go up or stay flat.</dd>
+        <dt>limits</dt><dd>$F_X(-\infty) = 0$ and $F_X(+\infty) = 1$. At the far left you've collected no paint; at the far right you've collected all of it.</dd>
+        <dt>relation to PDF</dt><dd>For continuous $X$, $f_X(x) = F_X'(x)$ — the density is the derivative of the CDF. For discrete $X$, the CDF is a staircase that jumps by $p_X(k)$ at each value $k$.</dd>
+      </dl>
+      <p class="mg-why"><strong>Why CDFs matter.</strong> They let you talk about discrete and continuous distributions with the same language. Also, sampling from an arbitrary distribution is often done by inverting the CDF (the "inverse CDF trick").</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="discrete">7. Common discrete distributions</h2>
+
+    <p>Four distributions cover 90% of the discrete cases you'll meet in practice. Memorize their PMFs, means, and variances — or at least learn to recognize them on sight.</p>
+
+    <h3>Bernoulli — the coin flip</h3>
+
+    <div class="math-display">$$X \sim \text{Bernoulli}(p) \quad\Longleftrightarrow\quad p_X(k) = \begin{cases} p & k = 1 \\ 1 - p & k = 0 \end{cases}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Bernoulli distribution</p>
+      <dl>
+        <dt>$X \sim \text{Bernoulli}(p)$</dt><dd>$X$ is distributed as a Bernoulli with success probability $p$. The tilde $\sim$ is read "is distributed as."</dd>
+        <dt>$p \in [0, 1]$</dt><dd>The probability of "success" ($X = 1$). "Success" and "failure" are just labels; they don't have to correspond to anything good.</dd>
+        <dt>$k \in \{0, 1\}$</dt><dd>The only two possible outcomes.</dd>
+        <dt>$\mathbb{E}[X] = p$</dt><dd>The mean.</dd>
+        <dt>$\operatorname{Var}(X) = p(1-p)$</dt><dd>The variance. Maximized at $p = 1/2$, where the flip is maximally uncertain.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Where you'll see this.</strong> Every binary classification problem. Every dropout mask. Every "did this click happen?" A/B test. The humblest distribution, used constantly.</p>
+    </div>
+
+    <h3>Binomial — how many successes in n trials</h3>
+
+    <div class="math-display">$$X \sim \text{Binomial}(n, p) \quad\Longleftrightarrow\quad p_X(k) = \binom{n}{k} p^k (1-p)^{n-k}, \quad k = 0, 1, \ldots, n$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Binomial distribution</p>
+      <dl>
+        <dt>$n$</dt><dd>The number of independent Bernoulli($p$) trials.</dd>
+        <dt>$k$</dt><dd>The number of successes observed.</dd>
+        <dt>$\binom{n}{k}$</dt><dd>The binomial coefficient "$n$ choose $k$" — the number of ways to pick which $k$ of the $n$ trials were the successful ones. Equals $n! / (k!(n-k)!)$.</dd>
+        <dt>$p^k (1-p)^{n-k}$</dt><dd>The probability of any one specific sequence with $k$ successes and $n-k$ failures.</dd>
+        <dt>$\mathbb{E}[X] = np$</dt><dd>Mean number of successes. Sum of means of $n$ Bernoullis.</dd>
+        <dt>$\operatorname{Var}(X) = np(1-p)$</dt><dd>Variance.</dd>
+      </dl>
+      <p class="mg-why"><strong>The sum of Bernoullis.</strong> If $X_1, \ldots, X_n$ are i.i.d. Bernoulli($p$), then $\sum_i X_i \sim \text{Binomial}(n, p)$. "Binomial" is just "total successes in $n$ flips."</p>
+    </div>
+
+    <h3>Geometric — how many trials until the first success</h3>
+
+    <div class="math-display">$$X \sim \text{Geometric}(p) \quad\Longleftrightarrow\quad p_X(k) = (1-p)^{k-1} p, \quad k = 1, 2, 3, \ldots$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Geometric distribution</p>
+      <dl>
+        <dt>$k$</dt><dd>The trial number on which the first success occurred.</dd>
+        <dt>$(1-p)^{k-1}$</dt><dd>Probability that the first $k-1$ trials all failed.</dd>
+        <dt>$p$</dt><dd>Probability that trial $k$ finally succeeded.</dd>
+        <dt>$\mathbb{E}[X] = 1/p$</dt><dd>Mean wait time. If the chance per trial is 1/6, it takes 6 trials on average.</dd>
+        <dt>$\operatorname{Var}(X) = (1-p)/p^2$</dt><dd>Variance.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Memoryless.</strong> Geometric has a famous property: no matter how long you've waited, the probability of waiting another $m$ more trials is the same as if you'd just started. The distribution has no "I'm due for a win" logic.</p>
+    </div>
+
+    <h3>Poisson — rare events over time or space</h3>
+
+    <div class="math-display">$$X \sim \text{Poisson}(\lambda) \quad\Longleftrightarrow\quad p_X(k) = \frac{\lambda^k e^{-\lambda}}{k!}, \quad k = 0, 1, 2, \ldots$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Poisson distribution</p>
+      <dl>
+        <dt>$\lambda$</dt><dd>The <strong>rate</strong> parameter — the expected number of events per unit interval. Lambda is strictly positive.</dd>
+        <dt>$k$</dt><dd>The number of events observed in that interval.</dd>
+        <dt>$e$</dt><dd>Euler's constant $\approx 2.71828$. It appears because the Poisson is the $n \to \infty$, $p \to 0$ limit of Binomial($n, p$) with $np = \lambda$ fixed.</dd>
+        <dt>$k!$</dt><dd>Factorial: $k! = k(k-1)(k-2)\cdots 1$.</dd>
+        <dt>$\mathbb{E}[X] = \lambda$</dt><dd>Mean equals the rate.</dd>
+        <dt>$\operatorname{Var}(X) = \lambda$</dt><dd>Variance also equals the rate — a signature of the Poisson.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Typical uses.</strong> Customer arrivals per hour, typos per page, radioactive decays per second, requests per second at a server. Anything where lots of independent things could happen but each with tiny probability, and you're counting how many actually did.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="continuous">8. Common continuous distributions</h2>
+
+    <h3>Uniform on an interval</h3>
+
+    <div class="math-display">$$X \sim \text{Uniform}(a, b) \quad\Longleftrightarrow\quad f_X(x) = \begin{cases} \dfrac{1}{b - a} & a \le x \le b \\ 0 & \text{otherwise} \end{cases}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Uniform distribution</p>
+      <dl>
+        <dt>$a, b$</dt><dd>The left and right endpoints of the interval, with $a < b$.</dd>
+        <dt>$1/(b-a)$</dt><dd>The constant density. Every point in $[a, b]$ is equally likely (in the density sense).</dd>
+        <dt>$\mathbb{E}[X] = (a + b)/2$</dt><dd>The midpoint.</dd>
+        <dt>$\operatorname{Var}(X) = (b - a)^2 / 12$</dt><dd>Grows with the square of the interval width.</dd>
+      </dl>
+      <p class="mg-why"><strong>The starting point.</strong> Every other continuous distribution can be simulated from uniform samples via the inverse-CDF trick. When you call <code>random()</code> in a programming language, you're sampling from $\text{Uniform}(0, 1)$.</p>
+    </div>
+
+    <h3>Exponential — time between Poisson events</h3>
+
+    <div class="math-display">$$X \sim \text{Exponential}(\lambda) \quad\Longleftrightarrow\quad f_X(x) = \lambda e^{-\lambda x}, \quad x \ge 0$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Exponential distribution</p>
+      <dl>
+        <dt>$\lambda$</dt><dd>Rate parameter, same meaning as the Poisson rate.</dd>
+        <dt>$\lambda e^{-\lambda x}$</dt><dd>Density that peaks at $x = 0$ and decays exponentially. Most waits are short; long waits get rarer fast.</dd>
+        <dt>$\mathbb{E}[X] = 1/\lambda$</dt><dd>Mean wait time. If events happen at rate 3 per minute, you wait 1/3 minute on average.</dd>
+        <dt>$\operatorname{Var}(X) = 1/\lambda^2$</dt><dd>Variance.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Memoryless (again).</strong> Like the geometric, the exponential has no memory: $P(X > s + t \mid X > s) = P(X > t)$. The wait until the next event doesn't depend on how long you've already waited.</p>
+    </div>
+
+    <h3>Gaussian / Normal — the most important distribution in the universe</h3>
+
+    <div class="math-display">$$X \sim \mathcal{N}(\mu, \sigma^2) \quad\Longleftrightarrow\quad f_X(x) = \frac{1}{\sigma \sqrt{2\pi}} \exp\!\left(-\frac{(x - \mu)^2}{2 \sigma^2}\right)$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Gaussian / Normal distribution</p>
+      <dl>
+        <dt>$\mu$</dt><dd>The <strong>mean</strong> — center of the bell curve. $\mathbb{E}[X] = \mu$.</dd>
+        <dt>$\sigma$</dt><dd>The <strong>standard deviation</strong> — width of the bell curve. Larger $\sigma$ means a wider, flatter bell.</dd>
+        <dt>$\sigma^2$</dt><dd>The variance, $\operatorname{Var}(X) = \sigma^2$.</dd>
+        <dt>$\mathcal{N}$</dt><dd>The calligraphic N that universally denotes Normal.</dd>
+        <dt>$\exp$</dt><dd>The exponential function $e^x$. The argument is a negative squared term, so the density is a bell that decays on both sides.</dd>
+        <dt>$1 / (\sigma\sqrt{2\pi})$</dt><dd>The normalization constant that makes the whole integral equal to 1.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why it's everywhere.</strong> The Central Limit Theorem (§13) says that sums of independent things — no matter what distribution they started from — look Gaussian in the limit. That's why measurement noise, heights, test scores, and a thousand other real-world quantities are roughly Gaussian. And it's why half of ML starts with "assume the residual is Normal."</p>
+      <p class="mg-why"><strong>68–95–99.7 rule.</strong> About 68% of the mass is within $\mu \pm \sigma$, 95% within $\mu \pm 2\sigma$, and 99.7% within $\mu \pm 3\sigma$. Internalize these. They let you eyeball whether a number is "within normal" without computing anything.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="gauss-demo">9. Interactive: the Gaussian sandbox</h2>
+
+    <p>Drag the sliders to change the mean $\mu$ and standard deviation $\sigma$ of a Gaussian and watch the PDF and CDF update together. The dashed lines mark the 68% interval $\mu \pm \sigma$. Notice how the PDF's <em>height</em> changes inversely with $\sigma$ — a wider bell is necessarily a shorter one, so the total area stays 1.</p>
+
+    <div class="viz-3d">
+      <div class="v3-controls">
+        <span class="v3-label">μ:</span>
+        <input id="gaussMu" type="range" min="-3" max="3" value="0" step="0.05" style="flex:1;max-width:240px;">
+        <span id="gaussMuLabel" style="min-width:50px;color:#22d3ee;font-family:ui-monospace,monospace;">0.00</span>
+        <span class="v3-label">σ:</span>
+        <input id="gaussSigma" type="range" min="0.3" max="2.5" value="1.0" step="0.05" style="flex:1;max-width:240px;">
+        <span id="gaussSigmaLabel" style="min-width:50px;color:#7c5cff;font-family:ui-monospace,monospace;">1.00</span>
+      </div>
+      <svg id="gaussSvg" viewBox="0 0 720 360" style="width:100%;height:auto;background:#0a0d12;border-radius:6px;"></svg>
+      <p class="v3-caption" id="gaussCaption">PDF (cyan) and CDF (violet) of $\mathcal{N}(\mu, \sigma^2)$.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="moments">10. Expectation and variance</h2>
+
+    <p>Two numbers summarize a distribution well enough for most purposes: the center and the spread. The center is the expectation; the spread is the variance. These are the first two <em>moments</em> of the distribution.</p>
+
+    <h3>Expectation</h3>
+
+    <div class="math-display">$$\mathbb{E}[X] = \sum_k k\, p_X(k) \qquad \text{(discrete)} \qquad \mathbb{E}[X] = \int_{-\infty}^\infty x\, f_X(x)\, dx \qquad \text{(continuous)}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Expectation</p>
+      <dl>
+        <dt>$\mathbb{E}[X]$</dt><dd>The expected value or <strong>mean</strong> of the random variable $X$. The "blackboard bold" $\mathbb{E}$ is universal notation.</dd>
+        <dt>$\sum_k k\, p_X(k)$</dt><dd>For a discrete RV: sum each value times its probability. The "weighted average of outcomes, weighted by probability."</dd>
+        <dt>$\int x\, f_X(x)\, dx$</dt><dd>The continuous analog — the integral of $x$ weighted by the density. See <a href="calculus.html">calculus.html</a> if the integral feels opaque.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Center of mass.</strong> If you printed the PMF or PDF on a cardboard and tried to balance it on a knife edge, the balance point would be $\mathbb{E}[X]$. It is not "the most likely value" (that's the mode) or "the median" — it's the balance point. For symmetric distributions like the Gaussian, all three coincide. For skewed distributions, they don't.</p>
+    </div>
+
+    <h3>Linearity of expectation</h3>
+
+    <p>The single most useful property of $\mathbb{E}$:</p>
+
+    <div class="math-display">$$\mathbb{E}[aX + bY] = a\, \mathbb{E}[X] + b\, \mathbb{E}[Y]$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Linearity of expectation</p>
+      <dl>
+        <dt>$X, Y$</dt><dd>Any two random variables on the same sample space. <em>They do not have to be independent.</em></dd>
+        <dt>$a, b$</dt><dd>Any real constants.</dd>
+      </dl>
+      <p class="mg-why"><strong>Why this is a superpower.</strong> Independence is a strong assumption. Linearity doesn't need it. You can compute the expected number of fixed points in a random permutation, or the expected number of empty bins in a hash table, by decomposing the quantity as a sum of indicator variables and adding their means. The variables are usually not independent, and it doesn't matter.</p>
+      <p class="mg-analogy"><strong>Proof sketch.</strong> For discrete variables, $\mathbb{E}[X + Y] = \sum_{\omega} (X(\omega) + Y(\omega)) P(\{\omega\}) = \sum_\omega X(\omega) P(\{\omega\}) + \sum_\omega Y(\omega) P(\{\omega\}) = \mathbb{E}[X] + \mathbb{E}[Y]$. Sums factor. The continuous proof is the same with integrals.</p>
+    </div>
+
+    <h3>Variance and standard deviation</h3>
+
+    <div class="math-display">$$\operatorname{Var}(X) = \mathbb{E}\!\left[(X - \mathbb{E}[X])^2\right] = \mathbb{E}[X^2] - \mathbb{E}[X]^2$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Variance</p>
+      <dl>
+        <dt>$\operatorname{Var}(X)$</dt><dd>Variance — the expected squared deviation from the mean. A measure of how spread out $X$ is.</dd>
+        <dt>$(X - \mathbb{E}[X])^2$</dt><dd>The squared gap between the random variable and its mean. Squared so negatives don't cancel positives.</dd>
+        <dt>$\mathbb{E}[X^2] - \mathbb{E}[X]^2$</dt><dd>An equivalent, often more convenient form. "Expectation of the square minus the square of the expectation." Remember this identity; it saves you all the time.</dd>
+        <dt>standard deviation</dt><dd>$\sigma(X) = \sqrt{\operatorname{Var}(X)}$. Same units as $X$, which is why you usually report $\sigma$ rather than $\operatorname{Var}$ in practice.</dd>
+      </dl>
+      <p class="mg-why"><strong>Not linear.</strong> $\operatorname{Var}(aX) = a^2 \operatorname{Var}(X)$ and $\operatorname{Var}(X + Y) = \operatorname{Var}(X) + \operatorname{Var}(Y) + 2\operatorname{Cov}(X, Y)$. The variance of a sum is the sum of variances only when $X$ and $Y$ are uncorrelated.</p>
+    </div>
+
+    <h3>The law of the unconscious statistician</h3>
+
+    <p>You often want the expectation not of $X$ itself but of some function $g(X)$. The "LOTUS" rule says you don't need to compute the distribution of $g(X)$; you just weight $g(x)$ by $X$'s original density:</p>
+
+    <div class="math-display">$$\mathbb{E}[g(X)] = \sum_k g(k)\, p_X(k) \qquad\text{or}\qquad \mathbb{E}[g(X)] = \int g(x)\, f_X(x)\, dx$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Law of the unconscious statistician</p>
+      <dl>
+        <dt>$g$</dt><dd>Any function you want to apply to the random variable — e.g., $g(x) = x^2$, $g(x) = \log x$.</dd>
+        <dt>$\mathbb{E}[g(X)]$</dt><dd>The expected value of the transformed variable.</dd>
+        <dt>$g(k)\, p_X(k)$</dt><dd>You evaluate $g$ at each outcome $k$ and weight by $k$'s original probability — no need to find the PMF of $g(X)$.</dd>
+      </dl>
+      <p class="mg-why"><strong>Why "unconscious"?</strong> The name is a joke: it's the formula beginners use without realizing they're implicitly using a theorem. The theorem is that this shortcut agrees with the "proper" calculation of first finding $g(X)$'s distribution and then computing its mean. It always does.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="joint">11. Joint, marginal, and conditional distributions</h2>
+
+    <p>Once you have more than one random variable — say $X$ and $Y$ — three new objects appear, and it pays to keep them straight.</p>
+
+    <p><strong>Joint</strong>. The joint distribution $p_{X,Y}(x, y)$ (or $f_{X,Y}$ in the continuous case) tells you the probability of every combination of values:</p>
+
+    <div class="math-display">$$p_{X,Y}(x, y) = P(X = x, Y = y)$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Joint distribution</p>
+      <dl>
+        <dt>$X, Y$</dt><dd>Two random variables on the same sample space.</dd>
+        <dt>$p_{X,Y}(x, y)$</dt><dd>The joint PMF (or density, in the continuous case) — how much probability mass sits at the point $(x, y)$.</dd>
+        <dt>$(X = x, Y = y)$</dt><dd>The event "$X$ equals $x$ and $Y$ equals $y$ simultaneously."</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Picture.</strong> The joint is a heatmap over the plane; integrating/summing it gives 1.</p>
+    </div>
+
+    <p><strong>Marginal</strong>. If you have the joint and you only care about $X$, you sum (or integrate) out $Y$:</p>
+
+    <div class="math-display">$$p_X(x) = \sum_y p_{X,Y}(x, y) \qquad \text{or} \qquad f_X(x) = \int f_{X,Y}(x, y)\, dy$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Marginalization</p>
+      <dl>
+        <dt>$p_X(x)$</dt><dd>The marginal distribution of $X$ — what you get if you ignore $Y$ entirely.</dd>
+        <dt>$\sum_y$ / $\int dy$</dt><dd>Summing or integrating over all possible values of the variable you want to eliminate.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>The word "marginal" is literal.</strong> Put the joint in a table. Sum each row; write the total in the right margin. Those numbers are the marginal distribution of the row variable. Same for columns.</p>
+    </div>
+
+    <p><strong>Conditional</strong>. This is just the conditional probability rule applied to joint densities:</p>
+
+    <div class="math-display">$$p_{X \mid Y}(x \mid y) = \frac{p_{X,Y}(x, y)}{p_Y(y)}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Conditional distribution</p>
+      <dl>
+        <dt>$p_{X \mid Y}(x \mid y)$</dt><dd>The distribution of $X$ given that you've observed $Y = y$.</dd>
+        <dt>$p_{X,Y}(x, y)$</dt><dd>The joint.</dd>
+        <dt>$p_Y(y)$</dt><dd>The marginal of $Y$ — the normalizer that rescales the slice so it sums to 1.</dd>
+      </dl>
+      <p class="mg-why"><strong>The whole game.</strong> Joint, marginal, conditional. Bayes' theorem, expectation, and every Bayesian inference algorithm you'll ever see is built out of just these three moves plus some bookkeeping.</p>
+    </div>
+
+    <h3>Covariance and correlation</h3>
+
+    <div class="math-display">$$\operatorname{Cov}(X, Y) = \mathbb{E}\!\left[(X - \mathbb{E}[X])(Y - \mathbb{E}[Y])\right] = \mathbb{E}[XY] - \mathbb{E}[X]\mathbb{E}[Y]$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Covariance</p>
+      <dl>
+        <dt>$\operatorname{Cov}(X, Y)$</dt><dd>A measure of how $X$ and $Y$ vary together. Positive when they tend to be large/small at the same time, negative when one being large predicts the other being small.</dd>
+        <dt>$(X - \mathbb{E}[X])(Y - \mathbb{E}[Y])$</dt><dd>Product of the deviations from each mean.</dd>
+        <dt>units</dt><dd>Covariance has the units of $X$ times the units of $Y$, which is awkward. That's why people prefer the dimensionless <em>correlation</em>.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Independence implies zero covariance.</strong> The converse is <em>not</em> true: you can have $\operatorname{Cov}(X, Y) = 0$ without $X$ and $Y$ being independent. Covariance only catches <em>linear</em> dependence.</p>
+    </div>
+
+    <div class="math-display">$$\rho(X, Y) = \frac{\operatorname{Cov}(X, Y)}{\sigma(X)\, \sigma(Y)} \in [-1, 1]$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Correlation</p>
+      <dl>
+        <dt>$\rho$</dt><dd>Pearson correlation coefficient. Bounded in $[-1, 1]$.</dd>
+        <dt>$\sigma(X), \sigma(Y)$</dt><dd>Standard deviations of $X$ and $Y$.</dd>
+        <dt>$\rho = 1$</dt><dd>Perfect positive linear relationship.</dd>
+        <dt>$\rho = -1$</dt><dd>Perfect negative linear relationship.</dd>
+        <dt>$\rho = 0$</dt><dd>Uncorrelated — <em>not</em> the same as independent.</dd>
+      </dl>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="mvn">12. Multivariate Gaussian</h2>
+
+    <p>The single most important distribution in modern ML. Once you stack several Gaussian variables into a vector and allow them to be correlated, you get the multivariate normal:</p>
+
+    <div class="math-display">$$\mathbf{x} \sim \mathcal{N}(\boldsymbol{\mu}, \boldsymbol{\Sigma}) \quad\Longleftrightarrow\quad f(\mathbf{x}) = \frac{1}{\sqrt{(2\pi)^d\, |\boldsymbol{\Sigma}|}} \exp\!\left(-\tfrac{1}{2} (\mathbf{x} - \boldsymbol{\mu})^\top \boldsymbol{\Sigma}^{-1} (\mathbf{x} - \boldsymbol{\mu})\right)$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Multivariate Gaussian</p>
+      <dl>
+        <dt>$\mathbf{x} \in \mathbb{R}^d$</dt><dd>A $d$-dimensional random vector. Bold lowercase for vectors.</dd>
+        <dt>$\boldsymbol{\mu} \in \mathbb{R}^d$</dt><dd>The <strong>mean vector</strong> — the center of the distribution in $d$ dimensions.</dd>
+        <dt>$\boldsymbol{\Sigma}$</dt><dd>The $d \times d$ <strong>covariance matrix</strong>. Entry $\Sigma_{ij} = \operatorname{Cov}(x_i, x_j)$. The diagonal holds the individual variances; the off-diagonals hold the pairwise covariances. See <a href="linear-algebra.html">linear-algebra.html</a> for matrices and quadratic forms.</dd>
+        <dt>$|\boldsymbol{\Sigma}|$</dt><dd>The determinant of the covariance matrix — a scalar measure of its "volume." Shows up in the normalizer.</dd>
+        <dt>$\boldsymbol{\Sigma}^{-1}$</dt><dd>The <strong>precision matrix</strong> — inverse of the covariance. It measures concentration, not spread: a large precision in a direction means the distribution is <em>tight</em> in that direction.</dd>
+        <dt>$(\mathbf{x} - \boldsymbol{\mu})^\top \boldsymbol{\Sigma}^{-1} (\mathbf{x} - \boldsymbol{\mu})$</dt><dd>The <strong>Mahalanobis distance</strong> squared — a generalized "how far from the mean" that accounts for correlations between dimensions.</dd>
+        <dt>$(2\pi)^d$</dt><dd>Normalization factor that generalizes the $\sqrt{2\pi}$ from the 1D case.</dd>
+      </dl>
+      <p class="mg-why"><strong>Why so central.</strong> The multivariate Gaussian is closed under linear transformations, marginalization, and conditioning — meaning every projection, slice, or linear combination of a Gaussian is still Gaussian. Nothing else is this well-behaved. Half of classical ML (PCA, Kalman filters, Gaussian processes, LDA, variational inference) is built on top of this single fact.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="lln-clt">13. Law of large numbers and the Central Limit Theorem</h2>
+
+    <p>Two results that tie probability to reality and are the reason Gaussians show up everywhere.</p>
+
+    <h3>The Law of Large Numbers (LLN)</h3>
+
+    <p>If $X_1, X_2, \ldots$ are independent random variables drawn from the same distribution with mean $\mu$, and you take the sample mean $\bar{X}_n = \tfrac{1}{n} \sum_{i=1}^n X_i$, then:</p>
+
+    <div class="math-display">$$\bar{X}_n \xrightarrow{\;n \to \infty\;} \mu$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Law of large numbers</p>
+      <dl>
+        <dt>$X_i$</dt><dd>Independent and identically distributed (i.i.d.) draws from the same distribution.</dd>
+        <dt>$\bar{X}_n$</dt><dd>Sample mean of the first $n$ draws.</dd>
+        <dt>$\mu = \mathbb{E}[X_i]$</dt><dd>True population mean.</dd>
+        <dt>convergence</dt><dd>The sample average converges to the true mean as $n$ grows. There are two precise versions (weak LLN and strong LLN) that differ in what kind of convergence they guarantee.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>What this is saying.</strong> Averaging many independent measurements gets you closer to the truth. The reason Monte Carlo simulation works. The reason frequentist statistics makes sense. The reason "more data" is almost always better.</p>
+    </div>
+
+    <h3>The Central Limit Theorem (CLT)</h3>
+
+    <p>The LLN tells you <em>where</em> $\bar{X}_n$ ends up. The CLT tells you <em>how</em> it gets there — specifically, what the distribution of the residual error looks like.</p>
+
+    <div class="math-display">$$\sqrt{n}\, \frac{\bar{X}_n - \mu}{\sigma} \xrightarrow{\;n \to \infty\;} \mathcal{N}(0, 1)$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Central Limit Theorem</p>
+      <dl>
+        <dt>$\bar{X}_n$</dt><dd>Sample mean of $n$ i.i.d. draws.</dd>
+        <dt>$\mu, \sigma$</dt><dd>Population mean and standard deviation (assumed finite).</dd>
+        <dt>$\sqrt{n}\, (\bar{X}_n - \mu)/\sigma$</dt><dd>The standardized error: gap from the truth, rescaled by the standard error $\sigma/\sqrt{n}$.</dd>
+        <dt>$\mathcal{N}(0, 1)$</dt><dd>Standard normal — mean zero, variance one.</dd>
+        <dt>convergence</dt><dd>"Converges in distribution to" — the CDF of the left side approaches the CDF of the right side everywhere.</dd>
+      </dl>
+      <p class="mg-why"><strong>Why this is magic.</strong> The $X_i$ can be from <em>any</em> distribution with finite variance. Uniform, exponential, Bernoulli, something weirder — doesn't matter. Their sample mean still looks Gaussian in the limit. This is why, even though the real world is full of non-Gaussian distributions, every averaged quantity from polls to thermometer readings is Gaussian in practice. The Gaussian is an attractor.</p>
+      <p class="mg-analogy"><strong>The size of the error.</strong> The standard error shrinks like $\sigma / \sqrt{n}$, not $1/n$. To cut your uncertainty in half, you need <em>four</em> times as much data. That $\sqrt{n}$ rate is the single most important scaling law in statistics.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="info">14. Entropy, cross-entropy, KL divergence</h2>
+
+    <p>Information theory is the bridge between probability and machine learning. Three quantities are essential.</p>
+
+    <h3>Entropy</h3>
+
+    <div class="math-display">$$H(p) = -\sum_x p(x)\, \log p(x)$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Entropy</p>
+      <dl>
+        <dt>$H(p)$</dt><dd>The <strong>entropy</strong> of the distribution $p$ — a measure of its uncertainty or "spread" in bits (if $\log$ is base 2) or nats (if $\log$ is natural).</dd>
+        <dt>$p(x)$</dt><dd>The probability the distribution assigns to outcome $x$.</dd>
+        <dt>$-\log p(x)$</dt><dd>The <strong>surprise</strong> of outcome $x$. Rare outcomes are surprising; certain outcomes are not. Surprise is never negative because $p(x) \le 1$ makes $\log p(x) \le 0$.</dd>
+        <dt>summation</dt><dd>Weighted average of surprise over the distribution — "how surprised do you expect to be?"</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Information content.</strong> A fair coin has entropy $\log 2 = 1$ bit — one yes/no question per flip. A biased coin has less. A deterministic outcome has entropy 0 because nothing is left to learn. Entropy measures how much information is needed to describe a sample from $p$.</p>
+    </div>
+
+    <h3>Cross-entropy</h3>
+
+    <div class="math-display">$$H(p, q) = -\sum_x p(x)\, \log q(x)$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Cross-entropy</p>
+      <dl>
+        <dt>$p$</dt><dd>The <em>true</em> distribution of the data.</dd>
+        <dt>$q$</dt><dd>Your model's distribution — the one you're using to "encode" outcomes from $p$.</dd>
+        <dt>$-\log q(x)$</dt><dd>The surprise <em>your model</em> feels at seeing $x$.</dd>
+        <dt>$\sum_x p(x)(-\log q(x))$</dt><dd>Your model's average surprise when outcomes are actually drawn from $p$.</dd>
+        <dt>$H(p, q) \ge H(p)$</dt><dd>Always, with equality only when $p = q$. Your model is never less surprised than the best possible model.</dd>
+      </dl>
+      <p class="mg-why"><strong>Why every classifier uses it.</strong> When you train a classifier with the "cross-entropy loss," you are minimizing $H(p, q)$ where $p$ is the true one-hot label distribution and $q$ is your softmax output. It is the unique loss that makes your model's predicted distribution converge to the true conditional distribution given the input.</p>
+    </div>
+
+    <h3>KL divergence</h3>
+
+    <div class="math-display">$$D_{\text{KL}}(p \,\|\, q) = \sum_x p(x)\, \log \frac{p(x)}{q(x)} = H(p, q) - H(p)$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Kullback–Leibler divergence</p>
+      <dl>
+        <dt>$D_{\text{KL}}(p \,\|\, q)$</dt><dd>The "distance" from $p$ to $q$ — how many extra nats of surprise you incur by using $q$ when the truth is $p$.</dd>
+        <dt>$\log (p(x) / q(x))$</dt><dd>Log-ratio of the true and model probabilities. Positive where $p > q$, negative where $p < q$.</dd>
+        <dt>$H(p, q) - H(p)$</dt><dd>KL equals cross-entropy minus entropy. Since $H(p)$ doesn't depend on $q$, minimizing cross-entropy over $q$ is the same as minimizing KL.</dd>
+        <dt>$D_{\text{KL}} \ge 0$</dt><dd>Always non-negative, zero only when $p = q$ almost everywhere. This is Gibbs' inequality.</dd>
+        <dt>not a metric</dt><dd>$D_{\text{KL}}$ is <em>asymmetric</em>: $D_{\text{KL}}(p \| q) \ne D_{\text{KL}}(q \| p)$ in general. It's not a distance in the usual sense, despite the name.</dd>
+      </dl>
+      <p class="mg-why"><strong>Where you'll meet it.</strong> Variational inference minimizes KL between an approximate posterior and the true one. VAEs have a KL regularizer pulling the latent code toward a prior. <a href="../topics/ai-safety.html">DPO and RLHF</a> use a KL term to keep the fine-tuned policy from drifting too far from the base model. Diffusion models train by matching a Gaussian reverse process to a KL-minimizing target. It is everywhere in modern ML.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="worked">15. Worked example: a Bayesian coin-flip</h2>
+
+    <p>Let's do a full Bayesian update from start to finish. You have a coin. You suspect it might be biased. Before flipping, you believe the bias parameter $\theta$ (the probability of heads) is uniformly distributed on $[0, 1]$ — every value equally plausible.</p>
+
+    <p><strong>Prior.</strong> $f(\theta) = 1$ for $\theta \in [0, 1]$.</p>
+
+    <p>You flip the coin 10 times and observe 7 heads. What should you believe about $\theta$ now?</p>
+
+    <p><strong>Likelihood.</strong> Given $\theta$, the probability of seeing 7 heads in 10 flips is a Binomial probability — and viewed as a function of $\theta$ with the data fixed:</p>
+
+    <div class="math-display">$$P(\text{data} \mid \theta) = \binom{10}{7} \theta^7 (1 - \theta)^3$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Coin-flip likelihood</p>
+      <dl>
+        <dt>$\theta$</dt><dd>The unknown bias parameter we're trying to learn.</dd>
+        <dt>$\binom{10}{7}$</dt><dd>The number of ways to arrange 7 heads in 10 slots. It's a constant in $\theta$ and will be absorbed into the normalizer.</dd>
+        <dt>$\theta^7 (1 - \theta)^3$</dt><dd>The "shape" of the likelihood — the part that actually depends on $\theta$.</dd>
+      </dl>
+    </div>
+
+    <p><strong>Posterior.</strong> By Bayes,</p>
+
+    <div class="math-display">$$f(\theta \mid \text{data}) = \frac{P(\text{data} \mid \theta)\, f(\theta)}{P(\text{data})} \propto \theta^7 (1 - \theta)^3$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Coin-flip posterior</p>
+      <dl>
+        <dt>$f(\theta \mid \text{data})$</dt><dd>The posterior — your updated density over $\theta$ after seeing the 10 flips.</dd>
+        <dt>$\propto$</dt><dd>"Proportional to." We're dropping the constants because they'll be set by requiring the density to integrate to 1.</dd>
+        <dt>$\theta^7 (1 - \theta)^3$</dt><dd>The unnormalized posterior — the shape of what you believe now.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>It's a Beta distribution.</strong> $\theta^{a-1}(1-\theta)^{b-1}$ is the unnormalized form of Beta($a$, $b$). So your posterior here is Beta($8$, $4$). Its mean is $8/(8+4) = 2/3 \approx 0.667$. So after 7 heads in 10 flips, your best estimate of $\theta$ is 0.667, not 0.7 — because your uniform prior is still pulling the estimate slightly toward 0.5. The prior has teeth even here.</p>
+      <p class="mg-why"><strong>This is conjugacy.</strong> When the prior and posterior come from the same family (uniform is Beta(1,1); posterior is Beta($k+1$, $n-k+1$)), we say the prior is <em>conjugate</em> to the likelihood. This is the Bayesian freebie: the update is closed-form. For coin flips the Beta is conjugate to the Bernoulli/Binomial. Most real problems don't have conjugate priors, which is why people invent MCMC and variational methods.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="code">16. Code — NumPy and SciPy</h2>
+
+    <p>Three tabs: sampling from common distributions and summarizing them, a Bayesian update from the worked example, and computing KL divergence numerically.</p>
+
+    <div class="code-tabs" id="ct-prob">
+      <div class="ct-header">
+        <button class="ct-tab active" data-tab="sample">Sampling</button>
+        <button class="ct-tab" data-tab="bayes">Bayesian update</button>
+        <button class="ct-tab" data-tab="kl">KL divergence</button>
+        <span class="ct-label">probability · working code</span>
+      </div>
+      <div class="ct-panel active" data-tab="sample"><pre><code><span class="kw">import</span> numpy <span class="kw">as</span> np
+<span class="kw">from</span> scipy <span class="kw">import</span> stats
+
+rng = np.random.default_rng(<span class="num">42</span>)
+
+<span class="cmt"># Draw 10,000 samples from each of three common distributions</span>
+bern = rng.binomial(n=<span class="num">1</span>, p=<span class="num">0.3</span>, size=<span class="num">10000</span>)        <span class="cmt"># Bernoulli(0.3)</span>
+pois = rng.poisson(lam=<span class="num">4.0</span>, size=<span class="num">10000</span>)              <span class="cmt"># Poisson(lambda=4)</span>
+norm = rng.normal(loc=<span class="num">0.0</span>, scale=<span class="num">1.0</span>, size=<span class="num">10000</span>)     <span class="cmt"># N(0, 1)</span>
+
+<span class="kw">for</span> name, s, true_mean, true_var <span class="kw">in</span> [
+    (<span class="str">"Bern(0.3)"</span>, bern, <span class="num">0.3</span>,  <span class="num">0.3</span> * <span class="num">0.7</span>),
+    (<span class="str">"Pois(4.0)"</span>, pois, <span class="num">4.0</span>,  <span class="num">4.0</span>),
+    (<span class="str">"N(0,1)"</span>,    norm, <span class="num">0.0</span>,  <span class="num">1.0</span>),
+]:
+    <span class="fn">print</span>(<span class="str">f"{name:10s}  sample mean = {s.mean():+.3f} (true {true_mean:+.3f})"</span>
+          <span class="str">f"   sample var = {s.var():.3f} (true {true_var:.3f})"</span>)
+
+<span class="cmt"># Use scipy.stats for PDFs / PMFs / CDFs directly</span>
+x = np.linspace(-<span class="num">4</span>, <span class="num">4</span>, <span class="num">200</span>)
+pdf = stats.norm.pdf(x, loc=<span class="num">0</span>, scale=<span class="num">1</span>)                <span class="cmt"># Gaussian density</span>
+cdf = stats.norm.cdf(x, loc=<span class="num">0</span>, scale=<span class="num">1</span>)                <span class="cmt"># Gaussian CDF</span>
+<span class="fn">print</span>(<span class="str">f"P(|X| &lt; 1) for N(0,1) ≈ {stats.norm.cdf(1) - stats.norm.cdf(-1):.4f}"</span>)
+<span class="cmt"># → 0.6827, the 68% rule.</span>
+</code></pre></div>
+
+      <div class="ct-panel" data-tab="bayes"><pre><code><span class="kw">import</span> numpy <span class="kw">as</span> np
+<span class="kw">from</span> scipy <span class="kw">import</span> stats
+
+<span class="cmt"># Bayesian coin-flip update — §15 worked example.</span>
+<span class="cmt"># Prior: Uniform(0, 1) = Beta(1, 1).</span>
+<span class="cmt"># Data: 10 flips, 7 heads.</span>
+<span class="cmt"># Posterior: Beta(1 + heads, 1 + tails) = Beta(8, 4).</span>
+
+heads, tails = <span class="num">7</span>, <span class="num">3</span>
+a_prior, b_prior = <span class="num">1</span>, <span class="num">1</span>
+a_post,  b_post  = a_prior + heads, b_prior + tails
+
+post = stats.beta(a_post, b_post)
+
+<span class="fn">print</span>(<span class="str">f"posterior mean  = {post.mean():.4f}"</span>)      <span class="cmt"># 0.6667</span>
+<span class="fn">print</span>(<span class="str">f"posterior mode  = {(a_post-1)/(a_post+b_post-2):.4f}"</span>)  <span class="cmt"># 0.7000</span>
+<span class="fn">print</span>(<span class="str">f"95% credible iv = [{post.ppf(0.025):.3f}, {post.ppf(0.975):.3f}]"</span>)
+
+<span class="cmt"># Disease-test Bayes — §5 worked example.</span>
+<span class="kw">def</span> <span class="fn">disease_posterior</span>(prior, sensitivity, specificity):
+    p_pos_given_d  = sensitivity
+    p_pos_given_nd = <span class="num">1</span> - specificity
+    p_pos = p_pos_given_d * prior + p_pos_given_nd * (<span class="num">1</span> - prior)
+    <span class="kw">return</span> p_pos_given_d * prior / p_pos
+
+p = <span class="fn">disease_posterior</span>(prior=<span class="num">0.001</span>, sensitivity=<span class="num">0.99</span>, specificity=<span class="num">0.99</span>)
+<span class="fn">print</span>(<span class="str">f"P(disease | positive) = {p:.4f}"</span>)      <span class="cmt"># 0.0901</span>
+</code></pre></div>
+
+      <div class="ct-panel" data-tab="kl"><pre><code><span class="kw">import</span> numpy <span class="kw">as</span> np
+<span class="kw">from</span> scipy <span class="kw">import</span> stats
+
+<span class="cmt"># KL divergence between two discrete distributions.</span>
+<span class="kw">def</span> <span class="fn">kl_discrete</span>(p, q, eps=<span class="num">1e-12</span>):
+    p = np.asarray(p, dtype=<span class="kw">float</span>)
+    q = np.asarray(q, dtype=<span class="kw">float</span>)
+    <span class="kw">return</span> np.sum(p * np.log((p + eps) / (q + eps)))
+
+p = np.array([<span class="num">0.1</span>, <span class="num">0.4</span>, <span class="num">0.5</span>])
+q = np.array([<span class="num">0.2</span>, <span class="num">0.3</span>, <span class="num">0.5</span>])
+<span class="fn">print</span>(<span class="str">f"KL(p || q) = {kl_discrete(p, q):.4f}"</span>)
+<span class="fn">print</span>(<span class="str">f"KL(q || p) = {kl_discrete(q, p):.4f}"</span>)   <span class="cmt"># different — KL is asymmetric</span>
+
+<span class="cmt"># Entropy and cross-entropy</span>
+<span class="kw">def</span> <span class="fn">entropy</span>(p, eps=<span class="num">1e-12</span>):
+    p = np.asarray(p, dtype=<span class="kw">float</span>)
+    <span class="kw">return</span> -np.sum(p * np.log(p + eps))
+
+<span class="kw">def</span> <span class="fn">cross_entropy</span>(p, q, eps=<span class="num">1e-12</span>):
+    <span class="kw">return</span> -np.sum(np.asarray(p) * np.log(np.asarray(q) + eps))
+
+<span class="fn">print</span>(<span class="str">f"H(p)       = {entropy(p):.4f}"</span>)
+<span class="fn">print</span>(<span class="str">f"H(p, q)    = {cross_entropy(p, q):.4f}"</span>)
+<span class="fn">print</span>(<span class="str">f"KL = H(p,q) - H(p) = {cross_entropy(p, q) - entropy(p):.4f}"</span>)
+
+<span class="cmt"># KL between two Gaussians has a closed form:</span>
+<span class="cmt">#   KL( N(mu1, s1^2) || N(mu2, s2^2) )</span>
+<span class="cmt">#     = log(s2/s1) + (s1^2 + (mu1-mu2)^2) / (2 s2^2) - 1/2</span>
+<span class="kw">def</span> <span class="fn">kl_gaussian</span>(mu1, s1, mu2, s2):
+    <span class="kw">return</span> (np.log(s2 / s1)
+            + (s1**<span class="num">2</span> + (mu1 - mu2)**<span class="num">2</span>) / (<span class="num">2</span> * s2**<span class="num">2</span>)
+            - <span class="num">0.5</span>)
+
+<span class="fn">print</span>(<span class="str">f"KL(N(0,1) || N(1,1)) = {kl_gaussian(0, 1, 1, 1):.4f}"</span>)
+</code></pre></div>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="ml">17. Connections to machine learning</h2>
+
+    <p>Everything in this page shows up, by name, in modern ML. A partial tour:</p>
+
+    <ul>
+      <li><strong>Cross-entropy loss.</strong> Every classifier you've trained in the last decade minimizes $H(p_{\text{true}}, p_{\text{model}})$ — cross-entropy between the one-hot label and the softmax output. The softmax is literally just "turn logits into a categorical probability distribution," and cross-entropy is the natural loss for matching it to the target.</li>
+      <li><strong>Negative log-likelihood.</strong> The loss used to train language models (see <a href="../topics/foundation-models.html">foundation models</a>) is $-\log p_\theta(x_t \mid x_{<t})$ averaged over tokens — that's the next-token cross-entropy. Same idea, different packaging.</li>
+      <li><strong>KL regularization in RLHF and DPO.</strong> <a href="../topics/ai-safety.html">Preference optimization</a> adds a KL term $\beta \cdot D_{\text{KL}}(\pi_{\text{new}} \,\|\, \pi_{\text{ref}})$ that keeps the fine-tuned policy close to the base model. Without it, RLHF would happily collapse into gibberish that maximizes the reward model.</li>
+      <li><strong>VAEs and diffusion.</strong> <a href="../topics/diffusion.html">Diffusion models</a> and variational autoencoders both optimize an evidence lower bound that's a sum of a reconstruction term and a KL divergence between an approximate posterior and a prior.</li>
+      <li><strong>Dropout.</strong> Each neuron is "kept" with probability $p$. That's a Bernoulli mask applied element-wise to the hidden state — literally sampling from Bern($p$) during training.</li>
+      <li><strong>Softmax = categorical distribution.</strong> The softmax output layer is just a Categorical distribution parameterized by logits. Sampling from it is "sampling from a softmax."</li>
+      <li><strong>Reparameterization trick.</strong> VAEs sample $z = \mu + \sigma \cdot \epsilon$ with $\epsilon \sim \mathcal{N}(0, 1)$ so the gradient can flow through. That's the Gaussian and nothing more.</li>
+      <li><strong>Bayes in <a href="../cs/optimization.html">optimization</a>.</strong> Bayesian optimization uses a Gaussian process prior over the objective function and a Bayes update after each evaluation to decide where to sample next.</li>
+    </ul>
+
+    <p>If you only remember one thing from this page, let it be this. Every time you take a negative log, you are computing a surprise. Every time you sum surprises weighted by the truth, you are computing cross-entropy. Every time you train a neural network on a classification or language task, you are doing Bayesian inference in disguise — with a frequentist accent, but Bayesian machinery. The whole field rests on §5 and §14 of this page.</p>
+
+    <!-- ========================================================== -->
+    <div class="bib">
+      <h4>Further reading</h4>
+      <ul>
+        <li>Sheldon Ross — <em>A First Course in Probability</em>. The standard undergraduate text. Clear, classical, lots of worked problems.</li>
+        <li>Grimmett &amp; Stirzaker — <em>Probability and Random Processes</em>. A step up in sophistication. Where to go when you want the measure-theoretic underpinnings without a full analysis course.</li>
+        <li>David MacKay — <em>Information Theory, Inference, and Learning Algorithms</em>. The bridge from probability to machine learning. Free PDF on his website. Opinionated, Bayesian, wonderful.</li>
+        <li>E. T. Jaynes — <em>Probability Theory: The Logic of Science</em>. The manifesto for probability as extended logic. Not a first book, but transformative as a second or third.</li>
+        <li>Blitzstein &amp; Hwang — <em>Introduction to Probability</em>. Modern, friendly, with a matching online course (Harvard Stat 110). Excellent intuition-building.</li>
+      </ul>
+    </div>
+
+    <div class="next-card">
+      <div class="label">NEXT UP</div>
+      <a href="statistics.html">→ Statistics</a>
+      <p>Probability gives you the forward direction — "given a model, what does the data look like?" Statistics runs it backward — "given the data, what model produced it?" Estimators, confidence intervals, hypothesis tests, and the maximum-likelihood principle. Read on.</p>
+    </div>
+
+  </article>
+</div>
+
+<script>
+// =========================================================
+// Code tabs
+document.querySelectorAll('.code-tabs').forEach(root => {
+  const tabs = root.querySelectorAll('.ct-tab');
+  const panels = root.querySelectorAll('.ct-panel');
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const target = tab.getAttribute('data-tab');
+      tabs.forEach(t => t.classList.toggle('active', t === tab));
+      panels.forEach(p => p.classList.toggle('active', p.getAttribute('data-tab') === target));
+    });
+  });
+});
+
+// =========================================================
+// Gaussian sandbox — PDF and CDF live update
+(function() {
+  const svg = document.getElementById('gaussSvg');
+  if (!svg) return;
+  const NS = 'http://www.w3.org/2000/svg';
+  const muSlider    = document.getElementById('gaussMu');
+  const sigSlider   = document.getElementById('gaussSigma');
+  const muLabel     = document.getElementById('gaussMuLabel');
+  const sigLabel    = document.getElementById('gaussSigmaLabel');
+  const caption     = document.getElementById('gaussCaption');
+
+  const W = 720, H = 360;
+  const ml = 60, mr = 30, mt = 30, mb = 50;
+  const plotW = W - ml - mr;
+  const plotH = H - mt - mb;
+
+  // Plot domain on the x-axis
+  const xMin = -6, xMax = 6;
+
+  function pdf(x, mu, sig) {
+    const z = (x - mu) / sig;
+    return Math.exp(-0.5 * z * z) / (sig * Math.sqrt(2 * Math.PI));
+  }
+
+  // Use the error function via Abramowitz & Stegun 7.1.26 approximation
+  function erf(x) {
+    const sign = x < 0 ? -1 : 1;
+    const ax = Math.abs(x);
+    const a1 =  0.254829592;
+    const a2 = -0.284496736;
+    const a3 =  1.421413741;
+    const a4 = -1.453152027;
+    const a5 =  1.061405429;
+    const p  =  0.3275911;
+    const t = 1 / (1 + p * ax);
+    const y = 1 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * Math.exp(-ax * ax);
+    return sign * y;
+  }
+
+  function cdf(x, mu, sig) {
+    return 0.5 * (1 + erf((x - mu) / (sig * Math.sqrt(2))));
+  }
+
+  function draw() {
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+
+    const mu  = parseFloat(muSlider.value);
+    const sig = parseFloat(sigSlider.value);
+    muLabel.textContent  = mu.toFixed(2);
+    sigLabel.textContent = sig.toFixed(2);
+
+    // Axis frame
+    const fr = document.createElementNS(NS, 'rect');
+    fr.setAttribute('x', ml);
+    fr.setAttribute('y', mt);
+    fr.setAttribute('width',  plotW);
+    fr.setAttribute('height', plotH);
+    fr.setAttribute('fill', '#0f131a');
+    fr.setAttribute('stroke', '#2a3446');
+    fr.setAttribute('stroke-width', 1);
+    svg.appendChild(fr);
+
+    // PDF maxes out at 1 / (sig * sqrt(2 pi)) — use a ceiling so smaller sigmas don't clip the view
+    const yMax = Math.max(0.5, 1 / (0.3 * Math.sqrt(2 * Math.PI)));
+
+    function xOf(x) { return ml + (x - xMin) / (xMax - xMin) * plotW; }
+    function yOfPdf(y) { return mt + plotH - (y / yMax) * plotH; }
+    function yOfCdf(y) { return mt + plotH - y * plotH; }
+
+    // Vertical grid at each integer x
+    for (let g = Math.ceil(xMin); g <= Math.floor(xMax); g++) {
+      const gx = xOf(g);
+      const ln = document.createElementNS(NS, 'line');
+      ln.setAttribute('x1', gx); ln.setAttribute('y1', mt);
+      ln.setAttribute('x2', gx); ln.setAttribute('y2', mt + plotH);
+      ln.setAttribute('stroke', '#1a2030');
+      svg.appendChild(ln);
+      const tl = document.createElementNS(NS, 'text');
+      tl.setAttribute('x', gx); tl.setAttribute('y', mt + plotH + 16);
+      tl.setAttribute('text-anchor', 'middle');
+      tl.setAttribute('fill', '#7a8a9a');
+      tl.setAttribute('font-size', 11);
+      tl.setAttribute('font-family', 'ui-monospace, monospace');
+      tl.textContent = g;
+      svg.appendChild(tl);
+    }
+
+    // Horizontal grid: 0, 0.25, 0.5, 0.75, 1 on the CDF scale
+    [0, 0.25, 0.5, 0.75, 1].forEach(v => {
+      const gy = yOfCdf(v);
+      const ln = document.createElementNS(NS, 'line');
+      ln.setAttribute('x1', ml); ln.setAttribute('y1', gy);
+      ln.setAttribute('x2', ml + plotW); ln.setAttribute('y2', gy);
+      ln.setAttribute('stroke', '#1a2030');
+      svg.appendChild(ln);
+      const tl = document.createElementNS(NS, 'text');
+      tl.setAttribute('x', ml - 6); tl.setAttribute('y', gy + 4);
+      tl.setAttribute('text-anchor', 'end');
+      tl.setAttribute('fill', '#7a8a9a');
+      tl.setAttribute('font-size', 11);
+      tl.setAttribute('font-family', 'ui-monospace, monospace');
+      tl.textContent = v.toFixed(2);
+      svg.appendChild(tl);
+    });
+
+    // Build paths
+    const N = 300;
+    let pdfPath = '';
+    let cdfPath = '';
+    let pdfFill = '';
+    for (let i = 0; i <= N; i++) {
+      const x = xMin + (xMax - xMin) * i / N;
+      const yp = pdf(x, mu, sig);
+      const yc = cdf(x, mu, sig);
+      const px = xOf(x);
+      const pyP = yOfPdf(yp);
+      const pyC = yOfCdf(yc);
+      pdfPath += (i === 0 ? 'M' : 'L') + px + ' ' + pyP + ' ';
+      cdfPath += (i === 0 ? 'M' : 'L') + px + ' ' + pyC + ' ';
+      if (i === 0) pdfFill += 'M' + px + ' ' + yOfPdf(0) + ' L' + px + ' ' + pyP + ' ';
+      else         pdfFill += 'L' + px + ' ' + pyP + ' ';
+    }
+    pdfFill += 'L' + xOf(xMax) + ' ' + yOfPdf(0) + ' Z';
+
+    // Shaded PDF fill
+    const fill = document.createElementNS(NS, 'path');
+    fill.setAttribute('d', pdfFill);
+    fill.setAttribute('fill', '#22d3ee');
+    fill.setAttribute('fill-opacity', '0.18');
+    svg.appendChild(fill);
+
+    // PDF curve
+    const pdfCurve = document.createElementNS(NS, 'path');
+    pdfCurve.setAttribute('d', pdfPath);
+    pdfCurve.setAttribute('fill', 'none');
+    pdfCurve.setAttribute('stroke', '#22d3ee');
+    pdfCurve.setAttribute('stroke-width', '2.2');
+    svg.appendChild(pdfCurve);
+
+    // CDF curve
+    const cdfCurve = document.createElementNS(NS, 'path');
+    cdfCurve.setAttribute('d', cdfPath);
+    cdfCurve.setAttribute('fill', 'none');
+    cdfCurve.setAttribute('stroke', '#7c5cff');
+    cdfCurve.setAttribute('stroke-width', '2.2');
+    svg.appendChild(cdfCurve);
+
+    // Mean line
+    const muX = xOf(mu);
+    if (muX >= ml && muX <= ml + plotW) {
+      const ml_ = document.createElementNS(NS, 'line');
+      ml_.setAttribute('x1', muX); ml_.setAttribute('y1', mt);
+      ml_.setAttribute('x2', muX); ml_.setAttribute('y2', mt + plotH);
+      ml_.setAttribute('stroke', '#f472b6');
+      ml_.setAttribute('stroke-width', '1.2');
+      ml_.setAttribute('stroke-dasharray', '3,3');
+      svg.appendChild(ml_);
+      const mlt = document.createElementNS(NS, 'text');
+      mlt.setAttribute('x', muX + 4); mlt.setAttribute('y', mt + 14);
+      mlt.setAttribute('fill', '#f472b6');
+      mlt.setAttribute('font-size', 11);
+      mlt.setAttribute('font-family', 'ui-monospace, monospace');
+      mlt.textContent = 'μ';
+      svg.appendChild(mlt);
+    }
+
+    // 68% interval lines: mu +/- sigma
+    [mu - sig, mu + sig].forEach((xv, idx) => {
+      const sx = xOf(xv);
+      if (sx < ml || sx > ml + plotW) return;
+      const sl = document.createElementNS(NS, 'line');
+      sl.setAttribute('x1', sx); sl.setAttribute('y1', mt);
+      sl.setAttribute('x2', sx); sl.setAttribute('y2', mt + plotH);
+      sl.setAttribute('stroke', '#b4c4d4');
+      sl.setAttribute('stroke-width', '1');
+      sl.setAttribute('stroke-dasharray', '2,4');
+      svg.appendChild(sl);
+      const st = document.createElementNS(NS, 'text');
+      st.setAttribute('x', sx + 4); st.setAttribute('y', mt + 28);
+      st.setAttribute('fill', '#b4c4d4');
+      st.setAttribute('font-size', 10);
+      st.setAttribute('font-family', 'ui-monospace, monospace');
+      st.textContent = idx === 0 ? 'μ-σ' : 'μ+σ';
+      svg.appendChild(st);
+    });
+
+    // Axis titles
+    const xl = document.createElementNS(NS, 'text');
+    xl.setAttribute('x', ml + plotW / 2); xl.setAttribute('y', H - 10);
+    xl.setAttribute('text-anchor', 'middle');
+    xl.setAttribute('fill', '#b4c4d4');
+    xl.setAttribute('font-size', 12);
+    xl.setAttribute('font-family', 'ui-monospace, monospace');
+    xl.textContent = 'x';
+    svg.appendChild(xl);
+
+    // Legend
+    const lg1 = document.createElementNS(NS, 'text');
+    lg1.setAttribute('x', ml + 10); lg1.setAttribute('y', mt + 18);
+    lg1.setAttribute('fill', '#22d3ee');
+    lg1.setAttribute('font-size', 12);
+    lg1.setAttribute('font-family', 'ui-monospace, monospace');
+    lg1.textContent = 'PDF';
+    svg.appendChild(lg1);
+    const lg2 = document.createElementNS(NS, 'text');
+    lg2.setAttribute('x', ml + 55); lg2.setAttribute('y', mt + 18);
+    lg2.setAttribute('fill', '#7c5cff');
+    lg2.setAttribute('font-size', 12);
+    lg2.setAttribute('font-family', 'ui-monospace, monospace');
+    lg2.textContent = 'CDF';
+    svg.appendChild(lg2);
+
+    // Caption
+    const peak = 1 / (sig * Math.sqrt(2 * Math.PI));
+    caption.textContent =
+      `N(μ=${mu.toFixed(2)}, σ=${sig.toFixed(2)}). Peak density ≈ ${peak.toFixed(3)}. ` +
+      `P(μ-σ ≤ X ≤ μ+σ) ≈ ${(cdf(mu + sig, mu, sig) - cdf(mu - sig, mu, sig)).toFixed(4)} (the 68% rule).`;
+  }
+
+  muSlider.addEventListener('input', draw);
+  sigSlider.addEventListener('input', draw);
+  draw();
+})();
+</script>
+<script defer src="../search-index.js"></script>
+<script defer src="../search.js"></script>
+</body>
+</html>

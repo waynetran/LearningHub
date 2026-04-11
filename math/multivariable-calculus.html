@@ -1,0 +1,1075 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Multivariable Calculus — Deep Dive</title>
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError: false});"></script>
+</head>
+<body>
+<div id="tooltip"></div>
+
+<nav class="topic-nav">
+  <a class="back" href="../index.html">← Learning Hub</a>
+  <div class="crumb">Mathematics / <span class="topic-name">Multivariable Calculus</span></div>
+</nav>
+
+<div class="topic-layout">
+  <aside class="topic-toc">
+    <h4>ON THIS PAGE</h4>
+    <ul>
+      <li><a href="#s1">1. Why you care</a></li>
+      <li><a href="#s2">2. Functions of several variables</a></li>
+      <li><a href="#s3">3. Partial derivatives</a></li>
+      <li><a href="#s4">4. The gradient</a></li>
+      <li><a href="#s5">5. Directional derivatives</a></li>
+      <li><a href="#s6">6. The multivariable chain rule</a></li>
+      <li><a href="#s7">7. The Jacobian matrix</a></li>
+      <li><a href="#s8">8. The Hessian matrix</a></li>
+      <li><a href="#s9">9. Interactive: gradient field</a></li>
+      <li><a href="#s10">10. Critical points &amp; the 2nd-derivative test</a></li>
+      <li><a href="#s11">11. Multiple integrals</a></li>
+      <li><a href="#s12">12. Lagrange multipliers</a></li>
+      <li><a href="#s13">13. Code: grads, Jacobians, Hessians</a></li>
+      <li><a href="#s14">14. Back to machine learning</a></li>
+      <li><a href="#s15">15. Further reading</a></li>
+    </ul>
+  </aside>
+
+  <article class="topic-content">
+    <h1>Multivariable Calculus</h1>
+    <p class="subtitle">Single-variable calculus studies functions of one number. Multivariable calculus studies functions of many — which is every function you'll ever meet in machine learning, physics, economics, and statistics. This page walks you from partial derivatives to the Hessian, with the multivariable chain rule (the math under backpropagation) in the middle.</p>
+
+    <div class="meta-tags">
+      <span>Prereq: <a href="calculus.html">single-variable calculus</a>, <a href="linear-algebra.html">vectors &amp; matrices</a></span>
+      <span>Read time: ~35 min</span>
+      <span>Interactive figures: 1</span>
+      <span>Code: NumPy</span>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="s1">1. Why you care</h2>
+
+    <p>Almost nothing in the real world depends on exactly one number. The temperature of a room depends on three spatial coordinates and time. The price of an option depends on the underlying, the strike, the volatility, the interest rate, and the days to expiry. The loss of a neural network depends on <em>every single weight and bias</em> — tens of millions, sometimes trillions.</p>
+
+    <p>Single-variable calculus gave you the tools to analyze one-variable functions: limits, derivatives, integrals, the chain rule. Multivariable calculus lifts all of those tools to functions like</p>
+
+    <div class="math-display">$$ f(x_1, x_2, \ldots, x_n) $$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">A function of several variables</p>
+      <dl>
+        <dt>$f$</dt><dd>The function itself. You plug in numbers, you get a number out.</dd>
+        <dt>$x_1, x_2, \ldots, x_n$</dt><dd>The $n$ inputs, usually called the <em>independent variables</em>. Each one is a real number.</dd>
+        <dt>$n$</dt><dd>The number of inputs — the <em>dimension</em> of the input space. $n=2$ for a 3D surface you can draw, $n=10^9$ for a modern language model.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why this matters.</strong> When you train a neural network, you're minimizing a scalar loss $\mathcal{L}(\theta)$ where $\theta = (\theta_1, \ldots, \theta_n)$ is the weight vector and $n$ can be billions. Every tool on this page is about how a scalar changes when you wiggle a very long vector of inputs.</p>
+    </div>
+
+    <p>If you're rusty, here's the one-line upgrade: in single-variable land, a derivative is a number (the slope); in multivariable land, a derivative is a <em>vector or a matrix</em> — an object that has a slope for every direction you could move. The gradient is a vector. The Jacobian is a matrix. The Hessian is a matrix of second derivatives. Every headline result of this page is "here is the multivariable version of a thing you already know."</p>
+
+    <div class="callout">
+      <p><strong>Skim path.</strong> If you only have five minutes, read the section headers, stare at the gradient figure in §9, and skip to §14. If you have thirty, read §3 (partial derivatives), §4 (gradient), §6 (chain rule) and §8 (Hessian). That's the part that makes the rest of the site make sense.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="s2">2. Functions of several variables</h2>
+
+    <p>There are two kinds of functions you'll meet on this page, and they are not the same thing. Knowing which you're looking at saves a lot of confusion.</p>
+
+    <p><strong>Scalar fields.</strong> These eat a point and return a single number. Formally, $f : \mathbb{R}^n \to \mathbb{R}$. Examples: the altitude above sea level as a function of latitude and longitude; the loss of a neural network as a function of its weights; the temperature inside a room.</p>
+
+    <p><strong>Vector fields.</strong> These eat a point and return a vector. Formally, $\mathbf{F} : \mathbb{R}^n \to \mathbb{R}^m$. Examples: the velocity of wind at each point on Earth (two or three numbers per point); the activations of every neuron in a hidden layer as a function of the inputs.</p>
+
+    <div class="math-display">$$ f : \mathbb{R}^n \to \mathbb{R} \quad \text{(scalar field)}, \qquad \mathbf{F} : \mathbb{R}^n \to \mathbb{R}^m \quad \text{(vector field)} $$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Scalar vs. vector fields</p>
+      <dl>
+        <dt>$\mathbb{R}^n$</dt><dd>The set of all $n$-tuples of real numbers. $\mathbb{R}^2$ is the plane, $\mathbb{R}^3$ is 3D space, $\mathbb{R}^n$ for $n$ large is "parameter space."</dd>
+        <dt>$\to$</dt><dd>"Maps to." Read $f : \mathbb{R}^n \to \mathbb{R}$ as "$f$ is a rule that turns any vector of $n$ numbers into one number."</dd>
+        <dt>$f$</dt><dd>Lowercase for scalar-valued functions.</dd>
+        <dt>$\mathbf{F}$</dt><dd>Bold capital for vector-valued functions. The bold is a flag: "this returns a vector, watch yourself."</dd>
+        <dt>$m$</dt><dd>The dimension of the output. For a vector field on a surface, $m = 2$; for loss, $m = 1$.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Rule of thumb.</strong> If the thing you're asking about is a <em>single number</em> (loss, probability, energy, height), it's a scalar field — you can draw level curves and think about it as a landscape. If it's a <em>direction or vector</em> (velocity, force, neural activation vector), it's a vector field and you have to keep track of components.</p>
+    </div>
+
+    <h3>Visualizing a 2D scalar field</h3>
+
+    <p>For a function $f(x, y)$ of two variables there are three equivalent pictures. You'll want to flip between them depending on the question.</p>
+
+    <ul>
+      <li><strong>3D surface.</strong> Graph $z = f(x, y)$ as a surface floating over the $xy$-plane. Good for intuition, impossible for $n > 2$.</li>
+      <li><strong>Heatmap.</strong> Color the plane by $f(x, y)$ — dark = low, bright = high. Perfect for spotting valleys and ridges.</li>
+      <li><strong>Level curves (contour lines).</strong> Draw the curves where $f(x, y) = c$ for various constants $c$. This is the view topo maps use. Close curves = steep; far apart curves = flat.</li>
+    </ul>
+
+    <div class="defn">
+      <strong>Level set.</strong> The level set of $f$ at height $c$ is the set $\{ \mathbf{x} : f(\mathbf{x}) = c \}$. In 2D it's a curve; in 3D it's a surface; in $n$-D it's an $(n{-}1)$-dimensional sub-world. "All the points where the function takes the same value."
+    </div>
+
+    <p>Here is a tiny hand-drawn version of the three views of the simple bowl $f(x, y) = x^2 + y^2$:</p>
+
+    <div class="viz-3d">
+      <svg viewBox="0 0 720 260" style="width:100%;height:auto;background:#0a0d12;border-radius:6px;">
+        <!-- Three panels -->
+        <g transform="translate(20,20)">
+          <text x="110" y="14" fill="#b4c4d4" font-size="12" text-anchor="middle" font-family="ui-monospace, monospace">3D surface</text>
+          <!-- fake parabola wires -->
+          <g stroke="#22d3ee" stroke-width="1" fill="none" opacity="0.8">
+            <path d="M 20 180 Q 110 40 200 180"/>
+            <path d="M 20 160 Q 110 60 200 160"/>
+            <path d="M 20 140 Q 110 80 200 140"/>
+            <path d="M 20 120 Q 110 100 200 120"/>
+          </g>
+          <g stroke="#7c5cff" stroke-width="1" fill="none" opacity="0.6">
+            <ellipse cx="110" cy="180" rx="90" ry="18"/>
+            <ellipse cx="110" cy="160" rx="75" ry="15"/>
+            <ellipse cx="110" cy="140" rx="58" ry="11"/>
+            <ellipse cx="110" cy="120" rx="38" ry="7"/>
+          </g>
+          <line x1="20" y1="200" x2="200" y2="200" stroke="#384050"/>
+          <line x1="110" y1="30" x2="110" y2="210" stroke="#384050" stroke-dasharray="2,3"/>
+        </g>
+        <g transform="translate(260,20)">
+          <text x="110" y="14" fill="#b4c4d4" font-size="12" text-anchor="middle" font-family="ui-monospace, monospace">heatmap</text>
+          <defs>
+            <radialGradient id="bowlGrad" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="#22d3ee"/>
+              <stop offset="50%" stop-color="#7c5cff"/>
+              <stop offset="100%" stop-color="#0a0d12"/>
+            </radialGradient>
+          </defs>
+          <rect x="20" y="30" width="180" height="180" fill="url(#bowlGrad)"/>
+          <rect x="20" y="30" width="180" height="180" fill="none" stroke="#384050"/>
+        </g>
+        <g transform="translate(500,20)">
+          <text x="110" y="14" fill="#b4c4d4" font-size="12" text-anchor="middle" font-family="ui-monospace, monospace">level curves</text>
+          <rect x="20" y="30" width="180" height="180" fill="#0f131a" stroke="#384050"/>
+          <g fill="none" stroke="#22d3ee" stroke-width="1.4">
+            <circle cx="110" cy="120" r="15"/>
+            <circle cx="110" cy="120" r="30"/>
+            <circle cx="110" cy="120" r="45"/>
+            <circle cx="110" cy="120" r="60"/>
+            <circle cx="110" cy="120" r="75"/>
+          </g>
+          <circle cx="110" cy="120" r="2.5" fill="#f472b6"/>
+        </g>
+      </svg>
+      <p class="v3-caption">The same function $f(x,y) = x^2 + y^2$ drawn three ways. Level curves are the most useful for high dimensions: you can talk about them when you can't draw them.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="s3">3. Partial derivatives</h2>
+
+    <p>Single-variable calculus has one kind of derivative. Multivariable calculus has one kind per direction. The simplest versions are the <em>partial derivatives</em>: pick one input, hold every other input fixed, and take the ordinary one-variable derivative.</p>
+
+    <div class="math-display">$$ \frac{\partial f}{\partial x_i}(\mathbf{a}) \;=\; \lim_{h \to 0} \frac{f(a_1, \ldots, a_i + h, \ldots, a_n) - f(\mathbf{a})}{h} $$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Partial derivative</p>
+      <dl>
+        <dt>$\dfrac{\partial f}{\partial x_i}$</dt><dd>"Partial derivative of $f$ with respect to $x_i$." The curly $\partial$ says "I'm only changing one variable." Sometimes written $f_{x_i}$ or $\partial_{x_i} f$.</dd>
+        <dt>$\mathbf{a}$</dt><dd>The point at which you're evaluating. Bold because it's a vector $\mathbf{a} = (a_1, \ldots, a_n)$.</dd>
+        <dt>$h$</dt><dd>A tiny scalar — the size of the nudge you apply to coordinate $i$ only. Taking $h \to 0$ gives the instantaneous rate.</dd>
+        <dt>$a_i + h$</dt><dd>Coordinate $i$ after the nudge. Every other coordinate stays at its original value.</dd>
+        <dt>$\lim_{h \to 0}$</dt><dd>Limit as $h$ shrinks to zero — same concept as single-variable calculus, just applied in one coordinate direction.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Picture.</strong> Stand on a hillside and face due east. Walk a tiny step in that direction. How fast did your altitude change per unit of eastward distance? That number is $\partial f / \partial x$. Turn 90° and do the same thing: $\partial f / \partial y$. You haven't moved in any other direction, so every other coordinate is frozen.</p>
+    </div>
+
+    <h3>Worked example: the easy one</h3>
+
+    <p>Let $f(x, y) = 3x^2 y + y^3$. Compute both partials.</p>
+
+    <p>For $\partial f / \partial x$, treat $y$ as if it were a constant:</p>
+
+    <div class="math-display">$$ \frac{\partial f}{\partial x} = 6xy $$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Partial with respect to $x$</p>
+      <dl>
+        <dt>$f(x, y) = 3x^2 y + y^3$</dt><dd>The function we're differentiating. Two inputs, one output.</dd>
+        <dt>$6xy$</dt><dd>Result of treating $y$ as a constant: $\tfrac{d}{dx}(3x^2 y) = 6xy$, and $\tfrac{d}{dx}(y^3) = 0$ because $y^3$ is a constant when $y$ is frozen.</dd>
+      </dl>
+    </div>
+
+    <p>For $\partial f / \partial y$, freeze $x$ and differentiate as if only $y$ were changing:</p>
+
+    <div class="math-display">$$ \frac{\partial f}{\partial y} = 3x^2 + 3y^2 $$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Partial with respect to $y$</p>
+      <dl>
+        <dt>$3x^2$</dt><dd>From $\tfrac{d}{dy}(3 x^2 y) = 3 x^2$ (because $3 x^2$ is a constant factor when $x$ is frozen).</dd>
+        <dt>$3y^2$</dt><dd>From $\tfrac{d}{dy}(y^3) = 3 y^2$, using the power rule.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Trick.</strong> Taking partial derivatives <em>is</em> single-variable calculus. You just temporarily pretend the other letters are constants. Every rule you know — product, quotient, chain — still works.</p>
+    </div>
+
+    <h3>Higher-order partials and a nicety</h3>
+
+    <p>You can differentiate twice. $\partial^2 f / \partial x^2$ is "the partial with respect to $x$ of the partial with respect to $x$," and $\partial^2 f / \partial x \partial y$ means "differentiate first with respect to $y$, then with respect to $x$." For almost every function you'll ever meet,</p>
+
+    <div class="math-display">$$ \frac{\partial^2 f}{\partial x \, \partial y} \;=\; \frac{\partial^2 f}{\partial y \, \partial x} $$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Clairaut's theorem / equality of mixed partials</p>
+      <dl>
+        <dt>$\dfrac{\partial^2 f}{\partial x \, \partial y}$</dt><dd>The mixed partial: differentiate once in $y$, then once in $x$ (right-to-left, following the conventional order).</dd>
+        <dt>$=$</dt><dd>These are equal <em>if</em> both mixed partials exist and are continuous near the point. Which they always are for anything you're going to meet on this site.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why it matters.</strong> This is why the Hessian matrix (§8) is symmetric — and symmetry is what lets you diagonalize it and talk about eigenvalues, which is how you classify saddle points vs minima.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="s4">4. The gradient</h2>
+
+    <p>Partial derivatives give you $n$ separate slopes, one per axis. Stack them into a vector and you get the <em>gradient</em>.</p>
+
+    <div class="math-display">$$ \nabla f(\mathbf{x}) \;=\; \left( \frac{\partial f}{\partial x_1}, \; \frac{\partial f}{\partial x_2}, \; \ldots, \; \frac{\partial f}{\partial x_n} \right) $$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">The gradient</p>
+      <dl>
+        <dt>$\nabla$</dt><dd>"Nabla" or "del." It's an operator (a thing that eats a function and hands back another function), and $\nabla f$ is read "grad $f$" or "del $f$."</dd>
+        <dt>$\nabla f(\mathbf{x})$</dt><dd>The gradient <em>vector</em> of $f$ evaluated at the point $\mathbf{x}$. It lives in $\mathbb{R}^n$ — same dimension as the input.</dd>
+        <dt>$\dfrac{\partial f}{\partial x_i}$</dt><dd>The $i$-th partial, defined in §3. One scalar per coordinate direction.</dd>
+        <dt>$\mathbf{x}$</dt><dd>The point in $\mathbb{R}^n$ where you're evaluating the gradient. Different point, different gradient.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Intuition.</strong> The gradient is the all-the-partials-at-once vector. It answers "if I take a unit step in the best direction, how much does $f$ go up, and which way is best?" — in one object.</p>
+    </div>
+
+    <h3>Why the gradient points uphill — the crucial fact</h3>
+
+    <p>This is the single most important sentence in this whole page. <strong>The gradient $\nabla f(\mathbf{x})$ points in the direction of steepest ascent of $f$, and its length is the rate of ascent in that direction.</strong> Negated, $-\nabla f$ points in the direction of steepest descent. That is the fact underneath every gradient-descent optimizer ever written.</p>
+
+    <p>Here's why. Take a tiny step $\mathbf{v}$ from $\mathbf{x}$. To first order,</p>
+
+    <div class="math-display">$$ f(\mathbf{x} + \mathbf{v}) \;\approx\; f(\mathbf{x}) \;+\; \nabla f(\mathbf{x}) \cdot \mathbf{v} $$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">First-order Taylor approximation</p>
+      <dl>
+        <dt>$\mathbf{v}$</dt><dd>A small displacement vector in $\mathbb{R}^n$. Think "tiny arrow from $\mathbf{x}$."</dd>
+        <dt>$f(\mathbf{x} + \mathbf{v})$</dt><dd>The value of $f$ at the nearby point.</dd>
+        <dt>$\nabla f(\mathbf{x}) \cdot \mathbf{v}$</dt><dd>The <a href="linear-algebra.html">dot product</a> of the gradient with the step. This is a single number — the first-order change in $f$.</dd>
+        <dt>$\approx$</dt><dd>"Approximately equal." The approximation gets better as $\|\mathbf{v}\|$ gets smaller, and the error shrinks faster than linearly.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>In plain English.</strong> Near $\mathbf{x}$, the function looks like a flat tilted plane, and the tilt is given by the gradient. Any small displacement changes $f$ by (roughly) gradient-dot-displacement.</p>
+    </div>
+
+    <p>If we constrain $\mathbf{v}$ to have fixed length (say $\|\mathbf{v}\| = 1$, a unit vector), then the change in $f$ is $\nabla f \cdot \mathbf{v}$, and the dot product is maximized when $\mathbf{v}$ points the same way as $\nabla f$:</p>
+
+    <div class="math-display">$$ \nabla f \cdot \mathbf{v} \;=\; \|\nabla f\| \, \|\mathbf{v}\| \, \cos\theta \;=\; \|\nabla f\| \cos\theta $$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Dot product in terms of angle</p>
+      <dl>
+        <dt>$\|\nabla f\|$</dt><dd>The length (Euclidean norm) of the gradient vector — a non-negative scalar.</dd>
+        <dt>$\|\mathbf{v}\| = 1$</dt><dd>We're looking at unit-length steps, so this drops out.</dd>
+        <dt>$\theta$</dt><dd>The angle between $\nabla f$ and $\mathbf{v}$. This is the only thing you can still vary.</dd>
+        <dt>$\cos\theta$</dt><dd>Takes its maximum value of $1$ when $\theta = 0$ — i.e., when $\mathbf{v}$ points the same way as $\nabla f$.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Conclusion.</strong> The direction that maximizes the first-order change in $f$ is the gradient's own direction, and the maximum change is $\|\nabla f\|$. That's why "the gradient points uphill" is not a mnemonic — it's a theorem about dot products.</p>
+    </div>
+
+    <p>A second, almost-free corollary: the gradient is <em>perpendicular</em> to the level curve passing through $\mathbf{x}$. Because along the level curve, $f$ doesn't change, so $\nabla f \cdot \mathbf{v} = 0$ for any tangent step $\mathbf{v}$ — and "dot product zero" means "perpendicular." Look at the concentric circles in §2 and imagine little arrows pointing straight out from the center. That's the gradient field of $x^2 + y^2$.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="s5">5. Directional derivatives</h2>
+
+    <p>The gradient packages the slopes along the coordinate axes. But nothing stops you from asking "how fast is $f$ changing if I walk in <em>this</em> direction?" — where "this" is some arbitrary unit vector. That's the <em>directional derivative</em>, and it's a one-line fall-out from §4.</p>
+
+    <div class="math-display">$$ D_{\mathbf{u}} f(\mathbf{x}) \;=\; \nabla f(\mathbf{x}) \cdot \mathbf{u} $$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Directional derivative</p>
+      <dl>
+        <dt>$D_{\mathbf{u}} f$</dt><dd>The directional derivative of $f$ in direction $\mathbf{u}$. A single scalar — the rate at which $f$ changes per unit distance moved in direction $\mathbf{u}$.</dd>
+        <dt>$\mathbf{u}$</dt><dd>A <em>unit vector</em>, $\|\mathbf{u}\| = 1$. If you forget to normalize, you'll get a number that depends on the length of $\mathbf{u}$, which is meaningless. Always normalize.</dd>
+        <dt>$\cdot$</dt><dd>Dot product — see the <a href="linear-algebra.html">linear algebra page</a>.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Check.</strong> If $\mathbf{u}$ is the unit vector along the $x_i$-axis (all zeros except a $1$ in slot $i$), the dot product picks off the $i$-th component of the gradient — so $D_{\mathbf{u}} f = \partial f / \partial x_i$. Directional derivatives generalize partials; they don't replace them.</p>
+    </div>
+
+    <h3>Worked example</h3>
+
+    <p>Let $f(x,y) = x^2 + 3xy$ and take $\mathbf{x} = (1, 2)$. The gradient is $\nabla f = (2x + 3y, \; 3x) = (2 + 6, \; 3) = (8, 3)$. Now walk in the direction $\mathbf{u} = (1, 1) / \sqrt{2}$ — 45° northeast. Then</p>
+
+    <div class="math-display">$$ D_{\mathbf{u}} f(1,2) \;=\; (8, 3) \cdot \tfrac{1}{\sqrt 2}(1, 1) \;=\; \frac{8 + 3}{\sqrt 2} \;=\; \frac{11}{\sqrt{2}} \approx 7.78 $$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Computing the directional derivative</p>
+      <dl>
+        <dt>$(8, 3)$</dt><dd>The gradient of $f$ at $(1, 2)$. Two numbers, one per input.</dd>
+        <dt>$\tfrac{1}{\sqrt 2}(1, 1)$</dt><dd>The normalized "northeast" direction. Dividing by $\sqrt 2$ makes the length 1.</dd>
+        <dt>$11 / \sqrt 2$</dt><dd>The instantaneous rate of change of $f$ as you walk northeast from $(1, 2)$.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Sanity check.</strong> The rate is smaller than $\|\nabla f\| = \sqrt{64 + 9} \approx 8.54$, as it should be: moving in any direction other than the gradient's own is strictly less efficient for climbing.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="s6">6. The multivariable chain rule</h2>
+
+    <p>The chain rule is the hinge of this whole page. Every other part is useful; this part is <em>structural</em>. Backpropagation — the algorithm that trains every modern neural network — is an application of the multivariable chain rule on a computation graph. If you learn one thing on this page, learn this.</p>
+
+    <h3>Easy version: $z = f(x(t), y(t))$</h3>
+
+    <p>You have a scalar function $f$ of two variables, and each of those variables is in turn a function of a single parameter $t$. You want $dz/dt$.</p>
+
+    <div class="math-display">$$ \frac{dz}{dt} \;=\; \frac{\partial f}{\partial x} \frac{dx}{dt} \;+\; \frac{\partial f}{\partial y} \frac{dy}{dt} $$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Chain rule — one parameter</p>
+      <dl>
+        <dt>$z = f(x, y)$</dt><dd>A scalar function of two intermediate variables.</dd>
+        <dt>$x = x(t), \; y = y(t)$</dt><dd>Both $x$ and $y$ depend on the same parameter $t$.</dd>
+        <dt>$dz/dt$</dt><dd>The total rate of change of $z$ as $t$ changes. We want one number.</dd>
+        <dt>$\partial f / \partial x, \; \partial f / \partial y$</dt><dd>How fast $f$ changes when you wiggle its inputs directly. These live at the current $(x, y)$.</dd>
+        <dt>$dx/dt, \; dy/dt$</dt><dd>How fast each intermediate variable changes as $t$ changes. Single-variable derivatives.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why the sum?</strong> Wiggling $t$ wiggles both $x$ <em>and</em> $y$, and each wiggle pushes $z$ through its own partial. You add the two contributions because, to first order, their effects are independent. This is the same reason gradients add components — linearity.</p>
+    </div>
+
+    <h3>General version: multiple intermediate variables</h3>
+
+    <p>Now suppose $z$ is a scalar function of $n$ intermediate variables $g_1, g_2, \ldots, g_n$, and each $g_i$ depends on $m$ primitive inputs $t_1, \ldots, t_m$:</p>
+
+    <div class="math-display">$$ \frac{\partial z}{\partial t_j} \;=\; \sum_{i=1}^{n} \frac{\partial z}{\partial g_i} \frac{\partial g_i}{\partial t_j} $$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Chain rule — the general form</p>
+      <dl>
+        <dt>$z$</dt><dd>A scalar output (a loss, a cost, a probability).</dd>
+        <dt>$g_1, \ldots, g_n$</dt><dd>Intermediate variables. Each one might depend on any or all of the $t_j$. Think of them as the outputs of a hidden layer.</dd>
+        <dt>$t_1, \ldots, t_m$</dt><dd>The primitive inputs you actually control. In ML these are the network's weights and biases.</dd>
+        <dt>$\dfrac{\partial z}{\partial g_i}$</dt><dd>"Upstream gradient" — how much $z$ responds to a wiggle in the intermediate $g_i$ directly.</dd>
+        <dt>$\dfrac{\partial g_i}{\partial t_j}$</dt><dd>"Local gradient" — how much $g_i$ responds to a wiggle in the primitive input $t_j$.</dd>
+        <dt>$\sum_{i=1}^{n}$</dt><dd>Sum over all intermediate variables. If $t_j$ affects multiple $g_i$'s, each path contributes a term, and you add.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>The core slogan.</strong> "Downstream sensitivity $=$ sum over paths of (upstream sensitivity $\times$ local sensitivity)." That is the entire chain rule, in any dimension, stated in words.</p>
+    </div>
+
+    <h3>The computation graph view</h3>
+
+    <p>Think of the chain rule geometrically on a directed graph: inputs $t_j$ at the bottom, intermediate nodes $g_i$ in the middle, scalar output $z$ at the top. Edges represent direct functional dependence. To compute $\partial z / \partial t_j$, you walk every path from $t_j$ up to $z$, multiplying edge gradients along the path, and then sum over all paths. That is exactly what backpropagation does — with one beautiful optimization.</p>
+
+    <div class="callout math">
+      <div class="label">BACKPROP IN ONE SENTENCE</div>
+      <p>Backpropagation is the observation that, instead of recomputing those path-sums independently for every input $t_j$, you can compute the gradient of $z$ with respect to every node in the graph in a single backward pass, because every node's gradient is a sum over its <em>immediate</em> successors — and those successors already have their gradients in hand when you reach the node. This is reverse-mode automatic differentiation; it costs roughly the same as one forward pass regardless of how many inputs you have. Without this trick, training a billion-parameter network would be impossible. Read the <a href="../topics/backpropagation.html">backpropagation page</a> for the full unpacking.</p>
+    </div>
+
+    <p>Every time you see a chain-rule sum in a paper, remind yourself: that sum is a sum over edges in a graph, and it's there because your function is a composition of simpler functions. The "multivariable" part is purely about branching — when one variable affects multiple downstream things, you add.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="s7">7. The Jacobian matrix</h2>
+
+    <p>So far we've stuck to scalar outputs. When the output is a vector, the right generalization of the derivative is a <em>matrix</em>: one row per output, one column per input. That matrix is the Jacobian.</p>
+
+    <div class="math-display">$$ \mathbf{J}_{\mathbf{f}}(\mathbf{x}) \;=\; \begin{bmatrix} \dfrac{\partial f_1}{\partial x_1} & \dfrac{\partial f_1}{\partial x_2} & \cdots & \dfrac{\partial f_1}{\partial x_n} \\[6pt] \dfrac{\partial f_2}{\partial x_1} & \dfrac{\partial f_2}{\partial x_2} & \cdots & \dfrac{\partial f_2}{\partial x_n} \\[4pt] \vdots & \vdots & \ddots & \vdots \\[4pt] \dfrac{\partial f_m}{\partial x_1} & \dfrac{\partial f_m}{\partial x_2} & \cdots & \dfrac{\partial f_m}{\partial x_n} \end{bmatrix} $$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">The Jacobian matrix</p>
+      <dl>
+        <dt>$\mathbf{f} : \mathbb{R}^n \to \mathbb{R}^m$</dt><dd>A vector-valued function: $n$ inputs in, $m$ outputs out.</dd>
+        <dt>$f_1, f_2, \ldots, f_m$</dt><dd>The component functions. Each $f_i$ is a scalar function of all $n$ inputs.</dd>
+        <dt>$\mathbf{J}_{\mathbf{f}}$</dt><dd>The Jacobian matrix of $\mathbf{f}$. Sometimes written $D\mathbf{f}$ or $\partial \mathbf{f} / \partial \mathbf{x}$.</dd>
+        <dt>Shape</dt><dd>$m$ rows, $n$ columns. Row $i$ is the gradient of $f_i$ (transposed); column $j$ tells you how all $m$ outputs respond to wiggling input $j$.</dd>
+        <dt>$\partial f_i / \partial x_j$</dt><dd>The partial of the $i$-th output with respect to the $j$-th input — a scalar.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why a matrix?</strong> Because the best linear approximation to a vector function near $\mathbf{x}$ is $\mathbf{f}(\mathbf{x} + \mathbf{v}) \approx \mathbf{f}(\mathbf{x}) + \mathbf{J}_{\mathbf{f}}(\mathbf{x}) \, \mathbf{v}$, and a linear map from $\mathbb{R}^n$ to $\mathbb{R}^m$ is, by definition, an $m \times n$ matrix. The Jacobian is "the derivative as a matrix."</p>
+    </div>
+
+    <p>Three important special cases. If $m = 1$ (scalar output), the Jacobian is a $1 \times n$ row vector — which, up to transpose, is exactly the gradient. If $n = 1$ (scalar input), the Jacobian is an $m \times 1$ column vector — the tangent vector to the curve $t \mapsto \mathbf{f}(t)$. If $m = n$, the Jacobian is square, and its determinant has a geometric meaning we'll use in the multiple-integrals section.</p>
+
+    <h3>Worked example</h3>
+
+    <p>Let $\mathbf{f}(x, y) = (x^2 y, \; x + \sin y)$. Two inputs, two outputs, so the Jacobian is $2 \times 2$.</p>
+
+    <div class="math-display">$$ \mathbf{J}_{\mathbf{f}}(x, y) \;=\; \begin{bmatrix} 2xy & x^2 \\ 1 & \cos y \end{bmatrix} $$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">A concrete Jacobian</p>
+      <dl>
+        <dt>Row 1</dt><dd>Partials of $f_1 = x^2 y$. $\partial f_1 / \partial x = 2xy$, $\partial f_1 / \partial y = x^2$.</dd>
+        <dt>Row 2</dt><dd>Partials of $f_2 = x + \sin y$. $\partial f_2 / \partial x = 1$, $\partial f_2 / \partial y = \cos y$.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Application.</strong> Multiplying a small input change $(dx, dy)$ by this matrix gives the linear approximation to the resulting output change $(df_1, df_2)$. For the same reason the gradient is the local best-linear-fit to a scalar field, the Jacobian is the local best-linear-fit to a vector field.</p>
+    </div>
+
+    <p>One more thing. The chain rule from §6 has a wonderfully clean restatement in Jacobian form: if $\mathbf{z} = \mathbf{f}(\mathbf{y})$ and $\mathbf{y} = \mathbf{g}(\mathbf{x})$, then</p>
+
+    <div class="math-display">$$ \mathbf{J}_{\mathbf{f} \circ \mathbf{g}}(\mathbf{x}) \;=\; \mathbf{J}_{\mathbf{f}}(\mathbf{g}(\mathbf{x})) \; \mathbf{J}_{\mathbf{g}}(\mathbf{x}) $$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Chain rule in Jacobian form</p>
+      <dl>
+        <dt>$\mathbf{f} \circ \mathbf{g}$</dt><dd>Function composition — "do $\mathbf{g}$ first, then $\mathbf{f}$."</dd>
+        <dt>$\mathbf{J}_{\mathbf{f}} \mathbf{J}_{\mathbf{g}}$</dt><dd>Matrix product of the two Jacobians, evaluated at compatible points.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Moral.</strong> The multivariable chain rule is just matrix multiplication. This is why backprop can be written as a sequence of matrix-vector products — each layer contributes its local Jacobian, and the product of Jacobians (left-to-right from the output side) is the gradient of the loss with respect to the inputs.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="s8">8. The Hessian matrix</h2>
+
+    <p>The gradient captures first-order information — the linear tilt of a scalar field. The second-order information — the <em>curvature</em> — lives in the Hessian matrix. The Hessian is to the gradient what the second derivative is to the first in single-variable calculus.</p>
+
+    <div class="math-display">$$ \mathbf{H}_f(\mathbf{x}) \;=\; \begin{bmatrix} \dfrac{\partial^2 f}{\partial x_1^2} & \dfrac{\partial^2 f}{\partial x_1 \partial x_2} & \cdots & \dfrac{\partial^2 f}{\partial x_1 \partial x_n} \\[6pt] \dfrac{\partial^2 f}{\partial x_2 \partial x_1} & \dfrac{\partial^2 f}{\partial x_2^2} & \cdots & \dfrac{\partial^2 f}{\partial x_2 \partial x_n} \\[4pt] \vdots & \vdots & \ddots & \vdots \\[4pt] \dfrac{\partial^2 f}{\partial x_n \partial x_1} & \dfrac{\partial^2 f}{\partial x_n \partial x_2} & \cdots & \dfrac{\partial^2 f}{\partial x_n^2} \end{bmatrix} $$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">The Hessian matrix</p>
+      <dl>
+        <dt>$\mathbf{H}_f$</dt><dd>The Hessian of $f$. An $n \times n$ matrix of second partial derivatives.</dd>
+        <dt>$\partial^2 f / \partial x_i^2$</dt><dd>Diagonal entries — "pure" second partials. Curvature along each coordinate axis.</dd>
+        <dt>$\partial^2 f / \partial x_i \partial x_j$</dt><dd>Off-diagonal entries — "mixed" second partials. How the slope in direction $i$ changes as you move in direction $j$.</dd>
+        <dt>Symmetry</dt><dd>By Clairaut's theorem, $\partial^2 f / \partial x_i \partial x_j = \partial^2 f / \partial x_j \partial x_i$, so the Hessian is symmetric for any well-behaved $f$. This is a huge deal.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>One-line slogan.</strong> The Hessian is the Jacobian of the gradient. Gradient gives you the slope as a vector function of position; take its Jacobian and you get the Hessian. That's why it's symmetric (equality of mixed partials) and that's why it matters (it's the best quadratic fit to $f$ near a point).</p>
+    </div>
+
+    <p>A second-order Taylor expansion makes the Hessian's role concrete:</p>
+
+    <div class="math-display">$$ f(\mathbf{x} + \mathbf{v}) \;\approx\; f(\mathbf{x}) \;+\; \nabla f(\mathbf{x}) \cdot \mathbf{v} \;+\; \tfrac{1}{2} \mathbf{v}^\top \mathbf{H}_f(\mathbf{x}) \, \mathbf{v} $$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Second-order Taylor expansion</p>
+      <dl>
+        <dt>$\mathbf{v}$</dt><dd>A small displacement from $\mathbf{x}$.</dd>
+        <dt>$\nabla f \cdot \mathbf{v}$</dt><dd>First-order (linear) correction — from §4.</dd>
+        <dt>$\tfrac{1}{2} \mathbf{v}^\top \mathbf{H}_f \mathbf{v}$</dt><dd>Second-order (quadratic) correction. This is a <em>quadratic form</em>: a number built by sandwiching the matrix $\mathbf{H}_f$ between $\mathbf{v}$ and its transpose.</dd>
+        <dt>$\mathbf{v}^\top$</dt><dd>The transpose of $\mathbf{v}$ — turning a column vector into a row vector so the matrix product is a scalar.</dd>
+        <dt>$\tfrac{1}{2}$</dt><dd>Comes from the second-order term of a Taylor series, same as $f''(a) h^2 / 2$ in 1D.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Geometric reading.</strong> Near $\mathbf{x}$, the function looks like a tilted quadratic bowl. The tilt comes from the gradient; the shape of the bowl — whether it's a well, a dome, or a saddle — comes from the Hessian. Which is exactly what classifies critical points in §10.</p>
+    </div>
+
+    <p>Eigenvalues of $\mathbf{H}_f$ tell you the principal curvatures — the amounts by which $f$ curves along the most- and least-curved directions — and their eigenvectors tell you those directions. A positive eigenvalue means "bowl-up in that direction," a negative one means "dome-down," a zero eigenvalue means "locally flat." Second-order optimization methods (Newton's method, natural gradient) use the Hessian directly; first-order methods (plain SGD, Adam) only approximate it.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="s9">9. Interactive: gradient field viewer</h2>
+
+    <p>Drag the pink point anywhere on the plane. The heatmap shows $f(x, y) = \sin(x) \cos(y) + 0.1(x^2 + y^2)$. The arrow at the point is the gradient $\nabla f$ (rescaled for visibility). The black curves are level curves — notice how the gradient arrow is always perpendicular to the level curve it's sitting on, and points uphill (toward brighter regions).</p>
+
+    <div class="viz-3d">
+      <div class="v3-controls">
+        <span class="v3-label">Drag the pink dot. Arrow = gradient.</span>
+      </div>
+      <svg id="gradSvg" viewBox="0 0 720 420" style="width:100%;height:auto;background:#0a0d12;border-radius:6px;cursor:crosshair;"></svg>
+      <p class="v3-caption" id="gradCaption">Point at $(0.0, 0.0)$ — function value and gradient shown.</p>
+    </div>
+
+    <p>Three things to play with. (1) Drag the dot toward a bright spot: the arrow should shrink to zero at the peak. (2) Drag it onto a level curve and notice how the arrow is always at right angles to the curve. (3) Park it on a saddle — between two peaks — and you'll see the arrow point <em>away</em> from whichever direction is locally higher. That's the geometry of the chain rule and of gradient descent in one figure.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="s10">10. Critical points &amp; the second-derivative test</h2>
+
+    <p>A <em>critical point</em> of a scalar field is a point where the gradient vanishes: $\nabla f(\mathbf{x}^*) = \mathbf{0}$. In single-variable calculus, that's a point with horizontal tangent — minimum, maximum, or inflection. In multivariable land, there's a new beast: the <em>saddle point</em>, where $f$ goes up in one direction and down in another.</p>
+
+    <div class="defn">
+      <strong>Critical / stationary point.</strong> A point $\mathbf{x}^*$ with $\nabla f(\mathbf{x}^*) = \mathbf{0}$. It can be a local minimum, local maximum, or saddle point — the Hessian decides which.
+    </div>
+
+    <h3>The second-derivative test via Hessian eigenvalues</h3>
+
+    <p>At a critical point, the gradient term in the Taylor expansion is zero, so the shape of $f$ to leading order is dictated entirely by the quadratic form $\tfrac{1}{2} \mathbf{v}^\top \mathbf{H} \mathbf{v}$. What happens to that quadratic form depends on the signs of the Hessian's eigenvalues:</p>
+
+    <ul>
+      <li><strong>All eigenvalues positive</strong> ($\mathbf{H}$ positive definite): $\mathbf{x}^*$ is a <em>local minimum</em>. The function curves up in every direction. Bowl.</li>
+      <li><strong>All eigenvalues negative</strong> ($\mathbf{H}$ negative definite): $\mathbf{x}^*$ is a <em>local maximum</em>. Curves down everywhere. Dome.</li>
+      <li><strong>Mixed signs</strong> (some positive, some negative): $\mathbf{x}^*$ is a <em>saddle point</em>. Up in some directions, down in others.</li>
+      <li><strong>Some zero eigenvalue</strong>: test is inconclusive. You need higher-order information.</li>
+    </ul>
+
+    <p>For two variables there's a well-known shortcut. Let $H = \det \mathbf{H}_f = f_{xx} f_{yy} - f_{xy}^2$. Then:</p>
+
+    <div class="math-display">$$ \begin{cases} H > 0 \text{ and } f_{xx} > 0 & \Rightarrow \text{local minimum} \\ H > 0 \text{ and } f_{xx} < 0 & \Rightarrow \text{local maximum} \\ H < 0 & \Rightarrow \text{saddle point} \\ H = 0 & \Rightarrow \text{inconclusive} \end{cases} $$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">2D second-derivative test</p>
+      <dl>
+        <dt>$f_{xx}, f_{yy}, f_{xy}$</dt><dd>The three second partials — short-hand for $\partial^2 f / \partial x^2$, $\partial^2 f / \partial y^2$, $\partial^2 f / \partial x \partial y$.</dd>
+        <dt>$H$</dt><dd>The determinant of the $2 \times 2$ Hessian. Positive $H$ means the eigenvalues have the same sign; negative $H$ means opposite signs (saddle).</dd>
+        <dt>$f_{xx} > 0$</dt><dd>Curves up in the $x$-direction. Combined with $H > 0$, that forces both eigenvalues to be positive.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why it works.</strong> For a $2 \times 2$ symmetric matrix, $\det = \lambda_1 \lambda_2$ and $\text{tr} = \lambda_1 + \lambda_2 = f_{xx} + f_{yy}$. Same-sign eigenvalues $\Leftrightarrow \det > 0$; positive eigenvalues $\Leftrightarrow \det > 0$ <em>and</em> $\text{tr} > 0$, and the trace sign matches $f_{xx}$'s sign when $\det > 0$.</p>
+    </div>
+
+    <h3>Worked example</h3>
+
+    <p>Find and classify critical points of $f(x,y) = x^3 - 3xy + y^3$. First the gradient:</p>
+
+    <div class="math-display">$$ \nabla f = (3x^2 - 3y, \; -3x + 3y^2) $$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Gradient of the cubic</p>
+      <dl>
+        <dt>$3x^2 - 3y$</dt><dd>Partial w.r.t. $x$: differentiate $x^3 \to 3x^2$, $-3xy \to -3y$, $y^3 \to 0$.</dd>
+        <dt>$-3x + 3y^2$</dt><dd>Partial w.r.t. $y$: $x^3 \to 0$, $-3xy \to -3x$, $y^3 \to 3y^2$.</dd>
+      </dl>
+    </div>
+
+    <p>Set both components to zero: $3x^2 - 3y = 0$ gives $y = x^2$; substitute into $-3x + 3y^2 = 0$ to get $x = y^2 = x^4$, so $x(x^3 - 1) = 0$, which means $x = 0$ or $x = 1$. Critical points: $(0,0)$ and $(1,1)$. Now compute the Hessian:</p>
+
+    <div class="math-display">$$ \mathbf{H}_f = \begin{bmatrix} 6x & -3 \\ -3 & 6y \end{bmatrix} $$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Hessian of the cubic</p>
+      <dl>
+        <dt>$6x$</dt><dd>Second partial $\partial^2 f / \partial x^2$ — differentiate $3x^2 - 3y$ again in $x$.</dd>
+        <dt>$-3$</dt><dd>Mixed partial — $\partial/\partial y$ of $3x^2 - 3y$, or equivalently $\partial / \partial x$ of $-3x + 3y^2$.</dd>
+        <dt>$6y$</dt><dd>Second partial $\partial^2 f / \partial y^2$.</dd>
+      </dl>
+    </div>
+
+    <p>At $(0,0)$: $\mathbf{H} = \begin{smallmatrix} 0 & -3 \\ -3 & 0 \end{smallmatrix}$, $\det = -9 < 0$, so this is a <strong>saddle point</strong>. At $(1,1)$: $\mathbf{H} = \begin{smallmatrix} 6 & -3 \\ -3 & 6 \end{smallmatrix}$, $\det = 36 - 9 = 27 > 0$ and $f_{xx} = 6 > 0$, so this is a <strong>local minimum</strong>. Done.</p>
+
+    <div class="callout warn">
+      <p><strong>Saddles in high dimensions.</strong> In $n$ dimensions, a critical point is a local minimum only if <em>all</em> $n$ eigenvalues are positive. In a billion-dimensional loss landscape, the chance of that happening at a random critical point is astronomically small — most critical points are saddles. This is a key reason modern neural networks train at all: gradient descent doesn't get stuck in bad local minima, it gets stuck on saddles and slopes, and momentum-based methods (Adam, momentum SGD) are very good at sliding off them.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="s11">11. Multiple integrals</h2>
+
+    <p>Single-variable calculus integrates over intervals. Multivariable calculus integrates over regions, surfaces, and volumes. The mechanics are the same — you partition, sample, and take a limit — but the bookkeeping is heavier.</p>
+
+    <h3>Double integrals and iterated integration</h3>
+
+    <p>For a region $R \subset \mathbb{R}^2$ and a scalar field $f(x,y)$, the double integral is the (signed) volume under the surface $z = f(x,y)$ above $R$:</p>
+
+    <div class="math-display">$$ \iint_R f(x, y) \, dA \;=\; \int_{a}^{b} \!\! \int_{c(x)}^{d(x)} f(x, y) \, dy \, dx $$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Double integral as iterated integral</p>
+      <dl>
+        <dt>$R$</dt><dd>A region in the plane, perhaps described as "$a \le x \le b$ and $c(x) \le y \le d(x)$."</dd>
+        <dt>$dA$</dt><dd>An infinitesimal area element — the 2D analogue of $dx$. In $(x,y)$ coordinates, $dA = dx \, dy$.</dd>
+        <dt>$\iint_R$</dt><dd>"Double integral over $R$." The two integral signs mean we integrate in two dimensions.</dd>
+        <dt>$\int_{c(x)}^{d(x)} \, dy$</dt><dd>Inner integral: integrate out $y$ first, treating $x$ as fixed. Result is a function of $x$.</dd>
+        <dt>$\int_a^b \, dx$</dt><dd>Outer integral: integrate the result over $x$. Turns the function of $x$ into a number.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Fubini's theorem.</strong> For any reasonable integrand and region, you can do the two integrals in either order and get the same answer. "Reasonable" covers essentially everything on this site.</p>
+    </div>
+
+    <p>Triple integrals work the same way, with one more level of nesting: $\iiint_V f \, dV$, $dV = dx \, dy \, dz$, and three iterated limits.</p>
+
+    <h3>Change of variables and the Jacobian determinant</h3>
+
+    <p>Sometimes the region is awkward in $(x,y)$ coordinates but simple in some other coordinates — polar, spherical, or a custom transformation. When you change variables from $(x,y)$ to $(u,v)$ via $\mathbf{x} = \mathbf{g}(u, v)$, the area element transforms by the <em>absolute value of the Jacobian determinant</em>:</p>
+
+    <div class="math-display">$$ \iint_R f(x, y) \, dx \, dy \;=\; \iint_{R'} f(\mathbf{g}(u, v)) \, \left| \det \mathbf{J}_{\mathbf{g}}(u, v) \right| \, du \, dv $$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Change of variables in 2D</p>
+      <dl>
+        <dt>$\mathbf{g}$</dt><dd>The coordinate transformation: $\mathbf{g}(u,v) = (x(u,v), y(u,v))$.</dd>
+        <dt>$R'$</dt><dd>The pre-image of $R$ under $\mathbf{g}$ — the same region, described in $(u,v)$ coordinates.</dd>
+        <dt>$\mathbf{J}_{\mathbf{g}}$</dt><dd>The $2 \times 2$ Jacobian matrix of $\mathbf{g}$. Its determinant measures how much $\mathbf{g}$ stretches or squishes area near the point.</dd>
+        <dt>$|\det \mathbf{J}_{\mathbf{g}}|$</dt><dd>Absolute value of the determinant. The absolute value is there because orientation doesn't matter for measuring area.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Example.</strong> Polar coordinates: $x = r\cos\theta$, $y = r\sin\theta$, and $\det \mathbf{J} = r$. That's where the $r \, dr \, d\theta$ you memorized comes from — it is literally the Jacobian determinant of the polar transformation.</p>
+    </div>
+
+    <p>This same construction shows up in probability theory as the change-of-variables formula for densities, and in normalizing-flow generative models: a bijective neural network $\mathbf{g}$ transforms a simple density into a complex one, and the Jacobian determinant of $\mathbf{g}$ is what lets you compute the transformed density exactly.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="s12">12. Lagrange multipliers</h2>
+
+    <p>Often you don't want the unconstrained extremum of $f$ — you want the extremum subject to some constraint, like "maximize $f(x, y)$ subject to $g(x, y) = 0$." Lagrange multipliers turn this into an unconstrained problem in one more variable.</p>
+
+    <div class="math-display">$$ \nabla f(\mathbf{x}^*) \;=\; \lambda \, \nabla g(\mathbf{x}^*), \qquad g(\mathbf{x}^*) = 0 $$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Lagrange condition</p>
+      <dl>
+        <dt>$f$</dt><dd>The objective function you want to optimize.</dd>
+        <dt>$g$</dt><dd>The constraint function. The constraint is "$g = 0$" — a level curve of $g$.</dd>
+        <dt>$\mathbf{x}^*$</dt><dd>A candidate optimum on the constraint surface.</dd>
+        <dt>$\lambda$</dt><dd>The Lagrange multiplier — an unknown scalar you solve for alongside $\mathbf{x}^*$. Its sign tells you which way along the constraint the objective is increasing.</dd>
+        <dt>$\nabla f = \lambda \nabla g$</dt><dd>"The gradient of $f$ is parallel to the gradient of $g$." Geometrically: the level curve of $f$ is tangent to the constraint curve at the optimum.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why it works.</strong> If the level curve of $f$ crossed the constraint transversally at $\mathbf{x}^*$, you could walk along the constraint in one direction and increase $f$. So at an optimum, the two curves must be tangent, which is the same as saying their normals (i.e., their gradients) are parallel. That parallelism is exactly $\nabla f = \lambda \nabla g$.</p>
+    </div>
+
+    <h3>Worked example</h3>
+
+    <p>Maximize $f(x, y) = xy$ subject to $g(x, y) = x + y - 1 = 0$. Gradients:</p>
+
+    <div class="math-display">$$ \nabla f = (y, \; x), \qquad \nabla g = (1, \; 1) $$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Gradients of objective and constraint</p>
+      <dl>
+        <dt>$(y, x)$</dt><dd>Gradient of $xy$: partial w.r.t. $x$ is $y$, partial w.r.t. $y$ is $x$.</dd>
+        <dt>$(1, 1)$</dt><dd>Gradient of the linear constraint $x + y - 1$: both partials are 1.</dd>
+      </dl>
+    </div>
+
+    <p>The Lagrange condition $\nabla f = \lambda \nabla g$ gives $y = \lambda$ and $x = \lambda$, so $x = y$. Combined with the constraint $x + y = 1$, we get $x = y = 1/2$, and the constrained maximum value is $f(1/2, 1/2) = 1/4$. That's the tightest rectangle-area you can get with a fixed perimeter — the square.</p>
+
+    <p>With multiple constraints $g_1 = 0, g_2 = 0, \ldots$, the condition generalizes to $\nabla f = \sum_i \lambda_i \nabla g_i$: the objective's gradient is a linear combination of the constraint gradients. You get one multiplier per constraint, and this is exactly the machinery behind support vector machines, constrained portfolio optimization, and KKT conditions for inequality-constrained optimization (see <a href="../cs/optimization.html">the optimization page</a>).</p>
+
+    <!-- ========================================================== -->
+    <h2 id="s13">13. Code: numerical gradients, Jacobians, Hessians</h2>
+
+    <p>Now let's get our hands dirty. The code below computes gradients, Jacobians, and Hessians two ways: a finite-difference approximation (no libraries beyond NumPy) and a sketched reverse-mode autodiff — the technique under every real-world deep learning framework.</p>
+
+    <div class="code-tabs" id="ct-mv">
+      <div class="ct-header">
+        <button class="ct-tab active" data-tab="grad">Numerical gradient</button>
+        <button class="ct-tab" data-tab="jac">Jacobian &amp; Hessian</button>
+        <button class="ct-tab" data-tab="ad">Reverse-mode AD</button>
+        <span class="ct-label">multivariable calculus · numerical recipes</span>
+      </div>
+
+      <div class="ct-panel active" data-tab="grad"><pre><code><span class="kw">import</span> numpy <span class="kw">as</span> np
+
+<span class="kw">def</span> <span class="fn">numerical_gradient</span>(f, x, h=<span class="num">1e-5</span>):
+    <span class="cmt"># f: R^n -> R, x: shape (n,). Returns grad shape (n,).</span>
+    <span class="cmt"># Central differences for O(h^2) accuracy.</span>
+    x = np.asarray(x, dtype=<span class="kw">float</span>)
+    grad = np.zeros_like(x)
+    <span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(x.size):
+        xp = x.copy(); xp[i] += h
+        xm = x.copy(); xm[i] -= h
+        grad[i] = (<span class="fn">f</span>(xp) - <span class="fn">f</span>(xm)) / (<span class="num">2</span> * h)
+    <span class="kw">return</span> grad
+
+<span class="cmt"># Example: f(x,y) = x^2 + 3 x y</span>
+<span class="kw">def</span> <span class="fn">f</span>(v): <span class="kw">return</span> v[<span class="num">0</span>]**<span class="num">2</span> + <span class="num">3</span> * v[<span class="num">0</span>] * v[<span class="num">1</span>]
+
+g = <span class="fn">numerical_gradient</span>(f, [<span class="num">1.0</span>, <span class="num">2.0</span>])
+<span class="fn">print</span>(g)   <span class="cmt"># [8. 3.] — matches analytic answer from §5</span>
+
+<span class="cmt"># Gradient descent in one line:</span>
+x = np.array([<span class="num">3.0</span>, <span class="num">4.0</span>])
+<span class="kw">for</span> _ <span class="kw">in</span> <span class="fn">range</span>(<span class="num">50</span>):
+    x = x - <span class="num">0.1</span> * <span class="fn">numerical_gradient</span>(f, x)
+<span class="fn">print</span>(x)   <span class="cmt"># converges to a stationary point of f</span>
+</code></pre></div>
+
+      <div class="ct-panel" data-tab="jac"><pre><code><span class="kw">import</span> numpy <span class="kw">as</span> np
+
+<span class="kw">def</span> <span class="fn">numerical_jacobian</span>(F, x, h=<span class="num">1e-5</span>):
+    <span class="cmt"># F: R^n -> R^m, x: shape (n,). Returns J shape (m, n).</span>
+    x = np.asarray(x, dtype=<span class="kw">float</span>)
+    F0 = np.asarray(<span class="fn">F</span>(x), dtype=<span class="kw">float</span>)
+    n, m = x.size, F0.size
+    J = np.zeros((m, n))
+    <span class="kw">for</span> j <span class="kw">in</span> <span class="fn">range</span>(n):
+        xp = x.copy(); xp[j] += h
+        xm = x.copy(); xm[j] -= h
+        J[:, j] = (np.asarray(<span class="fn">F</span>(xp)) - np.asarray(<span class="fn">F</span>(xm))) / (<span class="num">2</span>*h)
+    <span class="kw">return</span> J
+
+<span class="kw">def</span> <span class="fn">numerical_hessian</span>(f, x, h=<span class="num">1e-4</span>):
+    <span class="cmt"># f: R^n -> R. Returns H shape (n, n). Symmetric by construction.</span>
+    x = np.asarray(x, dtype=<span class="kw">float</span>)
+    n = x.size
+    H = np.zeros((n, n))
+    <span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(n):
+        <span class="kw">for</span> j <span class="kw">in</span> <span class="fn">range</span>(n):
+            xpp = x.copy(); xpp[i] += h; xpp[j] += h
+            xpm = x.copy(); xpm[i] += h; xpm[j] -= h
+            xmp = x.copy(); xmp[i] -= h; xmp[j] += h
+            xmm = x.copy(); xmm[i] -= h; xmm[j] -= h
+            H[i, j] = (<span class="fn">f</span>(xpp) - <span class="fn">f</span>(xpm) - <span class="fn">f</span>(xmp) + <span class="fn">f</span>(xmm)) / (<span class="num">4</span> * h * h)
+    <span class="kw">return</span> <span class="num">0.5</span> * (H + H.T)   <span class="cmt"># force symmetry to clean up noise</span>
+
+<span class="cmt"># Example from §7:</span>
+<span class="kw">def</span> <span class="fn">F</span>(v): <span class="kw">return</span> np.array([v[<span class="num">0</span>]**<span class="num">2</span> * v[<span class="num">1</span>], v[<span class="num">0</span>] + np.sin(v[<span class="num">1</span>])])
+<span class="fn">print</span>(<span class="fn">numerical_jacobian</span>(F, [<span class="num">1.0</span>, <span class="num">0.0</span>]))
+<span class="cmt"># [[0. 1.]                   row 1: d/dx (x^2 y)=2xy=0,  d/dy (x^2 y)=x^2=1</span>
+<span class="cmt">#  [1. 1.]]                  row 2: d/dx (x+sin y)=1,   d/dy (x+sin y)=cos(0)=1</span>
+</code></pre></div>
+
+      <div class="ct-panel" data-tab="ad"><pre><code><span class="kw">import</span> numpy <span class="kw">as</span> np
+
+<span class="cmt"># A cartoon reverse-mode autodiff: tiny tape of ops.</span>
+<span class="cmt"># Each Node holds a value and a list of (parent, local_derivative) pairs.</span>
+<span class="cmt"># A backward pass applies the chain rule from output back to inputs.</span>
+
+<span class="kw">class</span> <span class="fn">Node</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, val, parents=()):
+        self.val = <span class="fn">float</span>(val)
+        self.parents = parents   <span class="cmt"># list of (parent_node, local_grad)</span>
+        self.grad = <span class="num">0.0</span>
+
+    <span class="kw">def</span> <span class="fn">__add__</span>(a, b):
+        <span class="kw">return</span> <span class="fn">Node</span>(a.val + b.val, [(a, <span class="num">1.0</span>), (b, <span class="num">1.0</span>)])
+    <span class="kw">def</span> <span class="fn">__mul__</span>(a, b):
+        <span class="kw">return</span> <span class="fn">Node</span>(a.val * b.val, [(a, b.val), (b, a.val)])
+    <span class="kw">def</span> <span class="fn">sin</span>(a):
+        <span class="kw">return</span> <span class="fn">Node</span>(np.sin(a.val), [(a, np.cos(a.val))])
+
+<span class="kw">def</span> <span class="fn">backward</span>(output):
+    <span class="cmt"># Topological order via DFS.</span>
+    order, seen = [], <span class="fn">set</span>()
+    <span class="kw">def</span> <span class="fn">visit</span>(n):
+        <span class="kw">if</span> <span class="fn">id</span>(n) <span class="kw">in</span> seen: <span class="kw">return</span>
+        seen.add(<span class="fn">id</span>(n))
+        <span class="kw">for</span> p, _ <span class="kw">in</span> n.parents: <span class="fn">visit</span>(p)
+        order.append(n)
+    <span class="fn">visit</span>(output)
+    output.grad = <span class="num">1.0</span>
+    <span class="kw">for</span> n <span class="kw">in</span> <span class="fn">reversed</span>(order):
+        <span class="kw">for</span> p, local <span class="kw">in</span> n.parents:
+            p.grad += n.grad * local          <span class="cmt"># <-- THIS is the chain rule</span>
+
+<span class="cmt"># Compute f(x, y) = x*y + sin(x), and grad at (x=2, y=3).</span>
+x, y = <span class="fn">Node</span>(<span class="num">2.0</span>), <span class="fn">Node</span>(<span class="num">3.0</span>)
+z = x * y + x.<span class="fn">sin</span>()
+<span class="fn">backward</span>(z)
+<span class="fn">print</span>(x.grad, y.grad)   <span class="cmt"># y + cos(x), x  →  3 + cos(2), 2</span>
+</code></pre></div>
+    </div>
+
+    <p>Three points about that autodiff sketch. First, each primitive op (add, mul, sin) <em>locally</em> knows its own derivative — that's the local gradient in §6's chain rule. Second, the backward pass computes one sum per edge (each "$p.\text{grad} \mathrel{+}= n.\text{grad} \cdot \text{local}$") — that's the chain-rule sum, with the "$+{=}$" handling the case where one node has multiple parents. Third, the whole thing costs roughly one forward pass plus one backward pass — not one forward pass per input. That's the efficiency gain that makes training real networks feasible.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="s14">14. Back to machine learning</h2>
+
+    <p>Everything on this page is in service of one picture. A neural network is a function</p>
+
+    <div class="math-display">$$ \mathcal{L}(\theta) \;=\; \frac{1}{N} \sum_{i=1}^{N} \ell \big( \mathbf{y}_i, \, \text{net}_\theta(\mathbf{x}_i) \big) $$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">A generic supervised loss</p>
+      <dl>
+        <dt>$\mathcal{L}(\theta)$</dt><dd>The scalar training loss as a function of the parameter vector $\theta$. This is the scalar field we're descending.</dd>
+        <dt>$\theta$</dt><dd>The parameter vector — all weights and biases stacked into one long vector in $\mathbb{R}^n$ with $n$ potentially in the billions.</dd>
+        <dt>$N$</dt><dd>The number of training examples in a batch.</dd>
+        <dt>$(\mathbf{x}_i, \mathbf{y}_i)$</dt><dd>The $i$-th training input and its target. $\mathbf{x}_i$ might be an image, $\mathbf{y}_i$ its label.</dd>
+        <dt>$\text{net}_\theta$</dt><dd>The network — a composition of many layers, each parameterised by a slice of $\theta$.</dd>
+        <dt>$\ell$</dt><dd>A per-example loss (cross-entropy, squared error, etc.). Scalar-valued.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>So what do we do with it?</strong> Compute $\nabla_\theta \mathcal{L}$ (a vector the size of $\theta$), take a step in the direction $-\nabla_\theta \mathcal{L}$ (steepest descent, §4), repeat. That's the whole algorithm — <a href="../topics/gradient-descent.html">gradient descent</a>. Every improvement (momentum, Adam, second-order methods, natural gradient) is a modification to this loop that uses more information about the loss landscape to take better steps.</p>
+    </div>
+
+    <p>The multivariable calculus content maps onto ML as follows:</p>
+
+    <ul>
+      <li><strong>Gradient (§4):</strong> What you descend. Computed by backprop, consumed by the optimizer.</li>
+      <li><strong>Chain rule (§6):</strong> The algorithm by which gradients are computed. <a href="../topics/backpropagation.html">Backpropagation</a> is reverse-mode autodiff applied to the network's computation graph.</li>
+      <li><strong>Jacobian (§7):</strong> The local linear map of a single layer. Stacking Jacobians is how gradients flow through a network. This is also what makes <a href="../topics/self-attention.html">attention</a> differentiable end-to-end.</li>
+      <li><strong>Hessian (§8):</strong> Curvature of the loss. Second-order optimizers (K-FAC, natural gradient, Shampoo) use approximations to it; even Adam is secretly estimating diagonal curvature.</li>
+      <li><strong>Loss landscape (§10):</strong> In billions of dimensions, the landscape is dominated by saddles, not local minima. Training mostly means escaping saddles and navigating flat valleys, not finding the "global" optimum — there usually isn't a useful one.</li>
+      <li><strong>Multiple integrals &amp; Jacobian determinant (§11):</strong> Show up in probability (change of variables for densities), in <em>normalizing flows</em>, and in computing expected values over continuous distributions.</li>
+      <li><strong>Lagrange multipliers (§12):</strong> Under the hood of constrained optimization — SVMs, trust-region methods, KKT conditions, and anywhere you've seen "dual variables."</li>
+    </ul>
+
+    <p>If you internalize only one thing: <em>every neural network you'll ever train is a scalar field in high-dimensional parameter space, and everything we do to it is multivariable calculus.</em></p>
+
+    <!-- ========================================================== -->
+    <h2 id="s15">15. Further reading</h2>
+
+    <div class="bib">
+      <h4>Further reading</h4>
+      <ul>
+        <li>Marsden &amp; Tromba — <em>Vector Calculus</em> (6th ed., 2011). The canonical undergraduate textbook. Slow, visual, and patient.</li>
+        <li>James Stewart — <em>Calculus: Early Transcendentals</em>. The standard big-book; Chapters 14–16 cover everything on this page at a gentler pace.</li>
+        <li>Manfredo do Carmo — <em>Differential Geometry of Curves and Surfaces</em>. Where to go after multivariable calculus if you liked the geometric flavour of the gradient and level sets.</li>
+        <li>Hubbard &amp; Hubbard — <em>Vector Calculus, Linear Algebra, and Differential Forms: A Unified Approach</em>. Harder, deeper, and uses linear algebra throughout — closer in spirit to what you need for ML.</li>
+        <li>Baydin, Pearlmutter, Radul &amp; Siskind (2018) — <em>Automatic Differentiation in Machine Learning: a Survey</em>. The definitive modern reference for how the chain rule gets automated.</li>
+        <li>Goodfellow, Bengio &amp; Courville — <em>Deep Learning</em>, Chapter 4 (Numerical Computation) and Chapter 6 (Feedforward Networks). Re-reads the chain rule in ML language.</li>
+      </ul>
+    </div>
+
+    <div class="next-card">
+      <div class="label">NEXT UP</div>
+      <a href="numerical-analysis.html">→ Numerical Analysis</a>
+      <p>You now know what a gradient, Jacobian, and Hessian <em>are</em>. Next up: how to compute them stably on a real computer with finite-precision arithmetic, and what goes wrong when you don't. After that, head to <a href="../cs/optimization.html">optimization</a> to see these tools wired into concrete algorithms.</p>
+    </div>
+
+  </article>
+</div>
+
+<script>
+// =========================================================
+// Code tabs
+document.querySelectorAll('.code-tabs').forEach(root => {
+  const tabs = root.querySelectorAll('.ct-tab');
+  const panels = root.querySelectorAll('.ct-panel');
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const target = tab.getAttribute('data-tab');
+      tabs.forEach(t => t.classList.toggle('active', t === tab));
+      panels.forEach(p => p.classList.toggle('active', p.getAttribute('data-tab') === target));
+    });
+  });
+});
+
+// =========================================================
+// Gradient field viewer
+(function() {
+  const svg = document.getElementById('gradSvg');
+  if (!svg) return;
+  const NS = 'http://www.w3.org/2000/svg';
+  const caption = document.getElementById('gradCaption');
+
+  const W = 720, H = 420;
+  const ml = 50, mr = 20, mt = 20, mb = 50;
+  const plotW = W - ml - mr;
+  const plotH = H - mt - mb;
+
+  // Function in math coordinates
+  const xMin = -4, xMax = 4, yMin = -3, yMax = 3;
+  function f(x, y) { return Math.sin(x) * Math.cos(y) + 0.1 * (x*x + y*y); }
+  function dfdx(x, y) { return Math.cos(x) * Math.cos(y) + 0.2 * x; }
+  function dfdy(x, y) { return -Math.sin(x) * Math.sin(y) + 0.2 * y; }
+
+  // Screen <-> math mappings
+  function xToPx(x) { return ml + (x - xMin) / (xMax - xMin) * plotW; }
+  function yToPx(y) { return mt + plotH - (y - yMin) / (yMax - yMin) * plotH; }
+  function pxToX(px) { return xMin + (px - ml) / plotW * (xMax - xMin); }
+  function pxToY(py) { return yMin + (mt + plotH - py) / plotH * (yMax - yMin); }
+
+  // Find function range on the viewed box for color normalization
+  let fMin = Infinity, fMax = -Infinity;
+  const N = 60;
+  const samples = [];
+  for (let iy = 0; iy < N; iy++) {
+    const row = [];
+    for (let ix = 0; ix < N; ix++) {
+      const x = xMin + (ix + 0.5) * (xMax - xMin) / N;
+      const y = yMin + (iy + 0.5) * (yMax - yMin) / N;
+      const v = f(x, y);
+      if (v < fMin) fMin = v;
+      if (v > fMax) fMax = v;
+      row.push({ x, y, v });
+    }
+    samples.push(row);
+  }
+
+  // Color ramp: low (dark blue-purple) -> high (cyan/white)
+  function ramp(t) {
+    // clamp 0..1
+    t = Math.max(0, Math.min(1, t));
+    // interpolate between three stops
+    const stops = [
+      [10, 13, 18],      // dark
+      [54, 48, 120],     // mid purple
+      [34, 211, 238],    // accent-2 cyan
+      [220, 240, 250],   // near white highlight
+    ];
+    const idx = t * (stops.length - 1);
+    const i = Math.min(Math.floor(idx), stops.length - 2);
+    const frac = idx - i;
+    const r = Math.round(stops[i][0] + frac * (stops[i+1][0] - stops[i][0]));
+    const g = Math.round(stops[i][1] + frac * (stops[i+1][1] - stops[i][1]));
+    const b = Math.round(stops[i][2] + frac * (stops[i+1][2] - stops[i][2]));
+    return `rgb(${r},${g},${b})`;
+  }
+
+  // State: the point in math coordinates
+  const state = { x: 0, y: 0 };
+  let dragging = false;
+
+  function draw() {
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+
+    // Heatmap: draw NxN rectangles
+    const cellW = plotW / N;
+    const cellH = plotH / N;
+    for (let iy = 0; iy < N; iy++) {
+      for (let ix = 0; ix < N; ix++) {
+        const v = samples[iy][ix].v;
+        const t = (v - fMin) / (fMax - fMin);
+        const rect = document.createElementNS(NS, 'rect');
+        rect.setAttribute('x', ml + ix * cellW);
+        rect.setAttribute('y', mt + plotH - (iy + 1) * cellH);
+        rect.setAttribute('width', cellW + 0.6);
+        rect.setAttribute('height', cellH + 0.6);
+        rect.setAttribute('fill', ramp(t));
+        svg.appendChild(rect);
+      }
+    }
+
+    // Plot frame
+    const fr = document.createElementNS(NS, 'rect');
+    fr.setAttribute('x', ml); fr.setAttribute('y', mt);
+    fr.setAttribute('width', plotW); fr.setAttribute('height', plotH);
+    fr.setAttribute('fill', 'none');
+    fr.setAttribute('stroke', '#384050');
+    fr.setAttribute('stroke-width', 1);
+    svg.appendChild(fr);
+
+    // Level curves via simple contouring: check where f crosses target levels on cell edges
+    const levels = [];
+    const nLevels = 8;
+    for (let k = 1; k < nLevels; k++) {
+      levels.push(fMin + k * (fMax - fMin) / nLevels);
+    }
+    for (const L of levels) {
+      for (let iy = 0; iy < N - 1; iy++) {
+        for (let ix = 0; ix < N - 1; ix++) {
+          const a = samples[iy][ix].v;
+          const b = samples[iy][ix+1].v;
+          const c = samples[iy+1][ix].v;
+          const d = samples[iy+1][ix+1].v;
+          // simple trick: check if level falls within the [min, max] of the cell
+          // then draw a short line across the cell center (approximation).
+          const mn = Math.min(a, b, c, d);
+          const mx = Math.max(a, b, c, d);
+          if (L >= mn && L <= mx) {
+            const cx = ml + (ix + 0.5) * cellW;
+            const cy = mt + plotH - (iy + 0.5) * cellH;
+            // very crude normal direction from gradient; draw perpendicular tick
+            const gx = dfdx(samples[iy][ix].x, samples[iy][ix].y);
+            const gy = dfdy(samples[iy][ix].x, samples[iy][ix].y);
+            const mag = Math.hypot(gx, gy) + 1e-9;
+            const tx = -gy / mag, ty = gx / mag;
+            const len = 3.2;
+            const ln = document.createElementNS(NS, 'line');
+            ln.setAttribute('x1', cx - tx * len);
+            ln.setAttribute('y1', cy + ty * len);
+            ln.setAttribute('x2', cx + tx * len);
+            ln.setAttribute('y2', cy - ty * len);
+            ln.setAttribute('stroke', '#0a0d12');
+            ln.setAttribute('stroke-width', 1.1);
+            ln.setAttribute('opacity', 0.55);
+            svg.appendChild(ln);
+          }
+        }
+      }
+    }
+
+    // Axis labels
+    for (let xt = Math.ceil(xMin); xt <= Math.floor(xMax); xt++) {
+      const xp = xToPx(xt);
+      const tl = document.createElementNS(NS, 'text');
+      tl.setAttribute('x', xp);
+      tl.setAttribute('y', mt + plotH + 16);
+      tl.setAttribute('text-anchor', 'middle');
+      tl.setAttribute('fill', '#7a8a9a');
+      tl.setAttribute('font-size', 11);
+      tl.setAttribute('font-family', 'ui-monospace, monospace');
+      tl.textContent = xt;
+      svg.appendChild(tl);
+    }
+    for (let yt = Math.ceil(yMin); yt <= Math.floor(yMax); yt++) {
+      const yp = yToPx(yt);
+      const tl = document.createElementNS(NS, 'text');
+      tl.setAttribute('x', ml - 8);
+      tl.setAttribute('y', yp + 4);
+      tl.setAttribute('text-anchor', 'end');
+      tl.setAttribute('fill', '#7a8a9a');
+      tl.setAttribute('font-size', 11);
+      tl.setAttribute('font-family', 'ui-monospace, monospace');
+      tl.textContent = yt;
+      svg.appendChild(tl);
+    }
+
+    // Current point
+    const cx = xToPx(state.x);
+    const cy = yToPx(state.y);
+
+    // Gradient arrow
+    const gx = dfdx(state.x, state.y);
+    const gy = dfdy(state.x, state.y);
+    const mag = Math.hypot(gx, gy);
+    const scale = 60; // pixel length for a unit math gradient
+    if (mag > 1e-4) {
+      const dx = (gx / (mag + 0.4)) * scale;
+      const dy = -(gy / (mag + 0.4)) * scale; // screen y flipped
+      const ln = document.createElementNS(NS, 'line');
+      ln.setAttribute('x1', cx); ln.setAttribute('y1', cy);
+      ln.setAttribute('x2', cx + dx); ln.setAttribute('y2', cy + dy);
+      ln.setAttribute('stroke', '#f472b6');
+      ln.setAttribute('stroke-width', 3);
+      ln.setAttribute('stroke-linecap', 'round');
+      svg.appendChild(ln);
+      // arrow head
+      const ang = Math.atan2(dy, dx);
+      const ah = 9;
+      const head = document.createElementNS(NS, 'path');
+      const tx1 = cx + dx - ah * Math.cos(ang - 0.4);
+      const ty1 = cy + dy - ah * Math.sin(ang - 0.4);
+      const tx2 = cx + dx - ah * Math.cos(ang + 0.4);
+      const ty2 = cy + dy - ah * Math.sin(ang + 0.4);
+      head.setAttribute('d', `M ${cx+dx} ${cy+dy} L ${tx1} ${ty1} L ${tx2} ${ty2} Z`);
+      head.setAttribute('fill', '#f472b6');
+      svg.appendChild(head);
+    }
+
+    // The draggable dot
+    const pt = document.createElementNS(NS, 'circle');
+    pt.setAttribute('cx', cx);
+    pt.setAttribute('cy', cy);
+    pt.setAttribute('r', 7);
+    pt.setAttribute('fill', '#f472b6');
+    pt.setAttribute('stroke', '#fff');
+    pt.setAttribute('stroke-width', 2);
+    svg.appendChild(pt);
+
+    // Axis title
+    const xl = document.createElementNS(NS, 'text');
+    xl.setAttribute('x', ml + plotW / 2); xl.setAttribute('y', H - 8);
+    xl.setAttribute('text-anchor', 'middle');
+    xl.setAttribute('fill', '#b4c4d4');
+    xl.setAttribute('font-size', 12);
+    xl.setAttribute('font-family', 'ui-monospace, monospace');
+    xl.textContent = 'x';
+    svg.appendChild(xl);
+
+    const yl = document.createElementNS(NS, 'text');
+    yl.setAttribute('x', 18); yl.setAttribute('y', mt + plotH / 2);
+    yl.setAttribute('text-anchor', 'middle');
+    yl.setAttribute('fill', '#b4c4d4');
+    yl.setAttribute('font-size', 12);
+    yl.setAttribute('font-family', 'ui-monospace, monospace');
+    yl.setAttribute('transform', `rotate(-90 18 ${mt + plotH / 2})`);
+    yl.textContent = 'y';
+    svg.appendChild(yl);
+
+    // Caption
+    const fv = f(state.x, state.y);
+    caption.innerHTML = `Point $(x, y) = (${state.x.toFixed(2)}, ${state.y.toFixed(2)})$ &nbsp;·&nbsp; $f = ${fv.toFixed(3)}$ &nbsp;·&nbsp; $\\nabla f = (${gx.toFixed(2)}, ${gy.toFixed(2)})$ &nbsp;·&nbsp; $\\|\\nabla f\\| = ${mag.toFixed(3)}$`;
+    if (window.renderMathInElement) {
+      renderMathInElement(caption, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError: false});
+    }
+  }
+
+  // Event handlers: support mouse and touch via pointer events
+  function clientToMath(evt) {
+    const rect = svg.getBoundingClientRect();
+    const px = (evt.clientX - rect.left) * (W / rect.width);
+    const py = (evt.clientY - rect.top) * (H / rect.height);
+    // clamp to plot area
+    const cx = Math.max(ml, Math.min(ml + plotW, px));
+    const cy = Math.max(mt, Math.min(mt + plotH, py));
+    return { x: pxToX(cx), y: pxToY(cy) };
+  }
+
+  svg.addEventListener('pointerdown', (evt) => {
+    dragging = true;
+    const p = clientToMath(evt);
+    state.x = p.x; state.y = p.y;
+    draw();
+    svg.setPointerCapture(evt.pointerId);
+  });
+  svg.addEventListener('pointermove', (evt) => {
+    if (!dragging) return;
+    const p = clientToMath(evt);
+    state.x = p.x; state.y = p.y;
+    draw();
+  });
+  svg.addEventListener('pointerup', (evt) => {
+    dragging = false;
+    try { svg.releasePointerCapture(evt.pointerId); } catch (e) {}
+  });
+  svg.addEventListener('pointercancel', () => { dragging = false; });
+
+  draw();
+})();
+</script>
+<script defer src="../search-index.js"></script>
+<script defer src="../search.js"></script>
+</body>
+</html>

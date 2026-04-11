@@ -1,0 +1,1537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Computer Science — A Pragmatic Tour for Programmers</title>
+<link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+<div id="tooltip"></div>
+
+<!-- Mobile menu toggle -->
+<button class="mobile-menu-toggle" id="mobile-menu-toggle" aria-label="Toggle navigation">☰</button>
+<div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+
+<!-- ============================================================ -->
+<!-- Top bar: back to hub -->
+<!-- ============================================================ -->
+<div class="topbar">
+  <a class="topbar-back" href="../index.html">← Learning Hub</a>
+  <span class="topbar-crumb">Computer Science Track</span>
+  <span class="topbar-tracks">
+    <a href="../ai-ml.html">AI / ML</a>
+    <a href="../math/index.html">Math</a>
+  </span>
+</div>
+
+<!-- ============================================================ -->
+<!-- HERO -->
+<!-- ============================================================ -->
+<div class="hero">
+  <div class="hero-inner">
+    <span class="chip">UPDATED APRIL 2026</span>
+    <h1>Computer Science — The Core Four</h1>
+    <p class="lede">A pragmatic tour of the four subjects a working programmer in 2026 is expected to have in their bones: algorithms &amp; data structures, complexity, theoretical CS, and mathematical optimization. Hover any <span class="term" data-label="Term" data-def="Words with a dotted underline have definitions you can hover. Try it on the ones throughout this page.">dotted term</span> for a one-line definition. Click any <span class="term" data-label="Deep Dive" data-def="A pill-shaped link in a section heading. Clicking it opens the full textbook-level page with proofs, code, and interactive figures.">Deep Dive →</span> pill to jump into the full textbook page for that subject.</p>
+  </div>
+</div>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div class="brand">
+      <h2>Computer Science</h2>
+      <p>// the classical toolkit</p>
+    </div>
+    <nav id="sidenav">
+      <div class="cat-group" data-group="start">
+        <button class="cat cat-toggle" aria-expanded="true">
+          <span class="cat-icon">01</span><span class="cat-title">Start here</span><span class="cat-chev">▾</span>
+        </button>
+        <ul class="cat-body">
+          <li><a href="#overview">The 2026 State of CS</a></li>
+          <li><a href="#how-to-use">Pick your path</a></li>
+        </ul>
+      </div>
+      <div class="cat-group" data-group="classical">
+        <button class="cat cat-toggle" aria-expanded="false">
+          <span class="cat-icon">02</span><span class="cat-title">Algorithms &amp; DS</span><span class="cat-chev">▾</span>
+        </button>
+        <ul class="cat-body">
+          <li><a href="#algorithms">Algorithms overview</a>
+            <ul>
+              <li><a href="#arrays-hash">Arrays &amp; hash tables</a></li>
+              <li><a href="#trees-heaps">Trees &amp; heaps</a></li>
+              <li><a href="#graphs">Graphs</a></li>
+              <li><a href="#sorting">Sorting</a></li>
+              <li><a href="#searching">Searching</a></li>
+              <li><a href="#dp">Dynamic programming</a></li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+      <div class="cat-group" data-group="neural">
+        <button class="cat cat-toggle" aria-expanded="false">
+          <span class="cat-icon">03</span><span class="cat-title">Complexity &amp; Big-O</span><span class="cat-chev">▾</span>
+        </button>
+        <ul class="cat-body">
+          <li><a href="#complexity">Complexity overview</a>
+            <ul>
+              <li><a href="#big-o">Big-O, Θ, Ω</a></li>
+              <li><a href="#amortized">Amortized analysis</a></li>
+              <li><a href="#master-theorem">Master theorem</a></li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+      <div class="cat-group" data-group="transformer">
+        <button class="cat cat-toggle" aria-expanded="false">
+          <span class="cat-icon">04</span><span class="cat-title">Theoretical CS</span><span class="cat-chev">▾</span>
+        </button>
+        <ul class="cat-body">
+          <li><a href="#theoretical">Theoretical overview</a>
+            <ul>
+              <li><a href="#turing">Turing machines</a></li>
+              <li><a href="#halting">The halting problem</a></li>
+              <li><a href="#p-np">P vs NP</a></li>
+              <li><a href="#reductions">Reductions</a></li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+      <div class="cat-group" data-group="emerging">
+        <button class="cat cat-toggle" aria-expanded="false">
+          <span class="cat-icon">05</span><span class="cat-title">Optimization</span><span class="cat-chev">▾</span>
+        </button>
+        <ul class="cat-body">
+          <li><a href="#optimization">Optimization overview</a>
+            <ul>
+              <li><a href="#convex">Convexity</a></li>
+              <li><a href="#gradient-methods">Gradient methods</a></li>
+              <li><a href="#linear-prog">Linear programming</a></li>
+              <li><a href="#duality">Duality</a></li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+      <div class="cat-group cat-group--deep" data-group="deep-cs">
+        <button class="cat cat-toggle" aria-expanded="false">
+          <span class="cat-icon">📘</span><span class="cat-title">Deep dives</span><span class="cat-chev">▾</span>
+        </button>
+        <ul class="cat-body">
+          <li><a href="algorithms.html">Algorithms &amp; Data Structures</a></li>
+          <li><a href="complexity.html">Complexity &amp; Big-O</a></li>
+          <li><a href="theoretical-cs.html">Theoretical CS</a></li>
+          <li><a href="optimization.html">Mathematical Optimization</a></li>
+        </ul>
+      </div>
+      <div class="cat-group cat-group--deep" data-group="deep-math">
+        <button class="cat cat-toggle" aria-expanded="false">
+          <span class="cat-icon">📐</span><span class="cat-title">Math prereqs</span><span class="cat-chev">▾</span>
+        </button>
+        <ul class="cat-body">
+          <li><a href="../math/discrete-math.html">Discrete Math</a></li>
+          <li><a href="../math/linear-algebra.html">Linear Algebra</a></li>
+          <li><a href="../math/calculus.html">Calculus</a></li>
+          <li><a href="../math/multivariable-calculus.html">Multivariable Calculus</a></li>
+          <li><a href="../math/probability.html">Probability</a></li>
+        </ul>
+      </div>
+      <div class="cat-group cat-group--deep" data-group="deep-aiml">
+        <button class="cat cat-toggle" aria-expanded="false">
+          <span class="cat-icon">🧠</span><span class="cat-title">Applied (AI/ML)</span><span class="cat-chev">▾</span>
+        </button>
+        <ul class="cat-body">
+          <li><a href="../topics/gradient-descent.html">Gradient Descent</a></li>
+          <li><a href="../topics/backpropagation.html">Backpropagation</a></li>
+          <li><a href="../topics/foundation-models.html">Foundation Models</a></li>
+        </ul>
+      </div>
+    </nav>
+  </aside>
+
+  <main>
+    <div class="container">
+
+      <!-- ============================================================ -->
+      <section id="overview">
+        <h2>Overview <span class="era">// what you still need</span></h2>
+        <p>If you've been shipping code for years without touching a textbook, you've probably noticed four moments where the knowledge you skipped comes back to haunt you. One: an interviewer draws a tree on a whiteboard and asks you to level-order traverse it. Two: a senior engineer reviews your pull request and says "this is <span class="term" data-label="Quadratic" data-def="Running time proportional to n². Doubles the input, quadruples the work. The cliff where naive nested loops start to matter.">quadratic</span>, it'll blow up at a million rows." Three: someone casually says "that problem is <span class="term" data-label="NP-hard" data-def="A problem at least as hard as every problem in NP. Informally: if you could solve it in polynomial time, you could solve every verification problem in polynomial time, and the world's cryptography would fall.">NP-hard</span>, so we need a heuristic" and you don't know whether to believe them. Four: you try to train an ML model and Adam is "not converging" and the loss landscape is a mystery.</p>
+
+        <p>This track exists to cover those four blind spots. It isn't a full undergraduate CS curriculum — there's no operating systems, no networks, no databases, no compilers. What's here is the <em>theoretical core</em>, the stuff that applies regardless of whether you're writing Python, Rust, Elixir, or embedding prompts. You'll find one hub page (this one) for the skim, and one deep-dive page per subject for the read.</p>
+
+        <p>The goal of this page is modest: give you an accurate mental model of each of the four subjects, a couple of interactive demos that let you <em>see</em> the key ideas, and a clear jump-off to the full page when you want the proofs and code. Don't try to read the whole thing in one sitting. Skim it top-to-bottom once, bookmark the section you needed, and come back to that section with a coffee.</p>
+
+        <div class="callout">
+          <div class="label">The 60-second summary</div>
+          <p style="margin:6px 0">
+            <strong>01 · Algorithms &amp; Data Structures.</strong> The working toolkit — arrays, hash tables, trees, heaps, graphs, and the recipes (sorting, searching, BFS/DFS, dynamic programming) that act on them.<br>
+            <strong>02 · Complexity &amp; Big-O.</strong> A notation for talking about cost without getting lost in hardware. Read the code, read the bound, know in advance whether it'll scale.<br>
+            <strong>03 · Theoretical CS.</strong> Turing machines, the halting problem, P vs NP. What machines can and can't do — and which problems are expected to be forever hard.<br>
+            <strong>04 · Mathematical Optimization.</strong> Pick numbers to minimize a loss, subject to constraints. Gradient descent, convexity, KKT, duality — the math running inside every training loop.
+          </p>
+        </div>
+
+        <h3>What this track is, and isn't</h3>
+        <ul class="clean">
+          <li><strong>Is:</strong> a compact tour of the classical CS theory a working engineer actually needs in 2026, with inline demos and links to full textbook pages.</li>
+          <li><strong>Isn't:</strong> a replacement for CLRS, Sipser, or Boyd &amp; Vandenberghe. When you need depth, the deep-dive pages cite them.</li>
+          <li><strong>Isn't:</strong> a systems curriculum. No OS, networks, databases, or compilers. Those are fine subjects; they just live elsewhere.</li>
+          <li><strong>Assumes:</strong> you can read pseudocode, have seen a for-loop, and remember roughly what a function is. Everything past that is fair game to re-explain.</li>
+        </ul>
+
+        <p>When you're ready for the companion tracks, the <a href="../math/index.html">Math</a> hub covers the prerequisites (discrete math, linear algebra, calculus, probability) and the <a href="../ai-ml.html">AI/ML</a> hub is where the optimization and complexity show up in anger.</p>
+      </section>
+
+      <!-- ============================================================ -->
+      <section id="how-to-use">
+        <h2>Pick your path <span class="era">// by goal, not by subject</span></h2>
+        <p>Four common reasons people land on a CS fundamentals page. Pick the one that looks most like you and follow its reading order — you can always chase cross-links later.</p>
+
+        <div class="grid">
+          <div class="card">
+            <h4>"I want to pass a coding interview."</h4>
+            <p class="meta">Path: algorithms → complexity</p>
+            <p>Start at <a href="#algorithms">Algorithms &amp; Data Structures</a> below, then <a href="#complexity">Complexity &amp; Big-O</a>. The interactive binary-search and BFS demos on this page are the same shapes the interviewer will draw on the whiteboard. When you want depth, <a href="algorithms.html">algorithms.html</a> has every staple with runnable code.</p>
+          </div>
+          <div class="card">
+            <h4>"I want to understand why P vs NP matters."</h4>
+            <p class="meta">Path: complexity → theoretical CS</p>
+            <p>Skim <a href="#complexity">Complexity</a> for the Big-O language, then read <a href="#theoretical">Theoretical CS</a> for Turing machines, halting, and the P vs NP setup. The Turing-machine demo on this page walks through one step at a time; <a href="theoretical-cs.html">theoretical-cs.html</a> has the full proof sketches and the NP-complete zoo.</p>
+          </div>
+          <div class="card">
+            <h4>"I want to understand ML optimization."</h4>
+            <p class="meta">Path: mvc → optimization → backprop</p>
+            <p>Prereq refresh at <a href="../math/multivariable-calculus.html">multivariable calculus</a> and <a href="../math/linear-algebra.html">linear algebra</a>, then the <a href="#optimization">Optimization</a> section below. The gradient-descent-on-a-bowl demo is the core intuition. Then cross over to <a href="../topics/gradient-descent.html">Gradient Descent</a> and <a href="../topics/backpropagation.html">Backpropagation</a> on the ML track.</p>
+          </div>
+          <div class="card">
+            <h4>"I want to reason about big systems."</h4>
+            <p class="meta">Path: complexity → algorithms → amortized</p>
+            <p>Start at <a href="#complexity">Complexity</a> so you can read code at scale, then <a href="#algorithms">Algorithms</a> to recognize which recipe fits which shape of data. The amortized-analysis bit is the one people always miss and always need. Finish with <a href="complexity.html">complexity.html</a> for the recurrence-solving chops.</p>
+          </div>
+        </div>
+
+        <p>Every section on this page ends with a Deep Dive link in its heading — that's your jump point when the skim isn't enough.</p>
+      </section>
+
+      <!-- ============================================================ -->
+      <section id="algorithms">
+        <h2>Algorithms &amp; Data Structures <a href="algorithms.html" class="deep-dive">Deep Dive →</a><span class="era">// the working toolkit</span></h2>
+        <p class="lede">The containers, traversals, and recipes that turn "I could solve this in a week of loops" into "I solved it in ten lines and it runs on a billion inputs."</p>
+
+        <p>The single most useful thing you can learn from algorithms is not the code — it's the <em>recognition reflex</em>. A great engineer looks at a new problem and instantly matches it to a class they've seen before: "this is a shortest-path problem, reach for Dijkstra," "this is a dedup, reach for a set," "this is top-k, reach for a heap." The rest is bookkeeping. Everything in this section is in service of building that reflex. The full textbook treatment is in <a href="algorithms.html">algorithms.html</a>; here we'll do the fast tour.</p>
+
+        <h3 id="arrays-hash">Arrays &amp; <span class="term" data-label="Hash table" data-def="A data structure that maps keys to values in expected O(1) time by hashing the key to an index in a backing array. The Python dict, JS object, Java HashMap, Go map, Rust HashMap — all hash tables.">hash tables</span></h3>
+        <p>Arrays are the floor. A contiguous block of memory you index in O(1). Dynamic arrays (Python <code>list</code>, Go slice, C++ <code>vector</code>) give you O(1) amortized append by doubling the underlying buffer when full — the doubling is the clever bit, and you'll see why in the complexity section. Hash tables layer on top: hash a key to a bucket, resolve collisions with chaining or open addressing, and you get expected O(1) lookup, insert, and delete. About 80% of "make it fast" interview answers are "put it in a hash table." The other 20% are the rest of this section.</p>
+
+        <p>When hash tables lie: adversarial inputs can force every key into the same bucket and your O(1) becomes O(n). Languages that care (Rust, Python 3.4+) randomize their hash seed per-process to make this hard to exploit. If you're writing something that takes user-controlled keys, this matters.</p>
+
+        <h3 id="trees-heaps">Trees &amp; <span class="term" data-label="Priority queue" data-def="A data structure that always gives you the smallest (or largest) element quickly. Usually implemented as a binary heap: O(log n) insert, O(log n) extract, O(1) peek.">heaps</span></h3>
+        <p>A binary search tree keeps keys in order so you can find, insert, and delete in O(log n) — provided it stays balanced. Real-world BSTs are balanced via red-black (C++ <code>std::map</code>, Java <code>TreeMap</code>) or AVL rotations; on disk, B-trees fan out to hundreds of children per node so the height stays tiny. A binary heap is a different animal: it only maintains the "parent ≤ children" invariant, which is enough to extract the min in O(log n) without paying to keep everything sorted. That's why every priority queue you've ever used is a heap.</p>
+
+        <h3 id="graphs">Graphs &amp; traversal</h3>
+        <p>A graph is vertices and edges, nothing more. The trick is the representation: an adjacency list is a list-of-lists (one list of neighbors per vertex) and is the right default unless your graph is dense. Given a graph, three traversals matter. <span class="term" data-label="BFS" data-def="Breadth-first search. Visit all vertices at distance 1, then 2, then 3, and so on, from the start. Uses a FIFO queue.">BFS</span> uses a queue and visits in layers — it finds shortest paths in unweighted graphs for free. DFS uses a stack (or recursion, which is the same thing) and goes deep before wide — it's the engine under topological sort and cycle detection. Dijkstra is BFS with a priority queue for weighted edges, giving you shortest paths in O((V + E) log V).</p>
+
+        <h3 id="sorting">Sorting</h3>
+        <p>There are three sorts you should know by heart. <strong>Mergesort</strong> splits the array in half, recursively sorts each half, and merges them in O(n); the recurrence T(n) = 2T(n/2) + O(n) solves to O(n log n). <strong>Quicksort</strong> partitions around a pivot and recurses on each side; it's O(n log n) on average and O(n²) worst-case, but with random pivots the worst case is astronomically unlikely and the constants are so small that it's faster than mergesort in practice. <strong>Heapsort</strong> builds a heap and repeatedly extracts the min, giving deterministic O(n log n) without quicksort's variance. You can't beat n log n with comparisons — there's a formal lower bound via decision trees. You <em>can</em> beat it if you're willing to use radix or counting sort and your keys have bounded range.</p>
+
+        <h3 id="searching">Searching</h3>
+        <p>Binary search is the first non-trivial algorithm most people learn, and it's still the one that wins the most wall-clock time in practice. Half the array per step gives you O(log n) — that's 20 steps for a million elements, 30 for a billion. The classic mistakes are off-by-one errors in the midpoint and forgetting that the array has to be sorted first. Two cousins earn their own mention: the <strong>two-pointer</strong> pattern (one pointer from each end, walk them toward each other), and the <strong>sliding window</strong> (a variable-length window scanning the array once). Both are ways to turn a nested-loop brute force into a single pass.</p>
+
+        <h3 id="dp">Dynamic programming</h3>
+        <p>The scariest-looking technique that is, mechanically, the simplest: if your problem has <em>optimal substructure</em> (the best solution uses best solutions to sub-problems) and <em>overlapping sub-problems</em> (the same sub-problem shows up many times), cache the sub-problem answers. That's it. The rest is craft. You can cache top-down with memoization (recursive + hash table) or bottom-up with tabulation (a for-loop filling an array). Classic problems: Fibonacci, longest common subsequence, 0/1 knapsack, edit distance, matrix chain multiplication, coin change. If you can write the recursive brute force and identify the state, you can almost always DP-ify it.</p>
+
+        <h3>Pick the right container</h3>
+        <div class="grid">
+          <div class="card">
+            <h4>Array / dynamic array</h4>
+            <p class="meta">O(1) access, O(1) amortized append</p>
+            <p>Default for ordered collections you'll index into. Not great if you insert/delete in the middle often.</p>
+          </div>
+          <div class="card">
+            <h4>Hash table</h4>
+            <p class="meta">O(1) expected lookup / insert / delete</p>
+            <p>When you need "does this exist?" or "what's the value for this key?" as fast as possible, and order doesn't matter.</p>
+          </div>
+          <div class="card">
+            <h4>Balanced BST</h4>
+            <p class="meta">O(log n) lookup, ordered iteration</p>
+            <p>When you need hash-table-ish lookup <em>and</em> you need to iterate in key order, or do range queries.</p>
+          </div>
+          <div class="card">
+            <h4>Binary heap</h4>
+            <p class="meta">O(log n) insert, O(1) peek</p>
+            <p>When you keep grabbing the smallest (or largest) element and everything else can wait. Dijkstra, top-k, task schedulers.</p>
+          </div>
+          <div class="card">
+            <h4>Adjacency list</h4>
+            <p class="meta">O(V + E) space, O(deg(v)) neighbor scan</p>
+            <p>The right default for graphs. Switch to an adjacency matrix only when the graph is dense (edges ~ V²).</p>
+          </div>
+          <div class="card">
+            <h4>Trie</h4>
+            <p class="meta">O(m) lookup by string length</p>
+            <p>When the keys are strings and you want prefix queries (autocomplete, routing, IP-prefix lookups).</p>
+          </div>
+          <div class="card">
+            <h4>Union-find</h4>
+            <p class="meta">Near-O(1) union and find</p>
+            <p>Tracking connected components as edges arrive. The backbone of Kruskal's MST and most incremental graph code.</p>
+          </div>
+          <div class="card">
+            <h4>Bloom filter</h4>
+            <p class="meta">O(k) with small false-positive rate</p>
+            <p>"Have I seen this before, probably?" Used when a real set would blow your memory budget.</p>
+          </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- INTERACTIVE BINARY SEARCH DEMO -->
+        <!-- ============================================================ -->
+        <div class="demo" id="demo-binsearch">
+          <div class="demo-header">
+            <span class="title">▸ Interactive Binary Search — step through the halving</span>
+            <span class="step-indicator" id="bin-progress">Step 0 / 0</span>
+          </div>
+          <div class="demo-body">
+            <div class="demo-visual">
+              <svg viewBox="0 0 720 220" width="720" height="220" id="bin-svg">
+                <g id="bin-cells"></g>
+                <g id="bin-pointers"></g>
+                <text x="360" y="200" fill="#8a93a6" text-anchor="middle" font-family="monospace" font-size="11" id="bin-caption">Press Step → to begin.</text>
+              </svg>
+            </div>
+            <div class="demo-panel">
+              <div class="demo-params">
+                <h5>Search target</h5>
+                <div class="param-row">
+                  <label>target</label><input type="number" id="bin-target" value="23" step="1">
+                </div>
+                <div style="font-size:10px;color:var(--text-dim);margin-top:6px;">Array is fixed &amp; sorted (16 values, 2–92). Pick a target, then step through.</div>
+                <span class="preset" onclick="binSearchPreset(23)">try 23</span>
+                <span class="preset" onclick="binSearchPreset(77)">try 77</span>
+                <span class="preset" onclick="binSearchPreset(50)">miss (50)</span>
+              </div>
+              <div class="demo-calc" id="bin-calc">
+                <div class="step-title">Ready</div>
+                <div class="math">Low = 0, High = 15. We'll repeatedly pick mid and compare to the target.</div>
+                <div class="note">Each step halves the remaining window. 16 → 8 → 4 → 2 → 1. That's O(log n).</div>
+              </div>
+            </div>
+          </div>
+          <div class="demo-controls">
+            <button class="btn" onclick="resetBin()">↺ Reset</button>
+            <button class="btn" onclick="prevBin()">← Back</button>
+            <button class="btn primary" onclick="stepBin()">Step →</button>
+            <button class="btn" onclick="runAllBin()">Run All</button>
+          </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- INTERACTIVE BFS / DFS DEMO -->
+        <!-- ============================================================ -->
+        <div class="demo" id="demo-bfsdfs">
+          <div class="demo-header">
+            <span class="title">▸ Interactive BFS / DFS — visit order on a 6-node graph</span>
+            <span class="step-indicator" id="bfs-progress">Step 0 / 0</span>
+          </div>
+          <div class="demo-body">
+            <div class="demo-visual">
+              <svg viewBox="0 0 720 260" width="720" height="260" id="bfs-svg">
+                <g id="bfs-edges"></g>
+                <g id="bfs-nodes"></g>
+                <text x="360" y="245" fill="#8a93a6" text-anchor="middle" font-family="monospace" font-size="11" id="bfs-caption">Pick BFS or DFS and step through.</text>
+              </svg>
+            </div>
+            <div class="demo-panel">
+              <div class="demo-params">
+                <h5>Traversal</h5>
+                <div style="font-size:10px;color:var(--text-dim);margin-bottom:6px;">Start vertex is <code>A</code>. Ties broken alphabetically.</div>
+                <span class="preset" onclick="loadBfsMode('bfs')">Run BFS</span>
+                <span class="preset" onclick="loadBfsMode('dfs')">Run DFS</span>
+              </div>
+              <div class="demo-calc" id="bfs-calc">
+                <div class="step-title">Ready</div>
+                <div class="math">Pick a mode above, then Step → to walk through the traversal.</div>
+                <div class="note">BFS uses a FIFO queue; DFS uses a LIFO stack. Same graph, different visit order.</div>
+              </div>
+            </div>
+          </div>
+          <div class="demo-controls">
+            <button class="btn" onclick="resetBfs()">↺ Reset</button>
+            <button class="btn" onclick="prevBfs()">← Back</button>
+            <button class="btn primary" onclick="stepBfs()">Step →</button>
+            <button class="btn" onclick="runAllBfs()">Run All</button>
+          </div>
+        </div>
+
+        <div class="callout good">
+          <div class="label">See also</div>
+          <p style="margin:6px 0">Prereqs live in <a href="../math/discrete-math.html">discrete math</a> (graph terminology, induction, Big-O arithmetic). For a much deeper treatment, jump to the <a href="algorithms.html">full algorithms page</a> — every container on this cheat-sheet gets its own section with runnable Python.</p>
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <section id="complexity">
+        <h2>Complexity &amp; Big-O <a href="complexity.html" class="deep-dive">Deep Dive →</a><span class="era">// reading code at scale</span></h2>
+        <p class="lede">A notation for talking about running time without getting tangled in hardware, language, or compiler details.</p>
+
+        <h3 id="big-o">What Big-O actually measures</h3>
+        <p>When we say an algorithm is O(n²), we mean: <em>as n grows large, the running time grows no faster than some constant times n²</em>. That's an asymptotic upper bound. The constant is hidden on purpose, because it's the part that changes when you port your code to a new laptop. What doesn't change is the <em>shape</em> of the growth — and that's what determines whether your code scales to a million or a billion. A linear-time algorithm is always going to beat a quadratic one for large enough inputs; the only question is how large.</p>
+
+        <p>Three related symbols show up in papers. <code>O(f)</code> is the upper bound we just described. <code>Ω(f)</code> is a <em>lower</em> bound — the algorithm takes at least that long in the worst case. <code>Θ(f)</code> is both — a tight bound, upper and lower matching. Most casual talk says "this is O(n log n)" when the speaker means Θ; be generous, it usually doesn't matter.</p>
+
+        <div class="math-display">f(n) = O(g(n)) &nbsp;⟺&nbsp; ∃ c &gt; 0, n₀ ≥ 0 : ∀ n ≥ n₀, f(n) ≤ c · g(n)</div>
+        <div class="math-glossary">
+          <p class="mg-title">Big-O — formally</p>
+          <dl>
+            <dt>f(n)</dt><dd>The actual running time or operation count of the algorithm as a function of input size.</dd>
+            <dt>g(n)</dt><dd>A simpler yardstick function — typically 1, log n, n, n log n, n², or 2ⁿ.</dd>
+            <dt>n</dt><dd>The size of the input — list length, graph vertex count, whatever grows.</dd>
+            <dt>c</dt><dd>Any positive constant. Big-O hides constants on purpose so the bound survives a move to a different machine.</dd>
+            <dt>n₀</dt><dd>The threshold past which the bound holds. Big-O is about behavior when n is large; small-n shenanigans are ignored.</dd>
+            <dt>⟺, ∃, ∀</dt><dd>"If and only if", "there exists", "for all" — logic shorthand.</dd>
+          </dl>
+          <p class="mg-analogy"><strong>Analogy.</strong> Big-O is like saying "my rent grows at most linearly with apartment size." It doesn't tell you the rent in dollars — that depends on the city. It tells you the <em>shape</em> of the growth, which is the part that survives when you move.</p>
+        </div>
+
+        <h3 id="amortized"><span class="term" data-label="Amortized" data-def="Amortized analysis averages the cost of an operation over a sequence. An operation can be slow sometimes as long as it's fast on average, so the total cost over n operations is bounded.">Amortized</span> analysis &amp; the doubling trick</h3>
+        <p>Push to a Python list a million times. Each append is "O(1)" — except, occasionally, when the underlying array fills up, it has to allocate a bigger array and copy everything over. That copy is O(n). So how is append O(1)? <em>On average</em>, amortized over a long sequence of operations. The trick is that the capacity doubles (not increases by one) on each resize, so resizes happen at n = 1, 2, 4, 8, 16, … The total cost of all the resizes up through n is 1 + 2 + 4 + … + n ≈ 2n, and there are n appends, so the average is ≤ 3 per append. Constant. This is the canonical amortized-analysis argument: one expensive operation can be hidden inside many cheap ones.</p>
+
+        <h3 id="master-theorem">The Master Theorem</h3>
+        <p>Divide-and-conquer algorithms give you recurrences of the form T(n) = a · T(n/b) + O(nᵏ) — "I split the problem into <em>a</em> sub-problems each of size n/b, and gluing them back together costs nᵏ." The Master Theorem tells you which term dominates:</p>
+        <ul class="clean">
+          <li>If a &gt; bᵏ, the sub-problems dominate and T(n) = Θ(n^(log_b a)).</li>
+          <li>If a = bᵏ, they're balanced and T(n) = Θ(nᵏ log n).</li>
+          <li>If a &lt; bᵏ, the combine step dominates and T(n) = Θ(nᵏ).</li>
+        </ul>
+        <p>For mergesort, a = 2, b = 2, k = 1, so a = bᵏ and you get Θ(n log n). For Strassen's matrix multiply, a = 7, b = 2, k = 2, so a &gt; bᵏ and you get Θ(n^(log₂ 7)) ≈ Θ(n^2.807). That's how you beat the naive O(n³).</p>
+
+        <h3>The decision-tree lower bound</h3>
+        <p>Here's a question that trips most people up: why can't you sort faster than n log n? The answer is a lower bound, not a missing trick. Any comparison-based sort is a <em>decision tree</em>: each internal node compares two elements, each leaf is a permutation of the input. To distinguish among n! possible input permutations, the tree must have at least n! leaves, so its depth is at least log₂(n!) ≈ n log n (by Stirling). Any comparison sort executes at least one root-to-leaf path, so it does at least n log n comparisons in the worst case. End of story — unless you stop comparing and start exploiting key structure (radix sort, counting sort).</p>
+
+        <h3>How fast is "fast"? A cheat sheet</h3>
+        <p>A modern CPU does something like 10⁹ simple operations per second. Here's what that buys you, approximately, for each growth class — the "n you can handle in one second" column is the one to burn into your memory.</p>
+        <table class="rank">
+          <thead><tr><th>Growth</th><th>Representative algorithm</th><th>n you can handle in ~1 second</th></tr></thead>
+          <tbody>
+            <tr><td>O(log n)</td><td>Binary search</td><td>Any n you can represent (~10¹⁸)</td></tr>
+            <tr><td>O(n)</td><td>Linear scan, hash lookups, BFS</td><td>~10⁸</td></tr>
+            <tr><td>O(n log n)</td><td>Mergesort, heap operations, FFT</td><td>~10⁷</td></tr>
+            <tr><td>O(n²)</td><td>Bubble sort, nested loops, Floyd-Warshall</td><td>~10⁴</td></tr>
+            <tr><td>O(n³)</td><td>Naive matrix multiply, all-pairs shortest path</td><td>~500</td></tr>
+            <tr><td>O(2ⁿ)</td><td>Subset sum brute force, TSP DP</td><td>~25</td></tr>
+            <tr><td>O(n!)</td><td>Permutation enumeration, naive TSP</td><td>~11</td></tr>
+          </tbody>
+        </table>
+
+        <!-- ============================================================ -->
+        <!-- INTERACTIVE RUNTIME GROWTH DEMO -->
+        <!-- ============================================================ -->
+        <div class="demo" id="demo-runtime">
+          <div class="demo-header">
+            <span class="title">▸ Interactive Runtime Grower — slide n, watch the classes spread</span>
+            <span class="step-indicator" id="rt-progress">n = 32</span>
+          </div>
+          <div class="demo-body">
+            <div class="demo-visual">
+              <svg viewBox="0 0 720 340" width="720" height="340" id="rt-svg">
+                <g id="rt-grid"></g>
+                <g id="rt-curves"></g>
+                <g id="rt-marker"></g>
+                <g id="rt-labels"></g>
+              </svg>
+            </div>
+            <div class="demo-panel">
+              <div class="demo-params">
+                <h5>Input size</h5>
+                <div class="param-row">
+                  <label>n</label><input type="number" id="rt-n" value="32" step="1">
+                </div>
+                <div style="font-size:10px;color:var(--text-dim);margin-top:6px;">Try different n to see when quadratic and exponential become painful.</div>
+                <span class="preset" onclick="setRtN(10)">n = 10</span>
+                <span class="preset" onclick="setRtN(100)">n = 100</span>
+                <span class="preset" onclick="setRtN(1000)">n = 1000</span>
+                <span class="preset" onclick="setRtN(1000000)">n = 10⁶</span>
+              </div>
+              <div class="demo-calc" id="rt-calc">
+                <div class="step-title">Ready</div>
+                <div class="math">Change n to see how each growth class scales.</div>
+                <div class="note">Wall time assumes 10⁹ simple ops/sec.</div>
+              </div>
+            </div>
+          </div>
+          <div class="demo-controls">
+            <button class="btn" onclick="resetRt()">↺ Reset</button>
+          </div>
+        </div>
+
+        <div class="callout">
+          <div class="label">The practical takeaway</div>
+          <p style="margin:6px 0">When you're staring at code in review, ask two questions: "what's n here, and what shape is the work?" If you find a nested loop where both levels go up to n, you've got a quadratic and you should know whether that's OK. If the outer loop is n and the inner loop is log n (say, a binary search), you've got n log n and you're fine. The <span class="term" data-label="log n" data-def="Base-2 logarithm of n. Doubles every time n doubles. The growth class of divide-and-conquer — binary search, tree height, heap operations.">log n</span> factor is the one that almost never matters.</p>
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <section id="theoretical">
+        <h2>Theoretical CS <a href="theoretical-cs.html" class="deep-dive">Deep Dive →</a><span class="era">// what machines can and can't do</span></h2>
+        <p class="lede">What can a computer do at all, and what can it do efficiently? The answers turn out to be "less than you'd expect," in both senses.</p>
+
+        <h3 id="turing">The <span class="term" data-label="Turing machine" data-def="Alan Turing's 1936 formal model of computation: an infinite tape of symbols, a movable head, a finite state controller, and a transition function. The simplest universal model of what a computer can do.">Turing machine</span></h3>
+        <p>In 1936, Alan Turing — 23 years old, a fresh Cambridge graduate — wrote down the simplest possible mathematical model of a computer. One infinite tape of symbols. A read-write head that can move one cell at a time. A finite-state controller. A transition rule: "if I'm in state q and the head reads symbol s, write s', move the head left or right, and enter state q'." That's the whole machine. And every program you will ever run — every LLM, every game engine, every operating system — is reducible to something that could, in principle, be simulated on this one-tape model. That claim is the <em>Church-Turing thesis</em>, and no one has found a counter-example in nearly 90 years.</p>
+
+        <p>The reason the Turing machine matters is not that it's efficient — it's that it's <em>universal</em>. Any question about what computers can do can be rephrased as a question about what Turing machines can do. That move lets theoretical CS make statements of the form "no machine of any kind can ever solve X," which is a stronger statement than "no machine we currently know can solve X."</p>
+
+        <h3 id="halting">The <span class="term" data-label="Halting problem" data-def="Given a program and an input, decide whether the program eventually halts or runs forever. Turing proved (1936) that no algorithm can solve this in general — it's formally undecidable.">halting problem</span></h3>
+        <p>Turing's headline result: <em>there is no program that can, in general, tell whether another program halts.</em> The proof is a one-page diagonal argument and it's worth reading at least once in your life. Sketch: suppose a universal halting-checker <code>H(P, x)</code> existed, returning true iff program <code>P</code> halts on input <code>x</code>. Build a new program <code>D</code> that reads program <code>P</code> as input and does: "if <code>H(P, P)</code> says halts, loop forever; else halt." Now run <code>D(D)</code>. If it halts, <code>H</code> said it loops — contradiction. If it loops, <code>H</code> said it halts — contradiction. Therefore <code>H</code> cannot exist. The trick is the diagonal (running <code>D</code> on itself), and it's the same move Cantor used to show the reals are uncountable.</p>
+
+        <div class="callout">
+          <div class="label">The halting argument in pseudocode</div>
+          <pre style="font-family:var(--mono);font-size:12px;color:var(--text);line-height:1.65;margin:6px 0;white-space:pre-wrap;">  # Assume such an H exists:
+  def H(P, x):
+      return True if P halts on x else False
+
+  # Build D:
+  def D(P):
+      if H(P, P):
+          while True: pass   # loop forever
+      else:
+          return             # halt immediately
+
+  # Now run D(D).
+  # If D(D) halts, then H(D,D) was True → D(D) loops.  Contradiction.
+  # If D(D) loops, then H(D,D) was False → D(D) halts.  Contradiction.
+  # So H cannot exist.</pre>
+        </div>
+
+        <p>A huge number of "can I check at build time whether my program does X?" questions turn out to be the halting problem in disguise — type inference for unrestricted languages, program equivalence, virus detection from source code. When a compiler says "sorry, that's undecidable in general, here's a conservative approximation," the halting problem is usually what's hiding in the background.</p>
+
+        <h3 id="p-np">P vs NP</h3>
+        <p>Once you've accepted that <em>some</em> problems are unsolvable at all, the next natural question is: among the solvable ones, which are efficient? Theoretical CS organizes problems into <em>complexity classes</em>, and two matter more than the rest:</p>
+        <ul class="clean">
+          <li><strong>P</strong> — problems solvable in polynomial time. O(n), O(n log n), O(n²), O(n¹⁰⁰) — all in P. These are the "efficient" problems.</li>
+          <li><strong>NP</strong> — problems whose solutions can be <em>verified</em> in polynomial time. Given a candidate answer, you can check it fast, even if finding it is hard. Sudoku, SAT, TSP, graph coloring — all in NP.</li>
+        </ul>
+        <p>Every problem in P is in NP (if you can solve it quickly, you can verify a solution quickly). The million-dollar question is the reverse: is every problem in NP also in P? <strong>P = NP?</strong> If yes, then every problem whose solutions you can verify, you can also find — which would break cryptography, revolutionize optimization, and make a lot of hard problems trivial. Almost everyone believes P ≠ NP, but no one has proved it. The Clay Millennium Prize offers $1M to whoever does.</p>
+
+        <h3 id="reductions">Reductions &amp; NP-completeness</h3>
+        <p>A <span class="term" data-label="Reduction" data-def="A way to solve problem A by transforming it into problem B in polynomial time. If you can reduce A to B, then B is 'at least as hard' as A.">reduction</span> from problem A to problem B is a polynomial-time transformation that turns any instance of A into an equivalent instance of B. If such a reduction exists, we say "A reduces to B," written A ≤ₚ B, and we know B is at least as hard as A — if you could solve B efficiently, you'd solve A efficiently too by just running the transformation first.</p>
+        <p>In 1971 Stephen Cook (and independently Leonid Levin) proved that the Boolean satisfiability problem SAT is <em>NP-hard</em>: every problem in NP reduces to SAT. That single result anchored everything. Once you have one NP-hard problem, you can prove a new problem is NP-hard just by reducing SAT to it — or any other known-hard problem to it. Karp's 1972 paper then took 21 classic combinatorial problems and reduced them to each other, establishing most of the NP-complete canon: 3-SAT, Clique, Vertex Cover, Hamiltonian Cycle, TSP, Subset Sum, Graph Coloring. If P ≠ NP, all of these are forever hard in the worst case, and we settle for approximations and heuristics.</p>
+
+        <!-- ============================================================ -->
+        <!-- INTERACTIVE TURING MACHINE DEMO -->
+        <!-- ============================================================ -->
+        <div class="demo" id="demo-tm">
+          <div class="demo-header">
+            <span class="title">▸ Interactive Turing Machine — decide if a string has equal 0s and 1s</span>
+            <span class="step-indicator" id="tm-progress">Step 0 / 0</span>
+          </div>
+          <div class="demo-body">
+            <div class="demo-visual">
+              <svg viewBox="0 0 720 260" width="720" height="260" id="tm-svg">
+                <g id="tm-tape"></g>
+                <g id="tm-head"></g>
+                <text x="360" y="220" fill="#8a93a6" text-anchor="middle" font-family="monospace" font-size="11" id="tm-state-text">state: q0</text>
+                <text x="360" y="240" fill="#8a93a6" text-anchor="middle" font-family="monospace" font-size="10" id="tm-rule-text">ready</text>
+              </svg>
+            </div>
+            <div class="demo-panel">
+              <div class="demo-params">
+                <h5>Input tape</h5>
+                <div class="param-row">
+                  <label>tape</label><input type="text" id="tm-input" value="001011" style="background:var(--bg-3);border:1px solid var(--border);color:var(--text);padding:4px 6px;border-radius:4px;font-family:var(--mono);font-size:12px;width:120px;">
+                </div>
+                <div style="font-size:10px;color:var(--text-dim);margin-top:6px;">Uses symbols 0 and 1. The TM pairs off one 0 with one 1 per pass (marking each as X), halting when the tape is all X (accept) or unmatched (reject).</div>
+                <span class="preset" onclick="setTmInput('0011')">0011 (accept)</span>
+                <span class="preset" onclick="setTmInput('001011')">001011 (accept)</span>
+                <span class="preset" onclick="setTmInput('0001')">0001 (reject)</span>
+              </div>
+              <div class="demo-calc" id="tm-calc">
+                <div class="step-title">Ready</div>
+                <div class="math">Press Step → to run the machine one transition at a time.</div>
+                <div class="note">States: q0 scan-right, q1 found-0 seeking-1, q2 found-1 seeking-0, q3 rewind, qA accept, qR reject.</div>
+              </div>
+            </div>
+          </div>
+          <div class="demo-controls">
+            <button class="btn" onclick="resetTm()">↺ Reset</button>
+            <button class="btn" onclick="prevTm()">← Back</button>
+            <button class="btn primary" onclick="stepTm()">Step →</button>
+            <button class="btn" onclick="runAllTm()">Run All</button>
+          </div>
+        </div>
+
+        <div class="callout good">
+          <div class="label">See also</div>
+          <p style="margin:6px 0">For the full proofs, the NP-complete zoo, and a longer TM tutorial with two interactive figures, jump to <a href="theoretical-cs.html">theoretical-cs.html</a>. The prereq is <a href="../math/discrete-math.html">discrete math</a> (sets, functions, proof by contradiction). The practical consequences of NP-hardness show up in the optimization track below — we solve NP-hard problems every day, just not optimally.</p>
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <section id="optimization">
+        <h2>Mathematical Optimization <a href="optimization.html" class="deep-dive">Deep Dive →</a><span class="era">// the math under ML</span></h2>
+        <p class="lede">Pick variables to make a number as small as possible, subject to rules. That's the entire field — and it's the engine under every neural network, every airline schedule, every routing system.</p>
+
+        <p>Every optimization problem has the same three pieces: an <em>objective</em> (the number you want to minimize), <em>variables</em> (the knobs you can turn), and <em>constraints</em> (the rules the variables must obey). Training a neural net? Objective is the loss, variables are the weights, constraints are usually "none" (or "non-negative" for some regularizers). Routing trucks? Objective is total distance, variables are the edges you use, constraints are "every city visited exactly once." Same math, different clothes.</p>
+
+        <p>Prerequisites: this section leans on <a href="../math/multivariable-calculus.html">multivariable calculus</a> (partial derivatives, the gradient ∇f, the chain rule) and a little <a href="../math/linear-algebra.html">linear algebra</a> (dot products, matrix-vector operations). If those feel rusty, skim them before continuing.</p>
+
+        <h3 id="convex">Convex vs non-convex</h3>
+        <p>A function is <span class="term" data-label="Convex" data-def="A function is convex if the line segment between any two points on its graph lies on or above the graph. The 'bowl-shaped' class. Convex problems have one minimum, and any local minimum is the global minimum.">convex</span> if the line between any two points on its graph lies on or above the graph — think of a bowl. Convex functions are the safe zone of optimization: every local minimum is a global minimum, so any algorithm that just "walks downhill" is guaranteed to find the best answer. Linear, quadratic, and exponential functions are convex; so is the sum of convex functions, and the max of convex functions. Logistic regression is convex. Support vector machines are convex. Linear and quadratic programs are convex.</p>
+        <p>Neural networks are <em>not</em> convex. Their loss landscape is a high-dimensional mess with countless local minima, saddle points, and flat regions. The miracle of modern deep learning is that, empirically, the local minima SGD finds in that landscape tend to be almost as good as the global minimum would be. Nobody fully understands why, but it works — we've built a trillion-dollar industry on it.</p>
+
+        <h3 id="gradient-methods">Gradient descent, SGD, Adam</h3>
+        <p>The simplest optimization algorithm that works: compute the gradient ∇f (the direction of steepest ascent), take a small step in the opposite direction, repeat. That's <strong>gradient descent</strong>. The step size is a hyperparameter called the learning rate — too small and training drags, too large and you overshoot and diverge. <strong>Stochastic gradient descent</strong> (SGD) is the variant used in ML: instead of computing the true gradient over the whole dataset (which would be prohibitively expensive), estimate it from a random mini-batch. Noisier steps, vastly cheaper per step, surprisingly helpful for escaping saddle points.</p>
+        <p><strong>Adam</strong> is the workhorse. Published by Kingma &amp; Ba in 2014, it keeps a per-parameter exponential moving average of both the gradient (momentum) and the squared gradient (adaptive scale), and uses the ratio to pick a step size that is small for wildly-varying parameters and large for slow-moving ones. Ninety percent of production training runs still use Adam or its close relative AdamW. It isn't optimal — pure SGD with a warmup schedule sometimes beats it — but it's forgiving of bad hyperparameters, and that's worth a lot.</p>
+
+        <div class="math-display">x_{t+1} = x_t − η · ∇f(x_t)</div>
+        <div class="math-glossary">
+          <p class="mg-title">Vanilla gradient descent</p>
+          <dl>
+            <dt>x_t</dt><dd>The current parameter vector (the weights, in ML) at iteration t.</dd>
+            <dt>∇f(x_t)</dt><dd>The gradient of the objective f at x_t — a vector pointing in the direction of steepest ascent.</dd>
+            <dt>η (eta)</dt><dd>The learning rate. Usually a small positive number like 0.01 or 10⁻⁴.</dd>
+            <dt>x_{t+1}</dt><dd>The new parameter vector — one step downhill.</dd>
+          </dl>
+          <p class="mg-analogy"><strong>Analogy.</strong> You're blindfolded on a hillside and want to reach the valley. Feel the slope under your feet, take a small step in the downhill direction, repeat. If the hill is a bowl (convex), you're guaranteed to reach the bottom. If it's the Rockies (non-convex), you'll reach <em>a</em> bottom, not necessarily the deepest one.</p>
+        </div>
+
+        <h3 id="linear-prog">Linear &amp; KKT</h3>
+        <p>When your objective and constraints are all linear functions of the variables, you have a <strong>linear program</strong> (LP). LPs are the success story of applied optimization: Dantzig's 1947 <em>simplex method</em> solves million-variable LPs in seconds, and modern interior-point methods handle billions. Airlines schedule flights as LPs. Factories plan production as LPs. Hedge funds rebalance portfolios as LPs. Whenever you can massage a problem into "minimize cᵀx subject to Ax ≤ b," you're done — the tooling is that good.</p>
+        <p>For problems with both constraints and nonlinear objectives, the general recipe is the <strong>KKT conditions</strong> (Karush-Kuhn-Tucker). Informally: at any constrained optimum, the gradient of the objective is a non-negative linear combination of the gradients of the active constraints. That sounds abstract until you realize it's how SVMs get solved, how Lagrangian mechanics gets derived, and how constrained neural nets (with weight clipping, norm bounds, or output simplex) are trained.</p>
+
+        <h3 id="duality">Duality</h3>
+        <p>Every minimization problem has a <em>dual</em> maximization problem built from the same data. Weak duality says the dual's best value is always ≤ the primal's best value. For convex problems, strong duality usually holds: they're equal. That's more useful than it looks. The dual can be easier to solve, it gives you a certificate of optimality, and in SVM-land the dual is where the "kernel trick" lives — kernels only make sense because the dual formulation of SVMs is expressed entirely in terms of dot products, which you can replace with kernel functions. Linear programming duality has its own folklore: every LP has a dual LP that is an LP in its own right, and the simplex method solves both simultaneously.</p>
+
+        <!-- ============================================================ -->
+        <!-- INTERACTIVE GRADIENT DESCENT DEMO -->
+        <!-- ============================================================ -->
+        <div class="demo" id="demo-gd2d">
+          <div class="demo-header">
+            <span class="title">▸ Interactive Gradient Descent — 2D bowl, watch it converge</span>
+            <span class="step-indicator" id="gd2d-progress">Step 0</span>
+          </div>
+          <div class="demo-body">
+            <div class="demo-visual">
+              <svg viewBox="0 0 720 360" width="720" height="360" id="gd2d-svg">
+                <g id="gd2d-contours"></g>
+                <g id="gd2d-axes"></g>
+                <g id="gd2d-path"></g>
+                <g id="gd2d-point"></g>
+                <text x="360" y="345" fill="#8a93a6" text-anchor="middle" font-family="monospace" font-size="11">f(x, y) = (x−2)² + 3(y+1)²  ·  minimum at (2, −1)</text>
+              </svg>
+            </div>
+            <div class="demo-panel">
+              <div class="demo-params">
+                <h5>Start &amp; learning rate</h5>
+                <div class="param-row">
+                  <label>x₀</label><input type="number" id="gd2d-x" value="-3" step="0.1">
+                  <label>y₀</label><input type="number" id="gd2d-y" value="3" step="0.1">
+                </div>
+                <div class="param-row">
+                  <label>η</label><input type="number" id="gd2d-lr" value="0.1" step="0.01">
+                </div>
+                <span class="preset" onclick="loadGd2dPreset('slow')">slow η=0.05</span>
+                <span class="preset" onclick="loadGd2dPreset('fast')">fast η=0.25</span>
+                <span class="preset" onclick="loadGd2dPreset('diverge')">diverge η=0.4</span>
+              </div>
+              <div class="demo-calc" id="gd2d-calc">
+                <div class="step-title">Ready</div>
+                <div class="math">Press Step → to take one gradient-descent step.</div>
+                <div class="note">∇f = (2(x−2), 6(y+1))</div>
+              </div>
+            </div>
+          </div>
+          <div class="demo-controls">
+            <button class="btn" onclick="resetGd2d()">↺ Reset</button>
+            <button class="btn" onclick="prevGd2d()">← Back</button>
+            <button class="btn primary" onclick="stepGd2d()">Step →</button>
+            <button class="btn" onclick="runAllGd2d()">Run 30</button>
+          </div>
+        </div>
+
+        <div class="callout good">
+          <div class="label">See also</div>
+          <p style="margin:6px 0">The full treatment — Newton's method, quasi-Newton (BFGS), Lagrange multipliers, integer programming, convex optimization, duality gap, interior-point methods — is in <a href="optimization.html">optimization.html</a>. For the ML-facing version with worked backprop and training loops, see <a href="../topics/gradient-descent.html">Gradient Descent</a> and <a href="../topics/backpropagation.html">Backpropagation</a> on the AI/ML track.</p>
+        </div>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<script>
+// ============================================================
+// MOBILE MENU
+// ============================================================
+const mobileToggle = document.getElementById('mobile-menu-toggle');
+const sidebarEl = document.querySelector('aside.sidebar');
+const sidebarBackdrop = document.getElementById('sidebar-backdrop');
+function closeMobileMenu() {
+  sidebarEl.classList.remove('open');
+  sidebarBackdrop.classList.remove('show');
+  mobileToggle.textContent = '☰';
+}
+function openMobileMenu() {
+  sidebarEl.classList.add('open');
+  sidebarBackdrop.classList.add('show');
+  mobileToggle.textContent = '✕';
+}
+mobileToggle.addEventListener('click', () => {
+  if (sidebarEl.classList.contains('open')) closeMobileMenu();
+  else openMobileMenu();
+});
+sidebarBackdrop.addEventListener('click', closeMobileMenu);
+document.querySelectorAll('aside.sidebar nav a').forEach(a => {
+  a.addEventListener('click', () => {
+    if (window.innerWidth <= 900) closeMobileMenu();
+  });
+});
+
+// ============================================================
+// TOOLTIPS
+// ============================================================
+const tooltip = document.getElementById('tooltip');
+document.addEventListener('mouseover', (e) => {
+  const t = e.target.closest('.term');
+  if (!t) return;
+  const def = t.getAttribute('data-def');
+  const label = t.getAttribute('data-label') || 'Definition';
+  if (!def) return;
+  tooltip.innerHTML = `<div style="font-family: var(--mono); font-size: 10px; color: var(--accent); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px;">${label}</div>${def}`;
+  tooltip.classList.add('show');
+});
+document.addEventListener('mousemove', (e) => {
+  if (!tooltip.classList.contains('show')) return;
+  let x = e.clientX + 16, y = e.clientY + 16;
+  const tw = tooltip.offsetWidth, th = tooltip.offsetHeight;
+  if (x + tw > window.innerWidth - 10) x = e.clientX - tw - 16;
+  if (y + th > window.innerHeight - 10) y = e.clientY - th - 16;
+  tooltip.style.left = x + 'px';
+  tooltip.style.top = y + 'px';
+});
+document.addEventListener('mouseout', (e) => {
+  if (e.target.closest && e.target.closest('.term')) tooltip.classList.remove('show');
+});
+
+// ============================================================
+// COLLAPSIBLE SIDEBAR + SCROLL SPY
+// ============================================================
+const sections = document.querySelectorAll('main section[id]');
+const navLinks = document.querySelectorAll('aside nav a');
+const catGroups = document.querySelectorAll('.cat-group');
+const catToggles = document.querySelectorAll('.cat-toggle');
+
+catToggles.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const expanded = btn.getAttribute('aria-expanded') === 'true';
+    btn.setAttribute('aria-expanded', expanded ? 'false' : 'true');
+    try {
+      const group = btn.closest('.cat-group')?.dataset.group;
+      if (group) {
+        const key = 'sidenav:' + group;
+        localStorage.setItem(key, expanded ? 'closed' : 'open');
+      }
+    } catch (e) { /* localStorage may be disabled */ }
+  });
+});
+
+catGroups.forEach(group => {
+  try {
+    const key = 'sidenav:' + group.dataset.group;
+    const saved = localStorage.getItem(key);
+    if (saved === 'open' || saved === 'closed') {
+      const btn = group.querySelector('.cat-toggle');
+      if (btn) btn.setAttribute('aria-expanded', saved === 'open' ? 'true' : 'false');
+    }
+  } catch (e) { /* ignore */ }
+});
+
+let lastActiveGroup = null;
+function updateActiveNav() {
+  let active = null;
+  sections.forEach(sec => {
+    const rect = sec.getBoundingClientRect();
+    if (rect.top < 240) active = sec.id;
+  });
+  navLinks.forEach(a => {
+    const href = a.getAttribute('href');
+    a.classList.toggle('active', href === '#' + active);
+  });
+  if (active) {
+    const activeLink = document.querySelector('aside nav a.active');
+    const activeGroup = activeLink ? activeLink.closest('.cat-group') : null;
+    catGroups.forEach(g => g.classList.toggle('is-active', g === activeGroup));
+    if (activeGroup && activeGroup !== lastActiveGroup) {
+      const btn = activeGroup.querySelector('.cat-toggle');
+      if (btn && btn.getAttribute('aria-expanded') !== 'true') {
+        btn.setAttribute('aria-expanded', 'true');
+      }
+      lastActiveGroup = activeGroup;
+    }
+  }
+}
+window.addEventListener('scroll', updateActiveNav, { passive: true });
+updateActiveNav();
+
+// ============================================================
+// SHARED HELPERS
+// ============================================================
+function fmt(n, d = 3) {
+  if (isNaN(n)) return '?';
+  if (Math.abs(n) < 1e-6) n = 0;
+  return (+n).toFixed(d);
+}
+function readNum(id, fallback = 0) {
+  const el = document.getElementById(id);
+  if (!el) return fallback;
+  const v = parseFloat(el.value);
+  return isNaN(v) ? fallback : v;
+}
+const SVG_NS = 'http://www.w3.org/2000/svg';
+function svg(tag, attrs = {}, text = null) {
+  const el = document.createElementNS(SVG_NS, tag);
+  for (const k in attrs) el.setAttribute(k, attrs[k]);
+  if (text != null) el.textContent = text;
+  return el;
+}
+
+// ============================================================
+// BINARY SEARCH DEMO
+// ============================================================
+const binArr = [2, 5, 8, 12, 17, 23, 31, 38, 44, 52, 60, 67, 74, 81, 87, 92];
+const binState = { steps: [], cursor: 0, target: 23 };
+
+function buildBinSteps(target) {
+  const steps = [];
+  let lo = 0, hi = binArr.length - 1;
+  let found = -1;
+  while (lo <= hi) {
+    const mid = Math.floor((lo + hi) / 2);
+    const v = binArr[mid];
+    if (v === target) {
+      steps.push({ lo, hi, mid, note: `a[${mid}] = ${v} === ${target} · FOUND`, done: true });
+      found = mid;
+      break;
+    } else if (v < target) {
+      steps.push({ lo, hi, mid, note: `a[${mid}] = ${v} < ${target} · keep the right half`, done: false });
+      lo = mid + 1;
+    } else {
+      steps.push({ lo, hi, mid, note: `a[${mid}] = ${v} > ${target} · keep the left half`, done: false });
+      hi = mid - 1;
+    }
+  }
+  if (found < 0) {
+    steps.push({ lo, hi, mid: -1, note: `low > high · target ${target} not present`, done: true, miss: true });
+  }
+  return steps;
+}
+
+function drawBin() {
+  const cells = document.getElementById('bin-cells');
+  const pointers = document.getElementById('bin-pointers');
+  cells.innerHTML = '';
+  pointers.innerHTML = '';
+  const n = binArr.length;
+  const cellW = 40, startX = 20, y = 80, h = 42;
+  const step = binState.steps[binState.cursor - 1];
+  const lo = step ? step.lo : 0;
+  const hi = step ? step.hi : n - 1;
+  const mid = step ? step.mid : -1;
+  for (let i = 0; i < n; i++) {
+    const inRange = i >= lo && i <= hi;
+    const isMid = i === mid;
+    const rect = svg('rect', {
+      x: startX + i * cellW, y, width: cellW - 4, height: h,
+      rx: 4,
+      fill: isMid ? 'rgba(124,92,255,0.35)' : (inRange ? 'rgba(124,92,255,0.08)' : 'rgba(148,163,184,0.05)'),
+      stroke: isMid ? '#f472b6' : (inRange ? '#7c5cff' : '#384050'),
+      'stroke-width': isMid ? 2.5 : 1
+    });
+    cells.appendChild(rect);
+    cells.appendChild(svg('text', {
+      x: startX + i * cellW + (cellW - 4) / 2, y: y + 26,
+      fill: inRange ? '#dbe1ec' : '#5a6374',
+      'text-anchor': 'middle', 'font-family': 'monospace', 'font-size': 13
+    }, String(binArr[i])));
+    cells.appendChild(svg('text', {
+      x: startX + i * cellW + (cellW - 4) / 2, y: y + h + 14,
+      fill: '#5a6374',
+      'text-anchor': 'middle', 'font-family': 'monospace', 'font-size': 9
+    }, String(i)));
+  }
+  // pointers
+  function pointer(idx, label, color) {
+    if (idx < 0 || idx >= n) return;
+    const cx = startX + idx * cellW + (cellW - 4) / 2;
+    pointers.appendChild(svg('text', {
+      x: cx, y: y - 8, fill: color, 'text-anchor': 'middle',
+      'font-family': 'monospace', 'font-size': 11
+    }, label));
+    pointers.appendChild(svg('line', {
+      x1: cx, y1: y - 4, x2: cx, y2: y, stroke: color, 'stroke-width': 1.5
+    }));
+  }
+  if (step) {
+    pointer(lo, 'lo', '#22d3ee');
+    pointer(hi, 'hi', '#22d3ee');
+    pointer(mid, 'mid', '#f472b6');
+  }
+  document.getElementById('bin-caption').textContent = step ? (step.note) : 'Press Step → to begin.';
+}
+
+function renderBinStep() {
+  document.getElementById('bin-progress').textContent = `Step ${binState.cursor} / ${binState.steps.length}`;
+  const calc = document.getElementById('bin-calc');
+  drawBin();
+  if (binState.cursor === 0) {
+    calc.innerHTML = `
+      <div class="step-title">Ready</div>
+      <div class="math">target = <span class="result">${binState.target}</span></div>
+      <div class="math">lo = 0, hi = ${binArr.length - 1}</div>
+      <div class="note">Press Step → to halve the window.</div>`;
+    return;
+  }
+  const s = binState.steps[binState.cursor - 1];
+  if (s.done && !s.miss) {
+    calc.innerHTML = `
+      <div class="step-title">Step ${binState.cursor} · Found</div>
+      <div class="math">mid = <span class="num">${s.mid}</span>, a[mid] = <span class="result">${binArr[s.mid]}</span></div>
+      <div class="math">target ${binState.target} found at index <span class="result">${s.mid}</span></div>
+      <div class="note">Took ${binState.cursor} comparison${binState.cursor === 1 ? '' : 's'} for n=${binArr.length}. log₂(16) = 4.</div>`;
+  } else if (s.done && s.miss) {
+    calc.innerHTML = `
+      <div class="step-title">Step ${binState.cursor} · Not Found</div>
+      <div class="math">lo = ${s.lo}, hi = ${s.hi} · window empty</div>
+      <div class="math">target ${binState.target} not in array</div>
+      <div class="note">Even on a miss, we used ≤ log₂(n)+1 comparisons.</div>`;
+  } else {
+    calc.innerHTML = `
+      <div class="step-title">Step ${binState.cursor} · Compare</div>
+      <div class="math">lo=<span class="num">${s.lo}</span>, hi=<span class="num">${s.hi}</span>, mid=<span class="num">${s.mid}</span></div>
+      <div class="math">a[mid] = <span class="var">${binArr[s.mid]}</span> vs target <span class="var">${binState.target}</span></div>
+      <div class="note">${s.note}</div>`;
+  }
+}
+
+function resetBin() {
+  binState.target = Math.round(readNum('bin-target', 23));
+  binState.steps = buildBinSteps(binState.target);
+  binState.cursor = 0;
+  renderBinStep();
+}
+function stepBin() {
+  if (binState.cursor < binState.steps.length) { binState.cursor++; renderBinStep(); }
+}
+function prevBin() {
+  if (binState.cursor > 0) { binState.cursor--; renderBinStep(); }
+}
+function runAllBin() {
+  resetBin();
+  const iv = setInterval(() => {
+    if (binState.cursor >= binState.steps.length) { clearInterval(iv); return; }
+    stepBin();
+  }, 600);
+}
+function binSearchPreset(t) {
+  document.getElementById('bin-target').value = t;
+  resetBin();
+}
+document.getElementById('bin-target').addEventListener('input', resetBin);
+resetBin();
+
+// ============================================================
+// BFS / DFS DEMO
+// ============================================================
+// Graph: 6 nodes A..F, fixed positions, undirected edges
+const bfsNodes = [
+  { id: 'A', x: 90,  y: 120 },
+  { id: 'B', x: 220, y: 60  },
+  { id: 'C', x: 220, y: 180 },
+  { id: 'D', x: 360, y: 60  },
+  { id: 'E', x: 360, y: 180 },
+  { id: 'F', x: 500, y: 120 }
+];
+const bfsEdges = [
+  ['A', 'B'], ['A', 'C'],
+  ['B', 'D'], ['B', 'E'],
+  ['C', 'E'],
+  ['D', 'F'], ['E', 'F']
+];
+function neighborsOf(id) {
+  const out = [];
+  bfsEdges.forEach(([u, v]) => {
+    if (u === id) out.push(v);
+    else if (v === id) out.push(u);
+  });
+  out.sort();
+  return out;
+}
+
+const bfsState = { mode: 'bfs', steps: [], cursor: 0 };
+
+function buildBfsSteps(mode) {
+  const steps = [];
+  const visited = new Set();
+  const order = [];
+  if (mode === 'bfs') {
+    const q = ['A'];
+    visited.add('A');
+    steps.push({ current: null, queue: [...q], order: [...order], note: 'Queue: [A]. Visited: {A}.' });
+    while (q.length) {
+      const cur = q.shift();
+      order.push(cur);
+      steps.push({ current: cur, queue: [...q], order: [...order], note: `Dequeue ${cur}. Push all unvisited neighbors.` });
+      for (const nb of neighborsOf(cur)) {
+        if (!visited.has(nb)) {
+          visited.add(nb);
+          q.push(nb);
+          steps.push({ current: cur, queue: [...q], order: [...order], note: `Enqueue ${nb}. Queue: [${q.join(', ')}].` });
+        }
+      }
+    }
+    steps.push({ current: null, queue: [], order: [...order], note: `Queue empty. Visit order: ${order.join(' → ')}.`, done: true });
+  } else {
+    const st = ['A'];
+    visited.add('A');
+    steps.push({ current: null, stack: [...st], order: [...order], note: 'Stack: [A]. Visited: {A}.' });
+    while (st.length) {
+      const cur = st.pop();
+      order.push(cur);
+      steps.push({ current: cur, stack: [...st], order: [...order], note: `Pop ${cur}. Push unvisited neighbors in reverse order.` });
+      const nbs = neighborsOf(cur);
+      for (let i = nbs.length - 1; i >= 0; i--) {
+        const nb = nbs[i];
+        if (!visited.has(nb)) {
+          visited.add(nb);
+          st.push(nb);
+          steps.push({ current: cur, stack: [...st], order: [...order], note: `Push ${nb}. Stack: [${st.join(', ')}].` });
+        }
+      }
+    }
+    steps.push({ current: null, stack: [], order: [...order], note: `Stack empty. Visit order: ${order.join(' → ')}.`, done: true });
+  }
+  return steps;
+}
+
+function drawBfs() {
+  const edgesG = document.getElementById('bfs-edges');
+  const nodesG = document.getElementById('bfs-nodes');
+  edgesG.innerHTML = '';
+  nodesG.innerHTML = '';
+  const step = bfsState.steps[bfsState.cursor - 1];
+  const visited = new Set(step ? step.order : []);
+  const current = step ? step.current : null;
+  bfsEdges.forEach(([u, v]) => {
+    const a = bfsNodes.find(n => n.id === u);
+    const b = bfsNodes.find(n => n.id === v);
+    const both = visited.has(u) && visited.has(v);
+    edgesG.appendChild(svg('line', {
+      x1: a.x, y1: a.y, x2: b.x, y2: b.y,
+      stroke: both ? '#7c5cff' : '#384050',
+      'stroke-width': both ? 2.5 : 1.5,
+      opacity: both ? 1 : 0.6
+    }));
+  });
+  bfsNodes.forEach(n => {
+    const isVis = visited.has(n.id);
+    const isCur = n.id === current;
+    nodesG.appendChild(svg('circle', {
+      cx: n.x, cy: n.y, r: 22,
+      fill: isCur ? '#f472b6' : (isVis ? 'rgba(124,92,255,0.5)' : '#1a2030'),
+      stroke: isCur ? '#f9a8d4' : (isVis ? '#7c5cff' : '#384050'),
+      'stroke-width': isCur ? 3 : 2
+    }));
+    nodesG.appendChild(svg('text', {
+      x: n.x, y: n.y + 5, fill: '#dbe1ec',
+      'text-anchor': 'middle', 'font-family': 'monospace', 'font-size': 14
+    }, n.id));
+    if (isVis) {
+      const order = (step.order.indexOf(n.id) + 1);
+      nodesG.appendChild(svg('text', {
+        x: n.x + 22, y: n.y - 20, fill: '#22d3ee',
+        'text-anchor': 'middle', 'font-family': 'monospace', 'font-size': 10
+      }, '#' + order));
+    }
+  });
+  // Queue / Stack panel on the SVG right side
+  const panelX = 560;
+  nodesG.appendChild(svg('text', {
+    x: panelX, y: 30, fill: '#8a93a6',
+    'font-family': 'monospace', 'font-size': 10
+  }, bfsState.mode === 'bfs' ? 'queue (FIFO):' : 'stack (LIFO):'));
+  const contents = step ? (bfsState.mode === 'bfs' ? step.queue : step.stack) : [];
+  (contents || []).forEach((id, i) => {
+    nodesG.appendChild(svg('rect', {
+      x: panelX, y: 40 + i * 24, width: 110, height: 20, rx: 3,
+      fill: 'rgba(34,211,238,0.1)', stroke: '#22d3ee', 'stroke-width': 1
+    }));
+    nodesG.appendChild(svg('text', {
+      x: panelX + 10, y: 55 + i * 24, fill: '#dbe1ec',
+      'font-family': 'monospace', 'font-size': 12
+    }, id));
+  });
+}
+
+function renderBfsStep() {
+  document.getElementById('bfs-progress').textContent = `Step ${bfsState.cursor} / ${bfsState.steps.length}`;
+  const calc = document.getElementById('bfs-calc');
+  drawBfs();
+  const step = bfsState.steps[bfsState.cursor - 1];
+  document.getElementById('bfs-caption').textContent = bfsState.mode.toUpperCase() + ' from A · ties broken alphabetically';
+  if (!step) {
+    calc.innerHTML = `
+      <div class="step-title">Ready · ${bfsState.mode.toUpperCase()}</div>
+      <div class="math">Start vertex = <span class="result">A</span></div>
+      <div class="note">Press Step → to walk through the traversal.</div>`;
+    return;
+  }
+  calc.innerHTML = `
+    <div class="step-title">Step ${bfsState.cursor} · ${bfsState.mode.toUpperCase()}</div>
+    <div class="math">${step.note}</div>
+    <div class="math">visited order: <span class="result">${step.order.join(' → ') || '(none)'}</span></div>
+    ${step.done ? '<div class="note">Traversal complete.</div>' : ''}`;
+}
+
+function resetBfs() {
+  bfsState.steps = buildBfsSteps(bfsState.mode);
+  bfsState.cursor = 0;
+  renderBfsStep();
+}
+function stepBfs() {
+  if (bfsState.cursor < bfsState.steps.length) { bfsState.cursor++; renderBfsStep(); }
+}
+function prevBfs() {
+  if (bfsState.cursor > 0) { bfsState.cursor--; renderBfsStep(); }
+}
+function runAllBfs() {
+  resetBfs();
+  const iv = setInterval(() => {
+    if (bfsState.cursor >= bfsState.steps.length) { clearInterval(iv); return; }
+    stepBfs();
+  }, 550);
+}
+function loadBfsMode(mode) {
+  bfsState.mode = mode;
+  resetBfs();
+}
+resetBfs();
+
+// ============================================================
+// RUNTIME GROWTH DEMO
+// ============================================================
+const rtCurves = [
+  { name: 'log n',   fn: n => Math.max(1, Math.log2(n)),           color: '#4ade80' },
+  { name: 'n',       fn: n => n,                                    color: '#22d3ee' },
+  { name: 'n log n', fn: n => n * Math.max(1, Math.log2(n)),        color: '#facc15' },
+  { name: 'n²',      fn: n => n * n,                                color: '#fb923c' },
+  { name: '2ⁿ',      fn: n => Math.pow(2, n),                       color: '#f472b6' }
+];
+function formatTime(seconds) {
+  if (!isFinite(seconds)) return '∞';
+  if (seconds < 1e-6) return '< 1μs';
+  if (seconds < 1e-3) return (seconds * 1e6).toFixed(1) + ' μs';
+  if (seconds < 1) return (seconds * 1e3).toFixed(1) + ' ms';
+  if (seconds < 60) return seconds.toFixed(2) + ' s';
+  if (seconds < 3600) return (seconds / 60).toFixed(1) + ' min';
+  if (seconds < 86400) return (seconds / 3600).toFixed(1) + ' hr';
+  if (seconds < 86400 * 365) return (seconds / 86400).toFixed(1) + ' days';
+  if (seconds < 86400 * 365 * 1e6) return (seconds / (86400 * 365)).toExponential(1) + ' yr';
+  return '> age of universe';
+}
+function drawRt() {
+  const grid = document.getElementById('rt-grid');
+  const curvesG = document.getElementById('rt-curves');
+  const markerG = document.getElementById('rt-marker');
+  const labelsG = document.getElementById('rt-labels');
+  grid.innerHTML = '';
+  curvesG.innerHTML = '';
+  markerG.innerHTML = '';
+  labelsG.innerHTML = '';
+
+  const padL = 60, padR = 180, padT = 20, padB = 60;
+  const W = 720, H = 340;
+  const plotW = W - padL - padR;
+  const plotH = H - padT - padB;
+
+  // axes: log-log, n in [1, 1e8], ops in [1, 1e18]
+  const nMin = 1, nMax = 1e8;
+  const opsMin = 1, opsMax = 1e18;
+  const logX = v => padL + (Math.log10(v) / Math.log10(nMax)) * plotW;
+  const logY = v => padT + plotH - (Math.log10(Math.max(1, v)) / Math.log10(opsMax)) * plotH;
+
+  // grid
+  for (let k = 0; k <= 8; k++) {
+    const x = logX(Math.pow(10, k));
+    grid.appendChild(svg('line', { x1: x, y1: padT, x2: x, y2: padT + plotH, stroke: '#1a2030', 'stroke-width': 1 }));
+    grid.appendChild(svg('text', { x, y: padT + plotH + 14, fill: '#5a6374', 'text-anchor': 'middle', 'font-family': 'monospace', 'font-size': 9 }, '10' + '⁰¹²³⁴⁵⁶⁷⁸'[k]));
+  }
+  for (let k = 0; k <= 18; k += 3) {
+    const y = logY(Math.pow(10, k));
+    grid.appendChild(svg('line', { x1: padL, y1: y, x2: padL + plotW, y2: y, stroke: '#1a2030', 'stroke-width': 1 }));
+    grid.appendChild(svg('text', { x: padL - 6, y: y + 3, fill: '#5a6374', 'text-anchor': 'end', 'font-family': 'monospace', 'font-size': 9 }, '10^' + k));
+  }
+  // axes labels
+  grid.appendChild(svg('text', { x: padL + plotW / 2, y: H - 25, fill: '#8a93a6', 'text-anchor': 'middle', 'font-family': 'monospace', 'font-size': 10 }, 'input size n'));
+  grid.appendChild(svg('text', { x: 14, y: padT + plotH / 2, fill: '#8a93a6', 'text-anchor': 'middle', 'font-family': 'monospace', 'font-size': 10, transform: `rotate(-90 14 ${padT + plotH / 2})` }, 'operations'));
+
+  // curves
+  const sample = [];
+  for (let e = 0; e <= 8; e += 0.1) sample.push(Math.pow(10, e));
+  rtCurves.forEach((c, i) => {
+    let d = '';
+    sample.forEach((n, j) => {
+      const y = c.fn(n);
+      if (!isFinite(y) || y < 1) return;
+      const px = logX(n);
+      const py = logY(y);
+      if (py > padT + plotH + 5 || py < padT - 5) return;
+      d += (d === '' ? 'M' : 'L') + px.toFixed(1) + ' ' + py.toFixed(1) + ' ';
+    });
+    curvesG.appendChild(svg('path', { d, stroke: c.color, 'stroke-width': 2, fill: 'none', opacity: 0.9 }));
+    // Legend at right
+    const ly = padT + 20 + i * 22;
+    labelsG.appendChild(svg('line', { x1: padL + plotW + 14, y1: ly, x2: padL + plotW + 38, y2: ly, stroke: c.color, 'stroke-width': 2.5 }));
+    labelsG.appendChild(svg('text', { x: padL + plotW + 44, y: ly + 4, fill: c.color, 'font-family': 'monospace', 'font-size': 11 }, c.name));
+  });
+
+  // marker at chosen n
+  const n = Math.max(1, Math.round(readNum('rt-n', 32)));
+  const mx = logX(Math.min(n, nMax));
+  markerG.appendChild(svg('line', { x1: mx, y1: padT, x2: mx, y2: padT + plotH, stroke: '#dbe1ec', 'stroke-width': 1, 'stroke-dasharray': '4 4' }));
+  markerG.appendChild(svg('text', { x: mx, y: padT - 6, fill: '#dbe1ec', 'text-anchor': 'middle', 'font-family': 'monospace', 'font-size': 10 }, 'n = ' + n.toLocaleString()));
+}
+
+function renderRt() {
+  const n = Math.max(1, Math.round(readNum('rt-n', 32)));
+  document.getElementById('rt-progress').textContent = 'n = ' + n.toLocaleString();
+  drawRt();
+  const opsPerSec = 1e9;
+  const calc = document.getElementById('rt-calc');
+  const rows = rtCurves.map(c => {
+    const ops = c.fn(n);
+    return `<div class="math"><span class="var">${c.name}</span> → ${isFinite(ops) ? ops.toExponential(2) : '∞'} ops · ${formatTime(ops / opsPerSec)}</div>`;
+  }).join('');
+  calc.innerHTML = `
+    <div class="step-title">n = ${n.toLocaleString()}</div>
+    ${rows}
+    <div class="note">Assuming 10⁹ ops / sec.</div>`;
+}
+function resetRt() {
+  document.getElementById('rt-n').value = 32;
+  renderRt();
+}
+function setRtN(v) {
+  document.getElementById('rt-n').value = v;
+  renderRt();
+}
+document.getElementById('rt-n').addEventListener('input', renderRt);
+renderRt();
+
+// ============================================================
+// TURING MACHINE DEMO
+// ============================================================
+// TM: accepts strings with equal 0s and 1s by pairing them off.
+// Each pass: scan right, find a 0 or 1, mark as X, then look for the opposite
+// symbol, mark it X, rewind, repeat.
+const tmState = { tape: [], head: 0, state: 'q0', steps: [], cursor: 0 };
+
+function buildTmSteps(input) {
+  // Represent tape as array of symbols; include a left endmarker and right blank
+  const tape = ['_', ...input.split(''), '_'];
+  // Start on index 1 (first real symbol)
+  let head = 1;
+  let state = 'q0';
+  const steps = [];
+  const maxSteps = 400;
+  const snap = (rule) => {
+    steps.push({
+      tape: [...tape], head, state, rule
+    });
+  };
+  snap('start');
+  let guard = 0;
+  while (guard++ < maxSteps) {
+    const sym = tape[head];
+    let wrote = null, newState = state, move = 0, rule = '';
+    if (state === 'q0') {
+      // scanning right for first un-marked symbol
+      if (sym === '0') { wrote = 'X'; newState = 'q1'; move = 1; rule = 'q0,0 → X,R,q1 (seek 1)'; }
+      else if (sym === '1') { wrote = 'X'; newState = 'q2'; move = 1; rule = 'q0,1 → X,R,q2 (seek 0)'; }
+      else if (sym === 'X') { move = 1; rule = 'q0,X → R,q0'; }
+      else if (sym === '_') { newState = 'qA'; rule = 'q0,_ → qA (accept)'; }
+    } else if (state === 'q1') {
+      // looking right for a 1
+      if (sym === '0' || sym === 'X') { move = 1; rule = `q1,${sym} → R,q1`; }
+      else if (sym === '1') { wrote = 'X'; newState = 'q3'; move = -1; rule = 'q1,1 → X,L,q3 (rewind)'; }
+      else if (sym === '_') { newState = 'qR'; rule = 'q1,_ → qR (reject: unmatched 0)'; }
+    } else if (state === 'q2') {
+      // looking right for a 0
+      if (sym === '1' || sym === 'X') { move = 1; rule = `q2,${sym} → R,q2`; }
+      else if (sym === '0') { wrote = 'X'; newState = 'q3'; move = -1; rule = 'q2,0 → X,L,q3 (rewind)'; }
+      else if (sym === '_') { newState = 'qR'; rule = 'q2,_ → qR (reject: unmatched 1)'; }
+    } else if (state === 'q3') {
+      // rewinding to the left endmarker
+      if (sym === '_') { newState = 'q0'; move = 1; rule = 'q3,_ → R,q0 (new pass)'; }
+      else { move = -1; rule = `q3,${sym} → L,q3`; }
+    } else if (state === 'qA' || state === 'qR') {
+      break;
+    }
+    if (wrote != null) tape[head] = wrote;
+    head += move;
+    state = newState;
+    snap(rule);
+    if (state === 'qA' || state === 'qR') break;
+  }
+  return steps;
+}
+
+function drawTm() {
+  const tapeG = document.getElementById('tm-tape');
+  const headG = document.getElementById('tm-head');
+  tapeG.innerHTML = '';
+  headG.innerHTML = '';
+  const step = tmState.steps[tmState.cursor];
+  const tape = step ? step.tape : tmState.tape;
+  const head = step ? step.head : tmState.head;
+  const cellW = 44;
+  const visible = Math.min(tape.length, 14);
+  // center the view on the head
+  const startIdx = Math.max(0, Math.min(tape.length - visible, head - Math.floor(visible / 2)));
+  const startX = 40;
+  for (let i = 0; i < visible; i++) {
+    const idx = startIdx + i;
+    const x = startX + i * cellW;
+    const y = 70;
+    const isHead = idx === head;
+    tapeG.appendChild(svg('rect', {
+      x, y, width: cellW - 4, height: 50, rx: 3,
+      fill: isHead ? 'rgba(244,114,182,0.2)' : 'rgba(124,92,255,0.08)',
+      stroke: isHead ? '#f472b6' : '#384050',
+      'stroke-width': isHead ? 2.5 : 1
+    }));
+    const symbol = tape[idx] === '_' ? '␣' : tape[idx];
+    tapeG.appendChild(svg('text', {
+      x: x + (cellW - 4) / 2, y: y + 32,
+      fill: tape[idx] === 'X' ? '#f472b6' : '#dbe1ec',
+      'text-anchor': 'middle', 'font-family': 'monospace', 'font-size': 18
+    }, symbol));
+  }
+  // head arrow
+  const headOffset = head - startIdx;
+  if (headOffset >= 0 && headOffset < visible) {
+    const cx = startX + headOffset * cellW + (cellW - 4) / 2;
+    headG.appendChild(svg('path', {
+      d: `M ${cx - 6} 135 L ${cx + 6} 135 L ${cx} 125 Z`,
+      fill: '#f472b6'
+    }));
+    headG.appendChild(svg('text', {
+      x: cx, y: 155, fill: '#f472b6', 'text-anchor': 'middle',
+      'font-family': 'monospace', 'font-size': 11
+    }, 'head'));
+  }
+  document.getElementById('tm-state-text').textContent = 'state: ' + (step ? step.state : 'q0');
+  document.getElementById('tm-rule-text').textContent = step ? step.rule : 'ready';
+}
+
+function renderTmStep() {
+  document.getElementById('tm-progress').textContent = `Step ${tmState.cursor} / ${Math.max(0, tmState.steps.length - 1)}`;
+  drawTm();
+  const calc = document.getElementById('tm-calc');
+  const step = tmState.steps[tmState.cursor];
+  if (!step) {
+    calc.innerHTML = `
+      <div class="step-title">Ready</div>
+      <div class="math">Press Step → to run the machine.</div>`;
+    return;
+  }
+  const finished = step.state === 'qA' || step.state === 'qR';
+  calc.innerHTML = `
+    <div class="step-title">Step ${tmState.cursor}${finished ? ' · ' + (step.state === 'qA' ? 'ACCEPT' : 'REJECT') : ''}</div>
+    <div class="math">state = <span class="var">${step.state}</span>, head = <span class="num">${step.head}</span></div>
+    <div class="math">rule: <span class="result">${step.rule}</span></div>
+    <div class="note">Tape: ${step.tape.map(s => s === '_' ? '␣' : s).join(' ')}</div>`;
+}
+
+function resetTm() {
+  const input = (document.getElementById('tm-input').value || '').replace(/[^01]/g, '');
+  tmState.steps = buildTmSteps(input);
+  tmState.cursor = 0;
+  renderTmStep();
+}
+function stepTm() {
+  if (tmState.cursor < tmState.steps.length - 1) { tmState.cursor++; renderTmStep(); }
+}
+function prevTm() {
+  if (tmState.cursor > 0) { tmState.cursor--; renderTmStep(); }
+}
+function runAllTm() {
+  resetTm();
+  const iv = setInterval(() => {
+    if (tmState.cursor >= tmState.steps.length - 1) { clearInterval(iv); return; }
+    stepTm();
+  }, 350);
+}
+function setTmInput(v) {
+  document.getElementById('tm-input').value = v;
+  resetTm();
+}
+document.getElementById('tm-input').addEventListener('input', resetTm);
+resetTm();
+
+// ============================================================
+// GRADIENT DESCENT 2D DEMO
+// ============================================================
+// f(x,y) = (x-2)^2 + 3(y+1)^2, minimum at (2,-1), f_min = 0
+const gd2dState = { steps: [], cursor: 0 };
+
+function gdF(x, y) { return (x - 2) ** 2 + 3 * (y + 1) ** 2; }
+function gdGrad(x, y) { return [2 * (x - 2), 6 * (y + 1)]; }
+
+function buildGd2dSteps(x0, y0, lr) {
+  const steps = [{ x: x0, y: y0, loss: gdF(x0, y0), gx: 0, gy: 0 }];
+  let x = x0, y = y0;
+  for (let i = 0; i < 60; i++) {
+    const [gx, gy] = gdGrad(x, y);
+    x = x - lr * gx;
+    y = y - lr * gy;
+    const loss = gdF(x, y);
+    steps.push({ x, y, loss, gx, gy });
+    if (!isFinite(loss) || loss > 1e6) break;
+  }
+  return steps;
+}
+
+function drawGd2d() {
+  const contours = document.getElementById('gd2d-contours');
+  const axes = document.getElementById('gd2d-axes');
+  const path = document.getElementById('gd2d-path');
+  const point = document.getElementById('gd2d-point');
+  contours.innerHTML = '';
+  axes.innerHTML = '';
+  path.innerHTML = '';
+  point.innerHTML = '';
+
+  // plot area
+  const padL = 60, padR = 40, padT = 30, padB = 40;
+  const W = 720, H = 360;
+  const plotW = W - padL - padR;
+  const plotH = H - padT - padB;
+  // domain: x in [-5, 8], y in [-5, 4]
+  const xMin = -5, xMax = 8, yMin = -5, yMax = 4;
+  const toSx = x => padL + ((x - xMin) / (xMax - xMin)) * plotW;
+  const toSy = y => padT + plotH - ((y - yMin) / (yMax - yMin)) * plotH;
+
+  // draw contours at fixed levels as ellipses (since f is quadratic, level sets are ellipses centered at (2,-1))
+  const levels = [1, 4, 9, 16, 25, 36, 49, 64, 100];
+  levels.forEach(L => {
+    // (x-2)^2 + 3(y+1)^2 = L → semi-axes: a=sqrt(L) in x, b=sqrt(L/3) in y
+    const cx = toSx(2), cy = toSy(-1);
+    const rx = toSx(2 + Math.sqrt(L)) - cx;
+    const ry = cy - toSy(-1 + Math.sqrt(L / 3));
+    contours.appendChild(svg('ellipse', {
+      cx, cy, rx: Math.abs(rx), ry: Math.abs(ry),
+      fill: 'none', stroke: '#1a2030', 'stroke-width': 1
+    }));
+  });
+
+  // axes
+  axes.appendChild(svg('line', { x1: padL, y1: toSy(0), x2: padL + plotW, y2: toSy(0), stroke: '#384050', 'stroke-width': 1 }));
+  axes.appendChild(svg('line', { x1: toSx(0), y1: padT, x2: toSx(0), y2: padT + plotH, stroke: '#384050', 'stroke-width': 1 }));
+  for (let xi = -4; xi <= 8; xi += 2) {
+    axes.appendChild(svg('text', { x: toSx(xi), y: toSy(0) + 14, fill: '#5a6374', 'text-anchor': 'middle', 'font-family': 'monospace', 'font-size': 9 }, String(xi)));
+  }
+  for (let yi = -4; yi <= 4; yi += 2) {
+    axes.appendChild(svg('text', { x: toSx(0) - 6, y: toSy(yi) + 3, fill: '#5a6374', 'text-anchor': 'end', 'font-family': 'monospace', 'font-size': 9 }, String(yi)));
+  }
+  // minimum marker
+  axes.appendChild(svg('circle', { cx: toSx(2), cy: toSy(-1), r: 4, fill: '#4ade80', stroke: '#4ade80' }));
+  axes.appendChild(svg('text', { x: toSx(2) + 8, y: toSy(-1) - 6, fill: '#4ade80', 'font-family': 'monospace', 'font-size': 10 }, 'min'));
+
+  // descent path
+  const steps = gd2dState.steps.slice(0, gd2dState.cursor + 1);
+  if (steps.length >= 2) {
+    let d = '';
+    steps.forEach((s, i) => {
+      const px = toSx(Math.max(xMin, Math.min(xMax, s.x)));
+      const py = toSy(Math.max(yMin, Math.min(yMax, s.y)));
+      d += (i === 0 ? 'M' : 'L') + px.toFixed(1) + ' ' + py.toFixed(1) + ' ';
+    });
+    path.appendChild(svg('path', { d, stroke: '#7c5cff', 'stroke-width': 2, fill: 'none', opacity: 0.8 }));
+    steps.forEach((s, i) => {
+      if (i === steps.length - 1) return;
+      const px = toSx(Math.max(xMin, Math.min(xMax, s.x)));
+      const py = toSy(Math.max(yMin, Math.min(yMax, s.y)));
+      path.appendChild(svg('circle', { cx: px, cy: py, r: 2.5, fill: '#7c5cff' }));
+    });
+  }
+  // current point
+  const cur = gd2dState.steps[gd2dState.cursor];
+  if (cur) {
+    const cpx = toSx(Math.max(xMin, Math.min(xMax, cur.x)));
+    const cpy = toSy(Math.max(yMin, Math.min(yMax, cur.y)));
+    point.appendChild(svg('circle', { cx: cpx, cy: cpy, r: 7, fill: '#f472b6', stroke: '#f9a8d4', 'stroke-width': 2 }));
+  }
+}
+
+function renderGd2dStep() {
+  document.getElementById('gd2d-progress').textContent = 'Step ' + gd2dState.cursor;
+  drawGd2d();
+  const calc = document.getElementById('gd2d-calc');
+  const cur = gd2dState.steps[gd2dState.cursor];
+  if (!cur) { calc.innerHTML = ''; return; }
+  const [gx, gy] = gdGrad(cur.x, cur.y);
+  const gmag = Math.sqrt(gx * gx + gy * gy);
+  if (gd2dState.cursor === 0) {
+    calc.innerHTML = `
+      <div class="step-title">Step 0 · Starting point</div>
+      <div class="math">x = <span class="var">${fmt(cur.x, 2)}</span>, y = <span class="var">${fmt(cur.y, 2)}</span></div>
+      <div class="math">f(x,y) = <span class="result">${fmt(cur.loss, 3)}</span></div>
+      <div class="math">|∇f| = ${fmt(gmag, 3)}</div>
+      <div class="note">Press Step → to take one gradient-descent step.</div>`;
+  } else {
+    calc.innerHTML = `
+      <div class="step-title">Step ${gd2dState.cursor}</div>
+      <div class="math">x = <span class="var">${fmt(cur.x, 3)}</span>, y = <span class="var">${fmt(cur.y, 3)}</span></div>
+      <div class="math">f(x,y) = <span class="result">${fmt(cur.loss, 4)}</span></div>
+      <div class="math">|∇f| = ${fmt(gmag, 3)}</div>
+      <div class="note">${cur.loss < 0.01 ? 'Converged.' : 'Keep stepping — loss is still above the minimum (0).'}</div>`;
+  }
+}
+
+function resetGd2d() {
+  const x0 = readNum('gd2d-x', -3);
+  const y0 = readNum('gd2d-y', 3);
+  const lr = readNum('gd2d-lr', 0.1);
+  gd2dState.steps = buildGd2dSteps(x0, y0, lr);
+  gd2dState.cursor = 0;
+  renderGd2dStep();
+}
+function stepGd2d() {
+  if (gd2dState.cursor < gd2dState.steps.length - 1) { gd2dState.cursor++; renderGd2dStep(); }
+}
+function prevGd2d() {
+  if (gd2dState.cursor > 0) { gd2dState.cursor--; renderGd2dStep(); }
+}
+function runAllGd2d() {
+  gd2dState.cursor = 0;
+  renderGd2dStep();
+  const iv = setInterval(() => {
+    if (gd2dState.cursor >= Math.min(30, gd2dState.steps.length - 1)) { clearInterval(iv); return; }
+    stepGd2d();
+  }, 280);
+}
+function loadGd2dPreset(kind) {
+  if (kind === 'slow') { document.getElementById('gd2d-lr').value = 0.05; }
+  else if (kind === 'fast') { document.getElementById('gd2d-lr').value = 0.25; }
+  else if (kind === 'diverge') { document.getElementById('gd2d-lr').value = 0.4; }
+  resetGd2d();
+}
+['gd2d-x', 'gd2d-y', 'gd2d-lr'].forEach(id => {
+  document.getElementById(id).addEventListener('input', resetGd2d);
+});
+resetGd2d();
+</script>
+<script defer src="../search-index.js"></script>
+<script defer src="../search.js"></script>
+</body>
+</html>

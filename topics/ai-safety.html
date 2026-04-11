@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Safety & Alignment — Deep Dive</title>
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError: false});"></script>
+</head>
+<body>
+<div id="tooltip"></div>
+
+<nav class="topic-nav">
+  <a class="back" href="../ai-ml.html">← Back to AI/ML</a>
+  <div class="crumb">Deep Dives / <span class="topic-name">AI Safety &amp; Alignment</span></div>
+</nav>
+
+<div class="topic-layout">
+  <aside class="topic-toc">
+    <h4>ON THIS PAGE</h4>
+    <ul>
+      <li><a href="#intro">1. The alignment problem</a></li>
+      <li><a href="#rlhf">2. RLHF</a></li>
+      <li><a href="#ppo">3. PPO</a></li>
+      <li><a href="#dpo">4. DPO</a></li>
+      <li><a href="#demo">5. Interactive preference opt</a></li>
+      <li><a href="#cai">6. Constitutional AI</a></li>
+      <li><a href="#interp">7. Interpretability</a></li>
+      <li><a href="#code">8. Source code</a></li>
+      <li><a href="#summary">9. Summary</a></li>
+    </ul>
+  </aside>
+
+  <article class="topic-content">
+    <h1>AI Safety &amp; Alignment</h1>
+    <p class="subtitle">A pretrained foundation model has no particular reason to be helpful, honest, or harmless. Alignment is the set of techniques that turn it into an assistant you can ship — RLHF, DPO, Constitutional AI, red-teaming, interpretability. The fastest-moving and most philosophically fraught subfield on this site.</p>
+    <div class="meta-tags">
+      <span>Prereq: RL basics, LLMs</span>
+      <span>Time to read: ~24 min</span>
+      <span>Interactive figures: 1</span>
+      <span>Code: PyTorch, NumPy</span>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="intro">1. The alignment problem</h2>
+
+    <p>A freshly pretrained LLM predicts the next token given the previous ones. It has no goals, no values, no concept of helpfulness. If you prompt GPT-3 with "How do I make a Molotov cocktail?" it will happily continue, because the training corpus includes texts that continue that way. It's not malicious; it's just predicting.</p>
+
+    <p>This is the alignment problem, in miniature: the training objective (predict next token) is not the same as the deployment objective (be a helpful, honest, harmless assistant). Everything we call "alignment" is a family of techniques for closing this gap — specifying what you want, measuring whether you got it, and pushing the model toward it.</p>
+
+    <p>A working definition: an <em>aligned</em> model reliably does what its users actually want, refuses what it shouldn't do, and accurately communicates its own uncertainty. A <em>safe</em> model doesn't cause serious harm even when adversarially prompted. These are not the same; a model can be aligned to its developers and still unsafe, or safe in the common case but misaligned on edge cases. Both sets of problems are active research.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="rlhf">2. Reinforcement learning from human feedback</h2>
+
+    <p>RLHF (Christiano et al. 2017, Ouyang et al. 2022) was the breakthrough that made ChatGPT possible. Three stages:</p>
+
+    <ol>
+      <li><strong>SFT.</strong> Fine-tune the base model on a few thousand human-written (prompt, good-response) pairs. This gives you a model that at least understands the instruction-following format.</li>
+      <li><strong>Reward model.</strong> Collect pairs of model responses to the same prompt, have humans rank them, and train a reward model $r_\phi$ to predict which is preferred.</li>
+      <li><strong>RL.</strong> Use the reward model as the reward signal in an RL loop. Optimize the policy (the LLM) to maximize $r_\phi$ while staying close to the SFT model (so it doesn't unlearn everything).</li>
+    </ol>
+
+    <p>The reward model is trained on a <em>preference loss</em> (Bradley-Terry, 1952). Given a pair $(y_w, y_l)$ where $y_w$ is preferred to $y_l$:</p>
+
+    <div class="math-display">$$\mathcal{L}_\text{RM} = -\log \sigma\!\big(r_\phi(x, y_w) - r_\phi(x, y_l)\big)$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Preference loss</p>
+      <dl>
+        <dt>$x$</dt><dd>The prompt.</dd>
+        <dt>$y_w, y_l$</dt><dd>Two responses to the same prompt. $w$ = "winner" (preferred), $l$ = "loser." Humans labeled which was better.</dd>
+        <dt>$r_\phi(x, y)$</dt><dd>The reward model's scalar output — a learned function (typically a fine-tuned LLM with a scalar head) that ranks how good $y$ is as a response to $x$.</dd>
+        <dt>$\sigma$</dt><dd>The sigmoid: $\sigma(z) = 1/(1 + e^{-z})$.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>What this does</strong> The Bradley-Terry model says the probability that human labelers prefer $y_w$ to $y_l$ is $\sigma(r_\phi(x, y_w) - r_\phi(x, y_l))$. Maximum-likelihood training minimizes this loss. The effect: the reward model learns to give higher scores to winners than to losers, and the margin reflects how confidently humans preferred one over the other.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="ppo">3. PPO (the RL step)</h2>
+
+    <p>With a reward model in hand, the standard RL algorithm is PPO (Schulman et al. 2017). The objective is:</p>
+
+    <div class="math-display">$$\mathcal{L}_\text{PPO} = \mathbb{E}_{(x, y) \sim \pi_\theta}\!\left[ r_\phi(x, y) - \beta \cdot \text{KL}\!\left( \pi_\theta(\cdot|x) \,\|\, \pi_\text{SFT}(\cdot|x) \right) \right]$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">PPO with KL penalty</p>
+      <dl>
+        <dt>$\pi_\theta$</dt><dd>The current policy — the LLM being trained. $\theta$ are its parameters.</dd>
+        <dt>$\pi_\text{SFT}$</dt><dd>The SFT-stage model, frozen. A reference point.</dd>
+        <dt>$r_\phi(x, y)$</dt><dd>The reward model's score. The thing we want to maximize.</dd>
+        <dt>$\text{KL}(\pi_\theta \| \pi_\text{SFT})$</dt><dd>Kullback-Leibler divergence — how much $\pi_\theta$ has drifted from $\pi_\text{SFT}$. Penalized so the model doesn't forget its pretraining or over-exploit reward-model quirks.</dd>
+        <dt>$\beta$</dt><dd>Coefficient balancing "maximize reward" and "stay close to SFT." Typically 0.01–0.1. Smaller $\beta$ → more aggressive optimization and more reward hacking risk.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why the KL term matters</strong> Without it, the model will find ways to game the reward model — output gibberish that happens to score high, repeat certain phrases the reward model liked, etc. This is called <em>reward hacking</em>, and it's the central failure mode of RLHF. The KL penalty tethers the model to its pretrained behavior, limiting how far it can wander to chase reward.</p>
+    </div>
+
+    <p>PPO works, but it's a nightmare to implement — you need a reference model, a policy, a value network, and a reward model all in memory at the same time, plus careful clipping to keep updates small. Which is why 2023 brought...</p>
+
+    <!-- ========================================================== -->
+    <h2 id="dpo">4. Direct Preference Optimization</h2>
+
+    <p>DPO (Rafailov et al. 2023) asked a clever question: if you know the analytic solution to the PPO objective, can you skip PPO entirely and train the policy directly from preference pairs? The answer turns out to be yes. Given the same preference pair $(y_w, y_l)$ and reference model $\pi_\text{ref}$:</p>
+
+    <div class="math-display">$$\mathcal{L}_\text{DPO} = -\log \sigma\!\left( \beta \log \frac{\pi_\theta(y_w|x)}{\pi_\text{ref}(y_w|x)} - \beta \log \frac{\pi_\theta(y_l|x)}{\pi_\text{ref}(y_l|x)} \right)$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">DPO loss</p>
+      <dl>
+        <dt>$\pi_\theta$</dt><dd>The policy being trained.</dd>
+        <dt>$\pi_\text{ref}$</dt><dd>A frozen reference policy, typically the SFT model. Same role as $\pi_\text{SFT}$ in PPO.</dd>
+        <dt>$\log \frac{\pi_\theta(y|x)}{\pi_\text{ref}(y|x)}$</dt><dd>The log-ratio of how much more probability $\pi_\theta$ assigns to $y$ compared to $\pi_\text{ref}$. This is a per-sequence quantity: sum of per-token log-ratios.</dd>
+        <dt>$\beta$</dt><dd>The same $\beta$ as PPO — controls how far the policy can drift from the reference. Usually 0.1.</dd>
+        <dt>$\sigma$</dt><dd>Sigmoid. The loss looks structurally like the reward-model loss but substitutes implicit reward $\beta \log \frac{\pi_\theta}{\pi_\text{ref}}$ for the explicit $r_\phi$.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>The insight</strong> Rafailov showed that the optimal policy of the PPO objective has a closed form $\pi^*(y|x) \propto \pi_\text{ref}(y|x) \exp(r_\phi(x, y)/\beta)$. Rearranging lets you express the reward in terms of the policy: $r_\phi(x, y) = \beta \log \frac{\pi^*(y|x)}{\pi_\text{ref}(y|x)} + \text{const}$. Plug that back into the Bradley-Terry preference loss and you get DPO — no reward model, no PPO, just a supervised learning objective that trains directly on preference pairs.</p>
+    </div>
+
+    <p>DPO is <em>dramatically</em> easier to implement than PPO — it looks like a regular supervised cross-entropy loss — and on most benchmarks matches or exceeds PPO results. By 2024 it's the default for open-source alignment (Llama-3, Mistral, Gemma all use DPO or variants like IPO, KTO, ORPO).</p>
+
+    <!-- ========================================================== -->
+    <h2 id="demo">5. Interactive: how preference opt shifts a distribution</h2>
+
+    <p>A toy 1-D policy $\pi_\theta(y|x)$. We have one "good" response location $y_w$ and one "bad" one $y_l$. Drag the $\beta$ slider to see how DPO pushes probability toward $y_w$ and away from $y_l$ — and how a very small $\beta$ lets it wander too far from the reference (over-optimization).</p>
+
+    <div class="viz-3d">
+      <div class="v3-controls">
+        <span class="v3-label">β (KL constraint):</span>
+        <input id="dpoBeta" type="range" min="0.02" max="2" value="0.3" step="0.02" style="flex:1;max-width:340px;">
+        <span id="dpoBetaLabel" style="min-width:50px;color:#63b3ff;font-family:ui-monospace,monospace;">0.30</span>
+      </div>
+      <svg id="dpoSvg" viewBox="0 0 720 340" style="width:100%;height:auto;background:#0a0d12;border-radius:6px;"></svg>
+      <p class="v3-caption" id="dpoCaption">Blue: reference policy π_ref. Orange: DPO-optimized policy. Large β keeps it close to the reference; small β can push it arbitrarily far in the preferred direction.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="cai">6. Constitutional AI</h2>
+
+    <p><strong>Constitutional AI</strong> (Bai et al., Anthropic 2022) replaces the human labelers in RLHF with an AI labeler guided by a written set of principles — a "constitution." The flow:</p>
+
+    <ol>
+      <li>Write a constitution — a list of principles like "be harmless," "prefer fewer false claims," "refuse to help with crime." A few pages, human-written.</li>
+      <li>Have an LLM generate a response to a prompt, then have another LLM critique the response against the constitution and rewrite it. Repeat.</li>
+      <li>Use the resulting (prompt, revised response) pairs as training data (CAI-SFT stage).</li>
+      <li>Then for the RL stage, have the AI label preference pairs in place of humans, using the constitution as the evaluation rubric.</li>
+    </ol>
+
+    <p>Key benefit: you can scale to millions of preference labels at near-zero marginal cost, and you can update the policy by updating the constitution rather than retraining from scratch. Claude models have been trained this way since Claude 1. By 2024 the approach had split into two camps — RLAIF (any AI-rater-based RL) and Constitutional-style methods that explicitly center the principles.</p>
+
+    <p>Important caveat: CAI doesn't make the human labeler redundant, it relocates them. Now they write the constitution and review AI-labeled failures, rather than labeling every pair directly. The quality of the constitution becomes the bottleneck.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="interp">7. Interpretability</h2>
+
+    <p>RLHF shapes behavior. Interpretability tries to understand <em>why</em> a model behaves the way it does — what circuits, features, or concepts are encoded in its weights. This matters for alignment for two reasons: you can't reliably align what you can't inspect, and you can't reliably detect deception without some way to look inside.</p>
+
+    <p>The 2024 breakthrough was <strong>sparse autoencoders</strong> (SAEs). Train a single-hidden-layer autoencoder on a model's internal activations, with a strong sparsity penalty so each input fires only a small number of hidden units:</p>
+
+    <div class="math-display">$$\mathcal{L}_\text{SAE} = \|\mathbf{h} - \hat{\mathbf{h}}\|_2^2 + \lambda \|\mathbf{f}\|_1$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Sparse autoencoder</p>
+      <dl>
+        <dt>$\mathbf{h}$</dt><dd>The original activation vector at some layer of a transformer — say the residual stream at layer 12.</dd>
+        <dt>$\mathbf{f} = \text{ReLU}(W_\text{enc} \mathbf{h} + b_\text{enc})$</dt><dd>The sparse feature activations. The encoder weights $W_\text{enc}$ project $\mathbf{h}$ into a much higher-dimensional space (e.g., 16× bigger), and the L1 penalty forces most entries to be zero.</dd>
+        <dt>$\hat{\mathbf{h}} = W_\text{dec} \mathbf{f}$</dt><dd>The reconstruction, mapping the sparse code back to the original space.</dd>
+        <dt>$\|\mathbf{h} - \hat{\mathbf{h}}\|_2^2$</dt><dd>Reconstruction loss — the SAE must faithfully represent the original activation.</dd>
+        <dt>$\lambda \|\mathbf{f}\|_1$</dt><dd>Sparsity penalty — force most feature dimensions to stay at zero.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why this matters</strong> Activations in a dense transformer are <em>superposed</em> — many concepts share the same neurons. The SAE separates them into roughly "one concept per feature." Anthropic's 2024 work found features for things like "Golden Gate Bridge," "inner conflict," "code with security bugs," and "Arabic script." You can read off what the model is thinking, and — more importantly for safety — you can edit features directly and see how behavior changes.</p>
+    </div>
+
+    <p>Other 2024 interpretability tools: <em>activation patching</em> (replace one forward-pass activation with another and see what changes), <em>logit lens</em> (what token distribution does each residual stream predict), and <em>probing classifiers</em> (train a linear classifier on activations to see what information they encode). None of these is a full solution, but together they let you poke at specific hypotheses about how the model works.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="code">8. Source code</h2>
+
+    <p>DPO loss, reward-model loss, and a minimal SAE.</p>
+
+    <div class="code-tabs" id="ct-safety">
+      <div class="ct-header">
+        <button class="ct-tab active" data-tab="dpo">DPO loss</button>
+        <button class="ct-tab" data-tab="rm">Reward model loss</button>
+        <button class="ct-tab" data-tab="sae">Sparse autoencoder</button>
+        <span class="ct-label">alignment · training-time</span>
+      </div>
+      <div class="ct-panel active" data-tab="dpo"><pre><code><span class="kw">import</span> torch, torch.nn.functional <span class="kw">as</span> F
+
+<span class="kw">def</span> <span class="fn">dpo_loss</span>(policy, ref, prompts, y_w, y_l, beta=<span class="num">0.1</span>):
+    <span class="cmt"># Compute log-probabilities of each response under policy and reference.</span>
+    logp_policy_w = <span class="fn">sequence_logprob</span>(policy, prompts, y_w)
+    logp_policy_l = <span class="fn">sequence_logprob</span>(policy, prompts, y_l)
+    <span class="kw">with</span> torch.no_grad():
+        logp_ref_w = <span class="fn">sequence_logprob</span>(ref, prompts, y_w)
+        logp_ref_l = <span class="fn">sequence_logprob</span>(ref, prompts, y_l)
+
+    <span class="cmt"># Implicit rewards — log-ratios of policy to reference.</span>
+    r_w = beta * (logp_policy_w - logp_ref_w)
+    r_l = beta * (logp_policy_l - logp_ref_l)
+
+    <span class="cmt"># Bradley-Terry preference loss.</span>
+    <span class="kw">return</span> -F.logsigmoid(r_w - r_l).mean()
+
+<span class="kw">def</span> <span class="fn">sequence_logprob</span>(model, prompt_ids, response_ids):
+    ids = torch.cat([prompt_ids, response_ids], dim=-<span class="num">1</span>)
+    logits = model(ids).logits
+    logp = F.log_softmax(logits[:, :-<span class="num">1</span>], dim=-<span class="num">1</span>)
+    <span class="cmt"># Only sum over response tokens</span>
+    start = prompt_ids.size(-<span class="num">1</span>) - <span class="num">1</span>
+    per_tok = logp[:, start:].gather(<span class="num">2</span>, response_ids[:, :, <span class="kw">None</span>]).squeeze(-<span class="num">1</span>)
+    <span class="kw">return</span> per_tok.sum(-<span class="num">1</span>)
+</code></pre></div>
+
+      <div class="ct-panel" data-tab="rm"><pre><code><span class="kw">import</span> torch, torch.nn <span class="kw">as</span> nn, torch.nn.functional <span class="kw">as</span> F
+
+<span class="kw">class</span> <span class="fn">RewardModel</span>(nn.Module):
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, base_llm, d_model):
+        <span class="fn">super</span>().__init__()
+        self.base = base_llm                         <span class="cmt"># pretrained LM backbone</span>
+        self.head = nn.Linear(d_model, <span class="num">1</span>)           <span class="cmt"># scalar reward head</span>
+
+    <span class="kw">def</span> <span class="fn">forward</span>(self, ids):
+        h = self.base(ids).last_hidden_state         <span class="cmt"># (B, T, d)</span>
+        <span class="cmt"># Reward = scalar head on the final token's representation</span>
+        <span class="kw">return</span> self.head(h[:, -<span class="num">1</span>]).squeeze(-<span class="num">1</span>)     <span class="cmt"># (B,)</span>
+
+<span class="kw">def</span> <span class="fn">preference_loss</span>(rm, ids_w, ids_l):
+    <span class="cmt"># Bradley-Terry loss: -log σ(r_w - r_l)</span>
+    r_w = rm(ids_w)
+    r_l = rm(ids_l)
+    <span class="kw">return</span> -F.logsigmoid(r_w - r_l).mean()
+
+<span class="cmt"># Training loop runs on batches of (prompt, chosen, rejected) triples.</span>
+</code></pre></div>
+
+      <div class="ct-panel" data-tab="sae"><pre><code><span class="kw">import</span> torch, torch.nn <span class="kw">as</span> nn, torch.nn.functional <span class="kw">as</span> F
+
+<span class="kw">class</span> <span class="fn">SparseAutoencoder</span>(nn.Module):
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, d_model=<span class="num">4096</span>, n_features=<span class="num">65536</span>):
+        <span class="fn">super</span>().__init__()
+        self.W_enc = nn.Parameter(torch.randn(d_model, n_features) * <span class="num">0.01</span>)
+        self.b_enc = nn.Parameter(torch.zeros(n_features))
+        self.W_dec = nn.Parameter(torch.randn(n_features, d_model) * <span class="num">0.01</span>)
+
+    <span class="kw">def</span> <span class="fn">encode</span>(self, h):
+        <span class="kw">return</span> F.relu(h @ self.W_enc + self.b_enc)    <span class="cmt"># (B, n_features)</span>
+
+    <span class="kw">def</span> <span class="fn">decode</span>(self, f):
+        <span class="kw">return</span> f @ self.W_dec                          <span class="cmt"># (B, d_model)</span>
+
+    <span class="kw">def</span> <span class="fn">forward</span>(self, h):
+        f = self.encode(h)
+        h_hat = self.decode(f)
+        <span class="kw">return</span> h_hat, f
+
+<span class="kw">def</span> <span class="fn">sae_loss</span>(h, h_hat, f, lam=<span class="num">5.0</span>):
+    recon = F.mse_loss(h_hat, h)
+    sparsity = f.abs().mean()
+    <span class="kw">return</span> recon + lam * sparsity
+
+<span class="cmt"># To interpret a feature:</span>
+<span class="cmt"># 1. Run many inputs through the base model and the SAE.</span>
+<span class="cmt"># 2. For feature k, find the inputs that activate f[k] most strongly.</span>
+<span class="cmt"># 3. Read them and guess what concept they share. (This is how Anthropic</span>
+<span class="cmt">#    found "Golden Gate Bridge" and thousands of others in Claude 3 Sonnet.)</span>
+</code></pre></div>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="summary">9. Summary</h2>
+
+    <ul>
+      <li>A pretrained model has no built-in values. Alignment is the family of techniques that turn it into a helpful, honest, harmless assistant.</li>
+      <li><strong>RLHF</strong> (2022) was the breakthrough: train a reward model from human preferences, then use PPO to optimize the policy against it with a KL-to-SFT penalty.</li>
+      <li><strong>DPO</strong> (2023) rederived RLHF as a supervised preference-pair loss, removing the reward model and PPO entirely. Now the default for open-source.</li>
+      <li><strong>Constitutional AI</strong> (2022) uses an AI labeler guided by a written constitution to scale past human-label bandwidth. The constitution becomes the interface.</li>
+      <li><strong>Sparse autoencoders</strong> (2024) gave interpretability a working tool — untangle superposed activations into monosemantic features you can read off and edit.</li>
+      <li>None of these is a complete solution. Red-teaming, evals, adversarial robustness, deception detection, and model organism studies fill out the rest of the stack. Expect rapid change.</li>
+    </ul>
+
+    <div class="bib">
+      <h4>Further reading</h4>
+      <ul>
+        <li>Christiano et al. (2017) — <em>Deep Reinforcement Learning from Human Preferences</em>.</li>
+        <li>Ouyang et al. (2022) — <em>Training Language Models to Follow Instructions with Human Feedback</em> (InstructGPT).</li>
+        <li>Bai et al. (2022) — <em>Constitutional AI: Harmlessness from AI Feedback</em>.</li>
+        <li>Rafailov et al. (2023) — <em>Direct Preference Optimization: Your Language Model is Secretly a Reward Model</em>.</li>
+        <li>Templeton et al. (2024) — <em>Scaling Monosemanticity</em> (Anthropic's SAE interpretability paper).</li>
+      </ul>
+    </div>
+
+    <div class="next-card">
+      <div class="label">NEXT UP</div>
+      <a href="../ai-ml.html">← Back to AI/ML</a>
+      <p>That's the frontier as of 2026. Head back to the landscape for the broader picture — or revisit the earlier deep dives now that you know where the field is going.</p>
+    </div>
+
+  </article>
+</div>
+
+<script>
+// =========================================================
+// Code tabs
+document.querySelectorAll('.code-tabs').forEach(root => {
+  const tabs = root.querySelectorAll('.ct-tab');
+  const panels = root.querySelectorAll('.ct-panel');
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const target = tab.getAttribute('data-tab');
+      tabs.forEach(t => t.classList.toggle('active', t === tab));
+      panels.forEach(p => p.classList.toggle('active', p.getAttribute('data-tab') === target));
+    });
+  });
+});
+
+// =========================================================
+// DPO demo: 1-D policy shift under preference optimization
+(function() {
+  const svg = document.getElementById('dpoSvg');
+  if (!svg) return;
+  const NS = 'http://www.w3.org/2000/svg';
+  const slider = document.getElementById('dpoBeta');
+  const label = document.getElementById('dpoBetaLabel');
+  const caption = document.getElementById('dpoCaption');
+
+  // Reference policy: a Gaussian around 0.
+  // Preferred y_w at +1.5, disliked y_l at -1.5.
+  // DPO closed form: π*(y) ∝ π_ref(y) * exp(r(y) / β)
+  // where r(y) reflects preference. We model r(y) as softly peaked at y_w
+  // and valley at y_l.
+
+  function piRef(y) {
+    return Math.exp(-y * y / (2 * 0.9 * 0.9));
+  }
+  function reward(y) {
+    // +1 near y_w, -1 near y_l, smooth bumps
+    const up = Math.exp(-((y - 1.5) ** 2) / 0.5);
+    const dn = Math.exp(-((y + 1.5) ** 2) / 0.5);
+    return up - dn;
+  }
+
+  function draw() {
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+    const beta = parseFloat(slider.value);
+    label.textContent = beta.toFixed(2);
+
+    const W = 720, H = 340;
+    const ml = 50, mr = 30, mt = 30, mb = 40;
+    const plotW = W - ml - mr;
+    const plotH = H - mt - mb;
+
+    // Frame
+    const fr = document.createElementNS(NS, 'rect');
+    fr.setAttribute('x', ml); fr.setAttribute('y', mt);
+    fr.setAttribute('width', plotW); fr.setAttribute('height', plotH);
+    fr.setAttribute('fill', '#0f131a');
+    fr.setAttribute('stroke', '#2a3446');
+    svg.appendChild(fr);
+
+    // Sample y in [-3, 3]
+    const N = 200;
+    const ys = [];
+    const refVals = [];
+    const optVals = [];
+    for (let i = 0; i < N; i++) {
+      const y = -3 + 6 * i / (N - 1);
+      ys.push(y);
+      refVals.push(piRef(y));
+      optVals.push(piRef(y) * Math.exp(reward(y) / beta));
+    }
+    // Normalize both
+    const sumRef = refVals.reduce((a, b) => a + b, 0);
+    const sumOpt = optVals.reduce((a, b) => a + b, 0);
+    const rN = refVals.map(v => v / sumRef);
+    const oN = optVals.map(v => v / sumOpt);
+    const maxY = Math.max(...rN, ...oN);
+
+    function xOf(y) { return ml + ((y + 3) / 6) * plotW; }
+    function yOf(v) { return mt + plotH - (v / maxY) * (plotH - 20); }
+
+    // y_w and y_l markers
+    [1.5, -1.5].forEach((yv, i) => {
+      const x = xOf(yv);
+      const line = document.createElementNS(NS, 'line');
+      line.setAttribute('x1', x); line.setAttribute('y1', mt);
+      line.setAttribute('x2', x); line.setAttribute('y2', mt + plotH);
+      line.setAttribute('stroke', i === 0 ? '#4ade80' : '#f87171');
+      line.setAttribute('stroke-width', 1);
+      line.setAttribute('stroke-dasharray', '4,3');
+      svg.appendChild(line);
+      const lbl = document.createElementNS(NS, 'text');
+      lbl.setAttribute('x', x); lbl.setAttribute('y', mt + 14);
+      lbl.setAttribute('text-anchor', 'middle');
+      lbl.setAttribute('fill', i === 0 ? '#4ade80' : '#f87171');
+      lbl.setAttribute('font-size', 11);
+      lbl.setAttribute('font-family', 'ui-monospace, monospace');
+      lbl.textContent = i === 0 ? 'y_w (preferred)' : 'y_l (rejected)';
+      svg.appendChild(lbl);
+    });
+
+    function drawCurve(values, color, width, label) {
+      let d = '';
+      values.forEach((v, i) => {
+        const x = xOf(ys[i]);
+        const y = yOf(v);
+        d += (i === 0 ? 'M' : 'L') + x.toFixed(1) + ',' + y.toFixed(1);
+      });
+      const path = document.createElementNS(NS, 'path');
+      path.setAttribute('d', d);
+      path.setAttribute('fill', 'none');
+      path.setAttribute('stroke', color);
+      path.setAttribute('stroke-width', width);
+      svg.appendChild(path);
+    }
+
+    drawCurve(rN, '#63b3ff', 2);
+    drawCurve(oN, '#ff8a5b', 2.5);
+
+    // Legend
+    const lg1 = document.createElementNS(NS, 'text');
+    lg1.setAttribute('x', ml + 12); lg1.setAttribute('y', mt + plotH - 10);
+    lg1.setAttribute('fill', '#63b3ff');
+    lg1.setAttribute('font-size', 11);
+    lg1.setAttribute('font-family', 'ui-monospace, monospace');
+    lg1.textContent = 'π_ref (reference policy)';
+    svg.appendChild(lg1);
+    const lg2 = document.createElementNS(NS, 'text');
+    lg2.setAttribute('x', ml + 200); lg2.setAttribute('y', mt + plotH - 10);
+    lg2.setAttribute('fill', '#ff8a5b');
+    lg2.setAttribute('font-size', 11);
+    lg2.setAttribute('font-family', 'ui-monospace, monospace');
+    lg2.textContent = 'π_θ (DPO-optimized policy)';
+    svg.appendChild(lg2);
+
+    // Axis label
+    const xl = document.createElementNS(NS, 'text');
+    xl.setAttribute('x', ml + plotW / 2); xl.setAttribute('y', H - 8);
+    xl.setAttribute('text-anchor', 'middle');
+    xl.setAttribute('fill', '#b4c4d4');
+    xl.setAttribute('font-size', 12);
+    xl.setAttribute('font-family', 'ui-monospace, monospace');
+    xl.textContent = 'response space y';
+    svg.appendChild(xl);
+
+    let msg;
+    if (beta > 1.2) msg = 'Large β: policy barely moves from reference. Preference signal is almost ignored.';
+    else if (beta > 0.4) msg = 'Moderate β: policy shifts toward y_w and away from y_l while staying recognizably close to reference.';
+    else if (beta > 0.1) msg = 'Small β: aggressive optimization. Policy is heavily pushed toward y_w.';
+    else msg = 'Very small β: danger zone. Policy is essentially a delta function on y_w — risk of reward hacking.';
+    caption.textContent = `β = ${beta.toFixed(2)}.  ${msg}`;
+  }
+
+  slider.addEventListener('input', draw);
+  draw();
+})();
+</script>
+<script defer src="../search-index.js"></script>
+<script defer src="../search.js"></script>
+</body>
+</html>

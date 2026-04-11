@@ -1,0 +1,1099 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calculus — Deep Dive</title>
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError: false});"></script>
+</head>
+<body>
+<div id="tooltip"></div>
+
+<nav class="topic-nav">
+  <a class="back" href="../index.html">← Learning Hub</a>
+  <div class="crumb">Mathematics / <span class="topic-name">Calculus</span></div>
+</nav>
+
+<div class="topic-layout">
+  <aside class="topic-toc">
+    <h4>ON THIS PAGE</h4>
+    <ul>
+      <li><a href="#why">1. Why calculus exists</a></li>
+      <li><a href="#vocab">2. Vocabulary cheat sheet</a></li>
+      <li><a href="#limits">3. Limits</a></li>
+      <li><a href="#derivs">4. Derivatives</a></li>
+      <li><a href="#chain">5. The chain rule</a></li>
+      <li><a href="#demo">6. Interactive: derivative tracer</a></li>
+      <li><a href="#apps">7. Uses of derivatives</a></li>
+      <li><a href="#integrals">8. Integrals</a></li>
+      <li><a href="#ftc">9. Fundamental theorem</a></li>
+      <li><a href="#techniques">10. Techniques of integration</a></li>
+      <li><a href="#taylor">11. Taylor series</a></li>
+      <li><a href="#code">12. Source code</a></li>
+      <li><a href="#summary">13. Cheat sheet</a></li>
+    </ul>
+  </aside>
+
+  <article class="topic-content">
+    <h1>Calculus</h1>
+    <p class="subtitle">Two ancient questions — "how steep is this curve right here?" and "what's the area under it?" — turn out to be the same question in disguise. Calculus is the machinery that exposes the trick. Once you see it, derivatives and integrals stop feeling like random rules and start feeling inevitable.</p>
+    <div class="meta-tags">
+      <span>Prereq: algebra (functions, exponents, a little trig)</span>
+      <span>Read time: ~35 min</span>
+      <span>Interactive figures: 1</span>
+      <span>Code: NumPy, Python</span>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="why">1. Why calculus exists</h2>
+
+    <p>Imagine you're driving a car. The speedometer reads <em>37 mph</em>. What does that number actually mean? You weren't going 37 mph for an hour — maybe you were at 37 mph for a single instant. But "speed during an instant" sounds nonsensical. In an instant, you don't move anywhere. Distance travelled divided by zero time is 0/0, which is nothing.</p>
+
+    <p>Or: imagine a plot of land shaped like a pond. You want to know its area. Straight-sided fields are easy — length times width. But the pond's edge curves in and out. Every formula you know assumes straight edges. How do you handle the curve?</p>
+
+    <p>Both of these are calculus problems. The first is the <strong>tangent problem</strong> (how fast is something changing at one precise moment?). The second is the <strong>area problem</strong> (how much stuff is under a wiggly curve?). For two thousand years mathematicians attacked them piecemeal — Archimedes nearly cracked the area problem with his method of exhaustion around 250 BCE — but nobody had a general technique.</p>
+
+    <p>Then in the 1660s and 1670s, two people independently figured out the whole thing. Isaac Newton in Cambridge was trying to describe the motion of planets. Gottfried Wilhelm Leibniz in Germany was trying to formalize how tiny quantities combine. They arrived at the same idea from different directions, using different notation. Newton called it "the method of fluxions." Leibniz called it <em>calculus differentialis</em> and <em>calculus integralis</em>. An ugly priority dispute followed (we'll use Leibniz's notation because it's better), but the mathematics was the same. They had discovered that the tangent problem and the area problem are secretly the same problem, and there's a mechanical procedure for solving either one.</p>
+
+    <div class="callout">
+      <div class="label">THE PUNCHLINE</div>
+      <p>Differentiation finds instantaneous rates of change. Integration finds accumulated totals. The <strong>Fundamental Theorem of Calculus</strong> says these two operations are inverses of each other, the way addition and subtraction are inverses. Once you believe that, the whole subject falls into place.</p>
+    </div>
+
+    <p>Why should you, a person building software in 2026, care? Three reasons, in order of how directly you'll touch them:</p>
+
+    <ul>
+      <li><strong>Optimization.</strong> Nearly every machine learning model is trained by minimizing a loss function, and the tool that says "go this direction to make the loss smaller" is the derivative. <a href="../topics/gradient-descent.html">Gradient descent</a> <em>is</em> calculus.</li>
+      <li><strong>Backpropagation.</strong> The reason we can train neural networks with billions of parameters is one rule from calculus applied recursively: the <a href="#chain">chain rule</a>. <a href="../topics/backpropagation.html">Backprop</a> is literally "the chain rule, bookkept cleverly."</li>
+      <li><strong>Everything numerical.</strong> Physics engines, graphics, signal processing, statistics, control systems, probability densities — all of it assumes you speak calculus. If you want to read a paper, derive a formula, or debug a training loop, you need the vocabulary.</li>
+    </ul>
+
+    <p>This page will teach you calculus from zero. You do not need to remember anything from high school. You do need to be comfortable with functions (the rule "<em>f</em> takes a number <em>x</em> in and gives a number out"), exponents ($x^2$, $x^3$), and the idea that a graph plots $y = f(x)$ in the plane. That's it.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="vocab">2. Vocabulary cheat sheet</h2>
+
+    <p>These are the symbols you'll see repeatedly. Glance at the list now; the sections below define each one properly.</p>
+
+    <table class="rank-table">
+      <thead><tr><th>Symbol</th><th>Read as</th><th>Means</th></tr></thead>
+      <tbody>
+        <tr><td>$f(x)$</td><td>"f of x"</td><td>A function $f$ applied to input $x$; gives a number out.</td></tr>
+        <tr><td>$\lim_{x \to a}$</td><td>"limit as x approaches a"</td><td>What value the expression gets arbitrarily close to as $x$ gets close to $a$.</td></tr>
+        <tr><td>$f'(x)$</td><td>"f prime of x"</td><td>The derivative — instantaneous rate of change of $f$ at $x$. A new function.</td></tr>
+        <tr><td>$\dfrac{df}{dx}$</td><td>"dee f dee x"</td><td>Same as $f'(x)$. Leibniz notation. The ratio of a tiny change in $f$ to the tiny change in $x$ that caused it.</td></tr>
+        <tr><td>$\Delta x$</td><td>"delta x"</td><td>A finite (not infinitesimal) change in $x$. Capital $\Delta$ is Greek for "difference."</td></tr>
+        <tr><td>$dx$</td><td>"dee x"</td><td>An infinitesimal change in $x$ — a stand-in for "a change so small we're about to take a limit."</td></tr>
+        <tr><td>$\int f(x)\, dx$</td><td>"integral of f of x dee x"</td><td>The area under the curve $y = f(x)$ — or, equivalently, an antiderivative of $f$.</td></tr>
+        <tr><td>$\sum_{i=1}^n$</td><td>"sum from i equals 1 to n"</td><td>Add up the terms that follow, plugging in $i = 1, 2, \dots, n$.</td></tr>
+        <tr><td>$\epsilon, \delta$</td><td>"epsilon, delta"</td><td>Greek letters standing for "a tiny positive number." Used in the formal definition of limits.</td></tr>
+        <tr><td>$f \circ g$</td><td>"f composed with g"</td><td>The function $x \mapsto f(g(x))$ — first do $g$, then do $f$ on the result.</td></tr>
+      </tbody>
+    </table>
+
+    <p>One warning before we start: notation in calculus is historically messy. You will see $f'(x)$, $\dfrac{df}{dx}$, $\dot{f}$, and $Df$ all used interchangeably to mean exactly the same thing. Don't let the four different spellings throw you — they're all saying "the derivative of $f$."</p>
+
+    <!-- ========================================================== -->
+    <h2 id="limits">3. Limits — the one idea everything else is built on</h2>
+
+    <p>A limit is a way of asking: "if I plug numbers into this expression that are closer and closer to $a$, what value does the expression get closer and closer to?" It's a sneaky question because you're <em>not</em> asking what happens when $x$ equals $a$. You're asking what happens on the approach.</p>
+
+    <div class="defn">
+      <strong>Limit (informal).</strong> We write $\lim_{x \to a} f(x) = L$ to mean: as $x$ takes values arbitrarily close to $a$ (but not equal to $a$), the value $f(x)$ gets arbitrarily close to $L$. The value $f(a)$ itself is allowed to be anything, or undefined; the limit doesn't care.
+    </div>
+
+    <p>Why would you ever ask that weird question? Because some of the most important quantities in mathematics come out as $0/0$ or $\infty - \infty$ when you plug in the value you want. Limits are a workaround: instead of plugging in directly, you <em>sneak up</em> on the answer.</p>
+
+    <p>Here's the canonical example. Consider the function</p>
+
+    <div class="math-display">$$f(x) = \frac{x^2 - 1}{x - 1}.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">A function with a hole in it</p>
+      <dl>
+        <dt>$f(x)$</dt><dd>The output of our function when you feed in $x$.</dd>
+        <dt>$x^2$</dt><dd>"$x$ squared" — multiply $x$ by itself.</dd>
+        <dt>$x - 1$</dt><dd>Just the input minus one.</dd>
+        <dt>$\dfrac{\cdot}{\cdot}$</dt><dd>Division. The horizontal bar means divide the top by the bottom.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>The problem.</strong> If you plug in $x = 1$, you get $\frac{0}{0}$, which is undefined — division by zero. The function has no output at $x = 1$. But for every $x$ close to 1 (like 0.99 or 1.01), the output is well-defined. What's it heading toward?</p>
+    </div>
+
+    <p>Try plugging in $x$ values that sneak up on 1 from below and above:</p>
+
+    <ul>
+      <li>$f(0.9) = (0.81 - 1) / (0.9 - 1) = (-0.19) / (-0.1) = 1.9$</li>
+      <li>$f(0.99) = 1.99$</li>
+      <li>$f(0.999) = 1.999$</li>
+      <li>$f(1.001) = 2.001$</li>
+      <li>$f(1.01) = 2.01$</li>
+    </ul>
+
+    <p>As $x$ gets closer to 1, $f(x)$ gets closer to 2. It never reaches 2 exactly — the function isn't defined at $x=1$ at all — but the trend is unmistakable. We say $\lim_{x \to 1} f(x) = 2$.</p>
+
+    <p>You can also see it algebraically. The numerator $x^2 - 1$ factors as $(x-1)(x+1)$, so</p>
+
+    <div class="math-display">$$\frac{x^2 - 1}{x - 1} = \frac{(x-1)(x+1)}{x-1} = x + 1 \quad (\text{when } x \ne 1).$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Canceling a common factor</p>
+      <dl>
+        <dt>$(x-1)(x+1)$</dt><dd>A product. This is "$x$ minus one" times "$x$ plus one". Expand it and you get $x^2 - 1$ — that's called the difference-of-squares identity.</dd>
+        <dt>$\dfrac{(x-1)(x+1)}{x-1}$</dt><dd>The top and bottom share a factor of $(x-1)$. When $x \ne 1$ this factor is non-zero, so we can cancel it.</dd>
+        <dt>$x + 1$</dt><dd>The simplified form — identical to the original <em>everywhere except at $x = 1$</em>, where the original is undefined and this one equals 2.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>The intuition.</strong> The function is a perfectly smooth line $y = x + 1$ with a single missing pixel at $x = 1$. The limit "fills in" what that pixel ought to be. Limits are a formal way to look through the hole.</p>
+    </div>
+
+    <h3>$\epsilon$–$\delta$: the idea without the formalism</h3>
+
+    <p>Textbook calculus, starting with Cauchy and Weierstrass in the 1800s, makes "arbitrarily close" precise using two Greek letters: $\epsilon$ (epsilon) and $\delta$ (delta). Both just mean "a tiny positive number." The full definition looks terrifying the first time you see it, so we'll state the idea in English first.</p>
+
+    <div class="callout">
+      <div class="label">THE $\epsilon$–$\delta$ GAME</div>
+      <p>Someone challenges you: "I bet $f(x)$ can't get within $\epsilon = 0.001$ of the limit $L$." You reply: "Give me any $\epsilon$ you want, and I'll hand back a $\delta$. If you stay within $\delta$ of $a$ (but not equal to $a$), I promise $f(x)$ is within $\epsilon$ of $L$." If you can always win that game, no matter how small $\epsilon$ they pick, then the limit is $L$. That's it.</p>
+    </div>
+
+    <p>Stated formally: $\lim_{x \to a} f(x) = L$ means that for every $\epsilon > 0$ there exists a $\delta > 0$ such that whenever $0 < |x - a| < \delta$, we have $|f(x) - L| < \epsilon$. You do not need to be able to write $\epsilon$–$\delta$ proofs to do calculus — almost nobody who uses calculus in practice does. You <em>do</em> need the mental picture: limits are a promise that you can always get as close as someone demands.</p>
+
+    <h3>One-sided limits, infinite limits, continuity</h3>
+
+    <p>A few variations you'll run into:</p>
+
+    <ul>
+      <li><strong>One-sided limit.</strong> $\lim_{x \to a^+} f(x)$ means "as $x$ approaches $a$ from the right (values bigger than $a$)." Similarly $\lim_{x \to a^-}$ approaches from below. The two-sided limit exists only if both one-sided limits exist and agree.</li>
+      <li><strong>Infinite limit.</strong> $\lim_{x \to a} f(x) = \infty$ means the value of $f$ grows without bound. It's not saying $f(a) = \infty$ — infinity isn't a number — it's saying "the values keep going up, with no ceiling."</li>
+      <li><strong>Limit at infinity.</strong> $\lim_{x \to \infty} f(x) = L$ means "as $x$ grows without bound, $f$ gets arbitrarily close to $L$." This is how horizontal asymptotes are defined.</li>
+    </ul>
+
+    <p>A function $f$ is <strong>continuous</strong> at $a$ if three things hold: $f(a)$ exists, $\lim_{x \to a} f(x)$ exists, and the two are equal. In pictures: no gaps, no jumps, no holes — you can draw the graph without lifting your pencil. Most functions you deal with in practice (polynomials, exponentials, sines and cosines, their sums and products) are continuous everywhere. Functions with pieces glued together sometimes aren't, and that's where the interesting behavior lives.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="derivs">4. Derivatives — instantaneous rates of change</h2>
+
+    <p>Back to the car. You want to know the speed "at an instant" — at a single moment $t$. Speed is "distance divided by time", but during an instant no time passes and no distance is covered. So you approximate: measure how far you went during a tiny interval of time, and divide.</p>
+
+    <p>Let $s(t)$ be your position at time $t$. Over the interval from $t$ to $t + \Delta t$, your average speed is</p>
+
+    <div class="math-display">$$\text{average speed} = \frac{s(t + \Delta t) - s(t)}{\Delta t}.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Average rate of change (a.k.a. secant slope)</p>
+      <dl>
+        <dt>$s(t)$</dt><dd>Your position as a function of time. Plug in a time, get back a location (say, meters from your front door).</dd>
+        <dt>$t$</dt><dd>The starting time.</dd>
+        <dt>$\Delta t$</dt><dd>A small time interval — "how much time has passed." The capital Greek delta means "change in."</dd>
+        <dt>$s(t + \Delta t) - s(t)$</dt><dd>How far you've moved during that interval (final position minus starting position).</dd>
+        <dt>$\dfrac{\cdot}{\Delta t}$</dt><dd>Distance divided by time — that's speed. Standard units would be meters per second.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Picture.</strong> Plot $s$ against $t$. Pick two points on the curve at times $t$ and $t + \Delta t$. Draw the straight line through them. This expression is the <em>slope</em> of that line — rise over run. It's called a "secant" line because it slices through the curve at two points.</p>
+    </div>
+
+    <p>The secant slope is the <em>average</em> speed over an interval. Instantaneous speed is what happens as you shrink the interval to nothing. You take a limit:</p>
+
+    <div class="math-display">$$s'(t) = \lim_{\Delta t \to 0} \frac{s(t + \Delta t) - s(t)}{\Delta t}.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">The definition of the derivative</p>
+      <dl>
+        <dt>$s'(t)$</dt><dd>Read "s prime of t." A <em>new</em> function of $t$ whose value at each time is the instantaneous rate of change of $s$ at that time.</dd>
+        <dt>$\lim_{\Delta t \to 0}$</dt><dd>Take the limit as $\Delta t$ shrinks to zero. Remember: we never actually set $\Delta t$ equal to zero (that would be division by zero); we sneak up on it.</dd>
+        <dt>$\dfrac{s(t+\Delta t) - s(t)}{\Delta t}$</dt><dd>The average speed over the interval $[t, t+\Delta t]$ — the secant slope.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>The geometric punchline.</strong> As $\Delta t$ shrinks, the two points you drew through get closer and closer. The secant line rotates and settles into a final position: the <strong>tangent line</strong> — the straight line that just grazes the curve at the single point $(t, s(t))$. The derivative is the slope of that tangent line. Instantaneous rate of change = slope of the tangent line. Two names for the same thing.</p>
+    </div>
+
+    <p>Replacing $s$ with a generic function $f$, you get the definition you'll see in every textbook:</p>
+
+    <div class="math-display">$$f'(x) = \lim_{h \to 0} \frac{f(x + h) - f(x)}{h}.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Definition of the derivative (generic form)</p>
+      <dl>
+        <dt>$f$</dt><dd>Any function of one real variable.</dd>
+        <dt>$f'(x)$</dt><dd>The derivative of $f$, evaluated at $x$. This is itself a function — plug in any $x$, get back a number.</dd>
+        <dt>$h$</dt><dd>The small change in input, same role as $\Delta x$ or $\Delta t$ above. Using a single letter saves space.</dd>
+        <dt>$f(x + h) - f(x)$</dt><dd>How much the output changed when we bumped the input by $h$.</dd>
+        <dt>$\dfrac{f(x+h) - f(x)}{h}$</dt><dd>Average rate of change over the interval from $x$ to $x+h$. Geometrically: slope of the secant line between those two points on the graph.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>What the derivative "is."</strong> It's a machine. Feed in a function, get back a new function. The new function tells you the slope of the original at every point. If the original rises, the derivative is positive. If it falls, negative. If it has a peak or valley, the derivative is zero there. This last fact is why optimization uses derivatives — zero slope means "can't locally go up or down" which means "extremum."</p>
+    </div>
+
+    <h3>Notation, and why it's a mess</h3>
+
+    <p>Four notations you will see, all meaning the same thing:</p>
+
+    <div class="math-display">$$f'(x) \;=\; \frac{df}{dx} \;=\; \dot{f}(x) \;=\; Df(x).$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Four ways to spell the same idea</p>
+      <dl>
+        <dt>$f'(x)$</dt><dd><strong>Lagrange notation.</strong> A literal prime mark on the function name. Compact and standard.</dd>
+        <dt>$\dfrac{df}{dx}$</dt><dd><strong>Leibniz notation.</strong> Looks like a fraction; isn't one, really, but behaves like one in many useful ways. The "$df$" and "$dx$" are meant to evoke infinitesimally small changes. Tells you <em>what</em> we're differentiating ($f$) <em>with respect to what</em> ($x$), which matters when more than one variable is around.</dd>
+        <dt>$\dot{f}(x)$</dt><dd><strong>Newton's notation.</strong> The dot over the letter means "derivative with respect to time." Mostly used in physics.</dd>
+        <dt>$Df(x)$</dt><dd><strong>Operator notation.</strong> $D$ is the "differentiation operator" — a function that takes a function and returns its derivative. Mostly used in advanced or computational settings.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why the mess?</strong> Historical politics. Newton and Leibniz invented calculus in parallel, each with their own notation. British mathematicians stuck with Newton's dots for a century out of loyalty and fell behind the Continent as a result. Leibniz's $\frac{df}{dx}$ won on merit: it's more flexible, and it makes the chain rule look like a fraction cancellation. But everybody still uses $f'$ for brevity. So you will see all four, sometimes on the same page.</p>
+    </div>
+
+    <h3>The basic rules (the ones you'll use constantly)</h3>
+
+    <p>You rarely apply the limit definition in practice. Instead you memorize a handful of rules that cover most functions. Here are the essentials.</p>
+
+    <p><strong>The power rule.</strong> For any number $n$,</p>
+
+    <div class="math-display">$$\frac{d}{dx}\bigl(x^n\bigr) = n \, x^{n-1}.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Power rule</p>
+      <dl>
+        <dt>$\dfrac{d}{dx}$</dt><dd>"The derivative with respect to $x$ of …" — an operator applied to what follows.</dd>
+        <dt>$x^n$</dt><dd>$x$ to the power $n$. For positive integer $n$, this is $x$ multiplied by itself $n$ times. For non-integer $n$, it's defined through exponentials.</dd>
+        <dt>$n \, x^{n-1}$</dt><dd>The result: the exponent drops out front as a coefficient and the new exponent is one less.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>How to remember.</strong> "Bring the exponent down, subtract one from the exponent." So $\frac{d}{dx}(x^3) = 3x^2$, $\frac{d}{dx}(x^7) = 7x^6$, and $\frac{d}{dx}(x) = 1 \cdot x^0 = 1$. A constant $c$ can be written $c \cdot x^0$, and the rule gives $0 \cdot c \cdot x^{-1} = 0$ — the derivative of a constant is zero, which makes sense because a constant function has slope zero everywhere.</p>
+    </div>
+
+    <p><strong>Sum and constant-multiple rules.</strong> Derivatives distribute over addition, and constants pull out:</p>
+
+    <div class="math-display">$$\frac{d}{dx}\bigl(f(x) + g(x)\bigr) = f'(x) + g'(x), \qquad \frac{d}{dx}\bigl(c \, f(x)\bigr) = c \, f'(x).$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Linearity of the derivative</p>
+      <dl>
+        <dt>$f(x), g(x)$</dt><dd>Two functions of $x$.</dd>
+        <dt>$c$</dt><dd>A constant — a number that doesn't depend on $x$, like $3$ or $\pi$.</dd>
+        <dt>$f'(x) + g'(x)$</dt><dd>Differentiate each piece separately, then add.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why it works.</strong> If two cars are moving, the rate of change of their combined position is the sum of their individual rates. Obvious when you phrase it that way. This linearity is why differentiation plays well with linear algebra — it's itself a linear operator.</p>
+    </div>
+
+    <p><strong>Product rule.</strong> When you multiply two functions, you do <em>not</em> just multiply the derivatives. The correct rule is:</p>
+
+    <div class="math-display">$$\frac{d}{dx}\bigl(f(x) \, g(x)\bigr) = f'(x) \, g(x) + f(x) \, g'(x).$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Product rule</p>
+      <dl>
+        <dt>$f(x) \, g(x)$</dt><dd>The product of two functions. For example $x^2 \cdot \sin x$.</dd>
+        <dt>$f'(x) \, g(x)$</dt><dd>"First one's derivative times the second one, untouched."</dd>
+        <dt>$f(x) \, g'(x)$</dt><dd>"First one, untouched, times the second one's derivative."</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why this shape.</strong> Think of a rectangle of area $A = f \cdot g$, where both sides are changing. Bumping $f$ slightly grows the rectangle by a strip of width $g$ (area $\Delta f \cdot g$). Bumping $g$ grows it by a strip of width $f$ (area $f \cdot \Delta g$). There's also a tiny corner bit $\Delta f \cdot \Delta g$ — but in the limit, that corner is a second-order small quantity and vanishes. Only the two strips survive. That's the product rule.</p>
+    </div>
+
+    <p><strong>Quotient rule.</strong> For division, apply the product rule to $f \cdot (1/g)$ and simplify — or just memorize:</p>
+
+    <div class="math-display">$$\frac{d}{dx}\left(\frac{f(x)}{g(x)}\right) = \frac{f'(x)\, g(x) - f(x)\, g'(x)}{g(x)^2}.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Quotient rule</p>
+      <dl>
+        <dt>$\dfrac{f(x)}{g(x)}$</dt><dd>One function divided by another — assuming $g(x) \ne 0$, since division by zero is undefined.</dd>
+        <dt>$f'(x)\,g(x) - f(x)\,g'(x)$</dt><dd>Numerator: "derivative of top times bottom, minus top times derivative of bottom." Note the minus sign — the order matters here, unlike the product rule.</dd>
+        <dt>$g(x)^2$</dt><dd>Denominator: the bottom, squared.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Mnemonic.</strong> "Low dee-high minus high dee-low, over the square of what's below." You will say this sentence in your head for the rest of your life.</p>
+    </div>
+
+    <h3>Worked example</h3>
+
+    <p>Let's differentiate $f(x) = 3x^4 - 5x^2 + 7$.</p>
+
+    <p>By the sum and constant-multiple rules, we can handle each term separately. By the power rule:</p>
+
+    <ul>
+      <li>$\frac{d}{dx}(3x^4) = 3 \cdot 4 x^3 = 12 x^3$</li>
+      <li>$\frac{d}{dx}(-5x^2) = -5 \cdot 2 x = -10 x$</li>
+      <li>$\frac{d}{dx}(7) = 0$ (the derivative of a constant is zero)</li>
+    </ul>
+
+    <p>So $f'(x) = 12 x^3 - 10 x$. That's the slope of the tangent line to $f$ at any $x$. At $x = 1$, the slope is $12 - 10 = 2$. At $x = 0$, the slope is $0$ (the curve is momentarily flat). At $x = -1$, the slope is $-12 + 10 = -2$ (the curve is descending).</p>
+
+    <!-- ========================================================== -->
+    <h2 id="chain">5. The chain rule — the one rule backprop is built on</h2>
+
+    <p>The chain rule deserves its own section because it is the most important rule in calculus for anything computational, and because it's the one most students get wrong the first few times.</p>
+
+    <p>Suppose you have a composition — a function inside another function. Example: $h(x) = \sin(x^2)$. Here you first square $x$, then take the sine of the result. In function notation, $h = f \circ g$ where $g(x) = x^2$ (the inside) and $f(u) = \sin(u)$ (the outside).</p>
+
+    <p>The chain rule says:</p>
+
+    <div class="math-display">$$\frac{d}{dx}\bigl(f(g(x))\bigr) = f'(g(x)) \cdot g'(x).$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Chain rule (Lagrange form)</p>
+      <dl>
+        <dt>$f(g(x))$</dt><dd>A function of a function — first apply $g$ to $x$, then apply $f$ to the result.</dd>
+        <dt>$f'(g(x))$</dt><dd>The derivative of the <em>outer</em> function $f$, evaluated at the inner function's output $g(x)$. Read it as "$f$-prime, with the whole expression $g(x)$ plugged in where $x$ would normally go."</dd>
+        <dt>$g'(x)$</dt><dd>The derivative of the inner function at $x$.</dd>
+        <dt>$\cdot$</dt><dd>Multiplication. The chain rule is a <em>product</em> of two derivatives, not a sum.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Pictorial intuition.</strong> Imagine gears. The inner function $g$ turns the inside gear — a tiny bump in $x$ causes a bump of size $g'(x)$ in $u = g(x)$. That bump then drives the outer gear: a bump of $g'(x)$ in $u$ causes a bump of $f'(u) \cdot g'(x)$ in the final output. You multiply the gear ratios. That's the chain rule.</p>
+    </div>
+
+    <p>In Leibniz notation the chain rule looks even simpler — almost like fraction cancellation:</p>
+
+    <div class="math-display">$$\frac{df}{dx} = \frac{df}{du} \cdot \frac{du}{dx}, \quad \text{where } u = g(x).$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Chain rule (Leibniz form)</p>
+      <dl>
+        <dt>$u$</dt><dd>The intermediate variable — whatever the inner function returns. Here $u = g(x)$.</dd>
+        <dt>$\dfrac{df}{du}$</dt><dd>How fast $f$ changes per unit change in $u$ (the outer rate).</dd>
+        <dt>$\dfrac{du}{dx}$</dt><dd>How fast $u$ changes per unit change in $x$ (the inner rate).</dd>
+        <dt>$\dfrac{df}{dx}$</dt><dd>How fast $f$ changes per unit change in $x$, the quantity we want.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>It's literally unit cancellation.</strong> Read the right side as "(change in $f$ per change in $u$) times (change in $u$ per change in $x$)." The "$du$"s visually cancel and you're left with "change in $f$ per change in $x$." Leibniz designed the notation exactly so that this would work.</p>
+    </div>
+
+    <p>Back to $h(x) = \sin(x^2)$. Let $u = x^2$ so $\frac{du}{dx} = 2x$. Then $h = \sin u$ so $\frac{dh}{du} = \cos u = \cos(x^2)$. Multiply:</p>
+
+    <div class="math-display">$$h'(x) = \cos(x^2) \cdot 2x = 2x\cos(x^2).$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Chain rule worked example</p>
+      <dl>
+        <dt>$\cos(x^2)$</dt><dd>The derivative of the outer function (sine) evaluated at the inner output. The derivative of sine is cosine.</dd>
+        <dt>$2x$</dt><dd>The derivative of the inner function ($x^2$), by the power rule.</dd>
+        <dt>$2x\cos(x^2)$</dt><dd>Their product. The answer.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Common bug.</strong> Beginners often stop at $\cos(x^2)$ and forget to multiply by the derivative of the inside. That missing factor is what separates someone who passes calculus from someone who doesn't. Always ask: "what's the derivative of what's inside?"</p>
+    </div>
+
+    <h3>Why this matters for neural networks</h3>
+
+    <p>A neural network is a giant composition of functions: take input $x$, multiply by a weight matrix, apply a nonlinear <a href="../topics/activations.html">activation</a>, multiply by another matrix, activate again, and so on. The whole network is $f_L \circ f_{L-1} \circ \cdots \circ f_1(x)$ for some large number of layers $L$. Training the network means adjusting the weights to reduce a loss — which means computing the derivative of the loss with respect to each weight deep inside the composition.</p>
+
+    <p>The chain rule, applied recursively from the output backward to the input, is exactly how those derivatives are computed. This recursive application is called <a href="../topics/backpropagation.html">backpropagation</a>, and it's the algorithm that made modern deep learning tractable. Every time you see a training curve descending, the chain rule is quietly running underneath, multiplying gradients layer by layer. When it's your job to debug exploding or vanishing gradients, you are debugging long chain rule products with terms that are too big or too small.</p>
+
+    <p>If you remember nothing else from this page, remember this: the chain rule is how local information (slopes of individual pieces) combines into global information (the slope of the whole composed thing). That idea is everywhere in computation.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="demo">6. Interactive: watch the derivative trace itself out</h2>
+
+    <p>Here's the payoff. Below is a plot of a function $f(x) = 0.4x^3 - 1.2x$ — a cubic with a bump and a dip. The slider moves a point $x_0$ along the curve. At each position, you see:</p>
+
+    <ul>
+      <li>The point $(x_0, f(x_0))$ highlighted on the curve.</li>
+      <li>The <strong>tangent line</strong> through that point, with slope $f'(x_0)$ — the line that locally approximates the curve.</li>
+      <li>A second plot below showing the derivative $f'(x)$ as a separate curve, with a marker at $(x_0, f'(x_0))$. As you drag the slider, that marker traces out the derivative, point by point.</li>
+    </ul>
+
+    <p>Drag the slider slowly from left to right. You're watching the derivative get built in real time from the tangent slopes of the original.</p>
+
+    <div class="viz-3d">
+      <div class="v3-controls">
+        <span class="v3-label">Tangent point x₀:</span>
+        <input id="calcX" type="range" min="-2" max="2" value="-1.4" step="0.02" style="flex:1;max-width:340px;">
+        <span id="calcXLabel" style="min-width:70px;color:#22d3ee;font-family:ui-monospace,monospace;">-1.40</span>
+      </div>
+      <svg id="calcSvg" viewBox="0 0 720 420" style="width:100%;height:auto;background:#0a0d12;border-radius:6px;"></svg>
+      <p class="v3-caption" id="calcCaption">Top: the function $f(x) = 0.4x^3 - 1.2x$ and its tangent line at $x_0$. Bottom: the derivative $f'(x) = 1.2x^2 - 1.2$, with a marker at $x_0$ that traces the curve as you drag.</p>
+    </div>
+
+    <p>Things to notice as you drag:</p>
+
+    <ul>
+      <li>When the original curve has a <em>peak</em> (near $x_0 = -1$), the tangent is flat — slope zero. The marker in the bottom plot sits exactly on the $x$-axis. This is why optimization looks for zeros of the derivative: they mark candidate peaks and valleys.</li>
+      <li>Between the peak and the valley, the curve is descending and the tangent has negative slope. The marker sits below the axis.</li>
+      <li>When the curve is steeply rising (toward either end), the tangent is steep and the marker is far from the axis.</li>
+      <li>The derivative is itself a smooth curve — a parabola in this case — because the original is smooth. Smoothness propagates.</li>
+    </ul>
+
+    <!-- ========================================================== -->
+    <h2 id="apps">7. Uses of derivatives</h2>
+
+    <p>Now that you know what a derivative is and how to compute one, here are four things people actually do with them.</p>
+
+    <h3>7.1 Optimization: finding minima and maxima</h3>
+
+    <p>At a local maximum or minimum of a smooth function, the tangent line is horizontal — slope zero. So if you're hunting for extrema, solve $f'(x) = 0$. Each solution is a candidate; you then check whether it's a peak, a valley, or a flat inflection by looking at the second derivative or testing points nearby.</p>
+
+    <p><strong>Example.</strong> Find the minimum of $f(x) = x^2 - 4x + 7$. The derivative is $f'(x) = 2x - 4$. Set to zero: $2x - 4 = 0 \Rightarrow x = 2$. Plug back in: $f(2) = 4 - 8 + 7 = 3$. The minimum is $3$ at $x = 2$. You just did constrained optimization with high-school algebra, which is the whole idea.</p>
+
+    <p>For real-world problems with millions of parameters (like training neural networks), you can't solve $f'(x) = 0$ symbolically. Instead you use <a href="../topics/gradient-descent.html">gradient descent</a>: start at a random point, compute the derivative, take a small step in the direction of steepest decrease, repeat. The derivative tells you which way is downhill.</p>
+
+    <h3>7.2 Linear approximation</h3>
+
+    <p>Near a point $x_0$, any smooth function is approximately linear — it looks like its tangent line. That approximation is:</p>
+
+    <div class="math-display">$$f(x) \approx f(x_0) + f'(x_0)(x - x_0).$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Linearization</p>
+      <dl>
+        <dt>$f(x_0)$</dt><dd>The value of the function at your chosen base point.</dd>
+        <dt>$f'(x_0)$</dt><dd>The slope of the tangent line there.</dd>
+        <dt>$(x - x_0)$</dt><dd>How far you've moved from the base point.</dd>
+        <dt>$\approx$</dt><dd>"Approximately equal to." The approximation is exact at $x_0$ and gets worse as you move away, but for small moves it's often excellent.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why this matters.</strong> Every time you hear the phrase "first-order approximation" or "small perturbation," this is the formula being invoked. Physics builds entire simulations out of it. Numerical methods like Newton's method for root-finding (next) use it as their core step. When you see $f(x+h) \approx f(x) + h f'(x)$ in a paper, no new idea is being introduced — it's just linearization rearranged.</p>
+    </div>
+
+    <h3>7.3 Newton's method for root-finding</h3>
+
+    <p>You want to solve $f(x) = 0$ but the equation is too nasty for algebra. Newton's method: guess a value $x_n$, draw the tangent line there, and see where the tangent crosses zero. Use that crossing as your next guess, $x_{n+1}$. Repeat.</p>
+
+    <div class="math-display">$$x_{n+1} = x_n - \frac{f(x_n)}{f'(x_n)}.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Newton's iteration</p>
+      <dl>
+        <dt>$x_n$</dt><dd>Your current guess for the root. $n$ is the iteration counter — $x_0$ is the initial guess, $x_1$ the first refinement, and so on.</dd>
+        <dt>$f(x_n)$</dt><dd>The function value at your current guess. You want this to be zero.</dd>
+        <dt>$f'(x_n)$</dt><dd>The slope of the tangent at your current guess.</dd>
+        <dt>$\dfrac{f(x_n)}{f'(x_n)}$</dt><dd>A correction term, derived by asking: "where does the tangent line cross zero?" Rise over run means the run you need is $-f(x_n)/f'(x_n)$.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why it converges fast.</strong> When you're close to a root, Newton's method typically doubles the number of correct digits each iteration — quadratic convergence. It's the workhorse behind square-root and reciprocal instructions in hardware, and behind iterative solvers in <a href="./numerical-analysis.html">numerical analysis</a>. The catch: it needs a decent starting guess and a non-zero derivative nearby, or it can bounce off into the weeds.</p>
+    </div>
+
+    <h3>7.4 Rates of change everywhere</h3>
+
+    <p>Anywhere a quantity changes with respect to another, the derivative is the name of that rate. Velocity is the derivative of position with respect to time. Acceleration is the derivative of velocity. Marginal cost in economics is the derivative of total cost with respect to quantity produced. Power in physics is the derivative of energy with respect to time. Current is the derivative of charge. The derivative is a shape-shifter — the symbols stay the same and the real-world meaning comes from what function you're differentiating.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="integrals">8. Integrals — adding up infinitely many pieces</h2>
+
+    <p>Back to the pond with the wiggly edge. You want its area. Here's the plan: approximate the pond with a bunch of thin rectangles, add up their areas, then make the rectangles thinner and thinner and take a limit. That's integration.</p>
+
+    <p>Specifically, suppose you have a function $f(x) \geq 0$ on an interval $[a, b]$ and you want the area of the region trapped between the curve $y = f(x)$, the $x$-axis, and the vertical lines $x = a$ and $x = b$.</p>
+
+    <p>Slice the interval into $n$ equal subintervals of width $\Delta x = (b-a)/n$. On each subinterval, pick a sample $x$-value $x_i^*$ and build a rectangle of height $f(x_i^*)$ and width $\Delta x$. The rectangle approximates the sliver of area under the curve in that subinterval. Add up all $n$ rectangles:</p>
+
+    <div class="math-display">$$S_n = \sum_{i=1}^n f(x_i^*) \, \Delta x.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Riemann sum</p>
+      <dl>
+        <dt>$\sum_{i=1}^n$</dt><dd>"Sum from $i = 1$ to $n$." The capital Greek sigma means "add up all these terms as the index $i$ runs from 1 to $n$." So $\sum_{i=1}^3 i = 1 + 2 + 3 = 6$.</dd>
+        <dt>$n$</dt><dd>The number of rectangles you're using. Bigger $n$ means thinner rectangles and a better approximation.</dd>
+        <dt>$\Delta x$</dt><dd>The width of each rectangle, equal to $(b-a)/n$.</dd>
+        <dt>$x_i^*$</dt><dd>The sample point inside the $i$-th subinterval. Typical choices: the left endpoint, the right endpoint, or the midpoint. For continuous $f$, it doesn't matter in the limit.</dd>
+        <dt>$f(x_i^*)$</dt><dd>The height of the $i$-th rectangle, which is the function's value at the sample point.</dd>
+        <dt>$f(x_i^*) \, \Delta x$</dt><dd>Height times width — the area of one rectangle.</dd>
+        <dt>$S_n$</dt><dd>The sum of those rectangle areas — an approximation to the true area under the curve.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why this works.</strong> For modest $n$, you're missing some area (where the curve rises above a rectangle's top) and over-counting some (where the curve drops below). For huge $n$, those errors shrink faster than you can blink. The curve's wiggles get drowned by the sheer thinness of each rectangle.</p>
+    </div>
+
+    <p>Now take the limit as $n \to \infty$. If that limit exists and doesn't depend on how you chose the sample points, we call it the <strong>definite integral</strong> of $f$ from $a$ to $b$, written:</p>
+
+    <div class="math-display">$$\int_a^b f(x)\, dx = \lim_{n \to \infty} \sum_{i=1}^n f(x_i^*) \, \Delta x.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">The definite integral</p>
+      <dl>
+        <dt>$\displaystyle\int$</dt><dd>The integral sign — a stretched-out "S" for "sum." Leibniz picked this letter on purpose to remind you that integration is a kind of infinite sum.</dd>
+        <dt>$a, b$</dt><dd>The lower and upper limits of integration — the left and right endpoints of the interval over which you're adding up.</dd>
+        <dt>$f(x)$</dt><dd>The integrand — the function you're integrating.</dd>
+        <dt>$dx$</dt><dd>Think of this as "an infinitesimally thin slice of width $dx$." It's the limit version of $\Delta x$. The "$dx$" also tells you the variable of integration — in this case, $x$.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Picture in your head.</strong> $\int_a^b f(x)\, dx$ is the total area under the curve $y = f(x)$ between $x = a$ and $x = b$. If $f$ dips below the axis, the area there counts as negative — the integral is a <em>signed</em> area. If you integrate a velocity, you get a displacement. If you integrate a rate of flow, you get a total volume. Integration is the machinery for "adding up a rate over a duration to get a total."</p>
+    </div>
+
+    <h3>Antiderivatives — integration as the reverse of differentiation</h3>
+
+    <p>There is a second, completely different use of the word "integral" — the <strong>antiderivative</strong>. An antiderivative of $f$ is a function $F$ whose derivative is $f$. That is, $F'(x) = f(x)$. You might also hear this called the <em>indefinite integral</em> and write it</p>
+
+    <div class="math-display">$$\int f(x)\, dx = F(x) + C.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Indefinite integral (antiderivative)</p>
+      <dl>
+        <dt>$F(x)$</dt><dd>Any function whose derivative is $f(x)$. For $f(x) = 2x$, one antiderivative is $F(x) = x^2$.</dd>
+        <dt>$C$</dt><dd>An arbitrary constant — the "constant of integration." Since the derivative of a constant is zero, $x^2 + 1$, $x^2 - 7$, and $x^2 + \pi$ are all antiderivatives of $2x$. We write the $+ C$ to indicate the whole family.</dd>
+        <dt>No $a, b$</dt><dd>The indefinite integral has no limits on the integral sign — that's how you tell it apart from a definite integral. It returns a <em>function</em>, not a number.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Easy to confuse, important to separate.</strong> Definite integral $\int_a^b f(x) dx$ is a <em>number</em> (an area). Indefinite integral $\int f(x) dx$ is a <em>function</em> (plus a constant). They are linked by the Fundamental Theorem of Calculus, which is the next section, and which explains why both things got named "integral." Until that theorem is on the table, the link is just asserted: "reversing differentiation" and "computing areas" happen to be the same operation. Nobody would've guessed.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="ftc">9. The Fundamental Theorem of Calculus</h2>
+
+    <p>Named "Fundamental" because it's the bridge. It comes in two parts.</p>
+
+    <div class="callout math">
+      <div class="label">FTC PART 1</div>
+      <p>If $f$ is continuous on $[a, b]$ and we define a new function $F$ by $F(x) = \int_a^x f(t)\, dt$ — "the area from $a$ up to $x$" — then $F$ is differentiable, and $F'(x) = f(x)$. In words: <em>differentiating an integral undoes the integration</em>.</p>
+    </div>
+
+    <div class="math-display">$$\frac{d}{dx} \int_a^x f(t) \, dt = f(x).$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">FTC Part 1</p>
+      <dl>
+        <dt>$\int_a^x f(t)\, dt$</dt><dd>The area under $f$ from the fixed lower limit $a$ up to a variable upper limit $x$. As $x$ changes, so does the area; the result is a function of $x$.</dd>
+        <dt>$t$</dt><dd>A dummy variable of integration. It's just a placeholder for the input to $f$ as we add up. We use $t$ instead of $x$ here because $x$ is already being used as the upper limit — reusing the same letter would be confusing.</dd>
+        <dt>$\dfrac{d}{dx}$</dt><dd>Differentiate the whole expression with respect to $x$.</dd>
+        <dt>$f(x)$</dt><dd>The original integrand, evaluated at the upper limit.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why it's true (sketch).</strong> Suppose you've already found the area from $a$ to $x$, and you nudge $x$ slightly to $x + h$. You add a new strip of area, approximately $f(x) \cdot h$ (height times thin width). Divide by $h$ to get the rate of change, and you get $f(x)$. Take the limit as $h \to 0$ and the approximation becomes exact. The rate at which the area is accumulating is whatever height the curve currently has.</p>
+    </div>
+
+    <div class="callout math">
+      <div class="label">FTC PART 2</div>
+      <p>If $F$ is any antiderivative of $f$ on $[a, b]$, then $\int_a^b f(x)\, dx = F(b) - F(a)$. In words: to compute a definite integral, find any antiderivative and subtract its values at the endpoints.</p>
+    </div>
+
+    <div class="math-display">$$\int_a^b f(x)\, dx = F(b) - F(a), \quad \text{where } F'(x) = f(x).$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">FTC Part 2</p>
+      <dl>
+        <dt>$\int_a^b f(x)\, dx$</dt><dd>The definite integral — the exact, limit-based area under $f$ from $a$ to $b$.</dd>
+        <dt>$F$</dt><dd>Any antiderivative of $f$ — any function whose derivative is $f$. Several work; the $+C$ cancels when you subtract.</dd>
+        <dt>$F(b) - F(a)$</dt><dd>The difference of the antiderivative at the two endpoints. Sometimes written $F(x) \big|_a^b$ as shorthand.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why this is a miracle.</strong> The left side is a horrifying infinite sum — slice into $n$ pieces, take a limit, etc. The right side is two function evaluations and a subtraction. The Fundamental Theorem says they're equal. Every time you compute an area in a homework problem by finding an antiderivative and subtracting, you're using it. Archimedes would have killed for this theorem.</p>
+    </div>
+
+    <p>Here's FTC Part 2 in action. We want the area under $f(x) = x^2$ from $0$ to $3$.</p>
+
+    <ol>
+      <li>Find an antiderivative. Since $\frac{d}{dx}\left(\frac{x^3}{3}\right) = x^2$, we can take $F(x) = \frac{x^3}{3}$.</li>
+      <li>Evaluate at the endpoints: $F(3) = \frac{27}{3} = 9$ and $F(0) = 0$.</li>
+      <li>Subtract: $\int_0^3 x^2 \, dx = 9 - 0 = 9$.</li>
+    </ol>
+
+    <p>That's the exact area under the parabola from 0 to 3. No infinite sums, no limits — just the antiderivative at two points. It really is a miracle the first time you see it.</p>
+
+    <p>Taken together, the two parts say: <strong>differentiation and integration are inverse operations</strong>. Part 1 says differentiating an area function gives back the integrand. Part 2 says integrating a derivative gives back the original function (up to endpoints). One operation undoes the other.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="techniques">10. Techniques of integration</h2>
+
+    <p>Differentiation is mostly mechanical — apply rules, get an answer. Integration is harder. Many functions don't have antiderivatives expressible in elementary form at all ($e^{-x^2}$ is a famous example — its antiderivative is the error function, which has to be defined separately). For the cases that <em>do</em> work out, there are three tricks that cover most of the territory.</p>
+
+    <h3>10.1 u-substitution (the chain rule, run backwards)</h3>
+
+    <p>Any time you see a composition inside an integral and the derivative of the inner function also hanging around, u-substitution works. You rename the inner piece as $u$ and convert the whole integral to one in $u$.</p>
+
+    <p><strong>Example.</strong> Compute $\int 2x \cos(x^2)\, dx$. Let $u = x^2$. Then $\frac{du}{dx} = 2x$, which we can rearrange as $du = 2x \, dx$. The integral becomes</p>
+
+    <div class="math-display">$$\int \cos(u) \, du = \sin(u) + C = \sin(x^2) + C.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">u-substitution</p>
+      <dl>
+        <dt>$u$</dt><dd>A new variable that stands for the inner function — in this example, $u = x^2$.</dd>
+        <dt>$du$</dt><dd>The differential of $u$, equal to $\frac{du}{dx}\, dx$. It bookkeeps the scaling factor that changing variables introduces.</dd>
+        <dt>$\sin(u) + C$</dt><dd>The antiderivative of $\cos(u)$, since $\frac{d}{du}(\sin u) = \cos u$.</dd>
+        <dt>$\sin(x^2) + C$</dt><dd>Substitute $x^2$ back in for $u$ at the end — you want your answer in the original variable.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>What it really is.</strong> The chain rule says $\frac{d}{dx}\sin(x^2) = \cos(x^2) \cdot 2x$. u-substitution is that equation read right-to-left: if you see $\cos(x^2) \cdot 2x$ in an integral, you know the antiderivative is $\sin(x^2)$. Same rule, different direction.</p>
+    </div>
+
+    <h3>10.2 Integration by parts (the product rule, run backwards)</h3>
+
+    <p>The product rule for derivatives gives $(uv)' = u'v + uv'$. Integrate both sides from $a$ to $b$ and rearrange, and you get:</p>
+
+    <div class="math-display">$$\int u \, dv = u v - \int v \, du.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Integration by parts</p>
+      <dl>
+        <dt>$u$ and $v$</dt><dd>Two functions of $x$. You choose which part of the integrand to call $u$ and which to call $dv$.</dd>
+        <dt>$dv$</dt><dd>The "differential of $v$" — whatever $v$ was, $dv = v'(x)\, dx$.</dd>
+        <dt>$du$</dt><dd>Similarly, $du = u'(x)\, dx$.</dd>
+        <dt>$uv - \int v\, du$</dt><dd>The boundary term $uv$ plus a new integral you hope is simpler than the one you started with.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>The trade.</strong> You swap one integral ($\int u\, dv$) for another ($\int v\, du$). The trick is to pick $u$ and $dv$ so that the new integral is <em>easier</em> than the original. If you pick badly, you just go in circles. A common heuristic: let $u$ be whatever gets simpler when you differentiate (like $\ln x$ or $x^n$), and let $dv$ be whatever you can integrate easily (like $e^x\, dx$ or $\sin x\, dx$).</p>
+    </div>
+
+    <p><strong>Example.</strong> $\int x e^x \, dx$. Let $u = x$ (so $du = dx$) and $dv = e^x\, dx$ (so $v = e^x$). Then</p>
+
+    <div class="math-display">$$\int x e^x \, dx = x \cdot e^x - \int e^x \, dx = x e^x - e^x + C = (x-1) e^x + C.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Integration by parts worked out</p>
+      <dl>
+        <dt>$x e^x$</dt><dd>The boundary term $uv$. Comes for free.</dd>
+        <dt>$\int e^x \, dx$</dt><dd>The new integral — much easier than the original. An antiderivative of $e^x$ is just $e^x$, since $e^x$ is the unique function equal to its own derivative.</dd>
+        <dt>$(x - 1)e^x + C$</dt><dd>The final answer, after cleanup. You can check it by differentiating: $\frac{d}{dx}[(x-1)e^x] = e^x + (x-1)e^x = x e^x$. Correct.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>The pattern.</strong> Integration by parts is your tool for integrals where the integrand is a product of two <em>different kinds</em> of functions — polynomial times exponential, polynomial times trig, log times polynomial. It cuts the degree of one factor per application. Sometimes you have to apply it twice.</p>
+    </div>
+
+    <h3>10.3 Partial fractions (for rational functions)</h3>
+
+    <p>To integrate a rational function like $\frac{1}{(x-1)(x+2)}$, split it into simpler pieces you already know how to integrate. Algebra gives $\frac{1}{(x-1)(x+2)} = \frac{1/3}{x-1} - \frac{1/3}{x+2}$, and each piece is a standard form: $\int \frac{1}{x - a}\, dx = \ln|x - a| + C$. So the integral splits into two logarithms. The technique is called <strong>partial fraction decomposition</strong>, and it's how you turn scary rational functions into sums of logarithms and inverse tangents. You won't need to master it to follow this site; just know the name and what it's for.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="taylor">11. Taylor series — polynomial approximation of everything</h2>
+
+    <p>Here's a question that sounds crazy: can you approximate <em>any</em> smooth function near a point using just a polynomial? Turns out: yes, and the recipe uses derivatives.</p>
+
+    <p>The <strong>Taylor series</strong> of $f$ around a point $a$ is:</p>
+
+    <div class="math-display">$$f(x) = f(a) + f'(a)(x-a) + \frac{f''(a)}{2!}(x-a)^2 + \frac{f'''(a)}{3!}(x-a)^3 + \cdots$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Taylor series</p>
+      <dl>
+        <dt>$f(a)$</dt><dd>The constant term — the value of $f$ at the expansion point $a$. Matches $f$ at $x = a$.</dd>
+        <dt>$f'(a)(x - a)$</dt><dd>The linear term. Adding this gives you the tangent line through $(a, f(a))$ — a first-order approximation.</dd>
+        <dt>$f''(a)$</dt><dd>The <em>second derivative</em> at $a$ — the derivative of the derivative. Measures how the slope itself is changing; geometrically, the concavity (curving up or down).</dd>
+        <dt>$2!$</dt><dd>"2 factorial," equal to $2 \cdot 1 = 2$. In general $n! = n(n-1)\cdots 1$.</dd>
+        <dt>$(x - a)^n$</dt><dd>The $n$-th power of "distance from the expansion point." For $x$ close to $a$, higher powers shrink fast, so higher-order terms contribute less and less.</dd>
+        <dt>$f^{(n)}(a)$</dt><dd>The $n$-th derivative of $f$ evaluated at $a$. Computed by differentiating $n$ times in a row.</dd>
+        <dt>$\cdots$</dt><dd>Continues forever. The full series has a term for every $n = 0, 1, 2, 3, \dots$</dd>
+      </dl>
+      <p class="mg-analogy"><strong>What's going on.</strong> You're building a polynomial that matches $f$ at $a$: same value, same slope, same curvature, same rate-of-change-of-curvature, and so on. Each new term fixes one more derivative. For many functions, if you include enough terms, the polynomial gets arbitrarily close to $f$ on some interval around $a$. Practical consequence: you can replace a complicated function with a few terms of its Taylor series and get a cheap, accurate approximation.</p>
+    </div>
+
+    <p>Special case: when $a = 0$, the series is called a <strong>Maclaurin series</strong>:</p>
+
+    <div class="math-display">$$f(x) = f(0) + f'(0)\, x + \frac{f''(0)}{2!} x^2 + \frac{f'''(0)}{3!} x^3 + \cdots$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Maclaurin series (Taylor around 0)</p>
+      <dl>
+        <dt>$f(0), f'(0), f''(0), \dots$</dt><dd>The function and all its derivatives evaluated at $x = 0$.</dd>
+        <dt>$x, x^2, x^3, \dots$</dt><dd>The powers of $x$ itself, since $(x - 0)^n = x^n$.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Three series you'll meet everywhere.</strong> For $e^x$: $1 + x + x^2/2 + x^3/6 + \cdots$. For $\sin x$: $x - x^3/6 + x^5/120 - \cdots$. For $\cos x$: $1 - x^2/2 + x^4/24 - \cdots$. Each converges for all real $x$. These expansions are how calculators compute transcendental functions, and how physicists expand potentials near equilibrium, and how numerical analysts design integration schemes. When in doubt — Taylor expand.</p>
+    </div>
+
+    <p>Why this matters for the rest of the site:</p>
+
+    <ul>
+      <li><strong>Numerical methods</strong> like Runge-Kutta integrators or finite-difference stencils are built by matching Taylor series term-by-term. See <a href="./numerical-analysis.html">numerical analysis</a>.</li>
+      <li><strong>Physics linearizations</strong> — pendulums, small oscillations, perturbation theory — are Taylor expansions truncated at the first interesting term.</li>
+      <li><strong>Gradient descent</strong>'s update rule comes from a first-order Taylor expansion of the loss; Newton's method uses a second-order one.</li>
+      <li><strong>Activation functions</strong> like GELU involve the error function, which is defined through its Taylor series.</li>
+    </ul>
+
+    <!-- ========================================================== -->
+    <h2 id="code">12. Calculus in code</h2>
+
+    <p>Here are three calculus primitives in code: a finite-difference approximation of the derivative, a trapezoidal-rule numerical integral, and a Taylor expansion of $\sin x$. All three are tiny, all three are instructive.</p>
+
+    <div class="code-tabs" id="ct-calc">
+      <div class="ct-header">
+        <button class="ct-tab active" data-tab="np">NumPy</button>
+        <button class="ct-tab" data-tab="py">Plain Python</button>
+        <span class="ct-label">calculus primitives</span>
+      </div>
+
+      <div class="ct-panel active" data-tab="np"><pre><code><span class="kw">import</span> numpy <span class="kw">as</span> np
+
+<span class="cmt"># ---------- 1. Numerical derivative via central differences ----------</span>
+<span class="kw">def</span> <span class="fn">deriv</span>(f, x, h=<span class="num">1e-5</span>):
+    <span class="cmt"># Central difference is second-order accurate: error ~ h^2.</span>
+    <span class="cmt"># The symmetric version cancels the leading error term that</span>
+    <span class="cmt"># (f(x+h) - f(x)) / h would carry.</span>
+    <span class="kw">return</span> (f(x + h) - f(x - h)) / (<span class="num">2</span> * h)
+
+<span class="cmt"># Try it on f(x) = x^3. True derivative is 3 x^2.</span>
+f  = <span class="kw">lambda</span> x: x ** <span class="num">3</span>
+x0 = <span class="num">2.0</span>
+<span class="fn">print</span>(<span class="str">f"approx f'(2) = {deriv(f, x0):.6f}"</span>)   <span class="cmt"># ~ 12.000000</span>
+<span class="fn">print</span>(<span class="str">f"exact  f'(2) = {3 * x0 ** 2}"</span>)         <span class="cmt">#   12.0</span>
+
+<span class="cmt"># ---------- 2. Numerical integral via the trapezoidal rule ----------</span>
+<span class="kw">def</span> <span class="fn">integrate_trap</span>(f, a, b, n=<span class="num">1000</span>):
+    <span class="cmt"># Split [a, b] into n panels. Each panel is a trapezoid whose</span>
+    <span class="cmt"># area is the average of its two endpoint heights times its width.</span>
+    xs = np.linspace(a, b, n + <span class="num">1</span>)
+    ys = f(xs)
+    dx = (b - a) / n
+    <span class="kw">return</span> dx * (<span class="num">0.5</span> * ys[<span class="num">0</span>] + ys[<span class="num">1</span>:-<span class="num">1</span>].<span class="fn">sum</span>() + <span class="num">0.5</span> * ys[-<span class="num">1</span>])
+
+<span class="cmt"># Integrate x^2 from 0 to 3. Exact answer is 27/3 = 9.</span>
+<span class="fn">print</span>(<span class="str">f"trap    ≈ {integrate_trap(lambda x: x ** 2, 0, 3):.6f}"</span>)
+<span class="fn">print</span>(<span class="str">f"exact   = 9.0"</span>)
+
+<span class="cmt"># ---------- 3. Taylor series of sin(x) around 0 ----------</span>
+<span class="kw">def</span> <span class="fn">taylor_sin</span>(x, terms=<span class="num">10</span>):
+    <span class="cmt"># sin x = x - x^3/3! + x^5/5! - x^7/7! + ...</span>
+    total = <span class="num">0.0</span>
+    sign  = <span class="num">1.0</span>
+    fact  = <span class="num">1.0</span>
+    power = x
+    <span class="kw">for</span> k <span class="kw">in</span> <span class="fn">range</span>(terms):
+        n = <span class="num">2</span> * k + <span class="num">1</span>                      <span class="cmt"># 1, 3, 5, 7, ...</span>
+        <span class="kw">if</span> k &gt; <span class="num">0</span>:
+            power *= x * x
+            fact  *= n * (n - <span class="num">1</span>)
+        total += sign * power / fact
+        sign  *= -<span class="num">1</span>
+    <span class="kw">return</span> total
+
+<span class="fn">print</span>(<span class="str">f"taylor sin(1) = {taylor_sin(1.0):.8f}"</span>)
+<span class="fn">print</span>(<span class="str">f"numpy  sin(1) = {np.sin(1.0):.8f}"</span>)
+</code></pre></div>
+
+      <div class="ct-panel" data-tab="py"><pre><code><span class="kw">import</span> math
+
+<span class="cmt"># Same three primitives without NumPy, for readers without it installed.</span>
+
+<span class="kw">def</span> <span class="fn">deriv</span>(f, x, h=<span class="num">1e-5</span>):
+    <span class="kw">return</span> (f(x + h) - f(x - h)) / (<span class="num">2</span> * h)
+
+<span class="kw">def</span> <span class="fn">integrate_trap</span>(f, a, b, n=<span class="num">1000</span>):
+    dx = (b - a) / n
+    total = <span class="num">0.5</span> * (<span class="fn">f</span>(a) + <span class="fn">f</span>(b))
+    <span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(<span class="num">1</span>, n):
+        total += <span class="fn">f</span>(a + i * dx)
+    <span class="kw">return</span> dx * total
+
+<span class="kw">def</span> <span class="fn">taylor_exp</span>(x, terms=<span class="num">20</span>):
+    <span class="cmt"># e^x = sum_{k=0}^inf  x^k / k!</span>
+    total = <span class="num">0.0</span>
+    term  = <span class="num">1.0</span>                              <span class="cmt"># k = 0 term is 1</span>
+    <span class="kw">for</span> k <span class="kw">in</span> <span class="fn">range</span>(terms):
+        total += term
+        term  *= x / (k + <span class="num">1</span>)                   <span class="cmt"># update to the next term</span>
+    <span class="kw">return</span> total
+
+<span class="cmt"># Demo</span>
+<span class="fn">print</span>(<span class="str">f"d/dx (x^3) at x=2: {deriv(lambda x: x ** 3, 2.0):.6f}"</span>)
+<span class="fn">print</span>(<span class="str">f"integral x^2 dx [0,3]: {integrate_trap(lambda x: x ** 2, 0, 3):.6f}"</span>)
+<span class="fn">print</span>(<span class="str">f"taylor e^1 = {taylor_exp(1.0):.8f}  (vs math.e = {math.e:.8f})"</span>)
+</code></pre></div>
+    </div>
+
+    <p>Things worth noting about these little routines:</p>
+
+    <ul>
+      <li><strong>Central differences</strong> are more accurate than one-sided. The symmetric error terms cancel, so the error is $O(h^2)$ instead of $O(h)$ — meaning if you halve $h$, the error shrinks by a factor of 4, not 2. This is a Taylor-series consequence.</li>
+      <li><strong>The trapezoidal rule</strong> replaces each slice's rectangle with a trapezoid (average of left and right heights times width). For smooth integrands, its error shrinks like $O(1/n^2)$ — again, a Taylor-series consequence.</li>
+      <li><strong>Taylor series</strong> converge fast near the expansion point. The $k$-th term of $\sin x$'s series shrinks by a factor of roughly $x^2 / (2k)^2$ per step, so for $|x| < 1$ you only need a handful of terms for machine precision.</li>
+    </ul>
+
+    <p>These aren't production code. Real libraries like <code>scipy.integrate</code> and <code>jax.grad</code> use cleverer algorithms (Gaussian quadrature, automatic differentiation). But every one of those clever algorithms is built on the same foundation: limits, derivatives, and the Fundamental Theorem.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="summary">13. Cheat sheet</h2>
+
+    <div class="grid">
+      <div class="card">
+        <h4>Derivative definition</h4>
+        <p>$f'(x) = \displaystyle\lim_{h \to 0} \frac{f(x+h) - f(x)}{h}$</p>
+        <p class="meta">Slope of the tangent line.</p>
+      </div>
+      <div class="card">
+        <h4>Power rule</h4>
+        <p>$\displaystyle\frac{d}{dx}(x^n) = n x^{n-1}$</p>
+        <p class="meta">Exponent drops down; reduce by one.</p>
+      </div>
+      <div class="card">
+        <h4>Product rule</h4>
+        <p>$(fg)' = f'g + fg'$</p>
+        <p class="meta">Derivative of first times second, plus first times derivative of second.</p>
+      </div>
+      <div class="card">
+        <h4>Quotient rule</h4>
+        <p>$\left(\dfrac{f}{g}\right)' = \dfrac{f'g - fg'}{g^2}$</p>
+        <p class="meta">Low dee-high minus high dee-low, over low squared.</p>
+      </div>
+      <div class="card">
+        <h4>Chain rule</h4>
+        <p>$\dfrac{d}{dx} f(g(x)) = f'(g(x)) \cdot g'(x)$</p>
+        <p class="meta">Outer's derivative at inner, times inner's derivative.</p>
+      </div>
+      <div class="card">
+        <h4>Trig derivatives</h4>
+        <p>$(\sin x)' = \cos x$,&nbsp; $(\cos x)' = -\sin x$</p>
+        <p class="meta">Memorize these two; the rest follow.</p>
+      </div>
+      <div class="card">
+        <h4>Exponential</h4>
+        <p>$(e^x)' = e^x$,&nbsp; $(\ln x)' = 1/x$</p>
+        <p class="meta">$e^x$ is its own derivative. That's the defining property.</p>
+      </div>
+      <div class="card">
+        <h4>FTC Part 2</h4>
+        <p>$\displaystyle\int_a^b f(x)\, dx = F(b) - F(a)$</p>
+        <p class="meta">For any antiderivative $F$ of $f$.</p>
+      </div>
+      <div class="card">
+        <h4>u-substitution</h4>
+        <p>$\int f(g(x)) g'(x)\, dx = \int f(u)\, du$</p>
+        <p class="meta">Chain rule in reverse.</p>
+      </div>
+      <div class="card">
+        <h4>Integration by parts</h4>
+        <p>$\int u\, dv = uv - \int v\, du$</p>
+        <p class="meta">Product rule in reverse.</p>
+      </div>
+      <div class="card">
+        <h4>Taylor series</h4>
+        <p>$f(x) = \sum_n \dfrac{f^{(n)}(a)}{n!}(x-a)^n$</p>
+        <p class="meta">Polynomial approximation matching all derivatives at $a$.</p>
+      </div>
+      <div class="card">
+        <h4>Linear approximation</h4>
+        <p>$f(x) \approx f(a) + f'(a)(x - a)$</p>
+        <p class="meta">The 1st-order Taylor truncation. Powers everything "to first order."</p>
+      </div>
+    </div>
+
+    <h3>See also</h3>
+    <div class="see-also">
+      <div class="card">
+        <h4><a href="./linear-algebra.html">Linear algebra</a></h4>
+        <p>Calculus handles one variable at a time. Linear algebra handles many at once. Combined, they give you multivariable calculus — the language of gradient descent and optimization in high dimensions.</p>
+      </div>
+      <div class="card">
+        <h4><a href="./numerical-analysis.html">Numerical analysis</a></h4>
+        <p>What happens when you compute derivatives and integrals with floating-point arithmetic. Error analysis, convergence rates, stability — the engineering side of calculus.</p>
+      </div>
+      <div class="card">
+        <h4><a href="../topics/gradient-descent.html">Gradient descent</a></h4>
+        <p>Calculus's killer app in machine learning. Use derivatives to find the direction of steepest decrease in a loss function, then take a step that way. Repeat a million times.</p>
+      </div>
+      <div class="card">
+        <h4><a href="../topics/backpropagation.html">Backpropagation</a></h4>
+        <p>The chain rule, applied layer by layer through a neural network, bookkept so you only compute each gradient once. Without it, deep learning would still be a curiosity.</p>
+      </div>
+      <div class="card">
+        <h4><a href="../topics/activations.html">Activation functions</a></h4>
+        <p>ReLU, GELU, SiLU, softmax — each is a function whose derivative matters as much as the function itself, because the derivative is what flows backward through the network.</p>
+      </div>
+      <div class="card">
+        <h4><a href="../cs/optimization.html">Optimization (CS)</a></h4>
+        <p>The computer-science angle on finding minima — convexity, convergence, and algorithms beyond plain gradient descent. Leans heavily on calculus and linear algebra.</p>
+      </div>
+    </div>
+
+    <div class="bib">
+      <h4>Further reading</h4>
+      <ul>
+        <li>Michael Spivak — <em>Calculus</em>. The classic rigorous introduction. Proof-based, uncompromising, and beautiful; more a real-analysis textbook than a calculus one, but worth the effort if you want to understand <em>why</em> everything is true.</li>
+        <li>James Stewart — <em>Calculus: Early Transcendentals</em>. The standard undergraduate textbook. Not glamorous, but thorough, and every concept has worked examples.</li>
+        <li>Grant Sanderson — <em>Essence of Calculus</em> (YouTube series by 3Blue1Brown, <a href="https://www.3blue1brown.com/topics/calculus">3blue1brown.com/topics/calculus</a>). Visually stunning reintroduction that builds intuition before formalism. If you're a visual learner, start here.</li>
+        <li>Khan Academy — <em>Calculus 1 and 2</em> (<a href="https://www.khanacademy.org/math/calculus-1">khanacademy.org/math/calculus-1</a>). Thousands of worked problems, free, with step-by-step video explanations. Best place to practice.</li>
+        <li>Wikipedia — <a href="https://en.wikipedia.org/wiki/Fundamental_theorem_of_calculus">Fundamental Theorem of Calculus</a>. A surprisingly good article with historical context and multiple proofs of both parts.</li>
+        <li>Walter Rudin — <em>Principles of Mathematical Analysis</em>. The graduate-level rigor course. Don't read this first. Read it when you're ready to see calculus as one chapter of a larger theory called real analysis.</li>
+      </ul>
+    </div>
+
+    <div class="next-card">
+      <div class="label">NEXT UP</div>
+      <a href="./multivariable-calculus.html">→ Multivariable Calculus</a>
+      <p>One variable gets you tangent lines and areas. Many variables get you gradient vectors, tangent planes, and volumes — and the machinery machine learning actually runs on. Same ideas, more indices.</p>
+    </div>
+
+  </article>
+</div>
+
+<script>
+// =========================================================
+// Code tabs
+document.querySelectorAll('.code-tabs').forEach(root => {
+  const tabs = root.querySelectorAll('.ct-tab');
+  const panels = root.querySelectorAll('.ct-panel');
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const target = tab.getAttribute('data-tab');
+      tabs.forEach(t => t.classList.toggle('active', t === tab));
+      panels.forEach(p => p.classList.toggle('active', p.getAttribute('data-tab') === target));
+    });
+  });
+});
+
+// =========================================================
+// Derivative tracer visualization
+(function() {
+  const svg = document.getElementById('calcSvg');
+  if (!svg) return;
+  const NS = 'http://www.w3.org/2000/svg';
+  const slider = document.getElementById('calcX');
+  const label = document.getElementById('calcXLabel');
+  const caption = document.getElementById('calcCaption');
+
+  // The function and its derivative.
+  function f(x)  { return 0.4 * x * x * x - 1.2 * x; }
+  function df(x) { return 1.2 * x * x - 1.2; }
+
+  // Layout: two stacked panels.
+  const W = 720, H = 420;
+  const ml = 60, mr = 30;
+  const topTop = 20, topH = 180;
+  const botTop = 230, botH = 160;
+  const plotW = W - ml - mr;
+
+  // Shared x-range
+  const xmin = -2.4, xmax = 2.4;
+  // y-ranges
+  const fmin = -1.5, fmax = 1.5;        // fits f(x) over [-2,2]
+  const dmin = -1.8, dmax = 4.0;        // fits f'(x) over [-2,2]
+
+  function xOf(x) {
+    return ml + (x - xmin) / (xmax - xmin) * plotW;
+  }
+  function yTop(y) {
+    return topTop + topH - (y - fmin) / (fmax - fmin) * topH;
+  }
+  function yBot(y) {
+    return botTop + botH - (y - dmin) / (dmax - dmin) * botH;
+  }
+
+  function mkText(x, y, txt, color, size, anchor) {
+    const t = document.createElementNS(NS, 'text');
+    t.setAttribute('x', x); t.setAttribute('y', y);
+    t.setAttribute('fill', color || '#7a8a9a');
+    t.setAttribute('font-size', size || 11);
+    t.setAttribute('font-family', 'ui-monospace, monospace');
+    if (anchor) t.setAttribute('text-anchor', anchor);
+    t.textContent = txt;
+    return t;
+  }
+
+  function mkLine(x1, y1, x2, y2, stroke, w, dash) {
+    const l = document.createElementNS(NS, 'line');
+    l.setAttribute('x1', x1); l.setAttribute('y1', y1);
+    l.setAttribute('x2', x2); l.setAttribute('y2', y2);
+    l.setAttribute('stroke', stroke);
+    l.setAttribute('stroke-width', w || 1);
+    if (dash) l.setAttribute('stroke-dasharray', dash);
+    return l;
+  }
+
+  function mkRect(x, y, w, h, fill, stroke) {
+    const r = document.createElementNS(NS, 'rect');
+    r.setAttribute('x', x); r.setAttribute('y', y);
+    r.setAttribute('width', w); r.setAttribute('height', h);
+    r.setAttribute('fill', fill);
+    if (stroke) {
+      r.setAttribute('stroke', stroke);
+      r.setAttribute('stroke-width', 1);
+    }
+    return r;
+  }
+
+  function mkCircle(cx, cy, r, fill, stroke) {
+    const c = document.createElementNS(NS, 'circle');
+    c.setAttribute('cx', cx); c.setAttribute('cy', cy); c.setAttribute('r', r);
+    c.setAttribute('fill', fill);
+    if (stroke) {
+      c.setAttribute('stroke', stroke);
+      c.setAttribute('stroke-width', 1.5);
+    }
+    return c;
+  }
+
+  function mkPath(d, stroke, w, fill) {
+    const p = document.createElementNS(NS, 'path');
+    p.setAttribute('d', d);
+    p.setAttribute('stroke', stroke);
+    p.setAttribute('stroke-width', w || 2);
+    p.setAttribute('fill', fill || 'none');
+    p.setAttribute('stroke-linejoin', 'round');
+    p.setAttribute('stroke-linecap', 'round');
+    return p;
+  }
+
+  function drawGrid(group, top, h, ymin, ymax, yticks, xticks) {
+    // Frame
+    group.appendChild(mkRect(ml, top, plotW, h, '#0f131a', '#2a3446'));
+    // Vertical gridlines + x-axis ticks
+    xticks.forEach(xv => {
+      const x = xOf(xv);
+      group.appendChild(mkLine(x, top, x, top + h, '#1a212e', 1));
+      group.appendChild(mkText(x, top + h + 14, xv.toString(), '#7a8a9a', 10, 'middle'));
+    });
+    // Horizontal gridlines + y-axis ticks
+    yticks.forEach(yv => {
+      let yp;
+      if (top === topTop) yp = yTop(yv); else yp = yBot(yv);
+      group.appendChild(mkLine(ml, yp, ml + plotW, yp, '#1a212e', 1));
+      group.appendChild(mkText(ml - 6, yp + 3, yv.toString(), '#7a8a9a', 10, 'end'));
+    });
+    // Zero axes (slightly brighter)
+    const y0 = (top === topTop) ? yTop(0) : yBot(0);
+    group.appendChild(mkLine(ml, y0, ml + plotW, y0, '#384050', 1));
+    const x0 = xOf(0);
+    group.appendChild(mkLine(x0, top, x0, top + h, '#384050', 1));
+  }
+
+  function curvePath(fn, yMap) {
+    let d = '';
+    const N = 200;
+    for (let i = 0; i <= N; i++) {
+      const x = xmin + (i / N) * (xmax - xmin);
+      const y = fn(x);
+      const px = xOf(x);
+      const py = yMap(y);
+      d += (i === 0 ? 'M' : 'L') + px.toFixed(2) + ',' + py.toFixed(2) + ' ';
+    }
+    return d;
+  }
+
+  function draw() {
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+
+    const x0 = parseFloat(slider.value);
+    label.textContent = x0.toFixed(2);
+
+    const y0  = f(x0);
+    const dy0 = df(x0);
+
+    // ===== Top panel: f(x) with tangent line =====
+    drawGrid(svg, topTop, topH, fmin, fmax, [-1, 0, 1], [-2, -1, 0, 1, 2]);
+
+    // f(x) curve
+    svg.appendChild(mkPath(curvePath(f, yTop), '#22d3ee', 2));
+
+    // Tangent line: y = y0 + dy0 (x - x0)
+    // Draw across a modest window around x0 so it doesn't dominate.
+    const tSpan = 1.6;
+    const tx1 = Math.max(xmin, x0 - tSpan);
+    const tx2 = Math.min(xmax, x0 + tSpan);
+    const ty1 = y0 + dy0 * (tx1 - x0);
+    const ty2 = y0 + dy0 * (tx2 - x0);
+    svg.appendChild(mkLine(xOf(tx1), yTop(ty1), xOf(tx2), yTop(ty2),
+                           '#f472b6', 2.5));
+
+    // Point on curve
+    svg.appendChild(mkCircle(xOf(x0), yTop(y0), 5, '#f472b6', '#fff'));
+
+    // Panel title
+    svg.appendChild(mkText(ml + 6, topTop + 14,
+      'f(x) = 0.4 x³ − 1.2 x    (cyan)   tangent line (pink)',
+      '#b4c4d4', 11));
+
+    // ===== Bottom panel: f'(x) with marker =====
+    drawGrid(svg, botTop, botH, dmin, dmax, [-1, 0, 1, 2, 3],
+             [-2, -1, 0, 1, 2]);
+
+    // f'(x) curve
+    svg.appendChild(mkPath(curvePath(df, yBot), '#7c5cff', 2));
+
+    // Marker at (x0, f'(x0))
+    svg.appendChild(mkCircle(xOf(x0), yBot(dy0), 5, '#f472b6', '#fff'));
+
+    // Vertical link between the two plots at x = x0
+    svg.appendChild(mkLine(xOf(x0), topTop, xOf(x0), botTop + botH,
+                           '#384050', 1, '2,3'));
+
+    // Panel title
+    svg.appendChild(mkText(ml + 6, botTop + 14,
+      "f'(x) = 1.2 x² − 1.2    (violet)   marker traces derivative",
+      '#b4c4d4', 11));
+
+    // Axis labels
+    svg.appendChild(mkText(ml + plotW / 2, H - 4, 'x', '#b4c4d4', 11, 'middle'));
+
+    // Caption text (LaTeX lives in HTML; update a small status sentence)
+    const sign = dy0 >= 0 ? '+' : '−';
+    caption.textContent =
+      `At x₀ = ${x0.toFixed(2)}:  f(x₀) = ${y0.toFixed(3)},  ` +
+      `slope f'(x₀) = ${sign}${Math.abs(dy0).toFixed(3)}.  ` +
+      `Watch the marker below trace the derivative as you drag.`;
+  }
+
+  slider.addEventListener('input', draw);
+  draw();
+})();
+</script>
+<script defer src="../search-index.js"></script>
+<script defer src="../search.js"></script>
+</body>
+</html>

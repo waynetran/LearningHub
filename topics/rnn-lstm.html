@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RNNs & LSTMs — Deep Dive</title>
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError: false});"></script>
+</head>
+<body>
+<div id="tooltip"></div>
+
+<nav class="topic-nav">
+  <a class="back" href="../ai-ml.html">← Back to AI/ML</a>
+  <div class="crumb">Deep Dives / <span class="topic-name">RNNs & LSTMs</span></div>
+</nav>
+
+<div class="topic-layout">
+  <aside class="topic-toc">
+    <h4>ON THIS PAGE</h4>
+    <ul>
+      <li><a href="#intro">1. Why sequences need a different model</a></li>
+      <li><a href="#vanilla">2. The vanilla RNN</a></li>
+      <li><a href="#bptt">3. Backprop through time</a></li>
+      <li><a href="#vanishing">4. The vanishing-gradient problem</a></li>
+      <li><a href="#lstm">5. The LSTM cell</a>
+        <ul>
+          <li><a href="#gates">Gates, intuitively</a></li>
+          <li><a href="#lstm-math">Gates, precisely</a></li>
+          <li><a href="#lstm-demo">Interactive: LSTM over time</a></li>
+        </ul>
+      </li>
+      <li><a href="#gru">6. GRU: a leaner variant</a></li>
+      <li><a href="#code">7. Source code — build one yourself</a></li>
+      <li><a href="#legacy">8. Legacy and successors</a></li>
+      <li><a href="#summary">9. Summary</a></li>
+    </ul>
+  </aside>
+
+  <article class="topic-content">
+    <h1>RNNs & LSTMs</h1>
+    <p class="subtitle">How do you fit a variable-length sequence into a fixed-size neural network? The answer that held from 1986 until the Transformer dethroned it in 2017 was: keep a running state, and update it one step at a time.</p>
+    <div class="meta-tags">
+      <span>Prereq: feedforward nets, chain rule</span>
+      <span>Time to read: ~25 min</span>
+      <span>Interactive figures: 1</span>
+      <span>Code: Python, JAX, PyTorch, C</span>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="intro">1. Why sequences need a different model</h2>
+
+    <p>A feedforward network takes a fixed-size vector in and produces a fixed-size vector out. That is fine for a 28×28 MNIST digit (always 784 pixels) or a tabular row (always the same columns), but most of what humans actually produce — speech, language, music, DNA, stock prices — arrives as a <em>sequence</em> of unknown length. You can't just flatten a sentence into a vector: a three-word sentence and a thirty-word sentence have genuinely different shapes, and padding everything to the longest sentence in the corpus wastes enormous amounts of compute on blank space.</p>
+
+    <p>The insight behind recurrent networks is that a sequence can be processed one element at a time if you carry a <em>hidden state</em> forward from step to step. At each step, the network sees the current input plus the hidden state produced by the previous step, and produces both an output and a new hidden state. The hidden state is a summary of everything the network has seen so far, compressed into a fixed-size vector.</p>
+
+    <div class="callout">
+      <div class="label">THE CORE IDEA</div>
+      <p style="margin:6px 0">Unroll a loop. A recurrent network is a single small neural network, applied over and over with shared weights, passing a running summary forward. The "depth" of the computation grows with the length of the sequence, but the number of learnable parameters stays constant.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="vanilla">2. The vanilla RNN</h2>
+
+    <p>The simplest recurrent network is due to Elman (1990), though the idea had been floating around since Rumelhart, Hinton & Williams (1986). At every time step $t$, it computes:</p>
+
+    <div class="math-display">$$h_t = \tanh(W_{hh} h_{t-1} + W_{xh} x_t + b_h)$$</div>
+    <div class="math-display">$$y_t = W_{hy} h_t + b_y$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">What each symbol means</p>
+      <dl>
+        <dt>$x_t$</dt>
+        <dd>Input vector at time step $t$. For text, this is usually a word or token embedding; for audio, a frame of features.
+          <span class="mg-why">The sequence's "next thing to look at" — one element of the input stream.</span>
+        </dd>
+        <dt>$h_t$</dt>
+        <dd>Hidden state at time $t$. A fixed-size vector (size is a hyperparameter, e.g. 256 or 1024).
+          <span class="mg-why">The network's running memory of what it has seen so far.</span>
+        </dd>
+        <dt>$h_{t-1}$</dt>
+        <dd>Hidden state from the previous step. At $t=0$ this is usually the zero vector.
+          <span class="mg-why">The baton being handed forward through time.</span>
+        </dd>
+        <dt>$W_{hh}$</dt>
+        <dd>Square matrix that mixes the old hidden state into the new one. Shape: <code>hidden × hidden</code>.
+          <span class="mg-why">"How does what I already remember influence what I now think?"</span>
+        </dd>
+        <dt>$W_{xh}$</dt>
+        <dd>Matrix that projects the input into the hidden space. Shape: <code>hidden × input</code>.
+          <span class="mg-why">"How does this new token change my memory?"</span>
+        </dd>
+        <dt>$W_{hy}$</dt>
+        <dd>Matrix that reads the hidden state out into an output. Shape: <code>output × hidden</code>.
+          <span class="mg-why">"Given my current state, what is the prediction?"</span>
+        </dd>
+        <dt>$b_h, b_y$</dt>
+        <dd>Bias vectors — a per-unit constant offset, so a neuron can fire even with zero input.</dd>
+        <dt>$\tanh$</dt>
+        <dd>The hyperbolic tangent, applied elementwise. Squashes each coordinate into $(-1, 1)$.
+          <span class="mg-why">Keeps the hidden state bounded so it can't explode over hundreds of steps.</span>
+        </dd>
+      </dl>
+      <p class="mg-analogy"><strong>Analogy</strong> Imagine reading a novel with a notepad. $x_t$ is the next sentence. $h_{t-1}$ is your notes so far. $W_{xh} x_t$ says "here is what this new sentence adds." $W_{hh} h_{t-1}$ says "here is how my existing notes get reshuffled." You add them, pass through $\tanh$ ("keep everything on a sensible scale"), and that's your updated notepad $h_t$. To guess what happens next in the plot, you look at your notes through the lens $W_{hy}$.</p>
+    </div>
+
+    <p>Critically, the same matrices $W_{hh}, W_{xh}, W_{hy}$ are used at <em>every</em> time step. That's weight sharing across time, and it's the reason a single RNN can handle sequences of any length: the number of parameters doesn't grow with the length of the input.</p>
+
+    <figure>
+      <svg viewBox="0 0 620 220" width="100%" style="max-width:620px; background:var(--bg-2); border:1px solid var(--border); border-radius:8px; padding:12px">
+        <defs>
+          <marker id="rnn-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+            <path d="M0,0 L10,5 L0,10 z" fill="#7c5cff"/>
+          </marker>
+        </defs>
+        <!-- unrolled cells -->
+        <g font-family="monospace" font-size="11" fill="#dbe1ec" text-anchor="middle">
+          <!-- t-1 -->
+          <rect x="40"  y="80" width="90" height="60" rx="6" fill="#11141c" stroke="#7c5cff" stroke-width="1.5"/>
+          <text x="85" y="115">RNN cell</text>
+          <text x="85" y="70" fill="#22d3ee">h_{t-1}</text>
+          <text x="85" y="165" fill="#f472b6">x_{t-1}</text>
+          <text x="85" y="180" fill="#f472b6">y_{t-1}</text>
+          <line x1="85" y1="155" x2="85" y2="142" stroke="#f472b6" stroke-width="1.5" marker-end="url(#rnn-arr)"/>
+
+          <!-- t -->
+          <rect x="180" y="80" width="90" height="60" rx="6" fill="#11141c" stroke="#7c5cff" stroke-width="1.5"/>
+          <text x="225" y="115">RNN cell</text>
+          <text x="225" y="70" fill="#22d3ee">h_t</text>
+          <text x="225" y="165" fill="#f472b6">x_t</text>
+          <text x="225" y="180" fill="#f472b6">y_t</text>
+          <line x1="225" y1="155" x2="225" y2="142" stroke="#f472b6" stroke-width="1.5" marker-end="url(#rnn-arr)"/>
+
+          <!-- t+1 -->
+          <rect x="320" y="80" width="90" height="60" rx="6" fill="#11141c" stroke="#7c5cff" stroke-width="1.5"/>
+          <text x="365" y="115">RNN cell</text>
+          <text x="365" y="70" fill="#22d3ee">h_{t+1}</text>
+          <text x="365" y="165" fill="#f472b6">x_{t+1}</text>
+          <text x="365" y="180" fill="#f472b6">y_{t+1}</text>
+          <line x1="365" y1="155" x2="365" y2="142" stroke="#f472b6" stroke-width="1.5" marker-end="url(#rnn-arr)"/>
+
+          <!-- t+2 -->
+          <rect x="460" y="80" width="90" height="60" rx="6" fill="#11141c" stroke="#7c5cff" stroke-width="1.5"/>
+          <text x="505" y="115">RNN cell</text>
+          <text x="505" y="70" fill="#22d3ee">h_{t+2}</text>
+          <text x="505" y="165" fill="#f472b6">x_{t+2}</text>
+          <text x="505" y="180" fill="#f472b6">y_{t+2}</text>
+          <line x1="505" y1="155" x2="505" y2="142" stroke="#f472b6" stroke-width="1.5" marker-end="url(#rnn-arr)"/>
+        </g>
+
+        <!-- h arrows flowing left to right -->
+        <g stroke="#22d3ee" stroke-width="1.8" fill="none" marker-end="url(#rnn-arr)">
+          <line x1="130" y1="110" x2="180" y2="110"/>
+          <line x1="270" y1="110" x2="320" y2="110"/>
+          <line x1="410" y1="110" x2="460" y2="110"/>
+        </g>
+
+        <text x="10"  y="30" font-family="monospace" font-size="11" fill="#8a93a6">Unrolled view — same weights at every step, state flows forward</text>
+      </svg>
+      <figcaption>An RNN unrolled over four time steps. The cell is physically one function with one set of weights; the "depth" is illusory — we're just applying it repeatedly, threading the hidden state through.</figcaption>
+    </figure>
+
+    <!-- ========================================================== -->
+    <h2 id="bptt">3. Backprop through time (BPTT)</h2>
+
+    <p>How do you train such a thing? The same way you train any network: compute a loss, take gradients, update the weights. The wrinkle is that a parameter like $W_{hh}$ is used at every step, so when you differentiate the total loss, you have to sum contributions across every step it touched. This is called <strong>backpropagation through time</strong>.</p>
+
+    <p>Let $\mathcal{L} = \sum_t \ell_t(y_t, y_t^*)$ be the total loss over the sequence. Then:</p>
+
+    <div class="math-display">$$\frac{\partial \mathcal{L}}{\partial W_{hh}} = \sum_{t=1}^{T} \sum_{k=1}^{t} \frac{\partial \ell_t}{\partial h_t} \left( \prod_{j=k+1}^{t} \frac{\partial h_j}{\partial h_{j-1}} \right) \frac{\partial h_k}{\partial W_{hh}}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Reading the BPTT formula</p>
+      <dl>
+        <dt>$T$</dt><dd>The length of the sequence.</dd>
+        <dt>$\ell_t$</dt><dd>Per-step loss (e.g. cross-entropy between $y_t$ and the true label $y_t^*$).</dd>
+        <dt>$\dfrac{\partial \ell_t}{\partial h_t}$</dt><dd>"If I nudged the hidden state at step $t$, how much would the step-$t$ loss change?"</dd>
+        <dt>$\dfrac{\partial h_j}{\partial h_{j-1}}$</dt>
+        <dd>The Jacobian of one step of the recurrence — how the hidden state at step $j$ depends on the hidden state at step $j-1$.
+          <span class="mg-why">For a vanilla RNN, this equals $W_{hh}^{\top} \cdot \text{diag}(\tanh'(\cdot))$.</span>
+        </dd>
+        <dt>$\prod_{j=k+1}^{t} \dfrac{\partial h_j}{\partial h_{j-1}}$</dt>
+        <dd>A product of $t-k$ Jacobians — one for every step the error has to "travel" from $t$ back to $k$.
+          <span class="mg-why">This is the term that blows up or collapses. Keep reading.</span>
+        </dd>
+      </dl>
+      <p class="mg-analogy"><strong>Analogy</strong> Think of gradient signal like a whisper passed down a line of people. Each person garbles the message a bit (multiplies it by their local Jacobian). After 50 people the original whisper is either deafening (exploded) or inaudible (vanished). BPTT is the whisper game, and the Jacobian product is why the message rarely survives intact over long distances.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="vanishing">4. The vanishing-gradient problem</h2>
+
+    <p>The product of Jacobians is the trouble. If each Jacobian has spectral norm (largest singular value) $\sigma$, then the product of $n$ of them has norm roughly $\sigma^n$. For $\sigma < 1$, that tends to $0$ exponentially fast — the gradient <em>vanishes</em>. For $\sigma > 1$, it blows up exponentially — the gradient <em>explodes</em>. Either way, any dependency that spans more than a handful of steps is effectively invisible to the optimizer.</p>
+
+    <p>Bengio, Simard & Frasconi published the definitive analysis of this in 1994 ("Learning Long-Term Dependencies with Gradient Descent Is Difficult"). Their conclusion: vanilla RNNs, trained by gradient descent, simply cannot learn dependencies that span more than about 10–20 time steps. If you want a model to connect "The <em>cats</em> that the young girl with the green dress had been hoping to adopt… <em>were</em> from the shelter," you need a different architecture.</p>
+
+    <div class="defn">
+      <span class="label">The vanishing-gradient problem</span>
+      <p>In a recurrent network, gradients flowing back through time pass through a product of Jacobians. Unless those Jacobians hover very near the identity, the product shrinks (or grows) exponentially with distance. Long-range dependencies therefore receive no useful learning signal.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="lstm">5. The LSTM cell</h2>
+
+    <p>Sepp Hochreiter and Jürgen Schmidhuber's 1997 <strong>Long Short-Term Memory</strong> paper proposed a fix: build the cell so that, by default, information <em>doesn't</em> get multiplied as it passes through time. Instead of a single hidden state, an LSTM maintains two things:</p>
+
+    <ul>
+      <li>A <strong>cell state</strong> $c_t$: a "conveyor belt" that runs through time with only minor linear changes at each step. Because it's updated additively (not multiplicatively), gradients can flow through it without shrinking.</li>
+      <li>A <strong>hidden state</strong> $h_t$: a filtered view of the cell state, used as the cell's actual output and as the input to the next step's gate computations.</li>
+    </ul>
+
+    <h3 id="gates">Gates, intuitively</h3>
+
+    <p>Access to the cell state is controlled by three learnable <em>gates</em>. Each gate is a small sigmoid network that outputs a vector of numbers in $[0, 1]$. A $0$ means "block completely," a $1$ means "let through completely," and anything in between is a soft partial pass.</p>
+
+    <ul>
+      <li><strong>Forget gate $f_t$</strong> — "Which parts of the old cell state should I erase?"</li>
+      <li><strong>Input gate $i_t$</strong> — "Which parts of the new candidate values should I write into the cell state?"</li>
+      <li><strong>Output gate $o_t$</strong> — "Which parts of the (possibly updated) cell state should I expose as the hidden state this step?"</li>
+    </ul>
+
+    <p>Separating "what gets stored" from "what gets read" is the trick. The cell state is a kind of private memory; the gates decide how it's written, retained, and exposed.</p>
+
+    <h3 id="lstm-math">Gates, precisely</h3>
+
+    <div class="math-display">$$\begin{aligned}
+    f_t &= \sigma(W_f [h_{t-1}, x_t] + b_f) \quad &\text{(forget gate)} \\
+    i_t &= \sigma(W_i [h_{t-1}, x_t] + b_i) \quad &\text{(input gate)} \\
+    \tilde{c}_t &= \tanh(W_c [h_{t-1}, x_t] + b_c) \quad &\text{(candidate values)} \\
+    c_t &= f_t \odot c_{t-1} + i_t \odot \tilde{c}_t \quad &\text{(cell state update)} \\
+    o_t &= \sigma(W_o [h_{t-1}, x_t] + b_o) \quad &\text{(output gate)} \\
+    h_t &= o_t \odot \tanh(c_t) \quad &\text{(hidden state)}
+    \end{aligned}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Every symbol, unpacked</p>
+      <dl>
+        <dt>$\sigma$</dt>
+        <dd>The logistic sigmoid $\sigma(z) = 1/(1+e^{-z})$, applied elementwise. Squashes any real number into $(0, 1)$.
+          <span class="mg-why">Perfect for a gate: the output is naturally a "how much should I let through" fraction.</span>
+        </dd>
+        <dt>$\odot$</dt>
+        <dd>Elementwise (Hadamard) product. $(a \odot b)_i = a_i b_i$.
+          <span class="mg-why">This is how a gate vector "multiplies" onto another vector — each gate coordinate controls its own memory slot.</span>
+        </dd>
+        <dt>$[h_{t-1}, x_t]$</dt>
+        <dd>Concatenation of the previous hidden state and the current input into one long vector.
+          <span class="mg-why">The shorthand lets each gate look at both "what was I thinking?" and "what's happening now?" in a single matrix multiply.</span>
+        </dd>
+        <dt>$c_t$</dt>
+        <dd>Cell state at time $t$. This is the long-term memory conveyor belt.
+          <span class="mg-why">Note how it's updated: $c_t = f_t \odot c_{t-1} + i_t \odot \tilde{c}_t$. No $W$ multiplied into the old state — just an elementwise scaling by a number in $[0,1]$. That's why gradients can ride this line a long way.</span>
+        </dd>
+        <dt>$\tilde{c}_t$</dt>
+        <dd>"Candidate" new memory — the values the network would like to write in if the input gate lets it.</dd>
+        <dt>$f_t$</dt>
+        <dd>Forget gate. $f_t \approx 1$ means "keep the old cell state almost unchanged"; $f_t \approx 0$ means "wipe it."</dd>
+        <dt>$i_t$</dt>
+        <dd>Input gate. Decides how strongly $\tilde{c}_t$ is written into $c_t$.</dd>
+        <dt>$o_t$</dt>
+        <dd>Output gate. Controls which parts of $\tanh(c_t)$ become visible to the rest of the network.</dd>
+        <dt>$W_f, W_i, W_c, W_o$</dt>
+        <dd>The four learnable weight matrices (one per gate/candidate). Each has shape <code>hidden × (hidden + input)</code>.
+          <span class="mg-why">An LSTM has roughly 4× as many parameters as a vanilla RNN of the same hidden size.</span>
+        </dd>
+      </dl>
+      <p class="mg-analogy"><strong>Analogy</strong> Imagine a note-taking assistant with a long scrolling notepad (the cell state $c$). At every new sentence, the assistant has three decisions, each made one slot at a time:
+        <br>(a) <em>Forget gate:</em> for each line on the pad, keep it or cross it out.
+        <br>(b) <em>Input gate:</em> for each line, decide how much of the new sentence's draft ($\tilde{c}$) to write into that slot.
+        <br>(c) <em>Output gate:</em> for each line, decide whether to show it to the reader right now, or keep it private for later.
+        <br>The pad persists across the whole story, and because updates are additive rather than multiplicative, something you wrote down on page 1 can still be legible on page 100.
+      </p>
+    </div>
+
+    <p>The key equation to stare at is the cell-state update: $c_t = f_t \odot c_{t-1} + i_t \odot \tilde{c}_t$. If the forget gate learns to be close to 1 for a particular memory slot, information in that slot gets copied forward unchanged, step after step. Gradients flowing backward through that slot are multiplied by roughly 1 at every step — no vanishing. This is the "constant error carousel" that Hochreiter & Schmidhuber were building toward.</p>
+
+    <!-- Interactive demo -->
+    <h3 id="lstm-demo">Interactive: watch an LSTM carry information forward</h3>
+
+    <p>Below is a 4-slot LSTM cell state, fed a toy input sequence. Each row of the heatmap is one of the four memory slots; each column is a time step. The gates are set so that slot 1 uses a high forget-gate (persistent memory), slot 2 uses a low forget-gate (short-term), and slots 3 and 4 are in between. Press <strong>Step →</strong> to advance the sequence.</p>
+
+    <div class="step-figure" id="lstm-figure">
+      <div class="sf-header">
+        <span class="sf-title">▸ 4-slot LSTM, 10-step sequence</span>
+        <span class="sf-progress" id="lstm-progress">Step 0 / 10</span>
+      </div>
+      <div class="sf-body">
+        <div class="sf-visual">
+          <svg viewBox="0 0 460 260" width="100%" style="max-width:460px" id="lstm-svg">
+            <!-- labels -->
+            <g font-family="monospace" font-size="10" fill="#8a93a6">
+              <text x="50" y="24" text-anchor="end">slot 1 (f≈0.95)</text>
+              <text x="50" y="64" text-anchor="end">slot 2 (f≈0.20)</text>
+              <text x="50" y="104" text-anchor="end">slot 3 (f≈0.60)</text>
+              <text x="50" y="144" text-anchor="end">slot 4 (f≈0.80)</text>
+              <text x="60" y="180" fill="#f472b6">input x_t ↓</text>
+              <text x="60" y="230" fill="#22d3ee">output h_t ↑</text>
+            </g>
+            <!-- heatmap cells drawn by JS -->
+            <g id="lstm-cells"></g>
+            <!-- step tick -->
+            <g id="lstm-timetick"></g>
+          </svg>
+        </div>
+        <div class="sf-explain" id="lstm-explain">
+          <h5>Watch the cell state</h5>
+          <p>Each square is the cell-state value for one memory slot at one time step. Brighter cyan = larger positive value. Slot 1 has a forget gate near 1.0 — anything written there sticks around. Slot 2 has a forget gate near 0.2 — it decays to zero within a step or two. The two middle slots are in between.</p>
+          <p>When you press <strong>Step →</strong>, the input gate writes the new token's contribution to all four slots (same write amount), but the forget gate decides how much of the <em>old</em> state survives. Over 10 steps you'll see slot 1 build up a long-term summary while slot 2 only remembers "right now."</p>
+        </div>
+      </div>
+      <div class="sf-controls">
+        <button class="btn" onclick="lstmStep()">Step →</button>
+        <button class="btn ghost" onclick="lstmRun()">Run</button>
+        <div class="spacer"></div>
+        <button class="btn ghost" onclick="lstmReset()">Reset</button>
+      </div>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="gru">6. GRU: a leaner variant</h2>
+
+    <p>The LSTM has four gates worth of parameters and two state vectors per cell. That's a lot of moving parts. In 2014, Cho et al. proposed the <strong>Gated Recurrent Unit (GRU)</strong>: merge the forget and input gates into a single "update gate," drop the separate cell state, and cut the parameter count by roughly a third.</p>
+
+    <div class="math-display">$$\begin{aligned}
+    z_t &= \sigma(W_z [h_{t-1}, x_t]) \quad &\text{(update gate)} \\
+    r_t &= \sigma(W_r [h_{t-1}, x_t]) \quad &\text{(reset gate)} \\
+    \tilde{h}_t &= \tanh(W_h [r_t \odot h_{t-1}, x_t]) \quad &\text{(candidate)} \\
+    h_t &= (1 - z_t) \odot h_{t-1} + z_t \odot \tilde{h}_t
+    \end{aligned}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">GRU glossary</p>
+      <dl>
+        <dt>$z_t$</dt>
+        <dd>Update gate. Replaces the LSTM's forget+input pair with a single "how much of the old state to replace."
+          <span class="mg-why">The form $(1-z_t) \odot h_{t-1} + z_t \odot \tilde{h}_t$ is a linear interpolation — $z_t = 0$ keeps everything, $z_t = 1$ replaces everything.</span>
+        </dd>
+        <dt>$r_t$</dt>
+        <dd>Reset gate. Decides how much of the previous hidden state contributes to the candidate.
+          <span class="mg-why">Lets the GRU "start fresh" on phrase boundaries without waiting for the update gate to overwrite.</span>
+        </dd>
+        <dt>$\tilde{h}_t$</dt>
+        <dd>Candidate new hidden state — the values the cell would move toward.</dd>
+      </dl>
+    </div>
+
+    <p>Empirically, GRUs tend to match LSTMs on most tasks while being lighter and faster. The Transformer era has largely made both of them historical, but if you're running an RNN on a microcontroller, the GRU is usually the right pick.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="code">7. Source code — build one yourself</h2>
+
+    <p>A vanilla RNN fits in a dozen lines in almost any language. Here is the same minimal forward pass written four ways. The inputs are the same in each: a list of token vectors <code>xs</code>, learned matrices <code>Wxh</code>, <code>Whh</code>, <code>Why</code>, and bias vectors.</p>
+
+    <div class="code-tabs" id="ct-rnn">
+      <div class="ct-header">
+        <button class="ct-tab active" data-tab="py">Python / NumPy</button>
+        <button class="ct-tab" data-tab="pt">PyTorch</button>
+        <button class="ct-tab" data-tab="jax">JAX</button>
+        <button class="ct-tab" data-tab="c">C (pedagogical)</button>
+        <span class="ct-label">rnn · forward pass</span>
+      </div>
+      <div class="ct-panel active" data-tab="py"><pre><code><span class="kw">import</span> numpy <span class="kw">as</span> np
+
+<span class="kw">def</span> <span class="fn">rnn_forward</span>(xs, h0, Wxh, Whh, Why, bh, by):
+    <span class="cmt"># xs: list of input vectors, one per time step</span>
+    <span class="cmt"># h0: initial hidden state (zeros, usually)</span>
+    h = h0
+    ys = []
+    <span class="kw">for</span> x <span class="kw">in</span> xs:
+        h = np.tanh(Whh @ h + Wxh @ x + bh)
+        y = Why @ h + by
+        ys.append(y)
+    <span class="kw">return</span> ys, h
+</code></pre></div>
+
+      <div class="ct-panel" data-tab="pt"><pre><code><span class="kw">import</span> torch
+<span class="kw">import</span> torch.nn <span class="kw">as</span> nn
+
+<span class="kw">class</span> <span class="fn">VanillaRNN</span>(nn.Module):
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, input_size, hidden_size, output_size):
+        <span class="fn">super</span>().__init__()
+        self.Wxh = nn.Linear(input_size,  hidden_size, bias=<span class="kw">False</span>)
+        self.Whh = nn.Linear(hidden_size, hidden_size)
+        self.Why = nn.Linear(hidden_size, output_size)
+
+    <span class="kw">def</span> <span class="fn">forward</span>(self, xs, h=<span class="kw">None</span>):
+        <span class="cmt"># xs: (T, B, input_size)</span>
+        T, B, _ = xs.shape
+        <span class="kw">if</span> h <span class="kw">is</span> <span class="kw">None</span>:
+            h = torch.zeros(B, self.Whh.out_features, device=xs.device)
+        ys = []
+        <span class="kw">for</span> t <span class="kw">in</span> <span class="fn">range</span>(T):
+            h = torch.tanh(self.Whh(h) + self.Wxh(xs[t]))
+            ys.append(self.Why(h))
+        <span class="kw">return</span> torch.stack(ys), h
+</code></pre></div>
+
+      <div class="ct-panel" data-tab="jax"><pre><code><span class="kw">import</span> jax, jax.numpy <span class="kw">as</span> jnp
+<span class="kw">from</span> jax <span class="kw">import</span> lax
+
+<span class="kw">def</span> <span class="fn">rnn_forward</span>(params, xs, h0):
+    Wxh, Whh, Why, bh, by = params
+
+    <span class="kw">def</span> <span class="fn">step</span>(h, x):
+        h_new = jnp.tanh(Whh @ h + Wxh @ x + bh)
+        y = Why @ h_new + by
+        <span class="kw">return</span> h_new, y
+
+    <span class="cmt"># lax.scan is the loop-free, XLA-friendly idiom</span>
+    h_final, ys = lax.scan(step, h0, xs)
+    <span class="kw">return</span> ys, h_final
+</code></pre></div>
+
+      <div class="ct-panel" data-tab="c"><pre><code><span class="cmt">/* Pedagogical C — no BLAS, one matrix-vector at a time. */</span>
+<span class="kw">void</span> <span class="fn">rnn_forward</span>(
+    <span class="kw">const float</span> *xs,   <span class="cmt">// [T][I]</span>
+    <span class="kw">const float</span> *Wxh,  <span class="cmt">// [H][I]</span>
+    <span class="kw">const float</span> *Whh,  <span class="cmt">// [H][H]</span>
+    <span class="kw">const float</span> *Why,  <span class="cmt">// [O][H]</span>
+    <span class="kw">const float</span> *bh,   <span class="cmt">// [H]</span>
+    <span class="kw">const float</span> *by,   <span class="cmt">// [O]</span>
+    <span class="kw">int</span> T, <span class="kw">int</span> I, <span class="kw">int</span> H, <span class="kw">int</span> O,
+    <span class="kw">float</span> *ys         <span class="cmt">// [T][O] output</span>
+) {
+    <span class="kw">float</span> h[H], h_new[H];
+    <span class="kw">for</span> (<span class="kw">int</span> i = <span class="num">0</span>; i &lt; H; i++) h[i] = <span class="num">0</span>.f;
+
+    <span class="kw">for</span> (<span class="kw">int</span> t = <span class="num">0</span>; t &lt; T; t++) {
+        <span class="cmt">// h_new = tanh(Whh h + Wxh x + bh)</span>
+        <span class="kw">for</span> (<span class="kw">int</span> k = <span class="num">0</span>; k &lt; H; k++) {
+            <span class="kw">float</span> z = bh[k];
+            <span class="kw">for</span> (<span class="kw">int</span> j = <span class="num">0</span>; j &lt; H; j++) z += Whh[k*H + j] * h[j];
+            <span class="kw">for</span> (<span class="kw">int</span> j = <span class="num">0</span>; j &lt; I; j++) z += Wxh[k*I + j] * xs[t*I + j];
+            h_new[k] = <span class="fn">tanhf</span>(z);
+        }
+        <span class="kw">for</span> (<span class="kw">int</span> i = <span class="num">0</span>; i &lt; H; i++) h[i] = h_new[i];
+
+        <span class="cmt">// y = Why h + by</span>
+        <span class="kw">for</span> (<span class="kw">int</span> k = <span class="num">0</span>; k &lt; O; k++) {
+            <span class="kw">float</span> z = by[k];
+            <span class="kw">for</span> (<span class="kw">int</span> j = <span class="num">0</span>; j &lt; H; j++) z += Why[k*H + j] * h[j];
+            ys[t*O + k] = z;
+        }
+    }
+}
+</code></pre></div>
+    </div>
+
+    <p>Note the shared structure: three matrix-vector multiplies, a $\tanh$, and a loop over time. Everything else — GPU tiling, batching, mixed-precision — is performance dressing around this three-line inner loop.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="legacy">8. Legacy and successors</h2>
+
+    <p>LSTMs and GRUs dominated sequence modelling for about fifteen years. They powered the first wave of neural machine translation (seq2seq, 2014), Siri's speech recognition, early language models like Mikolov's RNNLM, and countless time-series forecasters. Even today, when you're training something on an embedded chip or inference has to happen a byte at a time, a GRU is often still the right answer.</p>
+
+    <p>The thing they could not do is parallelize over the time axis. An RNN <em>has</em> to process step $t$ before step $t+1$ because $h_t$ is an input to the computation of $h_{t+1}$. On a GPU, that's a brutal limitation: you can't feed all 2048 tokens of a context window through at once; you have to march. The Transformer (2017) replaced the recurrence with self-attention and got rid of the sequential bottleneck — every token in the sequence could be processed in parallel on the forward pass, and the "how do distant tokens communicate?" question was answered by direct content-based lookups rather than by threading information through a chain of hidden states. That is why the Transformer won, and why LSTMs are no longer the default for language. But every idea in the Transformer — attention, residual connections, layer norm — was first tried <em>inside</em> LSTMs by people trying to squeeze out more range. The LSTM taught the field what mattered.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="summary">9. Summary</h2>
+
+    <ul>
+      <li>RNNs process a sequence one element at a time, carrying a fixed-size hidden state forward as a summary of everything seen so far. The same weight matrices are used at every step.</li>
+      <li>Training uses <strong>backprop through time</strong>, which unrolls the recurrence and sums gradient contributions across steps.</li>
+      <li>Vanilla RNNs suffer from the <strong>vanishing-gradient problem</strong>: the product of Jacobians flowing back in time either shrinks or blows up exponentially, making long-range dependencies unlearnable.</li>
+      <li>The <strong>LSTM</strong> introduces a separate cell state updated additively (not multiplicatively), gated by three learnable sigmoids — forget, input, output. Information can ride the cell state for hundreds of steps without degradation.</li>
+      <li>The <strong>GRU</strong> merges gates to cut parameter count; usually matches LSTM performance.</li>
+      <li>Transformers replaced recurrence with self-attention in 2017, solving both vanishing gradients (no unbounded Jacobian product) and the parallelization bottleneck in one move. RNNs survive in edge/on-device use cases.</li>
+    </ul>
+
+    <div class="bib">
+      <h4>Further reading</h4>
+      <ul>
+        <li>Rumelhart, Hinton & Williams (1986) — <em>Learning representations by back-propagating errors</em>.</li>
+        <li>Elman (1990) — <em>Finding structure in time</em>.</li>
+        <li>Bengio, Simard & Frasconi (1994) — <em>Learning Long-Term Dependencies with Gradient Descent Is Difficult</em>.</li>
+        <li>Hochreiter & Schmidhuber (1997) — <em>Long Short-Term Memory</em>.</li>
+        <li>Cho et al. (2014) — <em>Learning Phrase Representations using RNN Encoder–Decoder for Statistical Machine Translation</em>.</li>
+        <li>Olah (2015) — <em>Understanding LSTM Networks</em> (colah's blog).</li>
+        <li>Karpathy (2015) — <em>The Unreasonable Effectiveness of Recurrent Neural Networks</em>.</li>
+      </ul>
+    </div>
+
+    <div class="next-card">
+      <div class="label">NEXT UP</div>
+      <a href="self-attention.html">→ Self-attention</a>
+      <p>How the Transformer's "every token looks at every other token" mechanism made RNNs obsolete for language.</p>
+    </div>
+
+  </article>
+</div>
+
+<script>
+// =========================================================
+// Code tabs — generic activator
+// =========================================================
+document.querySelectorAll('.code-tabs').forEach(root => {
+  const tabs = root.querySelectorAll('.ct-tab');
+  const panels = root.querySelectorAll('.ct-panel');
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const target = tab.getAttribute('data-tab');
+      tabs.forEach(t => t.classList.toggle('active', t === tab));
+      panels.forEach(p => p.classList.toggle('active', p.getAttribute('data-tab') === target));
+    });
+  });
+});
+
+// =========================================================
+// LSTM cell-state demo — 4 slots, 10 steps
+// =========================================================
+const LSTM_STEPS = 10;
+const LSTM_SLOTS = 4;
+// forget-gate bias per slot (closer to 1 = more persistent)
+const LSTM_F = [0.95, 0.20, 0.60, 0.80];
+// input signal: pulses at specific time steps
+const LSTM_INPUTS = [0.8, 0.2, 0.0, 0.5, 0.9, 0.1, 0.0, 0.7, 0.3, 0.0];
+
+const lstmState = { t: 0, c: [0, 0, 0, 0] };
+
+function lstmRenderCells() {
+  const g = document.getElementById('lstm-cells');
+  if (!g) return;
+  g.innerHTML = '';
+  const cellW = 34, cellH = 30, x0 = 60, y0 = 10;
+
+  // draw all history + current
+  for (let s = 0; s < LSTM_SLOTS; s++) {
+    for (let t = 0; t < LSTM_STEPS; t++) {
+      const x = x0 + t * cellW;
+      const y = y0 + s * (cellH + 8);
+      const filled = t < lstmState.t;
+      // recompute values via the forget recurrence to display history
+      let val = 0;
+      if (filled) {
+        for (let k = 0; k <= t; k++) {
+          val = LSTM_F[s] * val + 0.4 * LSTM_INPUTS[k];
+        }
+      }
+      const intensity = Math.min(1, Math.max(0, val));
+      const fill = filled
+        ? `rgba(34, 211, 238, ${0.15 + intensity * 0.85})`
+        : '#171b26';
+      g.innerHTML +=
+        `<rect x="${x}" y="${y}" width="${cellW - 4}" height="${cellH}" rx="3" fill="${fill}" stroke="#242a3a"/>` +
+        (filled
+          ? `<text x="${x + (cellW-4)/2}" y="${y + cellH/2 + 3}" text-anchor="middle" font-family="monospace" font-size="8" fill="${intensity > 0.5 ? '#0b0d12' : '#dbe1ec'}">${val.toFixed(2)}</text>`
+          : '');
+    }
+  }
+  // input row
+  for (let t = 0; t < LSTM_STEPS; t++) {
+    const x = x0 + t * cellW;
+    const y = 186;
+    const v = LSTM_INPUTS[t];
+    const active = t < lstmState.t;
+    const fill = active ? `rgba(244, 114, 182, ${0.2 + v * 0.8})` : '#171b26';
+    g.innerHTML +=
+      `<rect x="${x}" y="${y}" width="${cellW - 4}" height="22" rx="3" fill="${fill}" stroke="#242a3a"/>` +
+      `<text x="${x + (cellW-4)/2}" y="${y + 15}" text-anchor="middle" font-family="monospace" font-size="8" fill="${active ? '#0b0d12' : '#546e7a'}">${v}</text>`;
+  }
+
+  // current step highlight line
+  const tk = document.getElementById('lstm-timetick');
+  if (tk) {
+    tk.innerHTML = '';
+    if (lstmState.t > 0 && lstmState.t <= LSTM_STEPS) {
+      const x = x0 + (lstmState.t - 1) * cellW + (cellW - 4) / 2;
+      tk.innerHTML = `<line x1="${x}" y1="4" x2="${x}" y2="220" stroke="#f472b6" stroke-width="1" stroke-dasharray="2 3" opacity="0.6"/>`;
+    }
+  }
+}
+
+function lstmStep() {
+  if (lstmState.t >= LSTM_STEPS) return;
+  for (let s = 0; s < LSTM_SLOTS; s++) {
+    lstmState.c[s] = LSTM_F[s] * lstmState.c[s] + 0.4 * LSTM_INPUTS[lstmState.t];
+  }
+  lstmState.t++;
+  document.getElementById('lstm-progress').textContent = `Step ${lstmState.t} / ${LSTM_STEPS}`;
+  lstmRenderCells();
+}
+
+function lstmRun() {
+  while (lstmState.t < LSTM_STEPS) lstmStep();
+}
+
+function lstmReset() {
+  lstmState.t = 0;
+  lstmState.c = [0, 0, 0, 0];
+  document.getElementById('lstm-progress').textContent = `Step 0 / ${LSTM_STEPS}`;
+  lstmRenderCells();
+}
+
+window.addEventListener('DOMContentLoaded', lstmRenderCells);
+</script>
+<script defer src="../search-index.js"></script>
+<script defer src="../search.js"></script>
+</body>
+</html>

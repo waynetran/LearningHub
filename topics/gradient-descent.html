@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gradient Descent — Deep Dive</title>
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError: false});"></script>
+</head>
+<body>
+<div id="tooltip"></div>
+
+<nav class="topic-nav">
+  <a class="back" href="../ai-ml.html">← Back to AI/ML</a>
+  <div class="crumb">Deep Dives / <span class="topic-name">Gradient Descent</span></div>
+</nav>
+
+<div class="topic-layout">
+  <aside class="topic-toc">
+    <h4>ON THIS PAGE</h4>
+    <ul>
+      <li><a href="#intro">1. The engine of learning</a></li>
+      <li><a href="#gradient">2. What the gradient is</a></li>
+      <li><a href="#update">3. The update rule</a></li>
+      <li><a href="#1d-demo">4. Descent on a 1D curve</a></li>
+      <li><a href="#lr">5. Picking the learning rate</a></li>
+      <li><a href="#2d-demo">6. Descent on a 2D surface</a></li>
+      <li><a href="#variants">7. Batch, SGD, mini-batch</a></li>
+      <li><a href="#momentum">8. Momentum</a></li>
+      <li><a href="#adagrad">9. Adaptive methods (AdaGrad → Adam)</a></li>
+      <li><a href="#landscapes">10. Non-convex landscapes</a></li>
+      <li><a href="#summary">11. Summary</a></li>
+    </ul>
+  </aside>
+
+  <article class="topic-content">
+    <h1>Gradient Descent</h1>
+    <p class="subtitle">The optimization algorithm sitting underneath every neural network on Earth. Three lines of math, and an enormous amount of subtlety about how to make them work on real problems.</p>
+    <div class="meta-tags">
+      <span>Prereq: partial derivatives, vectors</span>
+      <span>Time to read: ~25 min</span>
+      <span>Interactive figures: 2</span>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="intro">1. The engine of learning</h2>
+
+    <p>Every learning algorithm in deep learning boils down to the same loop:</p>
+    <ol>
+      <li>Pick a <em>loss function</em> $L(\boldsymbol{\theta})$ that measures how wrong the model is, parameterized by weights $\boldsymbol{\theta}$.</li>
+      <li>Compute the gradient $\nabla_{\boldsymbol{\theta}} L$.</li>
+      <li>Take a small step against the gradient.</li>
+      <li>Repeat.</li>
+    </ol>
+
+    <p>Step 2 is where backpropagation lives. Step 3 — the "take a small step" part — is gradient descent. It has been around since Cauchy (1847), and it is the single reason deep learning is an engineering discipline rather than a branch of philosophy.</p>
+
+    <div class="callout">
+      <div class="label">WHY IT WORKS</div>
+      <p style="margin:6px 0">The gradient is the direction of steepest increase of a function. The negative gradient is the direction of steepest decrease. If your loss surface is reasonably smooth and your step size is reasonably small, moving in the negative-gradient direction is guaranteed to decrease the loss. Repeat enough times and you land in a minimum.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="gradient">2. What the gradient is</h2>
+
+    <p>If $L : \mathbb{R}^n \to \mathbb{R}$ is a scalar-valued function of $n$ variables, its gradient at a point $\boldsymbol{\theta}$ is the vector of partial derivatives:</p>
+
+    <div class="math-display">$$\nabla L(\boldsymbol{\theta}) = \begin{bmatrix} \partial L / \partial \theta_1 \\ \partial L / \partial \theta_2 \\ \vdots \\ \partial L / \partial \theta_n \end{bmatrix}$$</div>
+
+    <p>Two properties matter:</p>
+    <ul class="clean">
+      <li><strong>Direction.</strong> $\nabla L$ points in the direction in which $L$ increases the fastest.</li>
+      <li><strong>Magnitude.</strong> $\|\nabla L\|$ measures how steeply $L$ is increasing in that direction. A small gradient means "it's almost flat here"; a huge gradient means "we're on a cliff."</li>
+    </ul>
+
+    <p>A quick derivation of the "direction of steepest ascent" claim: for a small step $\boldsymbol{v}$ with $\|\boldsymbol{v}\| = 1$, a first-order Taylor expansion gives</p>
+    <div class="math-display">$$L(\boldsymbol{\theta} + \epsilon \boldsymbol{v}) \approx L(\boldsymbol{\theta}) + \epsilon \, \nabla L(\boldsymbol{\theta}) \cdot \boldsymbol{v}$$</div>
+    <p>The change in $L$ is maximized when $\boldsymbol{v}$ is aligned with $\nabla L$ (i.e. $\boldsymbol{v} = \nabla L / \|\nabla L\|$), and minimized — most negative — when $\boldsymbol{v}$ is anti-aligned. That's why we move in the direction $-\nabla L$ to minimize $L$.</p>
+
+    <div class="example">
+      <span class="label">Gradient of a quadratic</span>
+      <p>Let $L(\theta_1, \theta_2) = (\theta_1 - 2)^2 + 3(\theta_2 + 1)^2$.</p>
+      <p>$\partial L / \partial \theta_1 = 2(\theta_1 - 2)$</p>
+      <p>$\partial L / \partial \theta_2 = 6(\theta_2 + 1)$</p>
+      <p>At $\boldsymbol{\theta} = (0, 0)$: $\nabla L = [-4, 6]$. The steepest-descent direction is $[4, -6]$. The gradient vanishes (is zero) exactly at the minimum $\boldsymbol{\theta}^* = (2, -1)$.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="update">3. The update rule</h2>
+
+    <p>Gradient descent is one line:</p>
+    <div class="math-display">$$\boldsymbol{\theta}_{t+1} = \boldsymbol{\theta}_t - \eta \, \nabla L(\boldsymbol{\theta}_t)$$</div>
+
+    <p>The scalar $\eta > 0$ is the <em>learning rate</em> (sometimes called the <em>step size</em>). It is a hyperparameter: you set it by hand and tune it. Everything interesting about gradient descent — convergence speed, stability, whether it works at all — depends on this number.</p>
+
+    <div class="defn">
+      <span class="label">Convex function</span>
+      <p>A function is convex if any line segment between two points on its graph lies above the graph. Formally, $L$ is convex if for all $\boldsymbol{\theta}, \boldsymbol{\theta}'$ and $\lambda \in [0, 1]$: $L(\lambda \boldsymbol{\theta} + (1 - \lambda) \boldsymbol{\theta}') \le \lambda L(\boldsymbol{\theta}) + (1 - \lambda) L(\boldsymbol{\theta}')$. A convex function has exactly one "valley" — a single global minimum (or a connected set of minima).</p>
+    </div>
+
+    <p>For convex, sufficiently smooth $L$ and a learning rate below a certain critical value, gradient descent is guaranteed to converge to the global minimum. Neural network losses are <em>not</em> convex — they have thousands of local minima and saddle points — but empirically the minima SGD finds are "good enough" for deep networks. We'll come back to this.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="1d-demo">4. Descent on a 1D curve</h2>
+
+    <p>Let's start with the simplest possible case: minimizing a function of one variable. We'll use $L(\theta) = \theta^2 - 2\theta + 3$, which is a parabola with minimum at $\theta^* = 1$, $L(1) = 2$. The gradient is $L'(\theta) = 2\theta - 2$.</p>
+
+    <p>Starting from $\theta_0 = 5$ with $\eta = 0.3$:</p>
+
+    <div class="math-display no-center">
+$$\begin{aligned}
+\theta_1 &= 5 - 0.3 \cdot (2 \cdot 5 - 2) = 5 - 0.3 \cdot 8 = 2.6 \\
+\theta_2 &= 2.6 - 0.3 \cdot (2 \cdot 2.6 - 2) = 2.6 - 0.3 \cdot 3.2 = 1.64 \\
+\theta_3 &= 1.64 - 0.3 \cdot 1.28 = 1.256 \\
+\theta_4 &= 1.256 - 0.3 \cdot 0.512 = 1.1024
+\end{aligned}$$
+    </div>
+
+    <p>You can already see the iterates approaching 1 but doing it more slowly as they get closer — a classic exponential-decay pattern around a quadratic minimum. Try it yourself below.</p>
+
+    <h3>Interactive: 1D gradient descent</h3>
+    <p>Step through gradient descent on $L(\theta) = \theta^2 - 2\theta + 3$. Change the starting point and learning rate to watch convergence, slow dragging, bouncing around the minimum, or even divergence when $\eta$ is too large.</p>
+
+    <div class="step-figure" id="gd-1d-figure">
+      <div class="sf-header">
+        <span class="sf-title">▸ Gradient descent on $\theta^2 - 2\theta + 3$</span>
+        <span class="sf-progress" id="gd-1d-progress">Iter 0</span>
+      </div>
+      <div class="sf-body">
+        <div class="sf-visual">
+          <svg viewBox="0 0 460 300" width="100%" style="max-width:460px" id="gd-1d-svg">
+            <!-- background grid -->
+            <g stroke="#1f2432" stroke-width="0.5" fill="none">
+              <line x1="40" y1="50" x2="440" y2="50"/>
+              <line x1="40" y1="100" x2="440" y2="100"/>
+              <line x1="40" y1="150" x2="440" y2="150"/>
+              <line x1="40" y1="200" x2="440" y2="200"/>
+              <line x1="40" y1="250" x2="440" y2="250"/>
+              <line x1="80" y1="30" x2="80" y2="260"/>
+              <line x1="160" y1="30" x2="160" y2="260"/>
+              <line x1="240" y1="30" x2="240" y2="260"/>
+              <line x1="320" y1="30" x2="320" y2="260"/>
+              <line x1="400" y1="30" x2="400" y2="260"/>
+            </g>
+            <!-- axes -->
+            <line x1="40" y1="260" x2="440" y2="260" stroke="#8a93a6" stroke-width="1"/>
+            <line x1="40" y1="30" x2="40" y2="260" stroke="#8a93a6" stroke-width="1"/>
+            <text x="240" y="280" text-anchor="middle" fill="#8a93a6" font-family="monospace" font-size="10">θ</text>
+            <text x="25" y="145" text-anchor="middle" fill="#8a93a6" font-family="monospace" font-size="10">L(θ)</text>
+
+            <!-- parabola: theta ∈ [-3, 6] mapped to [40, 440]; L in [0, 30] mapped to [260, 30] -->
+            <path id="gd-1d-curve" fill="none" stroke="#22d3ee" stroke-width="2"/>
+            <!-- minimum marker -->
+            <circle id="gd-1d-min" r="4" fill="#34d399"/>
+            <text x="215" y="255" fill="#34d399" font-family="monospace" font-size="10">min</text>
+
+            <!-- current iterate -->
+            <circle id="gd-1d-pt" r="7" fill="#f472b6" stroke="#11141c" stroke-width="2"/>
+            <!-- tangent line -->
+            <line id="gd-1d-tan" stroke="#fbbf24" stroke-width="2"/>
+            <!-- trajectory -->
+            <g id="gd-1d-trail"></g>
+          </svg>
+        </div>
+        <div class="sf-explain" id="gd-1d-explain">
+          <h5>READY</h5>
+          <p>The pink dot is the current iterate $\theta_t$. The yellow line is the tangent at that point — its slope is $L'(\theta_t)$. Each step moves the dot by $-\eta L'(\theta_t)$.</p>
+          <p>Press <strong>Step →</strong> to advance one iteration.</p>
+        </div>
+      </div>
+      <div class="sf-params">
+        <label>θ₀ (start) <input type="number" id="gd-1d-theta0" value="5" step="0.5"></label>
+        <label>η (lr) <input type="number" id="gd-1d-lr" value="0.3" step="0.05"></label>
+      </div>
+      <div class="sf-controls">
+        <button class="btn" onclick="resetGD1D()">↺ Reset</button>
+        <div class="spacer"></div>
+        <button class="btn primary" onclick="stepGD1D()">Step →</button>
+        <button class="btn" onclick="runGD1D()">Run 20</button>
+      </div>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="lr">5. The learning rate is everything</h2>
+
+    <p>Play with the demo above. You will observe four regimes depending on $\eta$:</p>
+
+    <div class="grid">
+      <div class="card">
+        <h4>η too small</h4>
+        <p>Updates are tiny. Progress is slow. The iterate crawls toward the minimum. You will run out of patience (and compute budget) before converging.</p>
+      </div>
+      <div class="card">
+        <h4>η just right</h4>
+        <p>Updates are proportional to the distance from the minimum. Convergence is roughly exponential — each step shrinks the remaining distance by a constant factor. This is what you want.</p>
+      </div>
+      <div class="card">
+        <h4>η too large</h4>
+        <p>The iterate overshoots the minimum, lands on the other side, overshoots again, and oscillates. For moderate overshoot, it still converges but with a characteristic zigzag. For large overshoot, it <em>diverges</em> — the iterates move further from the minimum each step.</p>
+      </div>
+      <div class="card">
+        <h4>η genuinely too large</h4>
+        <p>The loss increases after every step and eventually blows up to infinity (NaN in floating point). You will see this as <em>training loss exploding</em> in practice, usually with a spike on the first few steps.</p>
+      </div>
+    </div>
+
+    <p>For a quadratic $L(\theta) = \frac{1}{2} \lambda \theta^2$ with $\lambda > 0$, gradient descent converges if and only if $\eta < 2/\lambda$, and converges fastest at $\eta = 1/\lambda$. That factor of $\lambda$ — the second derivative, the "curvature" — is what sets the right scale for $\eta$.</p>
+
+    <div class="example">
+      <span class="label">Divergence, worked out</span>
+      <p>Take $L(\theta) = \theta^2$ (so $\lambda = 2$), starting at $\theta_0 = 1$ with $\eta = 1.5$ (which violates the bound $\eta < 2/\lambda = 1$).</p>
+      <p>$\theta_1 = 1 - 1.5 \cdot 2 = -2$</p>
+      <p>$\theta_2 = -2 - 1.5 \cdot (-4) = 4$</p>
+      <p>$\theta_3 = 4 - 1.5 \cdot 8 = -8$</p>
+      <p>$\theta_4 = -8 - 1.5 \cdot (-16) = 16$</p>
+      <p>The iterates oscillate in sign and double in magnitude each step. $L$ goes 1 → 4 → 16 → 64 → 256 → ∞. Classic divergence.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="2d-demo">6. Descent on a 2D surface</h2>
+
+    <p>Neural networks have millions of parameters, not one. The picture that carries over from 1D to higher dimensions is a <em>loss landscape</em>: a hypersurface in $\mathbb{R}^{n+1}$ whose height at each point is $L(\boldsymbol{\theta})$. We can visualize this directly only for $n \le 2$, but the intuition holds.</p>
+
+    <p>The classic 2D test function is the <strong>stretched bowl</strong> (elliptical paraboloid):</p>
+    <div class="math-display">$$L(\theta_1, \theta_2) = a \theta_1^2 + b \theta_2^2$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">The stretched-bowl loss, unpacked</p>
+      <dl>
+        <dt>$\theta_1, \theta_2$</dt>
+        <dd>The two parameters we're optimizing over. In a real network these would be two among millions of weights.</dd>
+        <dt>$a, b$</dt>
+        <dd>Curvature coefficients along each axis. Both positive (so the bowl opens upward).
+          <span class="mg-why">When $a = b$, the bowl is rotationally symmetric; when $a \ne b$, one axis is steeper than the other.</span>
+        </dd>
+        <dt>$\kappa = \max(a,b)/\min(a,b)$</dt>
+        <dd>The <em>condition number</em> — how lopsided the bowl is.
+          <span class="mg-why">$\kappa = 1$ is a circular bowl, easy; $\kappa = 100$ is a long thin canyon, painful. In real neural nets $\kappa$ can exceed $10^6$.</span>
+        </dd>
+        <dt>$\nabla L = (2a\theta_1,\ 2b\theta_2)$</dt>
+        <dd>The gradient. Each component depends only on its own coordinate and the matching curvature.
+          <span class="mg-why">If $b \gg a$, a small step in $\theta_2$ is a large step in loss — you <em>have</em> to move gingerly on that axis, but that forces the entire step size to be small on the $\theta_1$ axis too.</span>
+        </dd>
+      </dl>
+      <p class="mg-analogy"><strong>Analogy</strong> Imagine a steep, narrow canyon with a gentle slope running along its length toward the exit. Rolling a ball down it: gravity along the canyon (the $\theta_1$ direction) barely moves the ball; gravity across it (the $\theta_2$ direction) sends it ricocheting off the canyon walls. That ricochet is the zigzag. Momentum damps it by averaging the oscillations out.</p>
+    </div>
+
+    <p>When $a = b$, level sets are circles and gradient descent takes a straight line to the minimum. When $a \ne b$ the level sets are elongated ellipses, and gradient descent develops the infamous <em>zigzag</em>: its direction alternates between bouncing across the narrow axis (steep gradient) and crawling along the long axis (shallow gradient). The <em>condition number</em> $\kappa = \max(a,b) / \min(a,b)$ measures how bad this is.</p>
+
+    <h3>3D view: what the "zigzag" actually looks like</h3>
+    <p>Below is an isometric render of the same loss surface, with a live gradient-descent trajectory traced across it. The contour lines on the floor are the level sets you'd see in a 2D top-down view — the trajectory above hovers on the surface itself. Press <strong>Step →</strong> to descend one iteration at a time and watch the path cling to the bowl.</p>
+
+    <div class="viz-3d">
+      <div class="viz-title">Isometric loss landscape · L(θ₁, θ₂) = aθ₁² + bθ₂²</div>
+      <svg viewBox="0 0 540 380" width="100%" id="gd-3d-svg">
+        <defs>
+          <linearGradient id="surf-grad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#f472b6" stop-opacity="0.85"/>
+            <stop offset="0.5" stop-color="#7c5cff" stop-opacity="0.7"/>
+            <stop offset="1" stop-color="#22d3ee" stop-opacity="0.55"/>
+          </linearGradient>
+        </defs>
+        <g id="gd-3d-floor"></g>
+        <g id="gd-3d-surface"></g>
+        <g id="gd-3d-trail"></g>
+        <g id="gd-3d-labels" font-family="monospace" font-size="10" fill="#8a93a6">
+          <text x="30" y="360">θ₁</text>
+          <text x="480" y="360">θ₂</text>
+          <text x="20" y="50">L</text>
+        </g>
+      </svg>
+      <p class="viz-caption">Isometric projection of the loss bowl. The mesh shows the surface; the lines on the base plane are contour rings. The pink trajectory is a live gradient-descent path.</p>
+      <div class="viz-controls">
+        <button onclick="gd3Step()">Step →</button>
+        <button onclick="gd3Run()">Run 30</button>
+        <button onclick="gd3Reset()">Reset</button>
+        <button onclick="gd3Rotate(-15)">↶ Rotate</button>
+        <button onclick="gd3Rotate(15)">Rotate ↷</button>
+      </div>
+    </div>
+
+    <h3>Interactive: 2D gradient descent with condition number</h3>
+    <p>Explore descent on $L(\theta_1, \theta_2) = a \theta_1^2 + b \theta_2^2$. The contour plot shows level sets; arrows trace the trajectory. Crank up the ratio $b/a$ to see zigzagging; try optionally enabling momentum to see it help.</p>
+
+    <div class="step-figure" id="gd-2d-figure">
+      <div class="sf-header">
+        <span class="sf-title">▸ 2D descent on $a\theta_1^2 + b\theta_2^2$</span>
+        <span class="sf-progress" id="gd-2d-progress">Iter 0</span>
+      </div>
+      <div class="sf-body">
+        <div class="sf-visual">
+          <svg viewBox="0 0 360 360" width="100%" style="max-width:360px" id="gd-2d-svg">
+            <!-- contours drawn dynamically -->
+            <g id="gd-2d-contours"></g>
+            <!-- axes -->
+            <line x1="30" y1="180" x2="330" y2="180" stroke="#8a93a6" stroke-width="0.8"/>
+            <line x1="180" y1="30" x2="180" y2="330" stroke="#8a93a6" stroke-width="0.8"/>
+            <text x="336" y="184" fill="#8a93a6" font-family="monospace" font-size="10">θ₁</text>
+            <text x="184" y="28" fill="#8a93a6" font-family="monospace" font-size="10">θ₂</text>
+
+            <!-- minimum marker -->
+            <circle cx="180" cy="180" r="4" fill="#34d399"/>
+
+            <!-- trajectory -->
+            <g id="gd-2d-trail"></g>
+            <!-- current point -->
+            <circle id="gd-2d-pt" r="7" fill="#f472b6" stroke="#11141c" stroke-width="2"/>
+          </svg>
+        </div>
+        <div class="sf-explain" id="gd-2d-explain">
+          <h5>READY</h5>
+          <p>Blue ellipses are level sets of $L$. The pink dot starts at $(\theta_1^{(0)}, \theta_2^{(0)})$. Each step moves in the $-\nabla L$ direction.</p>
+          <p>With $a=1, b=5$: the cost in the $\theta_2$ direction is much steeper than in $\theta_1$, so gradient descent zigzags across the narrow axis.</p>
+        </div>
+      </div>
+      <div class="sf-params">
+        <label>a <input type="number" id="gd-2d-a" value="1" step="0.5"></label>
+        <label>b <input type="number" id="gd-2d-b" value="5" step="0.5"></label>
+        <label>θ₁₀ <input type="number" id="gd-2d-t10" value="-4" step="0.5"></label>
+        <label>θ₂₀ <input type="number" id="gd-2d-t20" value="3" step="0.5"></label>
+        <label>η <input type="number" id="gd-2d-lr" value="0.15" step="0.05"></label>
+        <label>momentum β <input type="number" id="gd-2d-mom" value="0" step="0.1" min="0" max="0.99"></label>
+      </div>
+      <div class="sf-controls">
+        <button class="btn" onclick="resetGD2D()">↺ Reset</button>
+        <div class="spacer"></div>
+        <button class="btn primary" onclick="stepGD2D()">Step →</button>
+        <button class="btn" onclick="runGD2D()">Run 30</button>
+      </div>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="variants">7. Batch, stochastic, and mini-batch</h2>
+
+    <p>So far we have pretended that $L(\boldsymbol{\theta})$ is a single function. In practice it is a sum over training examples:</p>
+    <div class="math-display">$$L(\boldsymbol{\theta}) = \frac{1}{m} \sum_{i=1}^{m} \ell_i(\boldsymbol{\theta})$$</div>
+
+    <p>where $\ell_i$ is the loss on the $i$-th training example and $m$ is the dataset size. The gradient splits the same way: $\nabla L = \frac{1}{m} \sum_i \nabla \ell_i$.</p>
+
+    <div class="grid">
+      <div class="card">
+        <h4>Batch gradient descent</h4>
+        <p>Compute the full gradient over all $m$ examples, then take a step. High quality gradients; every step is deterministic. But a single update requires looking at the whole dataset. Too expensive for big data — you may wait an hour for one step.</p>
+      </div>
+      <div class="card">
+        <h4>Stochastic gradient descent (SGD)</h4>
+        <p>Pick one example at random, compute $\nabla \ell_i$, take a step. $m$ updates per epoch. Very cheap per step and surprisingly effective, but the gradients are noisy — the trajectory wanders instead of going in a clean straight line.</p>
+      </div>
+      <div class="card">
+        <h4>Mini-batch SGD</h4>
+        <p>The compromise everyone actually uses. Pick a small batch of $B$ examples (32, 64, 256, 1024…), average their gradients, take a step. Vectorizes beautifully on a GPU; gradients are smoother than SGD but still cheap per step.</p>
+      </div>
+    </div>
+
+    <div class="callout">
+      <div class="label">WHY NOISE HELPS</div>
+      <p style="margin:6px 0">SGD's noisy gradients are not just a tolerated compromise — they are part of why deep learning works. The noise acts as a regularizer that prevents the optimizer from fitting sharp, fragile minima of the training loss. Flat minima generalize better, and SGD's stochasticity nudges it toward them.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="momentum">8. Momentum</h2>
+
+    <p>Pure gradient descent has no memory: each step depends only on the gradient at the current point. Momentum adds a second term — a running average of past gradients — that accelerates steady directions and damps oscillations.</p>
+
+    <div class="theorem">
+      <span class="label">SGD with momentum</span>
+      <div class="math-display no-center">
+$$\begin{aligned}
+\boldsymbol{v}_{t+1} &= \beta \boldsymbol{v}_t + \nabla L(\boldsymbol{\theta}_t) \\
+\boldsymbol{\theta}_{t+1} &= \boldsymbol{\theta}_t - \eta \, \boldsymbol{v}_{t+1}
+\end{aligned}$$
+      </div>
+      <p>The scalar $\beta \in [0, 1)$ is the momentum coefficient. Typical values: $\beta = 0.9$ or $0.99$.</p>
+    </div>
+
+    <p>Physical intuition: imagine a ball rolling down the loss landscape. The velocity $\boldsymbol{v}$ accumulates over time — if the gradient keeps pointing in the same direction, the ball speeds up. In directions where the gradient oscillates (like the narrow axis of an elongated bowl), the oscillations partially cancel in the running average, so the ball doesn't bounce. The effect is dramatic: momentum can turn a 1000-step zigzag into a 100-step curving glide.</p>
+
+    <div class="example">
+      <span class="label">Momentum expansion</span>
+      <p>Unrolling the recursion: $\boldsymbol{v}_t = \sum_{k=0}^{t-1} \beta^k \nabla L(\boldsymbol{\theta}_{t-1-k})$.</p>
+      <p>$\boldsymbol{v}_t$ is an exponentially-weighted sum of all past gradients. The effective memory length is roughly $1/(1-\beta)$: at $\beta = 0.9$, the last ~10 gradients contribute meaningfully; at $\beta = 0.99$, the last ~100.</p>
+    </div>
+
+    <p>Try setting momentum to 0.9 in the 2D demo above. The trail should straighten out dramatically.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="adagrad">9. Adaptive methods: AdaGrad, RMSProp, Adam</h2>
+
+    <p>Momentum fixes zigzagging but keeps a single global learning rate. Adaptive methods go further: they maintain a <em>per-parameter</em> learning rate, so rarely-updated parameters get big updates and frequently-updated ones get small ones.</p>
+
+    <h3>AdaGrad (Duchi et al., 2011)</h3>
+    <p>Accumulate squared gradients per parameter; divide the update by the square root of the accumulation.</p>
+    <div class="math-display">$$g_t = \nabla L(\boldsymbol{\theta}_t), \quad G_t = G_{t-1} + g_t^2, \quad \boldsymbol{\theta}_{t+1} = \boldsymbol{\theta}_t - \frac{\eta}{\sqrt{G_t + \epsilon}} \odot g_t$$</div>
+    <p>Great for sparse features (NLP with bag-of-words) because parameters that are rarely touched keep large learning rates. Weakness: $G_t$ grows without bound, so the effective learning rate decays to zero over time.</p>
+
+    <h3>RMSProp (Hinton, unpublished 2012)</h3>
+    <p>Fixes AdaGrad's decay problem by replacing the sum with an exponential moving average:</p>
+    <div class="math-display">$$G_t = \rho G_{t-1} + (1 - \rho) g_t^2$$</div>
+    <p>Now $G_t$ represents recent squared gradients, not lifetime totals. The learning rate no longer monotonically shrinks.</p>
+
+    <h3>Adam (Kingma &amp; Ba, 2014)</h3>
+    <p>Combines momentum (first moment) and RMSProp (second moment), plus a bias correction to account for initialization at zero:</p>
+    <div class="math-display no-center">
+$$\begin{aligned}
+m_t &= \beta_1 m_{t-1} + (1-\beta_1) g_t \\
+v_t &= \beta_2 v_{t-1} + (1-\beta_2) g_t^2 \\
+\hat{m}_t &= m_t / (1 - \beta_1^t) \\
+\hat{v}_t &= v_t / (1 - \beta_2^t) \\
+\boldsymbol{\theta}_{t+1} &= \boldsymbol{\theta}_t - \frac{\eta}{\sqrt{\hat{v}_t} + \epsilon} \, \hat{m}_t
+\end{aligned}$$
+    </div>
+    <p>Typical defaults: $\beta_1 = 0.9$, $\beta_2 = 0.999$, $\epsilon = 10^{-8}$. Adam is the default optimizer for almost everything in deep learning; it "just works" on a wide range of problems without much tuning.</p>
+
+    <div class="callout math">
+      <div class="label">WHAT EACH OPTIMIZER GIVES YOU</div>
+      <p style="margin:6px 0"><strong>SGD:</strong> simplest, noisiest, often best generalization with enough tuning.<br>
+      <strong>SGD + Momentum:</strong> SGD but with memory. The go-to for vision and most "big" training runs.<br>
+      <strong>AdaGrad:</strong> per-parameter rates, but decays too aggressively.<br>
+      <strong>RMSProp:</strong> fixes AdaGrad's decay. Common in RL and RNN training.<br>
+      <strong>Adam:</strong> momentum + RMSProp + bias correction. The safe default.<br>
+      <strong>AdamW:</strong> Adam with decoupled weight decay. The actual modern default for transformers.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="landscapes">10. Non-convex landscapes (the actual setting)</h2>
+
+    <p>Neural network losses are <em>very</em> non-convex. For any network with $H$ hidden units in a layer, there are at least $H!$ equivalent minima just from permuting the hidden units — the loss surface has symmetries. There are also saddle points, ridges, plateaus, and occasional narrow valleys.</p>
+
+    <p>Three empirical findings about deep networks that deserve to be surprising:</p>
+    <ul class="clean">
+      <li><strong>Most "local minima" are nearly as good as the global minimum.</strong> In high dimensions, a random critical point is overwhelmingly likely to be a saddle, not a local minimum. And the local minima that exist tend to all have similar loss values.</li>
+      <li><strong>Overparameterization helps.</strong> Larger networks have smoother loss landscapes (fewer bad minima, more connected level sets). This is part of why "just make the model bigger" keeps working.</li>
+      <li><strong>Generalization does not require finding the global minimum.</strong> Training to an early stopping point, or a flat minimum, often generalizes better than grinding all the way down.</li>
+    </ul>
+
+    <p>The mathematical picture of gradient descent as "roll the ball down the bowl until it reaches the bottom" is a caricature, but it's a useful one. Just remember that the bowl is $10^9$-dimensional, has $10^{400}$ local minima, and you are sampling the gradient from a noisy mini-batch. Despite all that, it works.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="summary">11. Summary</h2>
+
+    <div class="callout good">
+      <div class="label">ONE-PARAGRAPH SUMMARY</div>
+      <p style="margin:6px 0">Gradient descent updates parameters by a scaled step against the gradient of the loss: $\boldsymbol{\theta} \leftarrow \boldsymbol{\theta} - \eta \nabla L$. The learning rate $\eta$ controls everything — too small and nothing moves, too large and you diverge. In practice we use mini-batch stochastic gradient descent, often augmented with momentum (running average of past gradients) or full adaptive per-parameter learning rates (Adam, AdamW). The loss landscape of a neural network is extravagantly non-convex, but the optimizers find good-enough solutions anyway — a fact that remains one of the more miraculous features of modern deep learning.</p>
+    </div>
+
+    <h3>Where to go next</h3>
+    <ul class="clean">
+      <li><a href="backpropagation.html">→ Backpropagation</a> — where the $\nabla L$ in the update rule actually comes from.</li>
+      <li><a href="perceptron.html">→ The Perceptron</a> — historical precursor, but the learning rule is genuinely different from gradient descent.</li>
+      <li><a class="ext" href="https://www.deeplearningbook.org/contents/optimization.html" target="_blank">Deep Learning Book Chapter 8</a> — rigorous coverage of optimization for deep nets.</li>
+      <li><a class="ext" href="https://arxiv.org/abs/1412.6980" target="_blank">Adam: A Method for Stochastic Optimization (Kingma &amp; Ba, 2014)</a></li>
+      <li><a class="ext" href="https://distill.pub/2017/momentum/" target="_blank">Distill: Why Momentum Really Works</a> — gorgeous interactive explanation.</li>
+    </ul>
+  </article>
+</div>
+
+<script>
+// ============================================================
+// Helpers
+// ============================================================
+function fmt(n, d = 3) { if (isNaN(n)) return '?'; if (Math.abs(n) < 1e-9) n = 0; return (+n).toFixed(d); }
+
+// ============================================================
+// 1D GRADIENT DESCENT DEMO: L(θ) = θ² - 2θ + 3
+// ============================================================
+const gd1d = { theta: 5, iter: 0, trail: [] };
+
+function L1d(t) { return t*t - 2*t + 3; }
+function dL1d(t) { return 2*t - 2; }
+
+// SVG mapping: theta in [-3, 6] -> [40, 440]; L in [0, 30] -> [260, 30]
+function sx1(t) { return 40 + ((t + 3) / 9) * 400; }
+function sy1(L) { return 260 - (L / 30) * 230; }
+
+function drawGD1DCurve() {
+  const path = document.getElementById('gd-1d-curve');
+  let d = '';
+  for (let i = 0; i <= 100; i++) {
+    const t = -3 + (9 * i / 100);
+    const L = Math.min(30, L1d(t));
+    d += (i === 0 ? 'M' : 'L') + sx1(t) + ',' + sy1(L) + ' ';
+  }
+  path.setAttribute('d', d);
+}
+
+function drawGD1DState() {
+  // minimum at (1, 2)
+  const minEl = document.getElementById('gd-1d-min');
+  minEl.setAttribute('cx', sx1(1));
+  minEl.setAttribute('cy', sy1(2));
+
+  const pt = document.getElementById('gd-1d-pt');
+  const t = gd1d.theta;
+  const L = L1d(t);
+  pt.setAttribute('cx', sx1(t));
+  pt.setAttribute('cy', sy1(L));
+
+  // tangent line
+  const slope = dL1d(t);
+  const t1 = t - 0.8, t2 = t + 0.8;
+  const y1 = L + slope*(t1 - t);
+  const y2 = L + slope*(t2 - t);
+  const tan = document.getElementById('gd-1d-tan');
+  tan.setAttribute('x1', sx1(t1));
+  tan.setAttribute('y1', sy1(Math.min(30, Math.max(0, y1))));
+  tan.setAttribute('x2', sx1(t2));
+  tan.setAttribute('y2', sy1(Math.min(30, Math.max(0, y2))));
+
+  // trail
+  const trailG = document.getElementById('gd-1d-trail');
+  let html = '';
+  for (let i = 1; i < gd1d.trail.length; i++) {
+    const a = gd1d.trail[i-1], b = gd1d.trail[i];
+    html += `<line x1="${sx1(a)}" y1="${sy1(L1d(a))}" x2="${sx1(b)}" y2="${sy1(L1d(b))}" stroke="#f472b6" stroke-width="1.5" opacity="0.5" stroke-dasharray="2 2"/>`;
+    html += `<circle cx="${sx1(b)}" cy="${sy1(L1d(b))}" r="3" fill="#f472b6" opacity="0.4"/>`;
+  }
+  trailG.innerHTML = html;
+}
+
+function resetGD1D() {
+  gd1d.theta = parseFloat(document.getElementById('gd-1d-theta0').value) || 5;
+  gd1d.iter = 0;
+  gd1d.trail = [gd1d.theta];
+  drawGD1DCurve();
+  drawGD1DState();
+  document.getElementById('gd-1d-progress').textContent = 'Iter 0';
+  document.getElementById('gd-1d-explain').innerHTML =
+    `<h5>READY</h5><p>θ₀ = ${fmt(gd1d.theta)}, L(θ₀) = ${fmt(L1d(gd1d.theta))}, L'(θ₀) = ${fmt(dL1d(gd1d.theta))}</p>
+     <p>Press <strong>Step →</strong> to apply $\\theta \\leftarrow \\theta - \\eta L'(\\theta)$.</p>`;
+}
+
+function stepGD1D() {
+  const lr = parseFloat(document.getElementById('gd-1d-lr').value) || 0.3;
+  const g = dL1d(gd1d.theta);
+  const next = gd1d.theta - lr * g;
+  gd1d.trail.push(next);
+  gd1d.iter++;
+  const before = gd1d.theta;
+  gd1d.theta = next;
+  drawGD1DState();
+  document.getElementById('gd-1d-progress').textContent = 'Iter ' + gd1d.iter;
+  document.getElementById('gd-1d-explain').innerHTML =
+    `<h5>ITER ${gd1d.iter}</h5>
+     <p>θ was ${fmt(before)}, L'(θ) = 2·${fmt(before)} − 2 = ${fmt(g)}</p>
+     <p>θ ← ${fmt(before)} − ${lr} · ${fmt(g)} = <strong>${fmt(next)}</strong></p>
+     <p>L(θ) = ${fmt(L1d(next))}</p>
+     ${Math.abs(next - 1) < 0.001 ? '<p style="color:var(--good)"><strong>✓ Converged to minimum at θ = 1, L = 2.</strong></p>' : ''}
+     ${Math.abs(next) > 50 ? '<p style="color:var(--danger)"><strong>✗ Diverged.</strong> Try a smaller η.</p>' : ''}`;
+}
+
+function runGD1D() {
+  for (let i = 0; i < 20; i++) stepGD1D();
+}
+
+// ============================================================
+// 2D GRADIENT DESCENT DEMO: L(θ₁, θ₂) = a θ₁² + b θ₂²
+// ============================================================
+const gd2d = { theta: [-4, 3], v: [0, 0], iter: 0, trail: [] };
+
+function L2d(t, a, b) { return a*t[0]*t[0] + b*t[1]*t[1]; }
+function gradL2d(t, a, b) { return [2*a*t[0], 2*b*t[1]]; }
+
+// SVG mapping: theta ∈ [-6, 6] -> [30, 330]
+function sx2(t1) { return 30 + ((t1 + 6) / 12) * 300; }
+function sy2(t2) { return 330 - ((t2 + 6) / 12) * 300; }
+
+function drawGD2DContours() {
+  const a = parseFloat(document.getElementById('gd-2d-a').value) || 1;
+  const b = parseFloat(document.getElementById('gd-2d-b').value) || 5;
+  const g = document.getElementById('gd-2d-contours');
+  let html = '';
+  // level sets: a t1² + b t2² = k
+  // ellipse semi-axes: sqrt(k/a), sqrt(k/b)
+  const ks = [1, 4, 9, 16, 25, 40, 60, 90, 120];
+  for (const k of ks) {
+    const rx = Math.sqrt(k/a);
+    const ry = Math.sqrt(k/b);
+    // convert to svg: x scale = 300/12 = 25, y scale = 25
+    const rxPx = rx * 25;
+    const ryPx = ry * 25;
+    html += `<ellipse cx="180" cy="180" rx="${rxPx}" ry="${ryPx}" fill="none" stroke="#22d3ee" stroke-width="1" opacity="${0.15 + 0.6 / (1 + k/20)}"/>`;
+  }
+  g.innerHTML = html;
+}
+
+function drawGD2DState() {
+  const pt = document.getElementById('gd-2d-pt');
+  pt.setAttribute('cx', sx2(gd2d.theta[0]));
+  pt.setAttribute('cy', sy2(gd2d.theta[1]));
+  // trail
+  const tg = document.getElementById('gd-2d-trail');
+  let html = '';
+  for (let i = 1; i < gd2d.trail.length; i++) {
+    const a = gd2d.trail[i-1], b = gd2d.trail[i];
+    html += `<line x1="${sx2(a[0])}" y1="${sy2(a[1])}" x2="${sx2(b[0])}" y2="${sy2(b[1])}" stroke="#f472b6" stroke-width="1.5" opacity="0.75"/>`;
+    html += `<circle cx="${sx2(b[0])}" cy="${sy2(b[1])}" r="2.5" fill="#f472b6" opacity="0.6"/>`;
+  }
+  tg.innerHTML = html;
+}
+
+function resetGD2D() {
+  gd2d.theta = [
+    parseFloat(document.getElementById('gd-2d-t10').value) || -4,
+    parseFloat(document.getElementById('gd-2d-t20').value) || 3
+  ];
+  gd2d.v = [0, 0];
+  gd2d.iter = 0;
+  gd2d.trail = [[...gd2d.theta]];
+  drawGD2DContours();
+  drawGD2DState();
+  document.getElementById('gd-2d-progress').textContent = 'Iter 0';
+  const a = parseFloat(document.getElementById('gd-2d-a').value) || 1;
+  const b = parseFloat(document.getElementById('gd-2d-b').value) || 5;
+  document.getElementById('gd-2d-explain').innerHTML =
+    `<h5>READY</h5><p>L(θ) = ${a}·θ₁² + ${b}·θ₂². Condition number κ = ${(Math.max(a,b)/Math.min(a,b)).toFixed(2)}.</p>
+     <p>Start: θ = [${fmt(gd2d.theta[0])}, ${fmt(gd2d.theta[1])}], L = ${fmt(L2d(gd2d.theta, a, b))}</p>`;
+}
+
+function stepGD2D() {
+  const a = parseFloat(document.getElementById('gd-2d-a').value) || 1;
+  const b = parseFloat(document.getElementById('gd-2d-b').value) || 5;
+  const lr = parseFloat(document.getElementById('gd-2d-lr').value) || 0.15;
+  const beta = parseFloat(document.getElementById('gd-2d-mom').value) || 0;
+  const g = gradL2d(gd2d.theta, a, b);
+  gd2d.v = [beta * gd2d.v[0] + g[0], beta * gd2d.v[1] + g[1]];
+  gd2d.theta = [gd2d.theta[0] - lr * gd2d.v[0], gd2d.theta[1] - lr * gd2d.v[1]];
+  gd2d.trail.push([...gd2d.theta]);
+  gd2d.iter++;
+  drawGD2DState();
+  document.getElementById('gd-2d-progress').textContent = 'Iter ' + gd2d.iter;
+  document.getElementById('gd-2d-explain').innerHTML =
+    `<h5>ITER ${gd2d.iter}</h5>
+     <p>∇L = [${fmt(g[0])}, ${fmt(g[1])}]</p>
+     ${beta > 0 ? `<p>v = ${beta}·v + ∇L = [${fmt(gd2d.v[0])}, ${fmt(gd2d.v[1])}]</p>` : ''}
+     <p>θ = [${fmt(gd2d.theta[0])}, ${fmt(gd2d.theta[1])}], L = <strong>${fmt(L2d(gd2d.theta, a, b))}</strong></p>`;
+}
+
+function runGD2D() {
+  for (let i = 0; i < 30; i++) stepGD2D();
+}
+
+// =========================================================
+// 3D isometric loss landscape (gd-3d)
+// =========================================================
+const GD3 = {
+  a: 1, b: 5,
+  lr: 0.12,
+  theta: [-4, 3],
+  trail: [[-4, 3]],
+  iter: 0,
+  angle: 0,  // extra yaw in degrees, applied before isometric
+  // isometric projection origin (center) in SVG coordinates
+  cx: 270, cy: 230,
+  // how many SVG px per unit in world space
+  sx: 36,  // horizontal screen per world-x
+  sy: 18,  // vertical screen per world-y (iso compression)
+  sz: 28,  // vertical screen per unit loss
+};
+
+// World coordinates: θ1 ∈ [-5,5], θ2 ∈ [-5,5], L = a θ1^2 + b θ2^2
+// Isometric projection: given world (x, y, z),
+//   px = cx + (x - y) * sx * cos(30°)
+//   py = cy + (x + y) * sy * sin(30°) - z * sz
+// Plus an in-plane yaw to let the user rotate around the vertical axis.
+function gd3Project(wx, wy, wz) {
+  const rad = GD3.angle * Math.PI / 180;
+  const rx = wx * Math.cos(rad) - wy * Math.sin(rad);
+  const ry = wx * Math.sin(rad) + wy * Math.cos(rad);
+  const px = GD3.cx + (rx - ry) * GD3.sx * 0.866;
+  const py = GD3.cy + (rx + ry) * GD3.sy * 0.5 - wz * GD3.sz;
+  return [px, py];
+}
+
+function gd3SurfaceValue(x, y) { return GD3.a * x * x + GD3.b * y * y; }
+
+function gd3Render() {
+  // --- contour rings on floor ---
+  const floor = document.getElementById('gd-3d-floor');
+  if (!floor) return;
+  let f = '';
+  // base rectangle outline
+  const corners = [[-5,-5],[5,-5],[5,5],[-5,5]];
+  const cp = corners.map(([x, y]) => gd3Project(x, y, 0));
+  f += `<polygon points="${cp.map(p => p.join(',')).join(' ')}" fill="#0d1019" stroke="#242a3a" stroke-width="0.8"/>`;
+  // grid lines on floor
+  for (let g = -4; g <= 4; g += 2) {
+    const [a1x, a1y] = gd3Project(g, -5, 0);
+    const [a2x, a2y] = gd3Project(g,  5, 0);
+    const [b1x, b1y] = gd3Project(-5, g, 0);
+    const [b2x, b2y] = gd3Project( 5, g, 0);
+    f += `<line x1="${a1x}" y1="${a1y}" x2="${a2x}" y2="${a2y}" stroke="#1d2230" stroke-width="0.6"/>`;
+    f += `<line x1="${b1x}" y1="${b1y}" x2="${b2x}" y2="${b2y}" stroke="#1d2230" stroke-width="0.6"/>`;
+  }
+  // contour rings (ellipses of constant loss)
+  const levels = [1, 3, 6, 10, 16, 24, 34];
+  levels.forEach(Lv => {
+    let d = '';
+    const N = 50;
+    for (let i = 0; i <= N; i++) {
+      const t = (i / N) * 2 * Math.PI;
+      // a x^2 + b y^2 = Lv  →  x = sqrt(Lv/a) cos t, y = sqrt(Lv/b) sin t
+      const x = Math.sqrt(Lv / GD3.a) * Math.cos(t);
+      const y = Math.sqrt(Lv / GD3.b) * Math.sin(t);
+      const [px, py] = gd3Project(x, y, 0);
+      d += (i === 0 ? 'M' : 'L') + px.toFixed(1) + ',' + py.toFixed(1);
+    }
+    f += `<path d="${d}" fill="none" stroke="#22d3ee" stroke-width="0.7" opacity="0.45"/>`;
+  });
+  floor.innerHTML = f;
+
+  // --- surface as a mesh of quads ---
+  const surf = document.getElementById('gd-3d-surface');
+  const N = 18;                   // grid resolution
+  const step = 10 / N;            // world units per quad
+  const quads = [];
+  for (let i = 0; i < N; i++) {
+    for (let j = 0; j < N; j++) {
+      const x0 = -5 + i * step,     y0 = -5 + j * step;
+      const x1 = x0 + step,         y1 = y0 + step;
+      const z00 = gd3SurfaceValue(x0, y0);
+      const z10 = gd3SurfaceValue(x1, y0);
+      const z11 = gd3SurfaceValue(x1, y1);
+      const z01 = gd3SurfaceValue(x0, y1);
+      // clip to visible height
+      if (Math.max(z00, z10, z11, z01) > 5.5) continue;
+      const p00 = gd3Project(x0, y0, z00);
+      const p10 = gd3Project(x1, y0, z10);
+      const p11 = gd3Project(x1, y1, z11);
+      const p01 = gd3Project(x0, y1, z01);
+      // "depth" for painter's algorithm: farther cells drawn first
+      const depth = (x0 + y0);
+      // color ramp by avg height
+      const h = (z00 + z10 + z11 + z01) / 4;
+      const t = Math.min(1, h / 5.5);
+      const r = Math.round(34 + t * (244 - 34));
+      const gr = Math.round(211 + t * (114 - 211));
+      const bl = Math.round(238 + t * (182 - 238));
+      const fill = `rgba(${r},${gr},${bl},${0.15 + 0.55 * t})`;
+      const pts = [p00, p10, p11, p01].map(p => p.map(n => n.toFixed(1)).join(',')).join(' ');
+      quads.push({ depth, svg: `<polygon points="${pts}" fill="${fill}" stroke="#0b0d12" stroke-width="0.3"/>` });
+    }
+  }
+  quads.sort((a, b) => a.depth - b.depth);
+  surf.innerHTML = quads.map(q => q.svg).join('');
+
+  // --- trajectory ---
+  const trail = document.getElementById('gd-3d-trail');
+  let t = '';
+  // line along the trajectory on the surface
+  let d = '';
+  GD3.trail.forEach(([x, y], k) => {
+    const z = gd3SurfaceValue(x, y);
+    const [px, py] = gd3Project(x, y, z);
+    d += (k === 0 ? 'M' : 'L') + px.toFixed(1) + ',' + py.toFixed(1);
+  });
+  t += `<path d="${d}" fill="none" stroke="#fbbf24" stroke-width="2" opacity="0.9"/>`;
+  // current position dot
+  const [cx, cy] = GD3.theta;
+  const cz = gd3SurfaceValue(cx, cy);
+  const [px, py] = gd3Project(cx, cy, cz);
+  t += `<circle cx="${px}" cy="${py}" r="5" fill="#f472b6" stroke="#11141c" stroke-width="1.5"/>`;
+  // drop-line from surface point to floor
+  const [fpx, fpy] = gd3Project(cx, cy, 0);
+  t += `<line x1="${px}" y1="${py}" x2="${fpx}" y2="${fpy}" stroke="#f472b6" stroke-width="0.8" stroke-dasharray="2 2" opacity="0.6"/>`;
+  t += `<circle cx="${fpx}" cy="${fpy}" r="2.5" fill="#f472b6" opacity="0.7"/>`;
+  // minimum marker
+  const [mpx, mpy] = gd3Project(0, 0, 0);
+  t += `<circle cx="${mpx}" cy="${mpy}" r="3.5" fill="#34d399"/>`;
+  trail.innerHTML = t;
+}
+
+function gd3Step() {
+  const [x, y] = GD3.theta;
+  const gx = 2 * GD3.a * x;
+  const gy = 2 * GD3.b * y;
+  GD3.theta = [x - GD3.lr * gx, y - GD3.lr * gy];
+  GD3.trail.push([...GD3.theta]);
+  GD3.iter++;
+  gd3Render();
+}
+
+function gd3Run() {
+  for (let i = 0; i < 30; i++) gd3Step();
+}
+
+function gd3Reset() {
+  GD3.theta = [-4, 3];
+  GD3.trail = [[-4, 3]];
+  GD3.iter = 0;
+  gd3Render();
+}
+
+function gd3Rotate(deg) {
+  GD3.angle += deg;
+  gd3Render();
+}
+
+// Initialize all demos on load
+window.addEventListener('DOMContentLoaded', () => {
+  resetGD1D();
+  resetGD2D();
+  gd3Render();
+});
+</script>
+<script defer src="../search-index.js"></script>
+<script defer src="../search.js"></script>
+</body>
+</html>

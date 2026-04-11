@@ -1,0 +1,1145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Numerical Analysis — Deep Dive</title>
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError: false});"></script>
+</head>
+<body>
+<div id="tooltip"></div>
+
+<nav class="topic-nav">
+  <a class="back" href="../index.html">← Back to Hub</a>
+  <div class="crumb">Mathematics / <span class="topic-name">Numerical Analysis</span></div>
+</nav>
+
+<div class="topic-layout">
+  <aside class="topic-toc">
+    <h4>ON THIS PAGE</h4>
+    <ul>
+      <li><a href="#why">1. Why numerical analysis</a></li>
+      <li><a href="#vocab">2. Vocabulary</a></li>
+      <li><a href="#fp">3. Floating-point</a></li>
+      <li><a href="#error">4. Error types</a></li>
+      <li><a href="#cancel">5. Catastrophic cancellation</a></li>
+      <li><a href="#cond">6. Conditioning &amp; stability</a></li>
+      <li><a href="#root">7. Root-finding</a></li>
+      <li><a href="#newton-viz">8. Interactive: Newton</a></li>
+      <li><a href="#linsys">9. Linear systems (direct)</a></li>
+      <li><a href="#iter">10. Linear systems (iterative)</a></li>
+      <li><a href="#interp">11. Interpolation</a></li>
+      <li><a href="#quad">12. Numerical integration</a></li>
+      <li><a href="#diff">13. Numerical differentiation</a></li>
+      <li><a href="#ode">14. ODE integration</a></li>
+      <li><a href="#code">15. Source code</a></li>
+      <li><a href="#ml">16. Connection to ML</a></li>
+      <li><a href="#summary">17. Summary</a></li>
+    </ul>
+  </aside>
+
+  <article class="topic-content">
+    <h1>Numerical Analysis</h1>
+    <p class="subtitle">Computers cannot represent most real numbers exactly. Every floating-point computation accumulates error. Numerical analysis is the field that makes math work on real hardware — how to solve equations, integrate functions, and factor matrices without the roundoff eating you alive.</p>
+    <div class="meta-tags">
+      <span>Prereq: <a href="calculus.html">calculus</a>, <a href="linear-algebra.html">linear algebra</a></span>
+      <span>Read time: ~30 min</span>
+      <span>Interactive figures: 1</span>
+      <span>Code: NumPy</span>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="why">1. Why numerical analysis</h2>
+
+    <p>Open a Python shell and type <code>0.1 + 0.2</code>. You will not get <code>0.3</code>. You will get <code>0.30000000000000004</code>. This is not a bug in Python, or in your CPU, or in IEEE 754. It is a direct consequence of something you already know from decimal arithmetic: you cannot write $1/3$ with finitely many decimal digits. Binary has the same problem, and $0.1$ is one of its victims — in binary, $0.1$ is a repeating fraction that has to be rounded somewhere.</p>
+
+    <p>Once you accept that real numbers get rounded on every single operation, you have to start asking uncomfortable questions. If I subtract two floats, how bad can the error get? If I solve a linear system with Gaussian elimination, does the answer mean anything? If I run gradient descent for a million steps, does the accumulated error matter? If I train a neural network in FP16 instead of FP32, do the gradients still point the right way?</p>
+
+    <p>Numerical analysis is the field that answers those questions. It is the bridge between the clean, exact math you learned in calculus and linear algebra and the messy, approximate math your CPU and GPU actually perform. It teaches you:</p>
+
+    <ul>
+      <li><strong>How to reason about error</strong> — where it comes from, how it propagates, and when you should worry.</li>
+      <li><strong>How to choose algorithms</strong> — two algorithms can be mathematically equivalent and numerically very different. One gives you 12 correct digits, the other gives you 2.</li>
+      <li><strong>How to read a matrix</strong> — some matrices amplify error by a factor of $10^{15}$ just because of their structure, and there is nothing any algorithm can do about it. You should know that before you start solving.</li>
+      <li><strong>How to set tolerances</strong> — when you write <code>while error &gt; 1e-8</code>, you need to know whether $10^{-8}$ is even reachable in your precision.</li>
+    </ul>
+
+    <p>This matters everywhere modern software touches continuous math. Every physics simulation, every rendering engine, every solver in a CAD tool, every ML training run, every weather forecast, every control loop in a drone — all of it rests on numerical analysis whether the programmer knows it or not. Usually it quietly works. Occasionally it falls over in spectacular ways, and then someone has to know this material.</p>
+
+    <div class="callout warn">
+      <div class="label">THE PATRIOT MISSILE STORY</div>
+      <p>On 25 February 1991, a Patriot missile battery at Dhahran failed to intercept an incoming Scud. 28 soldiers died. The cause was numerical: the battery's internal clock ticked in tenths of a second, stored as a 24-bit fixed-point number. After 100 hours of uptime, roundoff in the $0.1$ representation had accumulated a $0.34$ second drift. At Scud speeds, that was 600 meters. The radar looked in the wrong place. This page is partly about how to not do that.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="vocab">2. Vocabulary cheat-sheet</h2>
+
+    <p>A handful of symbols show up on every page of any numerical analysis textbook. Memorize these now and the rest of the page will feel easier.</p>
+
+    <ul>
+      <li>$\tilde{x}$ — an approximation of the true value $x$ (the tilde means "computed, not exact").</li>
+      <li>$\varepsilon_{\text{mach}}$ — <em>machine epsilon</em>, the gap between $1$ and the next representable float. About $2.2 \times 10^{-16}$ in double precision.</li>
+      <li>$\text{fl}(x)$ — the floating-point version of $x$, rounded to the nearest representable value.</li>
+      <li>$\kappa(A)$ — the <em>condition number</em> of matrix $A$. Measures how much $A$ amplifies small errors.</li>
+      <li>$\|\cdot\|$ — a norm, usually 2-norm (Euclidean) or $\infty$-norm (max absolute value).</li>
+      <li>$\mathcal{O}(h^p)$ — "grows like $h^p$", where $h$ is a step size. If a method is $\mathcal{O}(h^2)$, halving $h$ divides error by 4.</li>
+      <li>$f'(x)$, $f''(x)$ — first and second derivatives of $f$ at $x$.</li>
+    </ul>
+
+    <!-- ========================================================== -->
+    <h2 id="fp">3. Floating-point representation</h2>
+
+    <p>Every real number your computer touches lives in a box of 16, 32, or 64 bits. Inside that box is a tiny binary scientific-notation expression, specified by the IEEE 754 standard (1985, revised 2008, revised again 2019):</p>
+
+    <div class="math-display">$$x = (-1)^s \cdot (1.m_1 m_2 \dots m_p)_2 \cdot 2^{e - \text{bias}}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">IEEE 754 float layout</p>
+      <dl>
+        <dt>$s$</dt><dd>Sign bit — 1 bit, 0 means positive, 1 means negative.</dd>
+        <dt>$1.m_1 m_2 \dots m_p$</dt><dd>The <em>significand</em> (also called mantissa), written in binary. There is an implicit leading 1 that does not take up a bit — the stored bits are just the $m_i$. $p$ is the number of explicitly stored bits.</dd>
+        <dt>$e$</dt><dd>The biased exponent — an unsigned integer. It is biased so that small $e$ can represent both very small and very large numbers.</dd>
+        <dt>$\text{bias}$</dt><dd>A fixed offset (127 for FP32, 1023 for FP64) so that $e - \text{bias}$ can be negative. Think of it as shifting the zero point so the exponent field is always non-negative.</dd>
+        <dt>$p$ and total bit count</dt><dd>FP64 (double): 1 sign, 11 exponent, 52 mantissa. FP32 (float): 1, 8, 23. FP16 (half): 1, 5, 10. BF16: 1, 8, 7. FP8 (E4M3): 1, 4, 3.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Intuition.</strong> It is scientific notation, in binary, with a fixed number of digits. Just like you cannot write $\pi$ with 5 decimal digits of scientific notation without rounding, you cannot write $0.1$ with 52 binary digits without rounding. The rounding error is always there. The size of the error depends on how many mantissa bits you have.</p>
+    </div>
+
+    <p>The consequence of having a fixed number of mantissa bits is that the representable numbers are <em>not evenly spaced</em> on the real line. They are dense near zero and get sparser as you move away. The gap between consecutive floats near a value $x$ is roughly $|x| \cdot \varepsilon_{\text{mach}}$, where $\varepsilon_{\text{mach}}$ is machine epsilon.</p>
+
+    <div class="math-display">$$\varepsilon_{\text{mach}} = 2^{-p}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Machine epsilon</p>
+      <dl>
+        <dt>$\varepsilon_{\text{mach}}$</dt><dd>The smallest positive number such that $\text{fl}(1 + \varepsilon_{\text{mach}}) \ne 1$. In other words, the gap between $1.0$ and the next representable float above it, divided by 1.</dd>
+        <dt>$p$</dt><dd>The number of stored mantissa bits. FP64 has $p = 52$, so $\varepsilon_{\text{mach}} \approx 2.22 \times 10^{-16}$. FP32 has $p = 23$, so $\varepsilon_{\text{mach}} \approx 1.19 \times 10^{-7}$.</dd>
+      </dl>
+      <p class="mg-why"><strong>Why you care.</strong> Machine epsilon is the best relative accuracy you can ever hope to get from a single operation. Any algorithm that claims to compute $x$ to better than $\varepsilon_{\text{mach}} \cdot |x|$ absolute accuracy is lying, or using higher precision internally, or both.</p>
+    </div>
+
+    <p>Every basic floating-point operation ($+$, $-$, $\times$, $\div$, $\sqrt{\cdot}$) is guaranteed by IEEE 754 to produce a result that is the correctly rounded answer. In symbols:</p>
+
+    <div class="math-display">$$\text{fl}(x \oplus y) = (x \oplus y)(1 + \delta), \quad |\delta| \le \varepsilon_{\text{mach}}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Fundamental floating-point axiom</p>
+      <dl>
+        <dt>$x, y$</dt><dd>Two floating-point inputs (already representable).</dd>
+        <dt>$\oplus$</dt><dd>Any of the four basic arithmetic operations ($+, -, \times, \div$) performed in exact real arithmetic.</dd>
+        <dt>$\text{fl}(\cdot)$</dt><dd>Round to the nearest float, with ties going to even.</dd>
+        <dt>$\delta$</dt><dd>The relative rounding error — small, bounded, but unknown in sign.</dd>
+        <dt>$\varepsilon_{\text{mach}}$</dt><dd>Machine epsilon from above.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Analogy.</strong> Every arithmetic operation is a tiny perturbation by up to $\varepsilon_{\text{mach}}$ of the true answer. A single operation is fine. Ten thousand operations in sequence can accumulate — but usually do not, because the errors are random and partially cancel. It is only when you are systematically biased (like summing a million positive numbers, or subtracting two near-equal values) that you lose real precision.</p>
+    </div>
+
+    <h3>Why $0.1 + 0.2 \ne 0.3$</h3>
+
+    <p>In binary, $0.1$ is the repeating fraction $0.000110011001100\ldots_2$. Stored as an FP64 value, it gets rounded after 52 mantissa bits. So does $0.2$. So does $0.3$. The rounded $0.1$ plus the rounded $0.2$ does not happen to equal the rounded $0.3$ — it is higher by one ULP (unit in the last place), which in FP64 is about $5.5 \times 10^{-17}$. Your comparison fails.</p>
+
+    <div class="callout">
+      <div class="label">LESSON</div>
+      <p>Never compare floats for equality. Compare with a tolerance: <code>abs(a - b) &lt; tol</code>, where <code>tol</code> should be chosen based on both machine epsilon and the magnitudes of <code>a</code> and <code>b</code>.</p>
+    </div>
+
+    <h3>ML precision zoo</h3>
+
+    <p>Classical scientific computing lives in FP64. ML has drifted in the other direction, because training a giant model is bottlenecked on memory bandwidth and matrix-multiply throughput, not on last-digit accuracy. The relevant formats:</p>
+
+    <table class="rank-table">
+      <thead>
+        <tr><th>Format</th><th>Sign</th><th>Exp</th><th>Mantissa</th><th>Range</th><th>$\varepsilon_{\text{mach}}$</th><th>Use</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>FP64 (double)</td><td>1</td><td>11</td><td>52</td><td>$\sim 10^{\pm 308}$</td><td>$2.2 \times 10^{-16}$</td><td>Scientific computing, ground truth</td></tr>
+        <tr><td>FP32 (single)</td><td>1</td><td>8</td><td>23</td><td>$\sim 10^{\pm 38}$</td><td>$1.2 \times 10^{-7}$</td><td>Graphics, legacy ML</td></tr>
+        <tr><td>TF32</td><td>1</td><td>8</td><td>10</td><td>$\sim 10^{\pm 38}$</td><td>$9.8 \times 10^{-4}$</td><td>NVIDIA A100 matmul accumulator</td></tr>
+        <tr><td>FP16 (half)</td><td>1</td><td>5</td><td>10</td><td>$\sim 6.5 \times 10^{4}$</td><td>$9.8 \times 10^{-4}$</td><td>Mixed-precision training / inference</td></tr>
+        <tr><td>BF16 (bfloat16)</td><td>1</td><td>8</td><td>7</td><td>$\sim 10^{\pm 38}$</td><td>$7.8 \times 10^{-3}$</td><td>Modern LLM training (TPU/H100)</td></tr>
+        <tr><td>FP8 E4M3</td><td>1</td><td>4</td><td>3</td><td>$\sim 448$</td><td>$0.125$</td><td>H100 forward / weights</td></tr>
+        <tr><td>FP8 E5M2</td><td>1</td><td>5</td><td>2</td><td>$\sim 5.7 \times 10^{4}$</td><td>$0.25$</td><td>H100 gradients</td></tr>
+      </tbody>
+    </table>
+
+    <p>The pattern: as you shrink the format, you give up either <em>range</em> (how big or small the numbers can be) or <em>precision</em> (how finely you resolve them). BF16 keeps FP32's range and sacrifices precision — it turns out that for ML gradients, range matters more than mantissa bits, because gradient values span many orders of magnitude but do not need 7 digits of accuracy. This is why BF16 replaced FP16 for LLM training around 2020.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="error">4. Error types — absolute, relative, forward, backward</h2>
+
+    <p>When you have an approximation $\tilde{x}$ of a true value $x$, the two most basic measurements of how wrong it is are:</p>
+
+    <div class="math-display">$$\text{absolute error} = |\tilde{x} - x|, \qquad \text{relative error} = \frac{|\tilde{x} - x|}{|x|}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Absolute and relative error</p>
+      <dl>
+        <dt>$x$</dt><dd>The exact, true answer (which in practice you usually do not know — that is the whole point).</dd>
+        <dt>$\tilde{x}$</dt><dd>The approximation your algorithm actually produced.</dd>
+        <dt>Absolute</dt><dd>How far off you are, in the same units as $x$.</dd>
+        <dt>Relative</dt><dd>How far off you are as a fraction of the thing you are measuring. Dimensionless. For floating-point, this is usually what you want — being off by $10^{-6}$ is terrible if $x = 10^{-8}$ and excellent if $x = 10^{10}$.</dd>
+      </dl>
+      <p class="mg-why"><strong>Why both.</strong> Absolute error is the right metric when $x$ is small or zero (the relative metric blows up). Relative error is the right metric when comparing across scales. Most algorithms get judged on relative error, but you will see both.</p>
+    </div>
+
+    <p>The subtler distinction — and the one that separates numerical analysts from everyone else — is <em>forward</em> versus <em>backward</em> error. Suppose you want to compute $y = f(x)$, and your algorithm gives you $\tilde{y}$ instead.</p>
+
+    <ul>
+      <li><strong>Forward error</strong>: $|\tilde{y} - y|$. The gap between what you got and the right answer. Obvious.</li>
+      <li><strong>Backward error</strong>: the smallest perturbation $\Delta x$ such that $\tilde{y} = f(x + \Delta x)$ exactly. In other words — what problem did you actually solve? You solved a nearby one. How nearby?</li>
+    </ul>
+
+    <div class="defn">
+      <strong>Backward stability.</strong> An algorithm for computing $f(x)$ is <em>backward stable</em> if the answer it returns is the exact answer for some slightly perturbed input. The size of the needed perturbation is the backward error, and a good algorithm keeps it at the level of $\varepsilon_{\text{mach}}$ — no algorithm can do better, because the input itself got rounded the moment it was stored.</div>
+
+    <p>Why this matters: backward error is usually much easier to bound than forward error, and it cleanly separates "the algorithm did its job" from "the problem itself was hopeless." If the backward error is tiny but the forward error is huge, the problem was <em>ill-conditioned</em> (next section). Blame the problem, not the code.</p>
+
+    <h3>Roundoff versus truncation</h3>
+
+    <p>There are two fundamentally different sources of numerical error:</p>
+
+    <ul>
+      <li><strong>Roundoff error</strong>: the floats cannot represent the exact real numbers, so every operation rounds. Bounded by $\varepsilon_{\text{mach}}$ per operation.</li>
+      <li><strong>Truncation error</strong>: the algorithm approximates an infinite process (a derivative, an integral, an infinite series) by a finite one. Bounded by how "good" the approximation is — usually some power of a step size $h$.</li>
+    </ul>
+
+    <p>These go in opposite directions as you increase effort. Smaller $h$ lowers truncation error but raises roundoff (because you subtract more near-equal numbers). There is an optimal $h$ somewhere in between, and finding it is a recurring theme — most memorably in numerical differentiation, which we'll get to.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="cancel">5. Catastrophic cancellation</h2>
+
+    <p>The single biggest source of real-world numerical disasters is subtracting two floating-point numbers that are nearly equal. When you do, almost all the leading digits cancel and what you are left with is dominated by the rounding error that was sitting in the last few bits of each input.</p>
+
+    <p>Say $a = 1.23456789012345$ and $b = 1.23456789012340$. Both are stored to 15 significant figures. The true difference is $5 \times 10^{-14}$. But each input had roundoff error at the $10^{-14}$ level in its <em>last</em> digit, and that error did not cancel — now it dominates the answer. You have lost 14 digits of precision in one subtraction.</p>
+
+    <div class="callout math">
+      <div class="label">RULE</div>
+      <p>Every <em>significant</em> bit of precision you want out of a subtraction must be present <em>beyond</em> the bits that cancelled. Subtracting two numbers that agree in the first $k$ binary digits loses $k$ bits of precision, period.</p>
+    </div>
+
+    <h3>Worked example: the quadratic formula</h3>
+
+    <p>You learned in school to solve $ax^2 + bx + c = 0$ with:</p>
+
+    <div class="math-display">$$x_{1,2} = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Quadratic formula (naive)</p>
+      <dl>
+        <dt>$a, b, c$</dt><dd>The coefficients of the polynomial $ax^2 + bx + c$.</dd>
+        <dt>$x_{1,2}$</dt><dd>The two roots — there are always two, possibly complex, possibly repeated.</dd>
+        <dt>$\sqrt{b^2 - 4ac}$</dt><dd>The discriminant. Positive for two real roots, zero for a double root, negative for complex conjugates.</dd>
+      </dl>
+      <p class="mg-why"><strong>The catch.</strong> If $b$ is large and $ac$ is small, then $\sqrt{b^2 - 4ac}$ is very close to $|b|$. For the root where you <em>add</em> $\sqrt{b^2-4ac}$ to $-b$ with the same sign, you cancel. Your answer for that root is garbage.</p>
+    </div>
+
+    <p>Concrete: take $a = 1$, $b = 10^8$, $c = 1$. Mathematically the roots are very close to $-10^8$ and $-10^{-8}$. The first is fine. For the second, you compute $-b + \sqrt{b^2 - 4ac} = -10^8 + \sqrt{10^{16} - 4}$. In FP64, $\sqrt{10^{16} - 4}$ rounds to exactly $10^8$, so you get $-10^8 + 10^8 = 0$. The computed root is $0$ instead of $-10^{-8}$. The relative error is infinite.</p>
+
+    <p>The fix is to use a mathematically equivalent rewrite that dodges the cancellation. Rationalize:</p>
+
+    <div class="math-display">$$x = \frac{-b + \sqrt{b^2 - 4ac}}{2a} \cdot \frac{-b - \sqrt{b^2 - 4ac}}{-b - \sqrt{b^2 - 4ac}} = \frac{2c}{-b - \sqrt{b^2 - 4ac}}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Stable quadratic formula</p>
+      <dl>
+        <dt>Left-hand side</dt><dd>One of the two roots, rewritten by multiplying numerator and denominator by the conjugate $(-b - \sqrt{b^2 - 4ac})$.</dd>
+        <dt>$2c / (-b - \sqrt{b^2 - 4ac})$</dt><dd>Now both terms in the denominator have the <em>same sign</em> (assuming $b &gt; 0$), so they add instead of subtracting. No cancellation.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>The trick.</strong> Pick the sign in $\pm$ so that $-b \mp \sqrt{b^2 - 4ac}$ has no cancellation — i.e., so the two terms have the same sign. Then get the other root from $x_1 x_2 = c/a$ (Vieta's formula). This recipe gives you 15+ correct digits on both roots.</p>
+    </div>
+
+    <p>The general moral: if you find yourself subtracting two nearly-equal numbers, stop, and ask whether there is an algebraic rewrite that does the same computation without subtracting. There almost always is. Taylor series, exponentials, logs, and trigonometric identities all have stable rewrites you should learn on the job.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="cond">6. Conditioning and stability</h2>
+
+    <p>Conditioning is about the <em>problem</em>. Stability is about the <em>algorithm</em>. They are different and people confuse them constantly.</p>
+
+    <ul>
+      <li>A problem is <strong>well-conditioned</strong> if small changes in the input cause small changes in the output. <strong>Ill-conditioned</strong> if they do not. Ill-conditioning is a property of the mathematics, not the code.</li>
+      <li>An algorithm is <strong>stable</strong> if it does not itself amplify errors much beyond the unavoidable. An algorithm can be stable on a well-conditioned problem and still give garbage on an ill-conditioned one — because the ill-conditioning is not its fault.</li>
+    </ul>
+
+    <p>For a function $f$, the condition number at input $x$ measures how much a relative change in $x$ gets amplified in $f(x)$:</p>
+
+    <div class="math-display">$$\kappa_f(x) = \lim_{\delta \to 0} \sup_{|\Delta x| \le \delta} \frac{|f(x + \Delta x) - f(x)| / |f(x)|}{|\Delta x| / |x|}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Condition number of a function</p>
+      <dl>
+        <dt>$\kappa_f(x)$</dt><dd>The function's condition number at the point $x$. Dimensionless.</dd>
+        <dt>$\Delta x$</dt><dd>A small perturbation of the input.</dd>
+        <dt>Numerator</dt><dd>The relative change in output caused by the perturbation.</dd>
+        <dt>Denominator</dt><dd>The relative change in input.</dd>
+        <dt>$\sup$ and $\lim$</dt><dd>"Worst case over all small enough perturbations" — the supremum as $\delta \to 0$ is the steepest amplification direction.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Rule of thumb.</strong> A condition number of $10^k$ means you lose about $k$ digits of precision. If $\kappa \approx 10^{12}$ and you compute in FP64 (which has $\sim 16$ digits), you should expect about $16 - 12 = 4$ correct digits in the output. If $\kappa \approx 10^{16}$, you get noise.</p>
+    </div>
+
+    <p>For smooth $f$ of one variable, there is a closed form: $\kappa_f(x) = |x f'(x) / f(x)|$. So for $f(x) = \sqrt{x}$, $\kappa = 1/2$ (well-conditioned). For $f(x) = \tan(x)$ near $\pi/2$, $\kappa \to \infty$ (ill-conditioned — a tiny change in $x$ blows $\tan(x)$ up).</p>
+
+    <h3>Condition number of a matrix</h3>
+
+    <p>For a linear system $Ax = b$, the condition number of $A$ tells you how much relative error in $b$ can contaminate your answer for $x$:</p>
+
+    <div class="math-display">$$\kappa(A) = \|A\| \cdot \|A^{-1}\|$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Matrix condition number</p>
+      <dl>
+        <dt>$A$</dt><dd>A square invertible matrix.</dd>
+        <dt>$\|A\|$</dt><dd>An operator norm of $A$ — usually the 2-norm, which equals the largest singular value $\sigma_{\max}(A)$.</dd>
+        <dt>$\|A^{-1}\|$</dt><dd>The operator norm of the inverse. In the 2-norm, this is $1/\sigma_{\min}(A)$.</dd>
+        <dt>$\kappa(A)$</dt><dd>In the 2-norm, $\kappa_2(A) = \sigma_{\max}(A) / \sigma_{\min}(A)$ — the ratio of the largest singular value to the smallest. $\kappa(A) \ge 1$ always, with equality for orthogonal matrices.</dd>
+      </dl>
+      <p class="mg-why"><strong>Why you care.</strong> If $\kappa(A) = 10^{10}$ and your $b$ has $10^{-16}$ relative rounding error, your computed $x$ can be off by $10^{-6}$ relative — that is only six correct digits, and no amount of algorithmic care can fix it. Gaussian elimination did its job perfectly. The matrix is what is broken.</p>
+    </div>
+
+    <p>Ill-conditioned matrices come up more than you would expect. Vandermonde matrices (from polynomial interpolation at evenly spaced points) have $\kappa \sim 10^{10}$ at size 20. The Hilbert matrix $H_{ij} = 1/(i+j-1)$ has $\kappa$ that grows like $\sim (1+\sqrt{2})^{4n}$ — the $10 \times 10$ Hilbert matrix has $\kappa \approx 10^{13}$. Any matrix close to singular is ill-conditioned. Any design matrix in a regression with nearly-collinear features is ill-conditioned. This is why ridge regression (Tikhonov regularization) works — it artificially inflates the small singular values, trading bias for conditioning.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="root">7. Root-finding</h2>
+
+    <p>Given a function $f$, find an $x$ such that $f(x) = 0$. This is the workhorse primitive. You reduce equation-solving to this form, and then pick an algorithm based on what you know about $f$.</p>
+
+    <h3>Bisection — the bulletproof method</h3>
+
+    <p>If you know a sign change — $f(a) &lt; 0$ and $f(b) &gt; 0$ for some interval $[a, b]$ — and $f$ is continuous, then by the intermediate value theorem there is a root in $[a, b]$. Bisection: evaluate $f$ at the midpoint $c = (a+b)/2$, and replace $a$ or $b$ with $c$ depending on the sign. The interval halves. Repeat.</p>
+
+    <p>After $n$ steps, the interval has width $(b - a)/2^n$. To get $k$ bits of accuracy you need $k$ steps. This is <em>linear convergence</em> — one more bit of accuracy per step. Slow but absolutely guaranteed. Bisection cannot fail; it cannot miss the root; it is the method you fall back on when fancier methods misbehave.</p>
+
+    <h3>Newton's method — the fast one</h3>
+
+    <p>If you can evaluate both $f$ and its derivative $f'$, Newton's method takes your current guess $x_n$ and draws the tangent line to $f$ at $(x_n, f(x_n))$. Where that tangent line crosses zero becomes $x_{n+1}$:</p>
+
+    <div class="math-display">$$x_{n+1} = x_n - \frac{f(x_n)}{f'(x_n)}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Newton's method</p>
+      <dl>
+        <dt>$x_n$</dt><dd>The current iterate — your guess after $n$ steps.</dd>
+        <dt>$x_{n+1}$</dt><dd>The next iterate.</dd>
+        <dt>$f(x_n)$</dt><dd>The value of $f$ at the current guess. Zero when you are done.</dd>
+        <dt>$f'(x_n)$</dt><dd>The derivative at the current guess — the slope of the tangent line.</dd>
+        <dt>$-f(x_n)/f'(x_n)$</dt><dd>The horizontal distance from the current guess to where the tangent line crosses the x-axis. Subtract it from $x_n$ and you are at that crossing point.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Derivation.</strong> The tangent line at $x_n$ is $y = f(x_n) + f'(x_n)(x - x_n)$. Set $y = 0$ and solve for $x$: $x = x_n - f(x_n)/f'(x_n)$. That is the next guess. Geometrically: pretend $f$ is locally linear, find where the linear approximation hits zero, move there. Repeat.</p>
+    </div>
+
+    <p>Newton's method converges <em>quadratically</em> when it works: if $x_n$ is close enough to a simple root $x^*$, the error roughly squares each step:</p>
+
+    <div class="math-display">$$|x_{n+1} - x^*| \approx C \cdot |x_n - x^*|^2$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Quadratic convergence</p>
+      <dl>
+        <dt>$x^*$</dt><dd>The true root. $f(x^*) = 0$.</dd>
+        <dt>$|x_n - x^*|$</dt><dd>The error of iterate $n$.</dd>
+        <dt>$C$</dt><dd>A constant depending on $f$ — specifically $C = |f''(x^*)| / (2|f'(x^*)|)$ for simple roots.</dd>
+        <dt>Squared</dt><dd>If you have 3 correct digits, one more step gives you 6. Then 12. Then 24 — except you hit machine epsilon and stop.</dd>
+      </dl>
+      <p class="mg-why"><strong>The downside.</strong> "When it works." Newton can diverge wildly if your initial guess is far from the root, or if $f'$ is small near the root, or if $f$ is not smooth. It is fast or it is wrong; there is no middle ground. You bracket with bisection, then switch to Newton when you are close. That hybrid is what production root-finders (like SciPy's <code>brentq</code>) actually do.</p>
+    </div>
+
+    <h3>Secant method — Newton without the derivative</h3>
+
+    <p>What if you do not have $f'$, just $f$? Use a finite-difference approximation of the derivative from the last two iterates:</p>
+
+    <div class="math-display">$$x_{n+1} = x_n - f(x_n) \cdot \frac{x_n - x_{n-1}}{f(x_n) - f(x_{n-1})}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Secant method</p>
+      <dl>
+        <dt>$x_n, x_{n-1}$</dt><dd>The two most recent guesses.</dd>
+        <dt>$(f(x_n) - f(x_{n-1}))/(x_n - x_{n-1})$</dt><dd>A finite-difference estimate of $f'(x_n)$ — the slope of the line (secant) connecting the last two points on the curve.</dd>
+        <dt>Update</dt><dd>Same as Newton, but with the secant slope in place of the true derivative.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Convergence.</strong> Superlinear, with rate $\phi = (1 + \sqrt{5})/2 \approx 1.618$ — the golden ratio. Faster than bisection, slower than Newton, but no derivative needed. A nice middle ground.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="newton-viz">8. Interactive: Newton's method visualizer</h2>
+
+    <p>The function below is $f(x) = x^3 - 2x - 5$ — a classic cubic with one real root near $x \approx 2.09455$. Click anywhere on the plot to set the initial guess $x_0$. Newton's method will iterate from there, drawing each tangent step in orange until it converges or wanders off. The slider changes the function. Try a bad initial guess near a local extremum and watch what happens.</p>
+
+    <div class="viz-3d">
+      <div class="v3-controls">
+        <span class="v3-label">Function:</span>
+        <select id="newtFn" style="background:#151b24;color:#e8edf5;border:1px solid #2a3446;padding:4px 8px;border-radius:4px;">
+          <option value="cubic">f(x) = x³ − 2x − 5</option>
+          <option value="sine">f(x) = sin(x) − 0.5</option>
+          <option value="expm">f(x) = eˣ − 3x</option>
+          <option value="bad">f(x) = x³ − x (triple roots, tricky)</option>
+        </select>
+        <span class="v3-label" style="margin-left:12px;">Max iters:</span>
+        <input id="newtIter" type="range" min="1" max="15" value="10" step="1" style="flex:1;max-width:200px;">
+        <span id="newtIterLabel" style="min-width:30px;color:#63b3ff;font-family:ui-monospace,monospace;">10</span>
+      </div>
+      <svg id="newtSvg" viewBox="0 0 720 360" style="width:100%;height:auto;background:#0a0d12;border-radius:6px;cursor:crosshair;"></svg>
+      <p class="v3-caption" id="newtCaption">Click anywhere to set an initial guess. Orange segments show the tangent at each iterate and where it crosses zero.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="linsys">9. Linear systems — direct methods</h2>
+
+    <p>Given $A \in \mathbb{R}^{n \times n}$ and $b \in \mathbb{R}^n$, find $x$ such that $Ax = b$. You learned in linear algebra that the answer is $x = A^{-1} b$. You should almost never compute it that way — forming $A^{-1}$ is about twice as expensive as solving directly, and numerically worse because you round every entry of the inverse.</p>
+
+    <h3>Gaussian elimination, honestly</h3>
+
+    <p>Gaussian elimination turns $A$ into an upper-triangular matrix $U$ by adding multiples of one row to another. The multipliers form a lower-triangular matrix $L$ with ones on the diagonal. The result is:</p>
+
+    <div class="math-display">$$A = LU$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">LU decomposition</p>
+      <dl>
+        <dt>$A$</dt><dd>The $n \times n$ input matrix.</dd>
+        <dt>$L$</dt><dd>Lower-triangular matrix with 1s on the diagonal. $L_{ij}$ for $i &gt; j$ is the multiplier "row $j$ subtracted from row $i$" during elimination.</dd>
+        <dt>$U$</dt><dd>Upper-triangular matrix — what $A$ became after elimination.</dd>
+      </dl>
+      <p class="mg-why"><strong>Why factor.</strong> Once you have $L$ and $U$, solving $Ax = b$ becomes $L(Ux) = b$ — first forward-substitute to get $y$ from $Ly = b$, then back-substitute to get $x$ from $Ux = y$. Each triangular solve is $\mathcal{O}(n^2)$. The factorization is $\mathcal{O}(n^3)$ once, but you can reuse it for many right-hand sides.</p>
+    </div>
+
+    <p>Forward substitution unpacks $L y = b$ one equation at a time, top down: $y_1 = b_1$, then $y_2 = b_2 - L_{21} y_1$, and so on. Back substitution does the same for $U x = y$, bottom up: $x_n = y_n / U_{nn}$, then $x_{n-1} = (y_{n-1} - U_{n-1,n} x_n)/U_{n-1,n-1}$.</p>
+
+    <h3>Why pivoting matters</h3>
+
+    <p>Naive Gaussian elimination can catastrophically fail on matrices that are perfectly invertible. Consider:</p>
+
+    <div class="math-display">$$A = \begin{pmatrix} 10^{-20} &amp; 1 \\ 1 &amp; 1 \end{pmatrix}, \quad b = \begin{pmatrix} 1 \\ 2 \end{pmatrix}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Tiny-pivot example</p>
+      <dl>
+        <dt>$A$</dt><dd>A $2 \times 2$ matrix with a very small top-left entry.</dd>
+        <dt>$b$</dt><dd>The right-hand side.</dd>
+        <dt>True solution</dt><dd>$x \approx (1, 1)$ — close to the line-intersection of the two rows.</dd>
+      </dl>
+      <p class="mg-why"><strong>What breaks.</strong> Naive elimination uses $A_{11} = 10^{-20}$ as the pivot. It subtracts $10^{20}$ times row 1 from row 2, which gives a second equation that is completely dominated by the $10^{20}$ multiplier. In FP64, the original $1$s in row 2 are lost to rounding. Back-substitution returns $x_2 \approx 1$ (fine) but $x_1 \approx 0$ (wildly wrong).</p>
+    </div>
+
+    <p>The fix is <em>partial pivoting</em>: at each elimination step, swap rows so the pivot (the element you are dividing by) is the largest in absolute value of the candidates. This gives you $PA = LU$, where $P$ is a permutation matrix recording the swaps. It is what every production solver does, and what <code>numpy.linalg.solve</code> calls under the hood. It costs almost nothing and makes the factorization backward-stable in practice.</p>
+
+    <div class="callout good">
+      <div class="label">PERFORMANCE NOTE</div>
+      <p>LU with partial pivoting is $\mathcal{O}(n^3)$ in floating-point operations. For $n = 1000$, that is $\sim 10^9$ ops — under a second on a laptop. For $n = 10^4$ it is $\sim 10^{12}$ — minutes. For $n = 10^6$, forget direct methods entirely. That is where the next section comes in.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="iter">10. Iterative methods for linear systems</h2>
+
+    <p>When $A$ is enormous and <em>sparse</em> — which it is for most physical simulations, where each variable interacts with only a handful of neighbors — direct methods are too expensive. You use iterative methods instead. They start with a guess $x_0$ and refine it by applying $A$ as a matrix-vector multiply (which is cheap if $A$ is sparse) until the residual is small.</p>
+
+    <h3>Jacobi</h3>
+
+    <p>Split $A = D + R$, where $D$ is the diagonal and $R$ is everything else. Rewrite $Ax = b$ as $Dx = b - Rx$, and iterate:</p>
+
+    <div class="math-display">$$x^{(k+1)} = D^{-1}(b - R x^{(k)})$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Jacobi iteration</p>
+      <dl>
+        <dt>$x^{(k)}$</dt><dd>The $k$-th iterate (a full vector). We use the parenthesized superscript to distinguish iteration index from component index.</dd>
+        <dt>$D$</dt><dd>The diagonal part of $A$. $D^{-1}$ is trivial to apply — just divide component $i$ by $A_{ii}$.</dd>
+        <dt>$R = A - D$</dt><dd>The off-diagonal part of $A$. Cheap to apply if $A$ is sparse.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Convergence.</strong> Jacobi converges if $A$ is strictly diagonally dominant ($|A_{ii}| &gt; \sum_{j \ne i} |A_{ij}|$ for all $i$). Easy to parallelize — every component of $x^{(k+1)}$ uses only $x^{(k)}$, no dependencies between them. Unfortunately it converges slowly.</p>
+    </div>
+
+    <h3>Gauss–Seidel</h3>
+
+    <p>Same idea, but use the newly updated components as soon as they are available. Component-wise:</p>
+
+    <div class="math-display">$$x_i^{(k+1)} = \frac{1}{A_{ii}}\left(b_i - \sum_{j &lt; i} A_{ij} x_j^{(k+1)} - \sum_{j &gt; i} A_{ij} x_j^{(k)}\right)$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Gauss–Seidel iteration</p>
+      <dl>
+        <dt>$x_i^{(k+1)}$</dt><dd>The new value of component $i$.</dd>
+        <dt>$j &lt; i$</dt><dd>Components that have already been updated this sweep — use the new $x_j^{(k+1)}$.</dd>
+        <dt>$j &gt; i$</dt><dd>Components not yet updated — still use the old $x_j^{(k)}$.</dd>
+      </dl>
+      <p class="mg-why"><strong>Convergence.</strong> Typically about twice as fast as Jacobi, with similar conditions. Less parallelizable, since component $i$ depends on component $i-1$. The basis of Successive Over-Relaxation (SOR), which adds a damping parameter to accelerate further.</p>
+    </div>
+
+    <h3>Conjugate gradient</h3>
+
+    <p>For symmetric positive definite $A$, the gold standard is conjugate gradient (CG), introduced by Hestenes and Stiefel in 1952. CG builds up the solution in a Krylov subspace — each iteration is $\mathcal{O}(\text{nnz}(A))$ (cost of one sparse matvec), and it is guaranteed to converge in at most $n$ steps in exact arithmetic (and usually far fewer in practice). Preconditioned CG is what solves the linear systems inside finite-element simulations, and it is the direct ancestor of the trust-region methods at the heart of optimization libraries.</p>
+
+    <p>Rule of thumb: use direct methods when $n &lt; 10^4$ or $A$ is dense. Use iterative methods when $n &gt; 10^5$ or $A$ is sparse. Between those, profile.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="interp">11. Interpolation</h2>
+
+    <p>Given $n+1$ points $(x_0, y_0), \dots, (x_n, y_n)$ with distinct $x_i$, find a function $p$ that passes through all of them. The natural choice is a polynomial of degree $\le n$ — and there is exactly one such polynomial.</p>
+
+    <h3>Lagrange form</h3>
+
+    <div class="math-display">$$p(x) = \sum_{i=0}^{n} y_i \cdot \ell_i(x), \quad \ell_i(x) = \prod_{j \ne i} \frac{x - x_j}{x_i - x_j}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Lagrange interpolating polynomial</p>
+      <dl>
+        <dt>$n + 1$</dt><dd>The number of data points.</dd>
+        <dt>$(x_i, y_i)$</dt><dd>The $i$-th data point. All $x_i$ are distinct.</dd>
+        <dt>$\ell_i(x)$</dt><dd>The $i$-th Lagrange basis polynomial. By construction $\ell_i(x_j) = 1$ if $i = j$ and $0$ otherwise.</dd>
+        <dt>$p(x)$</dt><dd>The unique interpolating polynomial. Evaluated at $x_j$, every $\ell_i$ is zero except $\ell_j$, which is one, so $p(x_j) = y_j$. Done.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Intuition.</strong> Each basis polynomial is a "switch" — 1 at its own point, 0 at all others. The interpolant is a weighted sum where the weights are the actual $y_i$ values. It is elegant but numerically fragile, especially for high $n$.</p>
+    </div>
+
+    <h3>Newton's divided differences</h3>
+
+    <p>A more computationally friendly form builds the polynomial incrementally:</p>
+
+    <div class="math-display">$$p(x) = f[x_0] + f[x_0, x_1](x - x_0) + f[x_0, x_1, x_2](x - x_0)(x - x_1) + \cdots$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Newton divided differences</p>
+      <dl>
+        <dt>$f[x_i] = y_i$</dt><dd>Zeroth-order divided difference — just the value.</dd>
+        <dt>$f[x_i, x_{i+1}] = (f[x_{i+1}] - f[x_i])/(x_{i+1} - x_i)$</dt><dd>First-order divided difference — a slope.</dd>
+        <dt>$f[x_i, \dots, x_{i+k}]$</dt><dd>$k$-th-order divided difference, defined recursively.</dd>
+      </dl>
+      <p class="mg-why"><strong>Why bother.</strong> Adding a new data point only requires computing one more coefficient — you do not rebuild the polynomial. And the divided differences converge to derivatives of $f$ in the limit, which is a pretty chart.</p>
+    </div>
+
+    <h3>Runge's phenomenon — the warning</h3>
+
+    <p>High-degree polynomial interpolation at <em>equally spaced</em> points is a trap. Carl Runge showed in 1901 that interpolating $f(x) = 1/(1 + 25 x^2)$ at equally spaced points on $[-1, 1]$ gives an interpolant whose error near the endpoints <em>grows without bound</em> as you add more points. The polynomial wiggles violently at the edges.</p>
+
+    <div class="callout warn">
+      <div class="label">DO NOT DO THIS</div>
+      <p>Never use a degree-20+ polynomial to interpolate data at uniformly spaced points. The result looks smooth near the middle and explodes near the ends. This is counterintuitive — "more data points" feels like it should help — but it categorically does not.</p>
+    </div>
+
+    <p>Two fixes:</p>
+
+    <ul>
+      <li><strong>Chebyshev nodes.</strong> Sample $x_i$ at the projections of equally spaced angles on a half-circle — $x_i = \cos((2i+1)\pi/(2n+2))$. This clusters points near the endpoints, where the interpolant needs the most data. Runge's phenomenon goes away.</li>
+      <li><strong>Piecewise low-degree polynomials (splines).</strong> Instead of one high-degree polynomial for the whole interval, use a cubic on each subinterval, matched at the knots so that the first and second derivatives are continuous. These are <em>cubic splines</em>, the default in scientific plotting libraries and CAD tools. They are stable, smooth, and converge reliably as you add points.</li>
+    </ul>
+
+    <!-- ========================================================== -->
+    <h2 id="quad">12. Numerical integration (quadrature)</h2>
+
+    <p>Given a function $f$ on an interval $[a, b]$, approximate $\int_a^b f(x)\,dx$. Most integrals you encounter in practice do not have closed forms — the Gaussian CDF, Bessel functions, almost any ML loss integrated over a data distribution — so you need to compute them numerically.</p>
+
+    <h3>The family of Newton–Cotes rules</h3>
+
+    <p>Split $[a, b]$ into $n$ subintervals of width $h = (b-a)/n$. Replace $f$ with a local polynomial on each subinterval and integrate the polynomial exactly. Three classic choices, in ascending order of sophistication.</p>
+
+    <p><strong>Midpoint rule</strong> (zeroth-order — replace $f$ with its midpoint value on each subinterval):</p>
+
+    <div class="math-display">$$\int_a^b f(x)\,dx \approx h \sum_{i=0}^{n-1} f\!\left(a + \left(i + \tfrac{1}{2}\right) h\right)$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Composite midpoint rule</p>
+      <dl>
+        <dt>$h = (b-a)/n$</dt><dd>The subinterval width.</dd>
+        <dt>$a + (i + 1/2) h$</dt><dd>The center of the $i$-th subinterval.</dd>
+        <dt>Error</dt><dd>$\mathcal{O}(h^2)$ — halve $h$, divide error by 4.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Picture.</strong> A histogram whose bar height is the function value at the bar's center. Surprisingly good; it beats the trapezoidal rule for the same cost on smooth functions, because it gets second-order accuracy from its symmetry.</p>
+    </div>
+
+    <p><strong>Trapezoidal rule</strong> (first-order — connect consecutive sample points with straight lines and integrate the trapezoids):</p>
+
+    <div class="math-display">$$\int_a^b f(x)\,dx \approx \frac{h}{2}\left[f(a) + 2\sum_{i=1}^{n-1} f(a + i h) + f(b)\right]$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Composite trapezoidal rule</p>
+      <dl>
+        <dt>$f(a), f(b)$</dt><dd>Endpoint values, counted once.</dd>
+        <dt>$f(a + ih)$</dt><dd>Interior points, counted twice (each one belongs to two adjacent trapezoids).</dd>
+        <dt>$h/2$</dt><dd>Half the subinterval width — the "base over 2" factor from the trapezoid area formula.</dd>
+        <dt>Error</dt><dd>$\mathcal{O}(h^2)$. Formally, error $= -\frac{(b-a)h^2}{12} f''(\xi)$ for some $\xi \in [a, b]$. Proportional to $f''$ — so trapezoidal is exact on linear functions.</dd>
+      </dl>
+      <p class="mg-why"><strong>Why you know this.</strong> The trapezoidal rule is the default fallback integral. It is simple, reliable, and has an extremely nice property: on smooth <em>periodic</em> functions over a full period, it converges exponentially fast, not polynomially. This is why Fourier-transform based methods work so well on periodic data.</p>
+    </div>
+
+    <p><strong>Simpson's rule</strong> (second-order — fit a parabola through three consecutive sample points and integrate that):</p>
+
+    <div class="math-display">$$\int_a^b f(x)\,dx \approx \frac{h}{3}\left[f(a) + 4 \!\!\sum_{i \text{ odd}} f(a + ih) + 2 \!\!\sum_{i \text{ even}} f(a + ih) + f(b)\right]$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Composite Simpson's rule</p>
+      <dl>
+        <dt>$n$</dt><dd>Must be even — Simpson's rule integrates a parabola over pairs of subintervals.</dd>
+        <dt>Coefficients $1, 4, 2, 4, 2, \dots, 4, 1$</dt><dd>Weight pattern from integrating the local parabola. Endpoints once, odd interior points $\times 4$, even interior points $\times 2$.</dd>
+        <dt>Error</dt><dd>$\mathcal{O}(h^4)$ — halve $h$, divide error by 16. Much faster convergence than trapezoidal for the same number of function evaluations.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>The upgrade.</strong> Trapezoidal fits lines between samples; Simpson fits parabolas through trios of samples. Same number of evaluations, much better answer on smooth functions. It is the first thing to reach for when trapezoidal is not accurate enough.</p>
+    </div>
+
+    <h3>Gaussian quadrature (brief)</h3>
+
+    <p>Newton–Cotes uses equally spaced sample points. What if you get to <em>choose</em> where to sample? Gauss showed in 1814 that by picking $n$ optimally-placed points (the roots of Legendre polynomials) with optimally-chosen weights, you can exactly integrate polynomials up to degree $2n - 1$. That is a factor of two better than any equally-spaced rule, and for smooth functions the error converges exponentially in $n$. This is what SciPy's <code>quad</code> uses internally when it adapts to a region. You almost never need to implement this yourself — just know the name.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="diff">13. Numerical differentiation</h2>
+
+    <p>Given a function you can evaluate but cannot symbolically differentiate, approximate $f'(x)$. The natural starting point is the limit definition:</p>
+
+    <div class="math-display">$$f'(x) \approx \frac{f(x + h) - f(x)}{h}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Forward finite difference</p>
+      <dl>
+        <dt>$h$</dt><dd>A small positive step size.</dd>
+        <dt>$f(x+h) - f(x)$</dt><dd>Change in $f$ over a step of size $h$ — the numerator of the derivative definition.</dd>
+        <dt>Error</dt><dd>$\mathcal{O}(h)$ — first-order. Cut $h$ in half, cut error in half. Proof: Taylor-expand $f(x+h) = f(x) + h f'(x) + \frac{h^2}{2} f''(\xi)$, rearrange.</dd>
+      </dl>
+    </div>
+
+    <p>The <em>central</em> difference uses a symmetric two-sided step and is much better:</p>
+
+    <div class="math-display">$$f'(x) \approx \frac{f(x+h) - f(x-h)}{2h}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Central finite difference</p>
+      <dl>
+        <dt>$f(x+h), f(x-h)$</dt><dd>Two symmetric samples on either side of $x$.</dd>
+        <dt>$2h$</dt><dd>The full stride between them.</dd>
+        <dt>Error</dt><dd>$\mathcal{O}(h^2)$ — second-order. The odd-power terms in the Taylor expansion cancel by symmetry, leaving only $h^2$ and higher.</dd>
+      </dl>
+      <p class="mg-why"><strong>Always prefer central.</strong> For the same cost (two evaluations), it gives you second-order accuracy instead of first. The forward difference is only preferable when you physically cannot step backwards — at the boundary of a domain, say.</p>
+    </div>
+
+    <h3>The optimal step size — and why it's annoying</h3>
+
+    <p>You would think the smaller the $h$, the better. In exact arithmetic, yes. In floating-point, no. Consider the central difference error as a sum of two things:</p>
+
+    <div class="math-display">$$E(h) \approx \underbrace{\frac{|f'''(x)|}{6} h^2}_{\text{truncation}} + \underbrace{\frac{2 \varepsilon_{\text{mach}} |f(x)|}{h}}_{\text{roundoff}}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Finite-difference error balance</p>
+      <dl>
+        <dt>Truncation term $\propto h^2$</dt><dd>The error in pretending a Taylor expansion stops at the first-derivative term. Shrinks as you shrink $h$.</dd>
+        <dt>Roundoff term $\propto 1/h$</dt><dd>The cancellation error in computing $f(x+h) - f(x-h)$. When $h$ is tiny, $f(x+h)$ and $f(x-h)$ are nearly equal, so you lose precision in their difference. Then you divide by a tiny number, which amplifies the remaining error. Grows as you shrink $h$.</dd>
+        <dt>$\varepsilon_{\text{mach}}$</dt><dd>Machine epsilon — sets the scale of the roundoff in each function evaluation.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>The optimum.</strong> Differentiating with respect to $h$ and setting to zero, the optimal step size is $h^* \sim \varepsilon_{\text{mach}}^{1/3}$, which for FP64 is about $10^{-5}$. Not $10^{-16}$. The minimum achievable error is $\sim \varepsilon_{\text{mach}}^{2/3} \approx 10^{-11}$ — you lose about 5 digits of accuracy to the finite-difference game, no matter how careful you are.</p>
+    </div>
+
+    <p>This is one of the reasons symbolic differentiation (for clean formulas) and <em>automatic</em> differentiation (for programs) dominate in machine learning. Autodiff applies the chain rule through the computation graph exactly, using only the floating-point operations you would do anyway — you get full-precision derivatives at essentially the cost of one extra forward pass. Finite differences are now mostly used for sanity-checking autodiff implementations (the <code>gradcheck</code> pattern) and for gradient-free optimization. See <a href="../topics/gradient-descent.html">gradient descent</a> for more on how autodiff plugs into training.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="ode">14. ODE integration</h2>
+
+    <p>Given an initial value problem $y'(t) = f(t, y(t))$ with $y(t_0) = y_0$, you want to approximate $y(t)$ for $t &gt; t_0$. This is the fundamental primitive of every physical simulation on earth. The basic idea: take small steps in $t$, updating $y$ using a local approximation of the slope.</p>
+
+    <h3>Euler's method</h3>
+
+    <p>The simplest: just use the current slope to step forward by $h$:</p>
+
+    <div class="math-display">$$y_{n+1} = y_n + h \cdot f(t_n, y_n)$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Forward Euler</p>
+      <dl>
+        <dt>$y_n$</dt><dd>Approximate value of $y$ at time $t_n = t_0 + nh$.</dd>
+        <dt>$f(t_n, y_n)$</dt><dd>The slope — the right-hand side of the ODE — evaluated at the current state.</dd>
+        <dt>$h$</dt><dd>The time step.</dd>
+      </dl>
+      <p class="mg-why"><strong>Intuition.</strong> Start at $(t_n, y_n)$, pretend the slope is constant over $[t_n, t_n+h]$, follow the tangent line. First-order accurate: global error $\mathcal{O}(h)$. Simple but often unstable — a step that is too big makes it explode, especially on stiff equations. You will see it in every textbook and almost never in production.</p>
+    </div>
+
+    <h3>Runge–Kutta (RK4)</h3>
+
+    <p>A clever fourth-order scheme that evaluates the slope at four strategic points inside each step and averages them with magic coefficients:</p>
+
+    <div class="math-display">$$\begin{aligned} k_1 &amp;= f(t_n, y_n) \\ k_2 &amp;= f(t_n + h/2,\, y_n + h k_1 / 2) \\ k_3 &amp;= f(t_n + h/2,\, y_n + h k_2 / 2) \\ k_4 &amp;= f(t_n + h,\, y_n + h k_3) \\ y_{n+1} &amp;= y_n + \frac{h}{6}(k_1 + 2 k_2 + 2 k_3 + k_4) \end{aligned}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Classical RK4</p>
+      <dl>
+        <dt>$k_1$</dt><dd>Slope at the start of the step.</dd>
+        <dt>$k_2$</dt><dd>Slope at the midpoint, using $k_1$ to predict where we'd be.</dd>
+        <dt>$k_3$</dt><dd>Slope at the midpoint again, using the better estimate $k_2$.</dd>
+        <dt>$k_4$</dt><dd>Slope at the end of the step, using $k_3$.</dd>
+        <dt>Weighted average</dt><dd>Gives fourth-order accuracy — global error $\mathcal{O}(h^4)$.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why it rules.</strong> RK4 gives you four orders of accuracy for four function evaluations per step. The combination of easy implementation and high accuracy made it the default ODE integrator for five decades. Modern production solvers (Dormand–Prince 5(4), which is what <code>scipy.integrate.solve_ivp</code> defaults to) use adaptive step sizes on top of the same principle, but the spirit is the same.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="code">15. Source code</h2>
+
+    <p>Four canonical routines in NumPy. These are the "write them once from scratch so you understand them" versions — not replacements for <code>scipy.optimize</code> or <code>numpy.linalg</code>.</p>
+
+    <div class="code-tabs" id="ct-na">
+      <div class="ct-header">
+        <button class="ct-tab active" data-tab="newton">Newton's method</button>
+        <button class="ct-tab" data-tab="trap">Trapezoidal rule</button>
+        <button class="ct-tab" data-tab="lu">LU with pivoting</button>
+        <button class="ct-tab" data-tab="fd">Central diff</button>
+        <span class="ct-label">numerical analysis · from scratch</span>
+      </div>
+
+      <div class="ct-panel active" data-tab="newton"><pre><code><span class="kw">import</span> numpy <span class="kw">as</span> np
+
+<span class="kw">def</span> <span class="fn">newton</span>(f, fp, x0, tol=<span class="num">1e-12</span>, max_iter=<span class="num">50</span>):
+    <span class="cmt"># Find a root of f using Newton's method.</span>
+    <span class="cmt"># f  : callable returning f(x)</span>
+    <span class="cmt"># fp : callable returning f'(x)</span>
+    <span class="cmt"># x0 : initial guess</span>
+    x = <span class="fn">float</span>(x0)
+    <span class="kw">for</span> k <span class="kw">in</span> <span class="fn">range</span>(max_iter):
+        fx  = <span class="fn">f</span>(x)
+        fpx = <span class="fn">fp</span>(x)
+        <span class="kw">if</span> <span class="fn">abs</span>(fpx) &lt; <span class="num">1e-14</span>:
+            <span class="kw">raise</span> <span class="fn">RuntimeError</span>(<span class="str">"derivative vanished — Newton cannot step"</span>)
+        step = fx / fpx
+        x    = x - step
+        <span class="kw">if</span> <span class="fn">abs</span>(step) &lt; tol * <span class="fn">max</span>(<span class="num">1.0</span>, <span class="fn">abs</span>(x)):
+            <span class="kw">return</span> x, k + <span class="num">1</span>
+    <span class="kw">raise</span> <span class="fn">RuntimeError</span>(<span class="fn">f</span><span class="str">"Newton failed to converge in {max_iter} iterations"</span>)
+
+<span class="cmt"># Solve x^3 - 2x - 5 = 0 (Wallis's classic test, root near 2.0946)</span>
+f  = <span class="kw">lambda</span> x: x**<span class="num">3</span> - <span class="num">2</span>*x - <span class="num">5</span>
+fp = <span class="kw">lambda</span> x: <span class="num">3</span>*x**<span class="num">2</span> - <span class="num">2</span>
+root, iters = <span class="fn">newton</span>(f, fp, x0=<span class="num">2.0</span>)
+<span class="fn">print</span>(<span class="fn">f</span><span class="str">"root = {root:.15f} in {iters} iterations"</span>)
+<span class="cmt"># → root = 2.094551481542327 in 5 iterations (quadratic convergence)</span>
+</code></pre></div>
+
+      <div class="ct-panel" data-tab="trap"><pre><code><span class="kw">import</span> numpy <span class="kw">as</span> np
+
+<span class="kw">def</span> <span class="fn">trapezoidal</span>(f, a, b, n):
+    <span class="cmt"># Composite trapezoidal rule on [a, b] with n subintervals.</span>
+    <span class="cmt"># Error is O(h^2) for smooth f. For periodic smooth f over a</span>
+    <span class="cmt"># full period, error actually decays exponentially — trapezoidal</span>
+    <span class="cmt"># is the best tool you already know for Fourier-type integrals.</span>
+    x = np.<span class="fn">linspace</span>(a, b, n + <span class="num">1</span>)   <span class="cmt"># n+1 grid points</span>
+    y = <span class="fn">f</span>(x)
+    h = (b - a) / n
+    <span class="kw">return</span> h * (<span class="num">0.5</span>*y[<span class="num">0</span>] + y[<span class="num">1</span>:-<span class="num">1</span>].<span class="fn">sum</span>() + <span class="num">0.5</span>*y[-<span class="num">1</span>])
+
+<span class="cmt"># Integrate sin(x) over [0, pi] (true answer = 2)</span>
+<span class="kw">for</span> n <span class="kw">in</span> [<span class="num">10</span>, <span class="num">100</span>, <span class="num">1000</span>]:
+    approx = <span class="fn">trapezoidal</span>(np.sin, <span class="num">0</span>, np.pi, n)
+    err    = <span class="fn">abs</span>(approx - <span class="num">2.0</span>)
+    <span class="fn">print</span>(<span class="fn">f</span><span class="str">"n={n:5d}  approx={approx:.10f}  error={err:.2e}"</span>)
+<span class="cmt"># Error drops by ~100x each time n grows 10x — that's O(h^2).</span>
+</code></pre></div>
+
+      <div class="ct-panel" data-tab="lu"><pre><code><span class="kw">import</span> numpy <span class="kw">as</span> np
+
+<span class="kw">def</span> <span class="fn">lu_pivot</span>(A):
+    <span class="cmt"># Return (P, L, U) such that P @ A = L @ U, with partial pivoting.</span>
+    <span class="cmt"># P is stored as a permutation vector for efficiency.</span>
+    A = A.<span class="fn">astype</span>(<span class="fn">float</span>).<span class="fn">copy</span>()
+    n = A.shape[<span class="num">0</span>]
+    P = np.<span class="fn">arange</span>(n)
+    L = np.<span class="fn">eye</span>(n)
+    <span class="kw">for</span> k <span class="kw">in</span> <span class="fn">range</span>(n - <span class="num">1</span>):
+        <span class="cmt"># Pick the pivot — the largest absolute value in column k below row k</span>
+        piv = k + np.<span class="fn">argmax</span>(np.<span class="fn">abs</span>(A[k:, k]))
+        <span class="kw">if</span> piv != k:
+            A[[k, piv]] = A[[piv, k]]           <span class="cmt"># swap rows in A</span>
+            P[[k, piv]] = P[[piv, k]]           <span class="cmt"># record the swap</span>
+            <span class="kw">if</span> k &gt; <span class="num">0</span>:
+                L[[k, piv], :k] = L[[piv, k], :k]
+        <span class="cmt"># Eliminate below the pivot</span>
+        <span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(k + <span class="num">1</span>, n):
+            L[i, k] = A[i, k] / A[k, k]
+            A[i, k:] -= L[i, k] * A[k, k:]
+    U = np.<span class="fn">triu</span>(A)
+    <span class="kw">return</span> P, L, U
+
+<span class="kw">def</span> <span class="fn">solve</span>(A, b):
+    P, L, U = <span class="fn">lu_pivot</span>(A)
+    bp = b[P]
+    <span class="cmt"># Forward substitution: L y = bp</span>
+    n  = <span class="fn">len</span>(b)
+    y  = np.<span class="fn">zeros_like</span>(bp, dtype=<span class="fn">float</span>)
+    <span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(n):
+        y[i] = bp[i] - L[i, :i] @ y[:i]
+    <span class="cmt"># Back substitution: U x = y</span>
+    x = np.<span class="fn">zeros_like</span>(y)
+    <span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(n - <span class="num">1</span>, -<span class="num">1</span>, -<span class="num">1</span>):
+        x[i] = (y[i] - U[i, i+<span class="num">1</span>:] @ x[i+<span class="num">1</span>:]) / U[i, i]
+    <span class="kw">return</span> x
+
+<span class="cmt"># Test on the tiny-pivot example from section 9</span>
+A = np.<span class="fn">array</span>([[<span class="num">1e-20</span>, <span class="num">1.0</span>], [<span class="num">1.0</span>, <span class="num">1.0</span>]])
+b = np.<span class="fn">array</span>([<span class="num">1.0</span>, <span class="num">2.0</span>])
+<span class="fn">print</span>(<span class="fn">solve</span>(A, b))   <span class="cmt"># → [1. 1.] — correct, because we pivoted</span>
+</code></pre></div>
+
+      <div class="ct-panel" data-tab="fd"><pre><code><span class="kw">import</span> numpy <span class="kw">as</span> np
+
+<span class="kw">def</span> <span class="fn">central_diff</span>(f, x, h):
+    <span class="kw">return</span> (<span class="fn">f</span>(x + h) - <span class="fn">f</span>(x - h)) / (<span class="num">2</span> * h)
+
+<span class="cmt"># Approximate d/dx [sin(x)] at x = 1 (true answer = cos(1) ≈ 0.5403)</span>
+<span class="cmt"># Sweep h across many orders of magnitude — watch the classic U shape</span>
+<span class="cmt"># where truncation error dominates for big h and roundoff for small h.</span>
+x     = <span class="num">1.0</span>
+truth = np.<span class="fn">cos</span>(x)
+<span class="fn">print</span>(<span class="fn">f</span><span class="str">"{'h':&gt;10}  {'approx':&gt;20}  {'|error|':&gt;14}"</span>)
+<span class="kw">for</span> k <span class="kw">in</span> <span class="fn">range</span>(<span class="num">1</span>, <span class="num">17</span>):
+    h = <span class="num">10.0</span> ** (-k)
+    approx = <span class="fn">central_diff</span>(np.sin, x, h)
+    err    = <span class="fn">abs</span>(approx - truth)
+    <span class="fn">print</span>(<span class="fn">f</span><span class="str">"{h:10.0e}  {approx:20.15f}  {err:14.2e}"</span>)
+
+<span class="cmt"># Expected output: error drops as h^2 from h=1e-1 down to about h=1e-5,</span>
+<span class="cmt"># then climbs again as roundoff takes over. The optimum sits near</span>
+<span class="cmt"># h ~ eps_mach^(1/3) ≈ 6e-6, with best error ~ eps_mach^(2/3) ≈ 4e-11.</span>
+<span class="cmt"># Five digits of precision lost to the finite-difference game, forever.</span>
+</code></pre></div>
+
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="ml">16. Connection to machine learning</h2>
+
+    <p>Every piece of this page has a ghost running around inside modern ML. Spotting those ghosts makes a lot of otherwise-mysterious ML advice suddenly obvious.</p>
+
+    <ul>
+      <li><strong>Gradient descent is a numerical method.</strong> Training a neural net is just numerically minimizing a function. The learning rate is a step size, and exactly the same truncation-versus-roundoff tradeoffs apply. Too big a step — you overshoot the minimum, or diverge outright like Euler with too large $h$. Too small — you waste compute on round-off-limited progress. See <a href="../topics/gradient-descent.html">gradient descent</a> and <a href="../cs/optimization.html">optimization</a>.</li>
+      <li><strong>Batch size affects numerical stability.</strong> A gradient computed over a tiny batch is noisy, and summing noisy quantities has bigger relative error than summing smooth ones. Very small batches in FP16 can make gradients underflow entirely. This is one reason "gradient accumulation" exists — you accumulate multiple small-batch gradients into a higher-precision buffer before updating.</li>
+      <li><strong>Why BF16 became standard.</strong> LLM gradients span ~20 orders of magnitude during training. FP16's exponent range ($\sim 10^{\pm 5}$) is not enough — gradients underflow to zero and training stalls. BF16 keeps FP32's exponent range and spends its savings on mantissa. It is the "right" precision for this problem, and it took the industry until about 2019 to figure out that range beat precision.</li>
+      <li><strong>Why FP8 training is hard.</strong> With only 3–4 mantissa bits, machine epsilon is on the order of $10^{-1}$ — worse than percent-level. You cannot just cast the weights and hope. Real FP8 training uses per-tensor scaling factors, maintains master weights in higher precision, and carefully chooses which operations go in which format. It is a numerical-analysis problem in a trenchcoat.</li>
+      <li><strong>Quantization is floating-point in reverse.</strong> Post-training quantization takes a trained FP32 model and rounds its weights to INT8 (or INT4, or binary). The tradeoffs are the same as choosing a training precision — how much range do you need, how much resolution do you need, where does the noise matter. See <a href="../topics/edge-ai.html">edge AI</a> for the engineering story.</li>
+      <li><strong>Autodiff replaces finite differences.</strong> We flogged this above, but it bears repeating. The whole reason backpropagation is not "just" finite differences is that finite differences cannot actually compute high-dimensional gradients accurately — and there is no $h$ that works for a million-parameter model simultaneously. Autodiff gives you exact (up to rounding) gradients at the cost of a constant-factor-more compute. It is the single most important numerical method in modern machine learning, and you should read <a href="multivariable-calculus.html">multivariable calculus</a> next if you want to see why.</li>
+    </ul>
+
+    <!-- ========================================================== -->
+    <h2 id="summary">17. Summary</h2>
+
+    <ul>
+      <li>Computers cannot represent most real numbers exactly. Every operation rounds to the nearest representable float, with relative error bounded by machine epsilon.</li>
+      <li>IEEE 754 is the standard format. FP64 gets you 16 digits, FP32 gets you 7, BF16 gets you 3. ML uses less precision than scientific computing because range matters more than resolution for gradients.</li>
+      <li>Catastrophic cancellation is the usual villain: subtract two near-equal numbers and you lose all the digits that agreed. Algebraic rewrites fix most cases.</li>
+      <li>Conditioning is about the problem, stability is about the algorithm. Ill-conditioned problems give bad answers regardless of how clean your code is.</li>
+      <li>Newton's method converges quadratically when it works; bisection always works but only linearly. Hybrids give you both.</li>
+      <li>Gaussian elimination with partial pivoting is the backward-stable direct solver. For big sparse systems, switch to iterative methods — Jacobi, Gauss–Seidel, conjugate gradient.</li>
+      <li>Runge's phenomenon: high-degree polynomial interpolation at equally spaced points explodes at the endpoints. Use Chebyshev nodes or splines instead.</li>
+      <li>Trapezoidal is $\mathcal{O}(h^2)$, Simpson is $\mathcal{O}(h^4)$, Gaussian quadrature is spectrally accurate. Pick based on smoothness.</li>
+      <li>Finite differences have an optimal step size around $\varepsilon_{\text{mach}}^{1/3}$ and a floor error around $\varepsilon_{\text{mach}}^{2/3}$. This is why autodiff dominates in ML.</li>
+      <li>Euler explodes, RK4 works. Production ODE solvers are adaptive-step RK variants.</li>
+      <li>Every numerical lesson on this page has a ghost inside every training run of every modern ML model.</li>
+    </ul>
+
+    <div class="bib">
+      <h4>Further reading</h4>
+      <ul>
+        <li>Trefethen &amp; Bau (1997) — <em>Numerical Linear Algebra</em>. The gold-standard text on matrix computations. Lectures 12–16 on conditioning and stability are worth every minute.</li>
+        <li>Burden &amp; Faires — <em>Numerical Analysis</em>. The standard undergraduate textbook. Dense, thorough, good for reference.</li>
+        <li>Heath — <em>Scientific Computing: An Introductory Survey</em>. A one-volume tour that is more opinionated than Burden &amp; Faires and more readable.</li>
+        <li>Higham (2002) — <em>Accuracy and Stability of Numerical Algorithms</em>. The encyclopedic reference on floating-point error analysis. 700+ pages.</li>
+        <li>Goldberg (1991) — <em>What Every Computer Scientist Should Know About Floating-Point Arithmetic</em>. The paper to read if you only have an afternoon.</li>
+        <li>Kahan — <em>How Futile are Mindless Assessments of Roundoff in Floating-Point Computation?</em> The father of IEEE 754 being grumpy, instructively.</li>
+      </ul>
+    </div>
+
+    <div class="next-card">
+      <div class="label">NEXT UP</div>
+      <a href="../cs/optimization.html">→ Optimization</a>
+      <p>Root-finding and linear systems are the static side of numerical analysis. Once you turn them into the problem of minimizing a function — and let the function live in a billion-dimensional parameter space — you get optimization, the engine that drives every machine-learning training loop and every engineering design tool. You already know enough to start.</p>
+    </div>
+
+    <p style="color:var(--text-dim);font-size:.85em;margin-top:24px;">See also: <a href="multivariable-calculus.html">multivariable calculus</a>, <a href="../cs/complexity.html">algorithmic complexity</a>, <a href="../topics/gradient-descent.html">gradient descent</a>, <a href="../topics/edge-ai.html">edge AI &amp; quantization</a>.</p>
+
+  </article>
+</div>
+
+<script>
+// =========================================================
+// Code tabs
+document.querySelectorAll('.code-tabs').forEach(root => {
+  const tabs = root.querySelectorAll('.ct-tab');
+  const panels = root.querySelectorAll('.ct-panel');
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const target = tab.getAttribute('data-tab');
+      tabs.forEach(t => t.classList.toggle('active', t === tab));
+      panels.forEach(p => p.classList.toggle('active', p.getAttribute('data-tab') === target));
+    });
+  });
+});
+
+// =========================================================
+// Newton's method visualizer
+(function() {
+  const svg = document.getElementById('newtSvg');
+  if (!svg) return;
+  const NS = 'http://www.w3.org/2000/svg';
+  const fnSel  = document.getElementById('newtFn');
+  const iterSl = document.getElementById('newtIter');
+  const iterLb = document.getElementById('newtIterLabel');
+  const caption = document.getElementById('newtCaption');
+
+  // Function definitions: f, f', nice plotting window
+  const FNS = {
+    cubic: {
+      f:  x => x*x*x - 2*x - 5,
+      fp: x => 3*x*x - 2,
+      xmin: -3, xmax: 4, ymin: -15, ymax: 25,
+      label: 'f(x) = x³ − 2x − 5, root ≈ 2.0946'
+    },
+    sine: {
+      f:  x => Math.sin(x) - 0.5,
+      fp: x => Math.cos(x),
+      xmin: -6, xmax: 6, ymin: -2, ymax: 2,
+      label: 'f(x) = sin(x) − 0.5, roots at π/6 + 2πk and 5π/6 + 2πk'
+    },
+    expm: {
+      f:  x => Math.exp(x) - 3*x,
+      fp: x => Math.exp(x) - 3,
+      xmin: -1, xmax: 3, ymin: -4, ymax: 8,
+      label: 'f(x) = eˣ − 3x, two roots (~0.619, ~1.512)'
+    },
+    bad: {
+      f:  x => x*x*x - x,
+      fp: x => 3*x*x - 1,
+      xmin: -2, xmax: 2, ymin: -3, ymax: 3,
+      label: 'f(x) = x³ − x. Near x = ±1/√3 the derivative is zero — Newton diverges spectacularly.'
+    }
+  };
+
+  let currentFn = 'cubic';
+  let startX = 2.0;   // initial guess — user clicks to change
+
+  const W = 720, H = 360;
+  const ml = 50, mr = 30, mt = 25, mb = 40;
+  const plotW = W - ml - mr;
+  const plotH = H - mt - mb;
+
+  function draw() {
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+    const fn = FNS[currentFn];
+    const maxIter = parseInt(iterSl.value, 10);
+    iterLb.textContent = maxIter;
+
+    function xPx(x) { return ml + (x - fn.xmin) / (fn.xmax - fn.xmin) * plotW; }
+    function yPx(y) { return mt + plotH - (y - fn.ymin) / (fn.ymax - fn.ymin) * plotH; }
+
+    // Background frame
+    const fr = document.createElementNS(NS, 'rect');
+    fr.setAttribute('x', ml); fr.setAttribute('y', mt);
+    fr.setAttribute('width', plotW); fr.setAttribute('height', plotH);
+    fr.setAttribute('fill', '#0f131a');
+    fr.setAttribute('stroke', '#2a3446');
+    fr.setAttribute('stroke-width', 1);
+    svg.appendChild(fr);
+
+    // Vertical gridlines at integer x
+    for (let gx = Math.ceil(fn.xmin); gx <= Math.floor(fn.xmax); gx++) {
+      const x = xPx(gx);
+      const ln = document.createElementNS(NS, 'line');
+      ln.setAttribute('x1', x); ln.setAttribute('y1', mt);
+      ln.setAttribute('x2', x); ln.setAttribute('y2', mt + plotH);
+      ln.setAttribute('stroke', '#1a2030');
+      svg.appendChild(ln);
+      if (gx !== 0) {
+        const tl = document.createElementNS(NS, 'text');
+        tl.setAttribute('x', x); tl.setAttribute('y', mt + plotH + 14);
+        tl.setAttribute('text-anchor', 'middle');
+        tl.setAttribute('fill', '#7a8a9a');
+        tl.setAttribute('font-size', 10);
+        tl.setAttribute('font-family', 'ui-monospace, monospace');
+        tl.textContent = gx;
+        svg.appendChild(tl);
+      }
+    }
+    // Horizontal gridlines at multiples that look nice
+    const yStep = Math.pow(10, Math.floor(Math.log10(fn.ymax - fn.ymin))) / 2;
+    for (let gy = Math.ceil(fn.ymin / yStep) * yStep; gy <= fn.ymax; gy += yStep) {
+      const y = yPx(gy);
+      const ln = document.createElementNS(NS, 'line');
+      ln.setAttribute('x1', ml); ln.setAttribute('y1', y);
+      ln.setAttribute('x2', ml + plotW); ln.setAttribute('y2', y);
+      ln.setAttribute('stroke', '#1a2030');
+      svg.appendChild(ln);
+      if (Math.abs(gy) > 1e-9) {
+        const tl = document.createElementNS(NS, 'text');
+        tl.setAttribute('x', ml - 6); tl.setAttribute('y', y + 3);
+        tl.setAttribute('text-anchor', 'end');
+        tl.setAttribute('fill', '#7a8a9a');
+        tl.setAttribute('font-size', 10);
+        tl.setAttribute('font-family', 'ui-monospace, monospace');
+        tl.textContent = gy.toFixed(0);
+        svg.appendChild(tl);
+      }
+    }
+
+    // Axes (x = 0 and y = 0 lines, if they're in view)
+    if (0 >= fn.ymin && 0 <= fn.ymax) {
+      const y0 = yPx(0);
+      const ax = document.createElementNS(NS, 'line');
+      ax.setAttribute('x1', ml); ax.setAttribute('y1', y0);
+      ax.setAttribute('x2', ml + plotW); ax.setAttribute('y2', y0);
+      ax.setAttribute('stroke', '#485060');
+      ax.setAttribute('stroke-width', 1.2);
+      svg.appendChild(ax);
+    }
+    if (0 >= fn.xmin && 0 <= fn.xmax) {
+      const x0 = xPx(0);
+      const ay = document.createElementNS(NS, 'line');
+      ay.setAttribute('x1', x0); ay.setAttribute('y1', mt);
+      ay.setAttribute('x2', x0); ay.setAttribute('y2', mt + plotH);
+      ay.setAttribute('stroke', '#485060');
+      ay.setAttribute('stroke-width', 1.2);
+      svg.appendChild(ay);
+    }
+
+    // Curve
+    const pts = [];
+    const N = 400;
+    for (let i = 0; i <= N; i++) {
+      const x = fn.xmin + (fn.xmax - fn.xmin) * i / N;
+      const y = fn.f(x);
+      if (!Number.isFinite(y)) continue;
+      // Clip for plotting
+      const yC = Math.max(fn.ymin - 100, Math.min(fn.ymax + 100, y));
+      pts.push(`${xPx(x)},${yPx(yC)}`);
+    }
+    const curve = document.createElementNS(NS, 'polyline');
+    curve.setAttribute('points', pts.join(' '));
+    curve.setAttribute('fill', 'none');
+    curve.setAttribute('stroke', '#22d3ee');
+    curve.setAttribute('stroke-width', 2);
+    svg.appendChild(curve);
+
+    // Run Newton's method
+    let x = startX;
+    const history = [x];
+    let diverged = false;
+    let converged = false;
+    for (let k = 0; k < maxIter; k++) {
+      const fx  = fn.f(x);
+      const fpx = fn.fp(x);
+      if (!Number.isFinite(fx) || !Number.isFinite(fpx) || Math.abs(fpx) < 1e-12) {
+        diverged = true;
+        break;
+      }
+      const xNext = x - fx / fpx;
+      if (!Number.isFinite(xNext) || Math.abs(xNext) > 1e6) {
+        diverged = true;
+        break;
+      }
+      if (Math.abs(xNext - x) < 1e-12) {
+        converged = true;
+        history.push(xNext);
+        x = xNext;
+        break;
+      }
+      history.push(xNext);
+      x = xNext;
+    }
+
+    // Draw tangent steps
+    for (let k = 0; k < history.length - 1; k++) {
+      const xk = history[k];
+      const yk = fn.f(xk);
+      const xNext = history[k + 1];
+      // Only draw if on-screen enough
+      if (xk >= fn.xmin && xk <= fn.xmax && yk >= fn.ymin - 5 && yk <= fn.ymax + 5) {
+        // Vertical line from (xk, 0) to (xk, yk)
+        const vl = document.createElementNS(NS, 'line');
+        vl.setAttribute('x1', xPx(xk)); vl.setAttribute('y1', yPx(0));
+        vl.setAttribute('x2', xPx(xk)); vl.setAttribute('y2', yPx(yk));
+        vl.setAttribute('stroke', '#f472b6');
+        vl.setAttribute('stroke-width', 1);
+        vl.setAttribute('stroke-dasharray', '2,3');
+        svg.appendChild(vl);
+        // Tangent line from (xk, yk) to (xNext, 0)
+        const tl = document.createElementNS(NS, 'line');
+        tl.setAttribute('x1', xPx(xk));    tl.setAttribute('y1', yPx(yk));
+        tl.setAttribute('x2', xPx(xNext)); tl.setAttribute('y2', yPx(0));
+        tl.setAttribute('stroke', '#ff8a5b');
+        tl.setAttribute('stroke-width', 1.6);
+        svg.appendChild(tl);
+        // Point at (xk, yk)
+        const c = document.createElementNS(NS, 'circle');
+        c.setAttribute('cx', xPx(xk)); c.setAttribute('cy', yPx(yk));
+        c.setAttribute('r', 3);
+        c.setAttribute('fill', '#ff8a5b');
+        svg.appendChild(c);
+        // Label xk (only first few to avoid clutter)
+        if (k < 4) {
+          const lbl = document.createElementNS(NS, 'text');
+          lbl.setAttribute('x', xPx(xk) + 4);
+          lbl.setAttribute('y', yPx(0) - 4);
+          lbl.setAttribute('fill', '#ff8a5b');
+          lbl.setAttribute('font-size', 10);
+          lbl.setAttribute('font-family', 'ui-monospace, monospace');
+          lbl.textContent = `x${k}`;
+          svg.appendChild(lbl);
+        }
+      }
+    }
+
+    // Final point (converged root, if any)
+    if (history.length > 0) {
+      const xFinal = history[history.length - 1];
+      if (xFinal >= fn.xmin && xFinal <= fn.xmax) {
+        const cc = document.createElementNS(NS, 'circle');
+        cc.setAttribute('cx', xPx(xFinal));
+        cc.setAttribute('cy', yPx(0));
+        cc.setAttribute('r', 5);
+        cc.setAttribute('fill', converged ? '#6ee7b7' : '#ff8a5b');
+        cc.setAttribute('stroke', '#ffffff');
+        cc.setAttribute('stroke-width', 1);
+        svg.appendChild(cc);
+      }
+    }
+
+    // Function label
+    const fl = document.createElementNS(NS, 'text');
+    fl.setAttribute('x', ml + 8); fl.setAttribute('y', mt + 16);
+    fl.setAttribute('fill', '#22d3ee');
+    fl.setAttribute('font-size', 11);
+    fl.setAttribute('font-family', 'ui-monospace, monospace');
+    fl.textContent = fn.label;
+    svg.appendChild(fl);
+
+    // Caption
+    const x0str = startX.toFixed(4);
+    const xFin  = history[history.length - 1];
+    const iters = history.length - 1;
+    if (diverged) {
+      caption.textContent = `x₀ = ${x0str}. Diverged after ${iters} step(s) — derivative too small or iterate flew out of range. Click closer to the root.`;
+    } else if (converged) {
+      caption.textContent = `x₀ = ${x0str}. Converged to ${xFin.toFixed(10)} in ${iters} iterations. Quadratic convergence — each step roughly doubles the correct digits.`;
+    } else {
+      caption.textContent = `x₀ = ${x0str}. After ${iters} iterations, at x = ${xFin.toFixed(10)}. Increase max iters or start closer to a root.`;
+    }
+  }
+
+  // Click to set initial guess
+  svg.addEventListener('click', (ev) => {
+    const fn = FNS[currentFn];
+    const rect = svg.getBoundingClientRect();
+    const px = (ev.clientX - rect.left) * (W / rect.width);
+    if (px < ml || px > ml + plotW) return;
+    const x = fn.xmin + (px - ml) / plotW * (fn.xmax - fn.xmin);
+    startX = x;
+    draw();
+  });
+
+  fnSel.addEventListener('change', () => {
+    currentFn = fnSel.value;
+    // Reset to a sensible default guess for the new function
+    const fn = FNS[currentFn];
+    startX = (fn.xmin + fn.xmax) / 2;
+    draw();
+  });
+
+  iterSl.addEventListener('input', draw);
+
+  draw();
+})();
+</script>
+<script defer src="../search-index.js"></script>
+<script defer src="../search.js"></script>
+</body>
+</html>

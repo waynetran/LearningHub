@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reasoning & Test-Time Compute — Deep Dive</title>
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError: false});"></script>
+</head>
+<body>
+<div id="tooltip"></div>
+
+<nav class="topic-nav">
+  <a class="back" href="../ai-ml.html">← Back to AI/ML</a>
+  <div class="crumb">Deep Dives / <span class="topic-name">Reasoning &amp; Test-Time Compute</span></div>
+</nav>
+
+<div class="topic-layout">
+  <aside class="topic-toc">
+    <h4>ON THIS PAGE</h4>
+    <ul>
+      <li><a href="#intro">1. A new axis of scaling</a></li>
+      <li><a href="#cot">2. Chain of thought</a></li>
+      <li><a href="#bestofn">3. Best-of-N and self-consistency</a></li>
+      <li><a href="#demo">4. Interactive: cost vs. accuracy</a></li>
+      <li><a href="#prm">5. Process reward models</a></li>
+      <li><a href="#rl">6. RL on reasoning</a></li>
+      <li><a href="#code">7. Source code</a></li>
+      <li><a href="#summary">8. Summary</a></li>
+    </ul>
+  </aside>
+
+  <article class="topic-content">
+    <h1>Reasoning &amp; Test-Time Compute</h1>
+    <p class="subtitle">In 2024, OpenAI's o1 and DeepSeek-R1 cracked open a door that everyone assumed was sealed: you can make a model smarter <em>at inference time</em> by letting it think longer. The story of how chain-of-thought went from a prompting trick to a full training regime — and why "thinking time" became a new axis of the scaling law.</p>
+    <div class="meta-tags">
+      <span>Prereq: LLMs, RL basics</span>
+      <span>Time to read: ~20 min</span>
+      <span>Interactive figures: 1</span>
+      <span>Code: PyTorch, NumPy</span>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="intro">1. A new axis of scaling</h2>
+
+    <p>Since 2020, the scaling story of LLMs has been about two axes: parameters and training tokens. Double either one and loss drops predictably, per the Kaplan and Chinchilla laws. A third axis — test-time compute — was always there, but hardly anyone spent it, because the return on letting a model "think longer" at inference seemed flat. You got the same answer no matter how many tokens of padding you gave it.</p>
+
+    <p>Then in late 2024, OpenAI released <strong>o1</strong>, and a few months later DeepSeek published <strong>R1</strong>. Both showed something genuinely new: a model trained to produce long internal chains of thought before answering can, by spending <em>10×</em> or <em>100×</em> the inference compute, match a frontier model that has <em>10×</em> the parameters. The scaling curve of "pass@1 accuracy vs. log(inference tokens per problem)" is roughly linear, and it doesn't saturate in any regime anyone's tested.</p>
+
+    <p>The shift is fundamental. The traditional log-linear law was:</p>
+
+    <div class="math-display">$$L(N, D) \approx L_\infty + \frac{A}{N^\alpha} + \frac{B}{D^\beta}$$</div>
+
+    <p>where $L$ is loss, $N$ is parameters, $D$ is training tokens. The new regime adds a third term:</p>
+
+    <div class="math-display">$$L(N, D, C_\text{test}) \approx L_\infty + \frac{A}{N^\alpha} + \frac{B}{D^\beta} + \frac{C}{C_\text{test}^\gamma}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Scaling axes</p>
+      <dl>
+        <dt>$L$</dt><dd>The model's loss (or, equivalently, some measure of error rate on a reasoning benchmark like AIME or GPQA).</dd>
+        <dt>$N$</dt><dd>Parameter count. The classical axis: bigger model, lower loss.</dd>
+        <dt>$D$</dt><dd>Training tokens processed. The other classical axis.</dd>
+        <dt>$C_\text{test}$</dt><dd>Test-time compute budget — literally, how many tokens the model generates while thinking before giving its final answer. The new axis.</dd>
+        <dt>$\alpha, \beta, \gamma$</dt><dd>Empirical exponents, all positive and all small (~0.05–0.15). Each axis gives log-linear return.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Analogy</strong> A chess engine at 1 second per move is weaker than the same engine at 1 minute per move. That's a test-time compute scaling law — and everyone has taken it for granted in chess for 60 years. The 2024 reasoning models are the first LLMs where this curve is similarly steep.</p>
+    </div>
+
+    <p>Parameters are expensive to add (you have to retrain from scratch). Tokens are expensive (you have to mine the internet). Test-time compute is <em>elastic</em>: you pay for it only when you need to. That economic asymmetry is what makes the reasoning paradigm so interesting.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="cot">2. Chain of thought</h2>
+
+    <p>The foundation of all reasoning techniques is <em>chain-of-thought</em> (CoT) — rather than asking the model for an answer directly, you ask it to show its work. Wei et al. (2022) showed that simply prefixing a prompt with "Let's think step by step" produced large gains on math word problems. The mechanism is roughly:</p>
+
+    <ol>
+      <li>A transformer, to produce the next token, has one forward pass of compute proportional to its depth.</li>
+      <li>By producing <em>many</em> tokens of intermediate reasoning before the final answer, the model effectively runs many forward passes, each with growing context — a form of <em>unrolled depth</em>.</li>
+      <li>Each intermediate token can be conditioned on all previous ones, which lets the model break a hard problem into small steps it can handle.</li>
+    </ol>
+
+    <p>CoT as a prompting trick was 2022. CoT as a <em>training objective</em> is the 2024 development. Modern reasoning models aren't just prompted to think; their weights are shaped — via supervised fine-tuning on long reasoning traces, then RL — to produce reasoning that actually helps, not just verbose filler.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="bestofn">3. Best-of-N and self-consistency</h2>
+
+    <p>The simplest way to spend more compute at inference is to generate $N$ candidate solutions and pick the best. Two flavors:</p>
+
+    <div class="math-display">$$\text{pass@1 with best-of-}N = \max_{i=1}^{N} \; \text{correct}(y_i)$$</div>
+
+    <p>In <strong>self-consistency</strong> (Wang et al. 2022), you don't need an external judge — you just take the majority-vote final answer across $N$ independently sampled chains of thought:</p>
+
+    <div class="math-display">$$\hat{y} = \underset{y}{\arg\max} \sum_{i=1}^{N} \mathbb{1}[\text{final}(y_i) = y]$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Self-consistency variables</p>
+      <dl>
+        <dt>$N$</dt><dd>Number of independent rollouts. Each one starts from the same prompt but uses different random samples at each step.</dd>
+        <dt>$y_i$</dt><dd>The $i$-th complete reasoning trace plus its final answer. These are sampled at a nonzero temperature so they diverge.</dd>
+        <dt>$\text{final}(y_i)$</dt><dd>The extracted final answer from trace $i$ — typically the number or multiple-choice letter at the end.</dd>
+        <dt>$\mathbb{1}[\cdot]$</dt><dd>Indicator function: 1 if the condition is true, 0 otherwise. The sum counts how many traces agree.</dd>
+        <dt>$\hat{y}$</dt><dd>The final consensus answer — the one that the largest number of independent traces ended up at.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Analogy</strong> Asking 20 people to solve the same problem independently and taking the answer that the most people agreed on. Works because wrong answers tend to be idiosyncratic (there are many wrong answers, only one right one), so correct answers cluster and wrong answers scatter. On GSM8K, self-consistency with $N=40$ gives a ~15 point accuracy bump over $N=1$ — for free, just spend more compute.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="demo">4. Interactive: compute budget vs. accuracy</h2>
+
+    <p>Below is a simulator of a reasoning model solving a benchmark with $N$ independent CoT rollouts and majority voting. Each problem has a "difficulty" — a per-rollout probability of getting it right. Drag the slider to change $N$ and watch the accuracy curve respond. Real reasoning models show exactly this shape: log-linear gains with budget, flattening once you're well past the per-rollout accuracy threshold.</p>
+
+    <div class="viz-3d">
+      <div class="v3-controls">
+        <span class="v3-label">N (rollouts per problem):</span>
+        <input id="reasonN" type="range" min="1" max="64" value="1" step="1" style="flex:1;max-width:340px;">
+        <span id="reasonNLabel" style="min-width:30px;color:#63b3ff;font-family:ui-monospace,monospace;">1</span>
+      </div>
+      <svg id="reasonSvg" viewBox="0 0 720 340" style="width:100%;height:auto;background:#0a0d12;border-radius:6px;"></svg>
+      <p class="v3-caption" id="reasonCaption">Log-linear return: each doubling of N gives a roughly constant accuracy bump until the per-rollout accuracy saturates.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="prm">5. Process reward models</h2>
+
+    <p>Self-consistency treats a reasoning chain as a black box and only judges the final answer. But every <em>step</em> in the chain can be right or wrong, and a single wrong step contaminates everything after it. A <strong>process reward model</strong> (PRM) is trained to score partial reasoning traces one step at a time:</p>
+
+    <div class="math-display">$$r_\phi(s_{1:t}) \in [0, 1]$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Process reward model</p>
+      <dl>
+        <dt>$s_{1:t}$</dt><dd>The first $t$ reasoning steps so far. For each step, the PRM returns a probability that <em>this step</em> is correct given what came before.</dd>
+        <dt>$r_\phi$</dt><dd>The PRM itself — typically a fine-tuned language model with a scalar-output head. $\phi$ are its parameters. Trained on human- or model-labeled step-correctness data (OpenAI's PRM800K dataset is the reference).</dd>
+        <dt>$[0, 1]$</dt><dd>The output range. You can interpret it as the probability the step is valid math or valid logic.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why it matters</strong> A PRM lets you do tree search over the space of reasoning. At each step, expand multiple candidates, score each with the PRM, keep the best, expand again. This is "step-level beam search" — closer to how a chess engine searches forward than how a language model samples. It's how o1 and R1 claim to spend their inference compute.</p>
+    </div>
+
+    <p>Combined with beam search or MCTS, a PRM gives you a test-time compute curve that scales much better than plain best-of-N: instead of independently generating $N$ full traces and picking one, you're guided at every step, so wrong branches are pruned early and compute isn't wasted on dead-end reasoning.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="rl">6. RL on reasoning</h2>
+
+    <p>The real leap of o1/R1 is that CoT generation is no longer just prompted — it's RL-trained. Given a problem and a verifier (a Python executor for code, a symbolic math checker for math, or another model for open-ended tasks), you:</p>
+
+    <ol>
+      <li>Sample a reasoning trace from the current model.</li>
+      <li>Check if the final answer is correct.</li>
+      <li>Reward the whole trace if correct, zero if not (or use a PRM for per-step rewards).</li>
+      <li>Update the model to make successful traces more likely.</li>
+    </ol>
+
+    <p>Mathematically, you're optimizing a standard policy gradient objective:</p>
+
+    <div class="math-display">$$\mathcal{L}_\text{RL}(\theta) = -\mathbb{E}_{y \sim \pi_\theta(\cdot | x)} \big[ R(x, y) \big]$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Reasoning RL loss</p>
+      <dl>
+        <dt>$\theta$</dt><dd>The reasoning model's parameters.</dd>
+        <dt>$\pi_\theta(y | x)$</dt><dd>The policy: the probability the model assigns to generating trace $y$ given prompt $x$. For a language model, this is just the product of per-token probabilities.</dd>
+        <dt>$R(x, y)$</dt><dd>The reward — typically 1 if the final answer in $y$ is correct, 0 otherwise. For math and code, this is automatable (run the code, check the number). For open-ended tasks you need a reward model.</dd>
+        <dt>$\mathbb{E}$</dt><dd>Expectation over model samples. In practice, you sample a batch of traces and average.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>The DeepSeek-R1 recipe (Jan 2025)</strong> They showed you can skip the supervised warmup entirely. Start from a base model, apply GRPO (a PPO variant) with a verifiable reward on math and code, and the model <em>learns to produce long reasoning chains on its own</em> — including behaviors like self-doubt and backtracking — purely from reward pressure. This was the "AlphaZero moment" of language-model reasoning: an RL objective finding a qualitative capability no one programmed in.</p>
+    </div>
+
+    <p>Key variants that appear in 2024–25:</p>
+
+    <ul>
+      <li><strong>PPO</strong> (Proximal Policy Optimization): the original RL algorithm used for RLHF, now also used for reasoning.</li>
+      <li><strong>GRPO</strong> (Group Relative Policy Optimization, DeepSeek 2024): instead of a separate value network, compute advantages by normalizing rewards within a group of $N$ rollouts from the same prompt. Cheaper and more stable for reasoning.</li>
+      <li><strong>RLVR</strong> (RL with Verifiable Rewards): the general frame. You need a machine-checkable reward signal, which limits it to math, code, games, and structured tasks — but those turn out to be surprisingly general.</li>
+    </ul>
+
+    <!-- ========================================================== -->
+    <h2 id="code">7. Source code</h2>
+
+    <p>A tiny self-consistency evaluation loop, plus a one-screen GRPO advantage computation.</p>
+
+    <div class="code-tabs" id="ct-reason">
+      <div class="ct-header">
+        <button class="ct-tab active" data-tab="sc">Self-consistency</button>
+        <button class="ct-tab" data-tab="grpo">GRPO advantage</button>
+        <button class="ct-tab" data-tab="prm">PRM scoring</button>
+        <span class="ct-label">reasoning at test time</span>
+      </div>
+      <div class="ct-panel active" data-tab="sc"><pre><code><span class="kw">import</span> collections, re
+
+<span class="kw">def</span> <span class="fn">self_consistency</span>(model, prompt, N=<span class="num">32</span>, temperature=<span class="num">0.7</span>):
+    <span class="cmt"># Sample N independent chains of thought.</span>
+    traces = [model.sample(prompt, temperature=temperature) <span class="kw">for</span> _ <span class="kw">in</span> <span class="fn">range</span>(N)]
+
+    <span class="cmt"># Extract final answers (here: last number in each trace).</span>
+    answers = [re.findall(<span class="str">r"-?\d+(?:\.\d+)?"</span>, t)[-<span class="num">1</span>] <span class="kw">for</span> t <span class="kw">in</span> traces]
+
+    <span class="cmt"># Majority vote.</span>
+    counts = collections.Counter(answers)
+    top, votes = counts.most_common(<span class="num">1</span>)[<span class="num">0</span>]
+    <span class="kw">return</span> top, votes / N                 <span class="cmt"># answer, agreement</span>
+</code></pre></div>
+
+      <div class="ct-panel" data-tab="grpo"><pre><code><span class="kw">import</span> torch
+
+<span class="kw">def</span> <span class="fn">grpo_advantages</span>(rewards):
+    <span class="cmt"># rewards: (G, ) — G rollouts from the same prompt</span>
+    <span class="cmt"># GRPO: normalize rewards within the group, no value net needed.</span>
+    mean = rewards.mean()
+    std  = rewards.std().clamp(min=<span class="num">1e-6</span>)
+    <span class="kw">return</span> (rewards - mean) / std
+
+<span class="kw">def</span> <span class="fn">grpo_loss</span>(logprobs_new, logprobs_old, advantages, eps=<span class="num">0.2</span>):
+    <span class="cmt"># Standard PPO-style clipped objective, one advantage per token.</span>
+    ratio = torch.exp(logprobs_new - logprobs_old)
+    unclipped = ratio * advantages
+    clipped   = torch.clamp(ratio, <span class="num">1</span> - eps, <span class="num">1</span> + eps) * advantages
+    <span class="kw">return</span> -torch.min(unclipped, clipped).mean()
+
+<span class="cmt"># Usage sketch, per training step:</span>
+<span class="cmt">#   1. Sample G trajectories per prompt at temperature &gt; 0</span>
+<span class="cmt">#   2. Score each with a verifier (+1 correct, 0 wrong)</span>
+<span class="cmt">#   3. advantages = grpo_advantages(rewards)</span>
+<span class="cmt">#   4. loss = grpo_loss(logp_new, logp_old.detach(), advantages)</span>
+<span class="cmt">#   5. loss.backward(); optim.step()</span>
+</code></pre></div>
+
+      <div class="ct-panel" data-tab="prm"><pre><code><span class="kw">import</span> torch
+
+<span class="kw">def</span> <span class="fn">prm_score_trace</span>(prm, tokenizer, steps):
+    <span class="cmt"># steps: list of strings, one per reasoning step</span>
+    <span class="cmt"># Returns the PRM's per-step correctness scores.</span>
+    scores = []
+    prefix = <span class="str">""</span>
+    <span class="kw">for</span> step <span class="kw">in</span> steps:
+        prefix += step + <span class="str">"\n"</span>
+        ids = tokenizer(prefix, return_tensors=<span class="str">"pt"</span>).input_ids
+        <span class="kw">with</span> torch.no_grad():
+            <span class="cmt"># PRM head produces a scalar at the &lt;step_end&gt; token</span>
+            logit = prm(ids).logits[<span class="num">0</span>, -<span class="num">1</span>]
+            scores.append(torch.sigmoid(logit).item())
+    <span class="kw">return</span> scores
+
+<span class="kw">def</span> <span class="fn">beam_search_with_prm</span>(model, prm, prompt, beam=<span class="num">4</span>, max_steps=<span class="num">12</span>):
+    <span class="cmt"># Step-level beam search guided by a process reward model.</span>
+    beams = [(prompt, <span class="num">0.0</span>)]
+    <span class="kw">for</span> _ <span class="kw">in</span> <span class="fn">range</span>(max_steps):
+        candidates = []
+        <span class="kw">for</span> trace, cum <span class="kw">in</span> beams:
+            <span class="kw">for</span> step <span class="kw">in</span> model.sample_steps(trace, k=beam):
+                s = prm_score_trace(prm, model.tokenizer, <span class="fn">to_steps</span>(trace + step))[-<span class="num">1</span>]
+                candidates.append((trace + step, cum + torch.log(torch.tensor(s))))
+        candidates.sort(key=<span class="kw">lambda</span> x: -x[<span class="num">1</span>])
+        beams = candidates[:beam]
+    <span class="kw">return</span> <span class="fn">max</span>(beams, key=<span class="kw">lambda</span> x: x[<span class="num">1</span>])[<span class="num">0</span>]
+</code></pre></div>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="summary">8. Summary</h2>
+
+    <ul>
+      <li>Test-time compute is a new, elastic axis of scaling: let a model think longer and it gets better in a log-linear way.</li>
+      <li>Chain of thought started as a prompting trick (Wei 2022) and became a training objective (o1, R1 in 2024).</li>
+      <li>Self-consistency — sample $N$ chains and majority-vote — is the simplest and still-competitive test-time scaling technique.</li>
+      <li>Process reward models score partial reasoning step-by-step, enabling tree search and much better compute efficiency.</li>
+      <li>Reasoning RL (PPO, GRPO, RLVR) with verifiable rewards teaches a base model to produce long, useful chains of thought on its own. DeepSeek-R1 showed this works from scratch.</li>
+      <li>The paradigm is very new. Expect rapid change on all of: search algorithms, reward shaping, and the interplay between pretraining scale and test-time compute.</li>
+    </ul>
+
+    <div class="bib">
+      <h4>Further reading</h4>
+      <ul>
+        <li>Wei et al. (2022) — <em>Chain-of-Thought Prompting Elicits Reasoning in Large Language Models</em>.</li>
+        <li>Wang et al. (2022) — <em>Self-Consistency Improves Chain of Thought Reasoning</em>.</li>
+        <li>Lightman et al. (2023) — <em>Let's Verify Step by Step</em> (PRM800K, the canonical PRM paper).</li>
+        <li>OpenAI (2024) — <em>Learning to Reason with LLMs</em> (o1 technical report).</li>
+        <li>DeepSeek-AI (2025) — <em>DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning</em>.</li>
+      </ul>
+    </div>
+
+    <div class="next-card">
+      <div class="label">NEXT UP</div>
+      <a href="ai-safety.html">→ AI Safety &amp; Alignment</a>
+      <p>The RL techniques that make reasoning work are the same ones that shape model alignment. Read on for how RLHF, DPO, and Constitutional AI relate to the reasoning RL stack.</p>
+    </div>
+
+  </article>
+</div>
+
+<script>
+// =========================================================
+// Code tabs
+document.querySelectorAll('.code-tabs').forEach(root => {
+  const tabs = root.querySelectorAll('.ct-tab');
+  const panels = root.querySelectorAll('.ct-panel');
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const target = tab.getAttribute('data-tab');
+      tabs.forEach(t => t.classList.toggle('active', t === tab));
+      panels.forEach(p => p.classList.toggle('active', p.getAttribute('data-tab') === target));
+    });
+  });
+});
+
+// =========================================================
+// Reasoning: compute-vs-accuracy demo
+(function() {
+  const svg = document.getElementById('reasonSvg');
+  if (!svg) return;
+  const NS = 'http://www.w3.org/2000/svg';
+  const slider = document.getElementById('reasonN');
+  const nLabel = document.getElementById('reasonNLabel');
+  const caption = document.getElementById('reasonCaption');
+
+  // 60 synthetic problems with varying difficulty.
+  // p = per-rollout probability the trace reaches the correct answer.
+  const rng = mulberry32(42);
+  function mulberry32(a) {
+    return function() { let t = a += 0x6D2B79F5; t = Math.imul(t ^ t >>> 15, t | 1); t ^= t + Math.imul(t ^ t >>> 7, t | 61); return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+  }
+  const problems = [];
+  for (let i = 0; i < 60; i++) problems.push(0.08 + 0.7 * rng());
+
+  // With N rollouts at per-rollout accuracy p, probability majority vote is correct
+  // is approximated by 1 - Binomial(N, p)[<= N/2]. For small-ish N we compute exactly.
+  function binomCDF(N, p, kmax) {
+    // P(X ≤ kmax) for X ~ Binom(N, p)
+    let s = 0;
+    let term = Math.pow(1 - p, N);
+    s += term;
+    for (let k = 1; k <= kmax; k++) {
+      term = term * (N - k + 1) / k * p / (1 - p);
+      s += term;
+    }
+    return s;
+  }
+  function majorityAcc(N, p) {
+    if (N === 1) return p;
+    return 1 - binomCDF(N, p, Math.floor(N / 2));
+  }
+
+  function benchmark(N) {
+    return problems.reduce((s, p) => s + majorityAcc(N, p), 0) / problems.length;
+  }
+
+  // Build the full curve once.
+  const Ns = [];
+  for (let n = 1; n <= 64; n++) Ns.push(n);
+  const accs = Ns.map(benchmark);
+
+  function layout() {
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+
+    const W = 720, H = 340;
+    const ml = 60, mr = 30, mt = 30, mb = 50;
+    const plotW = W - ml - mr, plotH = H - mt - mb;
+
+    // Axes
+    const ax = (x1, y1, x2, y2) => {
+      const l = document.createElementNS(NS, 'line');
+      l.setAttribute('x1', x1); l.setAttribute('y1', y1);
+      l.setAttribute('x2', x2); l.setAttribute('y2', y2);
+      l.setAttribute('stroke', '#2a3446');
+      l.setAttribute('stroke-width', 1);
+      svg.appendChild(l);
+    };
+    ax(ml, mt, ml, mt + plotH);
+    ax(ml, mt + plotH, ml + plotW, mt + plotH);
+
+    // Grid and y-labels at 0.2, 0.4, 0.6, 0.8, 1.0
+    for (let g = 0; g <= 5; g++) {
+      const y = mt + plotH - (g / 5) * plotH;
+      const gl = document.createElementNS(NS, 'line');
+      gl.setAttribute('x1', ml); gl.setAttribute('y1', y);
+      gl.setAttribute('x2', ml + plotW); gl.setAttribute('y2', y);
+      gl.setAttribute('stroke', '#1a212e');
+      gl.setAttribute('stroke-width', 1);
+      svg.appendChild(gl);
+      const tl = document.createElementNS(NS, 'text');
+      tl.setAttribute('x', ml - 8); tl.setAttribute('y', y + 4);
+      tl.setAttribute('text-anchor', 'end');
+      tl.setAttribute('fill', '#7a8a9a');
+      tl.setAttribute('font-size', 11);
+      tl.setAttribute('font-family', 'ui-monospace, monospace');
+      tl.textContent = (g / 5).toFixed(1);
+      svg.appendChild(tl);
+    }
+
+    // X: log scale from 1 to 64
+    function xOf(n) { return ml + (Math.log2(n) / Math.log2(64)) * plotW; }
+    function yOf(a) { return mt + plotH - a * plotH; }
+
+    [1, 2, 4, 8, 16, 32, 64].forEach(n => {
+      const x = xOf(n);
+      const tl = document.createElementNS(NS, 'text');
+      tl.setAttribute('x', x); tl.setAttribute('y', mt + plotH + 16);
+      tl.setAttribute('text-anchor', 'middle');
+      tl.setAttribute('fill', '#7a8a9a');
+      tl.setAttribute('font-size', 11);
+      tl.setAttribute('font-family', 'ui-monospace, monospace');
+      tl.textContent = n;
+      svg.appendChild(tl);
+    });
+
+    // Axis labels
+    const xL = document.createElementNS(NS, 'text');
+    xL.setAttribute('x', ml + plotW / 2); xL.setAttribute('y', H - 8);
+    xL.setAttribute('text-anchor', 'middle');
+    xL.setAttribute('fill', '#b4c4d4');
+    xL.setAttribute('font-size', 12);
+    xL.setAttribute('font-family', 'ui-monospace, monospace');
+    xL.textContent = 'N  (rollouts per problem, log scale)';
+    svg.appendChild(xL);
+
+    const yL = document.createElementNS(NS, 'text');
+    yL.setAttribute('x', 16); yL.setAttribute('y', mt + plotH / 2);
+    yL.setAttribute('text-anchor', 'middle');
+    yL.setAttribute('fill', '#b4c4d4');
+    yL.setAttribute('font-size', 12);
+    yL.setAttribute('font-family', 'ui-monospace, monospace');
+    yL.setAttribute('transform', `rotate(-90 16 ${mt + plotH / 2})`);
+    yL.textContent = 'benchmark accuracy';
+    svg.appendChild(yL);
+
+    // Curve
+    let d = '';
+    accs.forEach((a, i) => {
+      const x = xOf(Ns[i]);
+      const y = yOf(a);
+      d += (i === 0 ? 'M' : 'L') + x.toFixed(1) + ',' + y.toFixed(1);
+    });
+    const path = document.createElementNS(NS, 'path');
+    path.setAttribute('d', d);
+    path.setAttribute('fill', 'none');
+    path.setAttribute('stroke', '#63b3ff');
+    path.setAttribute('stroke-width', 2);
+    svg.appendChild(path);
+
+    // Current N marker
+    const currN = parseInt(slider.value, 10);
+    const currA = benchmark(currN);
+    const cx = xOf(currN), cy = yOf(currA);
+    const c = document.createElementNS(NS, 'circle');
+    c.setAttribute('cx', cx); c.setAttribute('cy', cy); c.setAttribute('r', 6);
+    c.setAttribute('fill', '#ff8a5b');
+    c.setAttribute('stroke', '#fff');
+    c.setAttribute('stroke-width', 1.5);
+    svg.appendChild(c);
+
+    const lbl = document.createElementNS(NS, 'text');
+    lbl.setAttribute('x', cx + 10); lbl.setAttribute('y', cy - 8);
+    lbl.setAttribute('fill', '#ff8a5b');
+    lbl.setAttribute('font-size', 12);
+    lbl.setAttribute('font-family', 'ui-monospace, monospace');
+    lbl.textContent = `N=${currN}  acc=${(currA * 100).toFixed(1)}%`;
+    svg.appendChild(lbl);
+
+    nLabel.textContent = currN;
+    caption.textContent = `N=${currN} rollouts → ${(currA * 100).toFixed(1)}% accuracy across 60 synthetic problems. Doubling N gives ~constant gain until per-rollout accuracy saturates.`;
+  }
+
+  slider.addEventListener('input', layout);
+  layout();
+})();
+</script>
+<script defer src="../search-index.js"></script>
+<script defer src="../search.js"></script>
+</body>
+</html>

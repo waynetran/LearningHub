@@ -1,0 +1,1023 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Backpropagation — Deep Dive</title>
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError: false});"></script>
+</head>
+<body>
+<div id="tooltip"></div>
+
+<nav class="topic-nav">
+  <a class="back" href="../ai-ml.html">← Back to AI/ML</a>
+  <div class="crumb">Deep Dives / <span class="topic-name">Backpropagation</span></div>
+</nav>
+
+<div class="topic-layout">
+  <aside class="topic-toc">
+    <h4>ON THIS PAGE</h4>
+    <ul>
+      <li><a href="#intro">1. Why we need it</a></li>
+      <li><a href="#chain-rule">2. The chain rule refresher</a></li>
+      <li><a href="#compgraph">3. Computation graphs</a></li>
+      <li><a href="#network">4. Our running network</a></li>
+      <li><a href="#forward">5. Forward pass</a>
+        <ul><li><a href="#forward-demo">Interactive stepper</a></li></ul>
+      </li>
+      <li><a href="#loss">6. The loss function</a></li>
+      <li><a href="#four-eqs">7. The four BP equations</a></li>
+      <li><a href="#derivation">8. Derivation from the chain rule</a></li>
+      <li><a href="#backward">9. Backward pass</a>
+        <ul><li><a href="#backward-demo">Interactive stepper</a></li></ul>
+      </li>
+      <li><a href="#update">10. Gradient descent update</a></li>
+      <li><a href="#algorithm">11. Full algorithm</a></li>
+      <li><a href="#training-demo">12. Multi-iteration training</a></li>
+      <li><a href="#pitfalls">13. Pitfalls</a></li>
+      <li><a href="#summary">14. Summary</a></li>
+    </ul>
+  </aside>
+
+  <article class="topic-content">
+    <h1>Backpropagation</h1>
+    <p class="subtitle">The algorithm that actually trains neural networks — derived carefully, worked through with real numbers, and traced step-by-step in an interactive tiny network you can run in your browser.</p>
+    <div class="meta-tags">
+      <span>Prereq: calculus (chain rule), basic linear algebra</span>
+      <span>Time to read: ~30 min</span>
+      <span>Interactive figures: 3</span>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="intro">1. Why we need it</h2>
+    <p>A neural network is just a function. You hand it an input $x$, it produces a prediction $\hat{y}$. That function has knobs — millions or billions of them — called <em>weights</em>. The magic of training is finding the setting of those knobs that makes the network's predictions match the correct answers on some dataset.</p>
+
+    <p>Here's the problem in one sentence: given a scalar <em>loss</em> $L$ (how wrong the network was), how do we figure out — for every single weight $w$ in the network — which direction to nudge it to make $L$ smaller?</p>
+
+    <p>Mathematically, we need the partial derivative $\partial L / \partial w$ for every weight. With that, we can update each weight using gradient descent:</p>
+
+    <div class="math-display">$$w \leftarrow w - \eta \, \frac{\partial L}{\partial w}$$</div>
+
+    <p>where $\eta$ is a small positive number called the <em>learning rate</em>. The key word in that equation is <strong>every</strong>. A modern model has hundreds of billions of weights. Naively computing each gradient by finite differences would require a separate forward pass per weight — that's a hundred billion forward passes per training step. Obviously hopeless.</p>
+
+    <div class="callout">
+      <div class="label">THE INSIGHT</div>
+      <p style="margin:6px 0">Backpropagation computes all partial derivatives of a scalar output with respect to all inputs to a computation graph in a single backward pass whose cost is roughly equal to one forward pass. One forward + one backward = two passes, regardless of how many billion parameters you have. That is the reason deep learning works at scale.</p>
+    </div>
+
+    <p>Backprop was popularized in 1986 by Rumelhart, Hinton, and Williams, though variants had been discovered independently several times before. It's just the chain rule from calculus, applied cleverly. Let's build it from scratch.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="chain-rule">2. The chain rule refresher</h2>
+
+    <p>If you have a composition $f(g(x))$, the chain rule tells you how to differentiate it:</p>
+    <div class="math-display">$$\frac{df}{dx} = \frac{df}{dg} \cdot \frac{dg}{dx}$$</div>
+
+    <p>For a longer chain $f(g(h(x)))$:</p>
+    <div class="math-display">$$\frac{df}{dx} = \frac{df}{dg} \cdot \frac{dg}{dh} \cdot \frac{dh}{dx}$$</div>
+
+    <p>You multiply the local derivatives along the chain. That's the entire conceptual content of backpropagation. A neural network is a very long composition of functions — each layer is a function applied to the previous layer's output — so computing $\partial L / \partial w$ for some weight deep in the network is just multiplying local derivatives from the loss back to that weight.</p>
+
+    <div class="example">
+      <span class="label">Warm-up example</span>
+      <p>Let $f(x) = \sin(x^2 + 1)$. Set $u = x^2 + 1$, so $f = \sin(u)$.</p>
+      <p>$\frac{df}{du} = \cos(u)$, $\quad \frac{du}{dx} = 2x$</p>
+      <p>$\frac{df}{dx} = \cos(x^2+1) \cdot 2x$</p>
+      <p>Backpropagation does this same multiplication, but through a computation graph with thousands of nodes instead of two.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="compgraph">3. Computation graphs</h2>
+    <p>Any expression can be drawn as a directed graph where nodes are operations and edges carry intermediate values. For $f(x,y) = (x+y) \cdot y$:</p>
+    <div class="math-display no-center">
+$$x, y \to a = x + y \to f = a \cdot y$$
+    </div>
+    <p>To compute gradients we mark each edge with the local partial derivative and then trace backward from $f$ to whatever variable we want. The chain rule says: the derivative of $f$ with respect to a variable is the <em>sum over all paths</em> from that variable to $f$ of the product of local derivatives along the path.</p>
+    <p>Neural networks, even billion-parameter ones, are just large computation graphs. Backpropagation = "sum over paths" implemented efficiently by traversing the graph once in reverse.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="network">4. Our running network</h2>
+    <p>To keep everything concrete, we'll use a minimal network with 2 inputs, 2 hidden units, and 1 output — exactly what you need to learn XOR. Every equation we derive generalizes directly to larger networks.</p>
+
+    <figure>
+      <svg viewBox="0 0 520 280" width="100%" style="max-width:520px; background:var(--bg-2); border:1px solid var(--border); border-radius:8px; padding:16px">
+        <!-- Inputs -->
+        <g>
+          <circle cx="60" cy="90" r="24" fill="#171b26" stroke="#22d3ee" stroke-width="2"/>
+          <text x="60" y="95" text-anchor="middle" fill="#dbe1ec" font-family="monospace" font-size="13">x₁</text>
+          <circle cx="60" cy="190" r="24" fill="#171b26" stroke="#22d3ee" stroke-width="2"/>
+          <text x="60" y="195" text-anchor="middle" fill="#dbe1ec" font-family="monospace" font-size="13">x₂</text>
+        </g>
+        <!-- Hidden layer -->
+        <g>
+          <circle cx="240" cy="90" r="26" fill="#171b26" stroke="#7c5cff" stroke-width="2"/>
+          <text x="240" y="87" text-anchor="middle" fill="#dbe1ec" font-family="monospace" font-size="13">h₁</text>
+          <text x="240" y="102" text-anchor="middle" fill="#8a93a6" font-family="monospace" font-size="10">σ(z¹₁)</text>
+          <circle cx="240" cy="190" r="26" fill="#171b26" stroke="#7c5cff" stroke-width="2"/>
+          <text x="240" y="187" text-anchor="middle" fill="#dbe1ec" font-family="monospace" font-size="13">h₂</text>
+          <text x="240" y="202" text-anchor="middle" fill="#8a93a6" font-family="monospace" font-size="10">σ(z¹₂)</text>
+        </g>
+        <!-- Output -->
+        <circle cx="430" cy="140" r="30" fill="#171b26" stroke="#f472b6" stroke-width="2"/>
+        <text x="430" y="137" text-anchor="middle" fill="#dbe1ec" font-family="monospace" font-size="13">ŷ</text>
+        <text x="430" y="153" text-anchor="middle" fill="#8a93a6" font-family="monospace" font-size="10">σ(z²)</text>
+        <!-- Connections input to hidden -->
+        <g stroke="#242a3a" stroke-width="1.5" fill="none">
+          <line x1="84" y1="90" x2="214" y2="90"/>
+          <line x1="84" y1="90" x2="214" y2="190"/>
+          <line x1="84" y1="190" x2="214" y2="90"/>
+          <line x1="84" y1="190" x2="214" y2="190"/>
+        </g>
+        <!-- Connection labels -->
+        <text x="148" y="83" text-anchor="middle" fill="#c5b5ff" font-family="monospace" font-size="10">w¹₁₁</text>
+        <text x="165" y="130" text-anchor="middle" fill="#c5b5ff" font-family="monospace" font-size="10">w¹₁₂</text>
+        <text x="135" y="155" text-anchor="middle" fill="#c5b5ff" font-family="monospace" font-size="10">w¹₂₁</text>
+        <text x="148" y="205" text-anchor="middle" fill="#c5b5ff" font-family="monospace" font-size="10">w¹₂₂</text>
+        <!-- Connections hidden to output -->
+        <g stroke="#242a3a" stroke-width="1.5" fill="none">
+          <line x1="266" y1="90" x2="402" y2="140"/>
+          <line x1="266" y1="190" x2="402" y2="140"/>
+        </g>
+        <text x="330" y="105" text-anchor="middle" fill="#fbbf24" font-family="monospace" font-size="10">w²₁</text>
+        <text x="330" y="178" text-anchor="middle" fill="#fbbf24" font-family="monospace" font-size="10">w²₂</text>
+        <!-- Labels -->
+        <text x="60" y="250" text-anchor="middle" fill="#8a93a6" font-family="monospace" font-size="10">input layer</text>
+        <text x="240" y="250" text-anchor="middle" fill="#8a93a6" font-family="monospace" font-size="10">hidden layer</text>
+        <text x="430" y="250" text-anchor="middle" fill="#8a93a6" font-family="monospace" font-size="10">output layer</text>
+      </svg>
+      <figcaption>A 2-2-1 fully-connected network. Two input features, two hidden units, one output. Every line is a learnable weight; every hidden/output neuron also has an implicit bias.</figcaption>
+    </figure>
+
+    <h3>Notation</h3>
+    <p>Superscripts denote layer: $(1)$ is the hidden layer, $(2)$ is the output layer. $z$ denotes the <em>pre-activation</em> (the linear combination $w \cdot x + b$), $h$ or $\hat{y}$ denotes the <em>activation</em> (the output of $\sigma(z)$).</p>
+    <div class="math-display no-center">
+$$\begin{aligned}
+z^{(1)}_1 &= w^{(1)}_{11} x_1 + w^{(1)}_{21} x_2 + b^{(1)}_1 & h_1 &= \sigma(z^{(1)}_1) \\
+z^{(1)}_2 &= w^{(1)}_{12} x_1 + w^{(1)}_{22} x_2 + b^{(1)}_2 & h_2 &= \sigma(z^{(1)}_2) \\
+z^{(2)}  &= w^{(2)}_{1} h_1 + w^{(2)}_{2} h_2 + b^{(2)}    & \hat{y} &= \sigma(z^{(2)})
+\end{aligned}$$
+    </div>
+    <p>For the activation we'll use the classic logistic sigmoid:</p>
+    <div class="math-display">$$\sigma(z) = \frac{1}{1 + e^{-z}}, \qquad \sigma'(z) = \sigma(z)(1 - \sigma(z))$$</div>
+    <p>The fact that $\sigma'$ has such a clean form in terms of $\sigma$ itself is why it was the default activation for decades. Modern networks use ReLU mostly — we'll note how ReLU changes things at the end.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="forward">5. Forward pass</h2>
+    <p>Computing $\hat{y}$ from $x$ is just evaluating the equations above top to bottom. No calculus yet — it's plain arithmetic.</p>
+
+    <div class="example">
+      <span class="label">Running numbers</span>
+      <p>We'll use these inputs and initial weights throughout the page (you can change them in the interactive figure below):</p>
+      <p>$x = [0.5,\ 0.8]$, &nbsp;&nbsp; target $y = 1$</p>
+      <p>$W^{(1)} = \begin{bmatrix} 0.2 & 0.4 \\ 0.3 & 0.1 \end{bmatrix}$, &nbsp;&nbsp; $b^{(1)} = [0.1,\ 0.1]$</p>
+      <p>$w^{(2)} = [0.5,\ 0.6]$, &nbsp;&nbsp; $b^{(2)} = 0.2$</p>
+    </div>
+
+    <h3 id="forward-demo">Interactive: step through the forward pass</h3>
+    <p>Press <strong>Step →</strong> to compute each value one at a time. Edit any number in the parameter panel and the demo will restart so you can watch how the forward pass changes.</p>
+
+    <div class="step-figure" id="bp-forward-figure">
+      <div class="sf-header">
+        <span class="sf-title">▸ Forward pass (2-2-1 network)</span>
+        <span class="sf-progress" id="bp-fwd-progress">Step 0 / 6</span>
+      </div>
+      <div class="sf-body">
+        <div class="sf-visual">
+          <svg viewBox="0 0 460 270" width="100%" style="max-width:460px" id="bp-fwd-svg">
+            <!-- Inputs -->
+            <circle id="bp-fwd-x1" cx="50" cy="80" r="24" class="node-base"/>
+            <text id="bp-fwd-x1-label" x="50" y="84" text-anchor="middle" fill="#dbe1ec" font-family="monospace" font-size="12">x₁</text>
+            <circle id="bp-fwd-x2" cx="50" cy="180" r="24" class="node-base"/>
+            <text id="bp-fwd-x2-label" x="50" y="184" text-anchor="middle" fill="#dbe1ec" font-family="monospace" font-size="12">x₂</text>
+            <!-- Hidden -->
+            <circle id="bp-fwd-h1" cx="220" cy="80" r="28" class="node-base"/>
+            <text id="bp-fwd-h1-label" x="220" y="77" text-anchor="middle" fill="#dbe1ec" font-family="monospace" font-size="12">h₁</text>
+            <text id="bp-fwd-h1-val" x="220" y="91" text-anchor="middle" fill="#8a93a6" font-family="monospace" font-size="10">?</text>
+            <circle id="bp-fwd-h2" cx="220" cy="180" r="28" class="node-base"/>
+            <text id="bp-fwd-h2-label" x="220" y="177" text-anchor="middle" fill="#dbe1ec" font-family="monospace" font-size="12">h₂</text>
+            <text id="bp-fwd-h2-val" x="220" y="191" text-anchor="middle" fill="#8a93a6" font-family="monospace" font-size="10">?</text>
+            <!-- Output -->
+            <circle id="bp-fwd-y" cx="390" cy="130" r="30" class="node-base"/>
+            <text id="bp-fwd-y-label" x="390" y="127" text-anchor="middle" fill="#dbe1ec" font-family="monospace" font-size="12">ŷ</text>
+            <text id="bp-fwd-y-val" x="390" y="141" text-anchor="middle" fill="#8a93a6" font-family="monospace" font-size="10">?</text>
+            <!-- Connections -->
+            <line id="bp-fwd-c11" x1="74" y1="80" x2="192" y2="80" class="conn-base"/>
+            <line id="bp-fwd-c12" x1="74" y1="80" x2="192" y2="180" class="conn-base"/>
+            <line id="bp-fwd-c21" x1="74" y1="180" x2="192" y2="80" class="conn-base"/>
+            <line id="bp-fwd-c22" x1="74" y1="180" x2="192" y2="180" class="conn-base"/>
+            <line id="bp-fwd-co1" x1="248" y1="80" x2="362" y2="130" class="conn-base"/>
+            <line id="bp-fwd-co2" x1="248" y1="180" x2="362" y2="130" class="conn-base"/>
+            <!-- Labels -->
+            <text x="50" y="235" text-anchor="middle" fill="#8a93a6" font-family="monospace" font-size="9">input</text>
+            <text x="220" y="235" text-anchor="middle" fill="#8a93a6" font-family="monospace" font-size="9">hidden</text>
+            <text x="390" y="235" text-anchor="middle" fill="#8a93a6" font-family="monospace" font-size="9">output</text>
+          </svg>
+        </div>
+        <div class="sf-explain" id="bp-fwd-explain">
+          <h5>READY</h5>
+          <p>Press <strong>Step →</strong> to compute each pre-activation and activation in order.</p>
+        </div>
+      </div>
+      <div class="sf-params">
+        <label>x₁ <input type="number" id="bp-x1" value="0.5" step="0.1"></label>
+        <label>x₂ <input type="number" id="bp-x2" value="0.8" step="0.1"></label>
+        <label>y <input type="number" id="bp-y" value="1" step="0.1"></label>
+        <label>w¹₁₁ <input type="number" id="bp-w111" value="0.2" step="0.05"></label>
+        <label>w¹₁₂ <input type="number" id="bp-w112" value="0.4" step="0.05"></label>
+        <label>w¹₂₁ <input type="number" id="bp-w121" value="0.3" step="0.05"></label>
+        <label>w¹₂₂ <input type="number" id="bp-w122" value="0.1" step="0.05"></label>
+        <label>b¹₁ <input type="number" id="bp-b11" value="0.1" step="0.05"></label>
+        <label>b¹₂ <input type="number" id="bp-b12" value="0.1" step="0.05"></label>
+        <label>w²₁ <input type="number" id="bp-w21" value="0.5" step="0.05"></label>
+        <label>w²₂ <input type="number" id="bp-w22" value="0.6" step="0.05"></label>
+        <label>b² <input type="number" id="bp-b2" value="0.2" step="0.05"></label>
+      </div>
+      <div class="sf-controls">
+        <button class="btn" onclick="resetFwd()">↺ Reset</button>
+        <button class="btn" onclick="prevFwd()">← Back</button>
+        <div class="spacer"></div>
+        <button class="btn primary" onclick="stepFwd()">Step →</button>
+        <button class="btn" onclick="runAllFwd()">Run All</button>
+      </div>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="loss">6. The loss function</h2>
+    <p>Once we have a prediction $\hat{y}$, we measure how wrong it is with a <em>loss function</em>. For regression and for pedagogical clarity we'll use the squared error:</p>
+    <div class="math-display">$$L = \frac{1}{2}(\hat{y} - y)^2$$</div>
+    <p>The factor of $\frac{1}{2}$ is there purely so the derivative comes out clean: $\frac{\partial L}{\partial \hat{y}} = \hat{y} - y$.</p>
+    <p>For classification you'd use cross-entropy loss instead, but the backward-pass machinery is identical — only the formula for $\frac{\partial L}{\partial \hat{y}}$ changes.</p>
+
+    <div class="example">
+      <span class="label">With our numbers</span>
+      <p>After the forward pass we computed $\hat{y} \approx 0.703$. With target $y = 1$:</p>
+      <p>$L = \frac{1}{2}(0.703 - 1)^2 = \frac{1}{2}(0.0881) \approx 0.0441$</p>
+      <p>The network got $\hat{y} = 0.703$ but wanted $y = 1$. Our job now is to adjust every weight so that the <em>next</em> forward pass produces a $\hat{y}$ slightly closer to 1 — and therefore a slightly smaller loss.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="four-eqs">7. The four fundamental equations</h2>
+    <p>Backpropagation for a feedforward network can be stated as four equations. We'll derive them below; here they are stated cleanly. Let $L$ be the layer index (we'll use $L=2$ for the output layer), let $\delta^{(L)}_j = \partial L / \partial z^{(L)}_j$ be the "error signal" at neuron $j$ of layer $L$, and let $\odot$ denote element-wise product.</p>
+
+    <div class="theorem">
+      <span class="label">The four BP equations</span>
+      <div class="math-display no-center">
+$$\begin{aligned}
+\text{(BP1) Output error:} \quad & \delta^{(L)} = \nabla_{\hat{y}} L \odot \sigma'(z^{(L)}) \\
+\text{(BP2) Backprop through a layer:} \quad & \delta^{(l)} = \left((W^{(l+1)})^\top \delta^{(l+1)}\right) \odot \sigma'(z^{(l)}) \\
+\text{(BP3) Bias gradient:} \quad & \frac{\partial L}{\partial b^{(l)}_j} = \delta^{(l)}_j \\
+\text{(BP4) Weight gradient:} \quad & \frac{\partial L}{\partial w^{(l)}_{jk}} = h^{(l-1)}_k \cdot \delta^{(l)}_j
+\end{aligned}$$
+      </div>
+    </div>
+
+    <div class="math-glossary">
+      <p class="mg-title">The four equations, every symbol decoded</p>
+      <dl>
+        <dt>$l$</dt>
+        <dd>Layer index. $l = 1$ is the first hidden layer, $l = L$ is the output layer.</dd>
+        <dt>$z^{(l)}$</dt>
+        <dd>Pre-activation of layer $l$ — the weighted sum <em>before</em> the activation function is applied. $z^{(l)} = W^{(l)} h^{(l-1)} + b^{(l)}$.</dd>
+        <dt>$h^{(l)}$</dt>
+        <dd>Post-activation output of layer $l$: $h^{(l)} = \sigma(z^{(l)})$. Fed forward into layer $l+1$.</dd>
+        <dt>$\hat{y}$</dt>
+        <dd>Network's final prediction, equal to $h^{(L)}$.</dd>
+        <dt>$y$</dt>
+        <dd>The ground-truth target we're trying to match.</dd>
+        <dt>$L$</dt>
+        <dd>The loss — a scalar function of $\hat{y}$ and $y$ (e.g. MSE $\frac{1}{2}(\hat{y}-y)^2$ or cross-entropy).
+          <span class="mg-why">Careful: we reuse $L$ for "loss" and "total number of layers." Context always disambiguates.</span>
+        </dd>
+        <dt>$\delta^{(l)}_j$</dt>
+        <dd>"Error signal" at neuron $j$ of layer $l$. Defined as $\partial L / \partial z^{(l)}_j$.
+          <span class="mg-why">"If I nudged this neuron's pre-activation, how much would the loss change?" That's all a delta is.</span>
+        </dd>
+        <dt>$\sigma'(z)$</dt>
+        <dd>Derivative of the activation function, evaluated at the pre-activation.
+          <span class="mg-why">For sigmoid: $\sigma'(z) = \sigma(z)(1-\sigma(z))$. For ReLU: 1 if $z>0$ else 0.</span>
+        </dd>
+        <dt>$\odot$</dt>
+        <dd>Elementwise (Hadamard) product — multiply vectors coordinate by coordinate. Different from matrix multiply.</dd>
+        <dt>$W^{(l+1)}$</dt>
+        <dd>Weight matrix of the <em>next</em> layer, shape <code>(neurons in layer l+1) × (neurons in layer l)</code>.</dd>
+        <dt>$(W^{(l+1)})^\top \delta^{(l+1)}$</dt>
+        <dd>The key matrix-vector product of backprop. It routes each downstream error back to the upstream neurons that contributed to it, weighted by the connection strength.
+          <span class="mg-why">This is literally the forward matrix multiply, run in reverse. Backprop isn't a new algorithm — it's the forward pass with the same matrices transposed.</span>
+        </dd>
+        <dt>$\nabla_{\hat{y}} L$</dt>
+        <dd>Gradient of the loss with respect to the final prediction.
+          <span class="mg-why">For MSE, this is simply $\hat{y} - y$. For cross-entropy with softmax, it simplifies to $\hat{y} - y$ as well (a famous cancellation).</span>
+        </dd>
+      </dl>
+      <p class="mg-analogy"><strong>Analogy</strong> Imagine a factory with four production lines in a row. A defect shows up in the final product (that's $\nabla_{\hat{y}} L$). You want to know which machine to blame. BP1 says: divide the final defect by how sensitive the last machine is to its input — that's your first "blame score." BP2 says: to blame the second-to-last machine, look at how much it fed into the last one (that's $W$), weighted by how much each of its outputs mattered (that's the local derivative). Multiply. Repeat all the way back to machine one. BP3 and BP4 convert blame scores into concrete knob-turn prescriptions: "twist this knob by exactly this much to reduce the defect." That's the entire algorithm.</p>
+    </div>
+
+    <p>Read them slowly. BP1 says: to get the error signal at the output layer, take the gradient of the loss with respect to the final activation and multiply by the derivative of the activation function. BP2 says: to propagate the error one layer backward, multiply by the transposed weight matrix and then by $\sigma'$. BP3 and BP4 convert the error signal into actual weight and bias gradients.</p>
+    <p>Everything else in deep learning — optimizers, regularization, dropout — builds on top of these four lines.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="derivation">8. Derivation from the chain rule</h2>
+
+    <h3>8.1 BP1: the output layer</h3>
+    <p>We want $\delta^{(2)} = \frac{\partial L}{\partial z^{(2)}}$. The path from $L$ to $z^{(2)}$ goes through $\hat{y} = \sigma(z^{(2)})$. By the chain rule:</p>
+    <div class="math-display">$$\delta^{(2)} = \frac{\partial L}{\partial \hat{y}} \cdot \frac{\partial \hat{y}}{\partial z^{(2)}}$$</div>
+    <p>Since $L = \frac{1}{2}(\hat{y} - y)^2$, we have $\partial L / \partial \hat{y} = \hat{y} - y$. And $\partial \hat{y} / \partial z^{(2)} = \sigma'(z^{(2)}) = \hat{y}(1 - \hat{y})$. So:</p>
+    <div class="math-display">$$\delta^{(2)} = (\hat{y} - y)\,\hat{y}(1 - \hat{y})$$</div>
+
+    <h3>8.2 BP3 and BP4 at the output layer</h3>
+    <p>The output pre-activation is $z^{(2)} = w^{(2)}_1 h_1 + w^{(2)}_2 h_2 + b^{(2)}$. Differentiating with respect to $w^{(2)}_1$:</p>
+    <div class="math-display">$$\frac{\partial L}{\partial w^{(2)}_1} = \frac{\partial L}{\partial z^{(2)}} \cdot \frac{\partial z^{(2)}}{\partial w^{(2)}_1} = \delta^{(2)} \cdot h_1$$</div>
+    <p>And similarly $\partial L / \partial w^{(2)}_2 = \delta^{(2)} \cdot h_2$ and $\partial L / \partial b^{(2)} = \delta^{(2)}$ (because $\partial z^{(2)} / \partial b^{(2)} = 1$).</p>
+
+    <p>Notice the pattern: to compute the gradient for weight $w$ entering neuron $j$, you multiply the error signal $\delta_j$ by whatever value is flowing <em>into</em> that weight from the previous layer. That's BP4 in words.</p>
+
+    <h3>8.3 BP2: propagating error backward</h3>
+    <p>Now we want $\delta^{(1)}_1 = \frac{\partial L}{\partial z^{(1)}_1}$. What paths lead from $z^{(1)}_1$ to $L$? Only one — via $h_1$, then through the output neuron:</p>
+    <div class="math-display">$$z^{(1)}_1 \to h_1 \to z^{(2)} \to \hat{y} \to L$$</div>
+    <p>By the chain rule:</p>
+    <div class="math-display">$$\delta^{(1)}_1 = \frac{\partial L}{\partial z^{(1)}_1} = \frac{\partial L}{\partial z^{(2)}} \cdot \frac{\partial z^{(2)}}{\partial h_1} \cdot \frac{\partial h_1}{\partial z^{(1)}_1}$$</div>
+    <p>Identifying the terms: $\partial L / \partial z^{(2)} = \delta^{(2)}$; $\partial z^{(2)} / \partial h_1 = w^{(2)}_1$ (because $z^{(2)}$ is linear in $h_1$); and $\partial h_1 / \partial z^{(1)}_1 = \sigma'(z^{(1)}_1)$. So:</p>
+    <div class="math-display">$$\delta^{(1)}_1 = \delta^{(2)} \cdot w^{(2)}_1 \cdot \sigma'(z^{(1)}_1)$$</div>
+    <p>In a network with more than one output neuron, hidden unit $h_1$ would feed <em>multiple</em> output pre-activations $z^{(2)}_1, z^{(2)}_2, \dots$, so there would be multiple paths from $z^{(1)}_1$ to $L$. The chain rule says you sum over them:</p>
+    <div class="math-display">$$\delta^{(l)}_k = \sigma'(z^{(l)}_k) \sum_j w^{(l+1)}_{kj} \, \delta^{(l+1)}_j$$</div>
+    <p>In matrix form, that sum is exactly the transposed weight matrix times the next layer's error — which is (BP2).</p>
+
+    <h3>8.4 BP4 for the hidden layer</h3>
+    <p>Once we have $\delta^{(1)}_1$, the weight gradient in the first layer is the same pattern as before: "error in, signal coming in from below":</p>
+    <div class="math-display">$$\frac{\partial L}{\partial w^{(1)}_{11}} = \delta^{(1)}_1 \cdot x_1, \qquad \frac{\partial L}{\partial w^{(1)}_{21}} = \delta^{(1)}_1 \cdot x_2$$</div>
+    <p>And that's all four BP equations, derived from nothing more than the chain rule.</p>
+
+    <div class="proof">
+      <span class="label">Why this is a "backward pass"</span>
+      <p>Observe that BP2 computes $\delta^{(l)}$ from $\delta^{(l+1)}$. That is, we need to know the error signal at layer $l+1$ before we can compute it at layer $l$. So we march from the output layer back toward the input, one layer at a time, reusing the $\delta$ we just computed. This is why we call it <em>back</em>propagation — the arithmetic literally proceeds backward through the network.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="backward">9. Backward pass</h2>
+    <p>Now let's plug our running numbers through BP1 → BP4 and compute every gradient.</p>
+
+    <div class="example">
+      <span class="label">Values cached from the forward pass</span>
+      <p>$z^{(1)}_1 = 0.44, \quad h_1 = \sigma(0.44) \approx 0.6083$</p>
+      <p>$z^{(1)}_2 = 0.38, \quad h_2 = \sigma(0.38) \approx 0.5939$</p>
+      <p>$z^{(2)} \approx 0.8605, \quad \hat{y} = \sigma(0.8605) \approx 0.7029$</p>
+      <p>$L \approx 0.0441$</p>
+    </div>
+
+    <h3>Step 1 — BP1 at the output</h3>
+    <div class="math-display">$$\delta^{(2)} = (\hat{y} - y) \cdot \hat{y}(1-\hat{y}) = (0.7029 - 1)(0.7029)(0.2971) \approx -0.0620$$</div>
+
+    <h3>Step 2 — BP3/BP4 at the output</h3>
+    <div class="math-display">$$\frac{\partial L}{\partial w^{(2)}_1} = \delta^{(2)} \cdot h_1 = (-0.0620)(0.6083) \approx -0.0377$$</div>
+    <div class="math-display">$$\frac{\partial L}{\partial w^{(2)}_2} = \delta^{(2)} \cdot h_2 = (-0.0620)(0.5939) \approx -0.0368$$</div>
+    <div class="math-display">$$\frac{\partial L}{\partial b^{(2)}} = \delta^{(2)} \approx -0.0620$$</div>
+
+    <h3>Step 3 — BP2 for the hidden layer</h3>
+    <div class="math-display">$$\sigma'(z^{(1)}_1) = h_1(1-h_1) = (0.6083)(0.3917) \approx 0.2383$$</div>
+    <div class="math-display">$$\delta^{(1)}_1 = \delta^{(2)} \cdot w^{(2)}_1 \cdot \sigma'(z^{(1)}_1) = (-0.0620)(0.5)(0.2383) \approx -0.00739$$</div>
+    <div class="math-display">$$\sigma'(z^{(1)}_2) = h_2(1-h_2) \approx 0.2412$$</div>
+    <div class="math-display">$$\delta^{(1)}_2 = (-0.0620)(0.6)(0.2412) \approx -0.00897$$</div>
+
+    <h3>Step 4 — BP3/BP4 for the hidden layer</h3>
+    <div class="math-display no-center">
+$$\begin{aligned}
+\partial L / \partial w^{(1)}_{11} &= \delta^{(1)}_1 \cdot x_1 \approx -0.00370 \\
+\partial L / \partial w^{(1)}_{21} &= \delta^{(1)}_1 \cdot x_2 \approx -0.00591 \\
+\partial L / \partial w^{(1)}_{12} &= \delta^{(1)}_2 \cdot x_1 \approx -0.00449 \\
+\partial L / \partial w^{(1)}_{22} &= \delta^{(1)}_2 \cdot x_2 \approx -0.00717 \\
+\partial L / \partial b^{(1)}_1 &= \delta^{(1)}_1 \approx -0.00739 \\
+\partial L / \partial b^{(1)}_2 &= \delta^{(1)}_2 \approx -0.00897
+\end{aligned}$$
+    </div>
+
+    <p>All gradients are negative. That means each weight should be <em>increased</em> to reduce the loss (since $w \leftarrow w - \eta \cdot (\text{neg}) = w + \text{pos}$). Intuitively: the network underestimated $\hat{y}$, so we want every weight pointing toward the output to grow.</p>
+
+    <h3 id="backward-demo">Interactive: step through the backward pass</h3>
+    <p>This figure uses the same network state as the forward demo above (they share parameters). Run the forward pass first, then step through backward to watch each gradient appear.</p>
+
+    <div class="step-figure" id="bp-backward-figure">
+      <div class="sf-header">
+        <span class="sf-title">▸ Backward pass — gradients appear one at a time</span>
+        <span class="sf-progress" id="bp-bwd-progress">Step 0 / 8</span>
+      </div>
+      <div class="sf-body">
+        <div class="sf-visual">
+          <svg viewBox="0 0 460 270" width="100%" style="max-width:460px" id="bp-bwd-svg">
+            <!-- Network (mirrored state from forward) -->
+            <circle id="bp-bwd-x1" cx="50" cy="80" r="24" class="node-base node-used"/>
+            <text x="50" y="84" text-anchor="middle" fill="#dbe1ec" font-family="monospace" font-size="12">x₁</text>
+            <circle id="bp-bwd-x2" cx="50" cy="180" r="24" class="node-base node-used"/>
+            <text x="50" y="184" text-anchor="middle" fill="#dbe1ec" font-family="monospace" font-size="12">x₂</text>
+            <circle id="bp-bwd-h1" cx="220" cy="80" r="28" class="node-base node-used"/>
+            <text x="220" y="77" text-anchor="middle" fill="#dbe1ec" font-family="monospace" font-size="12">h₁</text>
+            <text id="bp-bwd-h1-val" x="220" y="91" text-anchor="middle" fill="#8a93a6" font-family="monospace" font-size="10">?</text>
+            <circle id="bp-bwd-h2" cx="220" cy="180" r="28" class="node-base node-used"/>
+            <text x="220" y="177" text-anchor="middle" fill="#dbe1ec" font-family="monospace" font-size="12">h₂</text>
+            <text id="bp-bwd-h2-val" x="220" y="191" text-anchor="middle" fill="#8a93a6" font-family="monospace" font-size="10">?</text>
+            <circle id="bp-bwd-y" cx="390" cy="130" r="30" class="node-base node-used"/>
+            <text x="390" y="127" text-anchor="middle" fill="#dbe1ec" font-family="monospace" font-size="12">ŷ</text>
+            <text id="bp-bwd-y-val" x="390" y="141" text-anchor="middle" fill="#8a93a6" font-family="monospace" font-size="10">?</text>
+            <!-- Connections -->
+            <line id="bp-bwd-c11" x1="74" y1="80" x2="192" y2="80" class="conn-base conn-used"/>
+            <line id="bp-bwd-c12" x1="74" y1="80" x2="192" y2="180" class="conn-base conn-used"/>
+            <line id="bp-bwd-c21" x1="74" y1="180" x2="192" y2="80" class="conn-base conn-used"/>
+            <line id="bp-bwd-c22" x1="74" y1="180" x2="192" y2="180" class="conn-base conn-used"/>
+            <line id="bp-bwd-co1" x1="248" y1="80" x2="362" y2="130" class="conn-base conn-used"/>
+            <line id="bp-bwd-co2" x1="248" y1="180" x2="362" y2="130" class="conn-base conn-used"/>
+            <!-- Delta indicators that will appear -->
+            <text id="bp-bwd-d2" x="390" y="170" text-anchor="middle" fill="#f472b6" font-family="monospace" font-size="10" opacity="0">δ²=?</text>
+            <text id="bp-bwd-d11" x="220" y="50" text-anchor="middle" fill="#f472b6" font-family="monospace" font-size="10" opacity="0">δ¹₁=?</text>
+            <text id="bp-bwd-d12" x="220" y="220" text-anchor="middle" fill="#f472b6" font-family="monospace" font-size="10" opacity="0">δ¹₂=?</text>
+          </svg>
+        </div>
+        <div class="sf-explain" id="bp-bwd-explain">
+          <h5>READY</h5>
+          <p>The forward pass values are cached. Press <strong>Step →</strong> to begin the backward pass from the loss.</p>
+        </div>
+      </div>
+      <div class="sf-controls">
+        <button class="btn" onclick="resetBwd()">↺ Reset</button>
+        <button class="btn" onclick="prevBwd()">← Back</button>
+        <div class="spacer"></div>
+        <button class="btn primary" onclick="stepBwd()">Step →</button>
+        <button class="btn" onclick="runAllBwd()">Run All</button>
+      </div>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="update">10. Gradient descent update</h2>
+    <p>Now that we have every gradient, we apply the update rule to each weight and bias simultaneously. With learning rate $\eta = 0.5$:</p>
+    <div class="math-display no-center">
+$$\begin{aligned}
+w^{(2)}_1 &\leftarrow 0.5 - 0.5 \cdot (-0.0377) = 0.5189 \\
+w^{(2)}_2 &\leftarrow 0.6 - 0.5 \cdot (-0.0368) = 0.6184 \\
+b^{(2)}   &\leftarrow 0.2 - 0.5 \cdot (-0.0620) = 0.2310
+\end{aligned}$$
+    </div>
+    <p>And similarly for the hidden layer. If we now run a <em>new</em> forward pass with these updated weights on the same input $x = [0.5, 0.8]$, we'll find $\hat{y}$ has moved slightly closer to the target $y = 1$. Repeating this for thousands of (input, target) pairs over many epochs drives the loss down across the whole dataset.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="algorithm">11. The full algorithm</h2>
+
+    <div class="callout math">
+      <div class="label">BACKPROPAGATION (pseudocode)</div>
+<pre style="margin:8px 0;font-family:var(--mono);font-size:13px;line-height:1.6;color:var(--text)">
+# Given: network with L layers, loss L, learning rate η
+# Given: training pair (x, y)
+
+# --- Forward pass ---
+h[0] = x
+for l in 1..L:
+    z[l] = W[l] @ h[l-1] + b[l]
+    h[l] = activation(z[l])
+loss = L(h[L], y)
+
+# --- Backward pass ---
+delta[L] = grad_output_loss(h[L], y) * activation_deriv(z[L])   # BP1
+for l in L..1 (reverse):
+    grad_W[l] = delta[l] @ h[l-1].T                              # BP4
+    grad_b[l] = delta[l]                                         # BP3
+    if l > 1:
+        delta[l-1] = (W[l].T @ delta[l]) * activation_deriv(z[l-1])  # BP2
+
+# --- Update ---
+for l in 1..L:
+    W[l] -= η * grad_W[l]
+    b[l] -= η * grad_b[l]
+</pre>
+    </div>
+
+    <p>Every deep learning framework (PyTorch, JAX, TensorFlow) implements a generalized version of this via <em>reverse-mode automatic differentiation</em>. You write the forward pass; the framework records the computation graph and then traverses it backward computing local derivatives. That's why you never have to write backward passes by hand anymore — but you still have to understand what's happening when gradients vanish, explode, or disappear mysteriously.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="training-demo">12. Multi-iteration training demo</h2>
+    <p>Let's put it all together. This figure performs <em>full</em> training iterations (forward + backward + update) on the same network, showing how the loss decreases and the output $\hat{y}$ drifts toward the target. Each "Step" is one complete iteration.</p>
+
+    <div class="step-figure" id="bp-training-figure">
+      <div class="sf-header">
+        <span class="sf-title">▸ Training — watch the loss decrease</span>
+        <span class="sf-progress" id="bp-train-progress">Iteration 0</span>
+      </div>
+      <div class="sf-body">
+        <div class="sf-visual">
+          <svg viewBox="0 0 460 270" width="100%" style="max-width:460px" id="bp-train-svg">
+            <!-- Loss graph -->
+            <g transform="translate(20, 20)">
+              <rect width="420" height="180" fill="#11141c" stroke="#242a3a" stroke-width="1" rx="4"/>
+              <text x="210" y="14" text-anchor="middle" fill="#8a93a6" font-family="monospace" font-size="10">Loss over iterations</text>
+              <text x="10" y="100" fill="#8a93a6" font-family="monospace" font-size="9" transform="rotate(-90, 10, 100)">L</text>
+              <g id="bp-train-loss-path"></g>
+              <g id="bp-train-loss-points"></g>
+            </g>
+            <text x="230" y="225" text-anchor="middle" fill="#f472b6" font-family="monospace" font-size="11" id="bp-train-yhat">ŷ = ?</text>
+            <text x="230" y="245" text-anchor="middle" fill="#22d3ee" font-family="monospace" font-size="11" id="bp-train-loss">L = ?</text>
+          </svg>
+        </div>
+        <div class="sf-explain" id="bp-train-explain">
+          <h5>READY</h5>
+          <p>Press <strong>Step →</strong> to run one full training iteration. The loss graph shows how $L$ evolves. Try different learning rates to see oscillation, slow convergence, or divergence.</p>
+        </div>
+      </div>
+      <div class="sf-params">
+        <label>η (lr) <input type="number" id="bp-lr" value="0.5" step="0.1"></label>
+        <label>x₁ <input type="number" id="bp-tr-x1" value="0.5" step="0.1"></label>
+        <label>x₂ <input type="number" id="bp-tr-x2" value="0.8" step="0.1"></label>
+        <label>target y <input type="number" id="bp-tr-y" value="1" step="0.1"></label>
+      </div>
+      <div class="sf-controls">
+        <button class="btn" onclick="resetTraining()">↺ Reset</button>
+        <div class="spacer"></div>
+        <button class="btn primary" onclick="stepTraining()">Step →</button>
+        <button class="btn" onclick="runAllTraining()">Run 20 iter</button>
+      </div>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="pitfalls">13. Pitfalls</h2>
+
+    <h3>Vanishing gradients</h3>
+    <p>Notice that every backward step multiplies by $\sigma'(z) = \sigma(z)(1-\sigma(z))$, which is at most $\frac{1}{4}$ — and is <em>much</em> smaller when $z$ is far from 0. In a deep network, the gradient at the first layer is a product of many such small numbers, and it shrinks exponentially with depth. This was why deep networks famously didn't train for decades. Fixes:</p>
+    <ul class="clean">
+      <li><strong>ReLU activation:</strong> $\text{ReLU}(z) = \max(0, z)$, whose derivative is $1$ for $z > 0$. No shrinkage, just a hard cutoff at zero.</li>
+      <li><strong>Residual connections (ResNet, 2015):</strong> add a shortcut $h^{(l+1)} = h^{(l)} + f(h^{(l)})$. The gradient can flow directly through the shortcut without being multiplied by anything, preserving its magnitude.</li>
+      <li><strong>Careful weight initialization</strong> (Xavier, He) to keep $z$ in the active region of the activation.</li>
+      <li><strong>LayerNorm / BatchNorm</strong> to rescale activations between layers.</li>
+    </ul>
+
+    <h3>Exploding gradients</h3>
+    <p>The opposite failure: the product of backward multipliers is too large and gradients grow without bound, causing NaNs. Fixes: gradient clipping ("if $\|\nabla\| > c$, rescale to $c$"), smaller learning rates, better initialization.</p>
+
+    <h3>Dead ReLUs</h3>
+    <p>If a ReLU's input goes strongly negative, its gradient is zero, and the weights feeding it receive no update — forever. The neuron is "dead." Leaky ReLU, GELU, and SiLU/Swish activations fix this by having a small nonzero slope in the negative region.</p>
+
+    <h3>You shouldn't need to debug backprop itself</h3>
+    <p>Every modern framework implements autograd. You almost never write a backward pass by hand. What you <em>do</em> debug is the <em>effects</em> of backprop: loss curves, gradient norms, activation statistics. The goal of understanding backprop is to read those signals.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="summary">14. Summary</h2>
+
+    <div class="callout good">
+      <div class="label">ONE-PARAGRAPH SUMMARY</div>
+      <p style="margin:6px 0">Backpropagation computes $\partial L / \partial w$ for every weight in a network in a single pass that costs about as much as one forward pass. It works by recognizing that the network is a composition of functions, so the chain rule applies: if you start at the loss and march backward, multiplying local derivatives as you go, you end up with the gradient of the loss with respect to every intermediate quantity, including every weight. The four BP equations (output error, backprop through a layer, bias gradient, weight gradient) are the recipe. Everything else in deep learning — optimizers, architectures, regularization — builds on top of that primitive.</p>
+    </div>
+
+    <h3>Where to go next</h3>
+    <ul class="clean">
+      <li><a href="gradient-descent.html">→ Gradient Descent deep dive</a> — the other half of the training loop: what do we actually <em>do</em> with these gradients?</li>
+      <li><a href="perceptron.html">→ Perceptron deep dive</a> — where it all began: the learning rule for a single neuron, predating backprop by three decades.</li>
+      <li><a href="self-attention.html">→ Self-Attention</a> — how backprop flows through a transformer layer.</li>
+      <li><a class="ext" href="http://neuralnetworksanddeeplearning.com/chap2.html" target="_blank">Michael Nielsen's Chapter 2</a> — the classic textbook explanation of the four BP equations.</li>
+      <li><a class="ext" href="https://karpathy.github.io/2015/08/25/why-im-a-why-does-nothing-work/" target="_blank">Karpathy's Yes you should understand backprop</a> — the failure modes you only see after building intuition.</li>
+      <li><a class="ext" href="https://www.youtube.com/watch?v=Ilg3gGewQ5U" target="_blank">3Blue1Brown: What is backpropagation really doing?</a> — beautiful visual companion to this derivation.</li>
+    </ul>
+  </article>
+</div>
+
+<script>
+// ============================================================
+// Shared math helpers
+// ============================================================
+function sigmoid(z) { return 1 / (1 + Math.exp(-z)); }
+function sigmoidPrime(a) { return a * (1 - a); } // where a = sigmoid(z)
+function fmt(n, d = 4) { if (isNaN(n)) return '?'; if (Math.abs(n) < 1e-8) n = 0; return (+n).toFixed(d); }
+function readNum(id, fallback = 0) { const v = parseFloat(document.getElementById(id).value); return isNaN(v) ? fallback : v; }
+
+// ============================================================
+// Network state (shared between forward & backward demos)
+// ============================================================
+function getNetParams() {
+  return {
+    x:  [readNum('bp-x1'), readNum('bp-x2')],
+    y:  readNum('bp-y'),
+    W1: [
+      [readNum('bp-w111'), readNum('bp-w112')],
+      [readNum('bp-w121'), readNum('bp-w122')]
+    ],
+    b1: [readNum('bp-b11'), readNum('bp-b12')],
+    w2: [readNum('bp-w21'), readNum('bp-w22')],
+    b2: readNum('bp-b2')
+  };
+}
+function computeForward(p) {
+  const z11 = p.W1[0][0]*p.x[0] + p.W1[1][0]*p.x[1] + p.b1[0];
+  const z12 = p.W1[0][1]*p.x[0] + p.W1[1][1]*p.x[1] + p.b1[1];
+  const h1 = sigmoid(z11);
+  const h2 = sigmoid(z12);
+  const z2 = p.w2[0]*h1 + p.w2[1]*h2 + p.b2;
+  const yhat = sigmoid(z2);
+  const loss = 0.5 * (yhat - p.y) ** 2;
+  return { z11, z12, h1, h2, z2, yhat, loss };
+}
+function computeBackward(p, f) {
+  const dL_dyhat = f.yhat - p.y;
+  const d2 = dL_dyhat * sigmoidPrime(f.yhat); // delta^(2)
+  const dLdw21 = d2 * f.h1;
+  const dLdw22 = d2 * f.h2;
+  const dLdb2 = d2;
+  const d11 = d2 * p.w2[0] * sigmoidPrime(f.h1);
+  const d12 = d2 * p.w2[1] * sigmoidPrime(f.h2);
+  const dLdw111 = d11 * p.x[0];
+  const dLdw121 = d11 * p.x[1];
+  const dLdw112 = d12 * p.x[0];
+  const dLdw122 = d12 * p.x[1];
+  const dLdb11 = d11;
+  const dLdb12 = d12;
+  return { dL_dyhat, d2, dLdw21, dLdw22, dLdb2, d11, d12, dLdw111, dLdw121, dLdw112, dLdw122, dLdb11, dLdb12 };
+}
+
+// ============================================================
+// FORWARD PASS DEMO
+// ============================================================
+const fwdState = { step: 0, max: 6 };
+
+function clearFwdVisual() {
+  ['bp-fwd-x1','bp-fwd-x2','bp-fwd-h1','bp-fwd-h2','bp-fwd-y'].forEach(id =>
+    document.getElementById(id).setAttribute('class','node-base'));
+  ['bp-fwd-c11','bp-fwd-c12','bp-fwd-c21','bp-fwd-c22','bp-fwd-co1','bp-fwd-co2'].forEach(id =>
+    document.getElementById(id).setAttribute('class','conn-base'));
+  document.getElementById('bp-fwd-h1-val').textContent = '?';
+  document.getElementById('bp-fwd-h2-val').textContent = '?';
+  document.getElementById('bp-fwd-y-val').textContent = '?';
+}
+function updateFwdLabels() {
+  const p = getNetParams();
+  document.getElementById('bp-fwd-x1-label').textContent = `x₁=${fmt(p.x[0],1)}`;
+  document.getElementById('bp-fwd-x2-label').textContent = `x₂=${fmt(p.x[1],1)}`;
+}
+
+function renderFwdStep() {
+  const p = getNetParams();
+  const f = computeForward(p);
+  const explain = document.getElementById('bp-fwd-explain');
+  document.getElementById('bp-fwd-progress').textContent = `Step ${fwdState.step} / ${fwdState.max}`;
+  clearFwdVisual();
+  updateFwdLabels();
+
+  switch (fwdState.step) {
+    case 0:
+      explain.innerHTML = `
+        <h5>READY · Inputs set</h5>
+        <p>x = [${fmt(p.x[0],2)}, ${fmt(p.x[1],2)}], y = ${fmt(p.y,2)}</p>
+        <div class="sf-math">We'll compute z¹₁, h₁, z¹₂, h₂, z², ŷ in order.</div>`;
+      break;
+    case 1:
+      document.getElementById('bp-fwd-x1').setAttribute('class','node-base node-active');
+      document.getElementById('bp-fwd-x2').setAttribute('class','node-base node-active');
+      document.getElementById('bp-fwd-c11').setAttribute('class','conn-base conn-active');
+      document.getElementById('bp-fwd-c21').setAttribute('class','conn-base conn-active');
+      document.getElementById('bp-fwd-h1').setAttribute('class','node-base node-active');
+      explain.innerHTML = `
+        <h5>STEP 1 · Compute z¹₁</h5>
+        <div class="sf-math">z¹₁ = w¹₁₁·x₁ + w¹₂₁·x₂ + b¹₁</div>
+        <div class="sf-math">= ${fmt(p.W1[0][0],2)}·${fmt(p.x[0],2)} + ${fmt(p.W1[1][0],2)}·${fmt(p.x[1],2)} + ${fmt(p.b1[0],2)}</div>
+        <div class="sf-math">= ${fmt(f.z11)}</div>`;
+      break;
+    case 2:
+      document.getElementById('bp-fwd-h1').setAttribute('class','node-base node-active');
+      document.getElementById('bp-fwd-h1-val').textContent = fmt(f.h1, 3);
+      explain.innerHTML = `
+        <h5>STEP 2 · Activate h₁ = σ(z¹₁)</h5>
+        <div class="sf-math">h₁ = σ(${fmt(f.z11)}) = 1 / (1 + e<sup>-${fmt(f.z11)}</sup>)</div>
+        <div class="sf-math">= ${fmt(f.h1)}</div>`;
+      break;
+    case 3:
+      document.getElementById('bp-fwd-h1').setAttribute('class','node-base node-used');
+      document.getElementById('bp-fwd-h1-val').textContent = fmt(f.h1, 3);
+      document.getElementById('bp-fwd-c11').setAttribute('class','conn-base conn-used');
+      document.getElementById('bp-fwd-c21').setAttribute('class','conn-base conn-used');
+      document.getElementById('bp-fwd-x1').setAttribute('class','node-base node-active');
+      document.getElementById('bp-fwd-x2').setAttribute('class','node-base node-active');
+      document.getElementById('bp-fwd-c12').setAttribute('class','conn-base conn-active');
+      document.getElementById('bp-fwd-c22').setAttribute('class','conn-base conn-active');
+      document.getElementById('bp-fwd-h2').setAttribute('class','node-base node-active');
+      document.getElementById('bp-fwd-h2-val').textContent = fmt(f.h2, 3);
+      explain.innerHTML = `
+        <h5>STEP 3 · Compute z¹₂ and h₂</h5>
+        <div class="sf-math">z¹₂ = ${fmt(p.W1[0][1],2)}·${fmt(p.x[0],2)} + ${fmt(p.W1[1][1],2)}·${fmt(p.x[1],2)} + ${fmt(p.b1[1],2)}</div>
+        <div class="sf-math">= ${fmt(f.z12)}</div>
+        <div class="sf-math">h₂ = σ(${fmt(f.z12)}) = ${fmt(f.h2)}</div>`;
+      break;
+    case 4:
+      ['bp-fwd-h1','bp-fwd-h2'].forEach(id => document.getElementById(id).setAttribute('class','node-base node-used'));
+      document.getElementById('bp-fwd-h1-val').textContent = fmt(f.h1, 3);
+      document.getElementById('bp-fwd-h2-val').textContent = fmt(f.h2, 3);
+      ['bp-fwd-c11','bp-fwd-c12','bp-fwd-c21','bp-fwd-c22'].forEach(id => document.getElementById(id).setAttribute('class','conn-base conn-used'));
+      document.getElementById('bp-fwd-co1').setAttribute('class','conn-base conn-active');
+      document.getElementById('bp-fwd-co2').setAttribute('class','conn-base conn-active');
+      document.getElementById('bp-fwd-y').setAttribute('class','node-base node-active');
+      explain.innerHTML = `
+        <h5>STEP 4 · Compute z²</h5>
+        <div class="sf-math">z² = w²₁·h₁ + w²₂·h₂ + b²</div>
+        <div class="sf-math">= ${fmt(p.w2[0],2)}·${fmt(f.h1)} + ${fmt(p.w2[1],2)}·${fmt(f.h2)} + ${fmt(p.b2,2)}</div>
+        <div class="sf-math">= ${fmt(f.z2)}</div>`;
+      break;
+    case 5:
+      ['bp-fwd-h1','bp-fwd-h2'].forEach(id => document.getElementById(id).setAttribute('class','node-base node-used'));
+      document.getElementById('bp-fwd-h1-val').textContent = fmt(f.h1, 3);
+      document.getElementById('bp-fwd-h2-val').textContent = fmt(f.h2, 3);
+      ['bp-fwd-c11','bp-fwd-c12','bp-fwd-c21','bp-fwd-c22','bp-fwd-co1','bp-fwd-co2'].forEach(id => document.getElementById(id).setAttribute('class','conn-base conn-used'));
+      document.getElementById('bp-fwd-y').setAttribute('class','node-base node-active');
+      document.getElementById('bp-fwd-y-val').textContent = fmt(f.yhat, 3);
+      explain.innerHTML = `
+        <h5>STEP 5 · Activate ŷ = σ(z²)</h5>
+        <div class="sf-math">ŷ = σ(${fmt(f.z2)}) = ${fmt(f.yhat)}</div>`;
+      break;
+    case 6:
+      ['bp-fwd-h1','bp-fwd-h2','bp-fwd-y'].forEach(id => document.getElementById(id).setAttribute('class','node-base node-used'));
+      document.getElementById('bp-fwd-h1-val').textContent = fmt(f.h1, 3);
+      document.getElementById('bp-fwd-h2-val').textContent = fmt(f.h2, 3);
+      document.getElementById('bp-fwd-y-val').textContent = fmt(f.yhat, 3);
+      ['bp-fwd-c11','bp-fwd-c12','bp-fwd-c21','bp-fwd-c22','bp-fwd-co1','bp-fwd-co2'].forEach(id => document.getElementById(id).setAttribute('class','conn-base conn-used'));
+      explain.innerHTML = `
+        <h5>DONE · Loss computed</h5>
+        <div class="sf-math">L = ½(ŷ - y)²</div>
+        <div class="sf-math">= ½(${fmt(f.yhat)} - ${fmt(p.y)})²</div>
+        <div class="sf-math">= <span style="color:#f472b6">${fmt(f.loss)}</span></div>
+        <p style="font-size:12px;color:#8a93a6;margin-top:8px">Now run the backward pass demo below to compute every gradient.</p>`;
+      break;
+  }
+}
+function stepFwd() { if (fwdState.step < fwdState.max) { fwdState.step++; renderFwdStep(); } }
+function prevFwd() { if (fwdState.step > 0) { fwdState.step--; renderFwdStep(); } }
+function resetFwd() { fwdState.step = 0; renderFwdStep(); resetBwd(); }
+function runAllFwd() {
+  resetFwd();
+  const iv = setInterval(() => { if (fwdState.step >= fwdState.max) { clearInterval(iv); return; } stepFwd(); }, 800);
+}
+['bp-x1','bp-x2','bp-y','bp-w111','bp-w112','bp-w121','bp-w122','bp-b11','bp-b12','bp-w21','bp-w22','bp-b2'].forEach(id => {
+  document.getElementById(id).addEventListener('input', () => { resetFwd(); });
+});
+
+// ============================================================
+// BACKWARD PASS DEMO
+// ============================================================
+const bwdState = { step: 0, max: 8 };
+
+function resetBwdVisual() {
+  document.getElementById('bp-bwd-d2').setAttribute('opacity','0');
+  document.getElementById('bp-bwd-d11').setAttribute('opacity','0');
+  document.getElementById('bp-bwd-d12').setAttribute('opacity','0');
+  ['bp-bwd-c11','bp-bwd-c12','bp-bwd-c21','bp-bwd-c22','bp-bwd-co1','bp-bwd-co2'].forEach(id =>
+    document.getElementById(id).setAttribute('class','conn-base conn-used'));
+}
+
+function renderBwdStep() {
+  const p = getNetParams();
+  const f = computeForward(p);
+  const b = computeBackward(p, f);
+  const explain = document.getElementById('bp-bwd-explain');
+  document.getElementById('bp-bwd-progress').textContent = `Step ${bwdState.step} / ${bwdState.max}`;
+  // Show forward values
+  document.getElementById('bp-bwd-h1-val').textContent = fmt(f.h1, 3);
+  document.getElementById('bp-bwd-h2-val').textContent = fmt(f.h2, 3);
+  document.getElementById('bp-bwd-y-val').textContent = fmt(f.yhat, 3);
+  resetBwdVisual();
+
+  switch (bwdState.step) {
+    case 0:
+      explain.innerHTML = `
+        <h5>READY</h5>
+        <p>Forward cache: ŷ = ${fmt(f.yhat)}, L = ${fmt(f.loss)}.</p>
+        <p>Press Step → to compute ∂L/∂ŷ, then propagate backward.</p>`;
+      break;
+    case 1:
+      document.getElementById('bp-bwd-y').setAttribute('class','node-base node-active');
+      explain.innerHTML = `
+        <h5>STEP 1 · ∂L/∂ŷ</h5>
+        <div class="sf-math">∂L/∂ŷ = ŷ - y = ${fmt(f.yhat)} - ${fmt(p.y)} = <span style="color:#f472b6">${fmt(b.dL_dyhat)}</span></div>`;
+      break;
+    case 2:
+      document.getElementById('bp-bwd-y').setAttribute('class','node-base node-active');
+      document.getElementById('bp-bwd-d2').setAttribute('opacity','1');
+      document.getElementById('bp-bwd-d2').textContent = `δ²=${fmt(b.d2, 3)}`;
+      explain.innerHTML = `
+        <h5>STEP 2 · BP1 — output error δ²</h5>
+        <div class="sf-math">σ'(z²) = ŷ(1-ŷ) = ${fmt(f.yhat)}·${fmt(1-f.yhat)} = ${fmt(sigmoidPrime(f.yhat))}</div>
+        <div class="sf-math">δ² = (ŷ-y) · σ'(z²)</div>
+        <div class="sf-math">   = ${fmt(b.dL_dyhat)} · ${fmt(sigmoidPrime(f.yhat))}</div>
+        <div class="sf-math">   = <span style="color:#f472b6">${fmt(b.d2)}</span></div>`;
+      break;
+    case 3:
+      document.getElementById('bp-bwd-y').setAttribute('class','node-base node-used');
+      document.getElementById('bp-bwd-d2').setAttribute('opacity','1');
+      document.getElementById('bp-bwd-d2').textContent = `δ²=${fmt(b.d2, 3)}`;
+      document.getElementById('bp-bwd-co1').setAttribute('class','conn-base conn-active');
+      document.getElementById('bp-bwd-co2').setAttribute('class','conn-base conn-active');
+      explain.innerHTML = `
+        <h5>STEP 3 · BP4 — output layer weight gradients</h5>
+        <div class="sf-math">∂L/∂w²₁ = δ² · h₁ = ${fmt(b.d2)}·${fmt(f.h1)} = ${fmt(b.dLdw21)}</div>
+        <div class="sf-math">∂L/∂w²₂ = δ² · h₂ = ${fmt(b.d2)}·${fmt(f.h2)} = ${fmt(b.dLdw22)}</div>
+        <div class="sf-math">∂L/∂b²  = δ²      = ${fmt(b.dLdb2)}</div>`;
+      break;
+    case 4:
+      document.getElementById('bp-bwd-y').setAttribute('class','node-base node-used');
+      document.getElementById('bp-bwd-d2').setAttribute('opacity','1');
+      document.getElementById('bp-bwd-d2').textContent = `δ²=${fmt(b.d2, 3)}`;
+      document.getElementById('bp-bwd-co1').setAttribute('class','conn-base conn-active');
+      document.getElementById('bp-bwd-h1').setAttribute('class','node-base node-active');
+      document.getElementById('bp-bwd-d11').setAttribute('opacity','1');
+      document.getElementById('bp-bwd-d11').textContent = `δ¹₁=${fmt(b.d11, 4)}`;
+      explain.innerHTML = `
+        <h5>STEP 4 · BP2 — backprop to h₁</h5>
+        <div class="sf-math">σ'(z¹₁) = h₁(1-h₁) = ${fmt(sigmoidPrime(f.h1))}</div>
+        <div class="sf-math">δ¹₁ = δ² · w²₁ · σ'(z¹₁)</div>
+        <div class="sf-math">    = ${fmt(b.d2)} · ${fmt(p.w2[0],2)} · ${fmt(sigmoidPrime(f.h1))}</div>
+        <div class="sf-math">    = <span style="color:#f472b6">${fmt(b.d11, 5)}</span></div>`;
+      break;
+    case 5:
+      document.getElementById('bp-bwd-y').setAttribute('class','node-base node-used');
+      document.getElementById('bp-bwd-d2').setAttribute('opacity','1');
+      document.getElementById('bp-bwd-d2').textContent = `δ²=${fmt(b.d2, 3)}`;
+      document.getElementById('bp-bwd-co2').setAttribute('class','conn-base conn-active');
+      document.getElementById('bp-bwd-h2').setAttribute('class','node-base node-active');
+      document.getElementById('bp-bwd-d11').setAttribute('opacity','1');
+      document.getElementById('bp-bwd-d11').textContent = `δ¹₁=${fmt(b.d11, 4)}`;
+      document.getElementById('bp-bwd-d12').setAttribute('opacity','1');
+      document.getElementById('bp-bwd-d12').textContent = `δ¹₂=${fmt(b.d12, 4)}`;
+      explain.innerHTML = `
+        <h5>STEP 5 · BP2 — backprop to h₂</h5>
+        <div class="sf-math">σ'(z¹₂) = h₂(1-h₂) = ${fmt(sigmoidPrime(f.h2))}</div>
+        <div class="sf-math">δ¹₂ = δ² · w²₂ · σ'(z¹₂)</div>
+        <div class="sf-math">    = ${fmt(b.d2)} · ${fmt(p.w2[1],2)} · ${fmt(sigmoidPrime(f.h2))}</div>
+        <div class="sf-math">    = <span style="color:#f472b6">${fmt(b.d12, 5)}</span></div>`;
+      break;
+    case 6:
+      document.getElementById('bp-bwd-d11').setAttribute('opacity','1');
+      document.getElementById('bp-bwd-d11').textContent = `δ¹₁=${fmt(b.d11, 4)}`;
+      document.getElementById('bp-bwd-d12').setAttribute('opacity','1');
+      document.getElementById('bp-bwd-d12').textContent = `δ¹₂=${fmt(b.d12, 4)}`;
+      document.getElementById('bp-bwd-h1').setAttribute('class','node-base node-used');
+      document.getElementById('bp-bwd-h2').setAttribute('class','node-base node-used');
+      document.getElementById('bp-bwd-c11').setAttribute('class','conn-base conn-active');
+      document.getElementById('bp-bwd-c21').setAttribute('class','conn-base conn-active');
+      document.getElementById('bp-bwd-x1').setAttribute('class','node-base node-active');
+      document.getElementById('bp-bwd-x2').setAttribute('class','node-base node-active');
+      explain.innerHTML = `
+        <h5>STEP 6 · BP4 — hidden weights entering h₁</h5>
+        <div class="sf-math">∂L/∂w¹₁₁ = δ¹₁ · x₁ = ${fmt(b.d11,4)}·${fmt(p.x[0],2)} = ${fmt(b.dLdw111,5)}</div>
+        <div class="sf-math">∂L/∂w¹₂₁ = δ¹₁ · x₂ = ${fmt(b.d11,4)}·${fmt(p.x[1],2)} = ${fmt(b.dLdw121,5)}</div>
+        <div class="sf-math">∂L/∂b¹₁  = δ¹₁ = ${fmt(b.dLdb11,5)}</div>`;
+      break;
+    case 7:
+      document.getElementById('bp-bwd-d11').setAttribute('opacity','1');
+      document.getElementById('bp-bwd-d11').textContent = `δ¹₁=${fmt(b.d11, 4)}`;
+      document.getElementById('bp-bwd-d12').setAttribute('opacity','1');
+      document.getElementById('bp-bwd-d12').textContent = `δ¹₂=${fmt(b.d12, 4)}`;
+      document.getElementById('bp-bwd-c12').setAttribute('class','conn-base conn-active');
+      document.getElementById('bp-bwd-c22').setAttribute('class','conn-base conn-active');
+      document.getElementById('bp-bwd-x1').setAttribute('class','node-base node-active');
+      document.getElementById('bp-bwd-x2').setAttribute('class','node-base node-active');
+      explain.innerHTML = `
+        <h5>STEP 7 · BP4 — hidden weights entering h₂</h5>
+        <div class="sf-math">∂L/∂w¹₁₂ = δ¹₂ · x₁ = ${fmt(b.d12,4)}·${fmt(p.x[0],2)} = ${fmt(b.dLdw112,5)}</div>
+        <div class="sf-math">∂L/∂w¹₂₂ = δ¹₂ · x₂ = ${fmt(b.d12,4)}·${fmt(p.x[1],2)} = ${fmt(b.dLdw122,5)}</div>
+        <div class="sf-math">∂L/∂b¹₂  = δ¹₂ = ${fmt(b.dLdb12,5)}</div>`;
+      break;
+    case 8:
+      document.getElementById('bp-bwd-d11').setAttribute('opacity','1');
+      document.getElementById('bp-bwd-d11').textContent = `δ¹₁=${fmt(b.d11, 4)}`;
+      document.getElementById('bp-bwd-d12').setAttribute('opacity','1');
+      document.getElementById('bp-bwd-d12').textContent = `δ¹₂=${fmt(b.d12, 4)}`;
+      explain.innerHTML = `
+        <h5>DONE · All gradients computed</h5>
+        <p style="font-size:12px">Every weight and bias now has a partial derivative. Notice: all negative here, meaning we should <em>increase</em> every weight to reduce the loss (since ŷ is below the target).</p>
+        <p style="font-size:12px;color:#8a93a6">Scroll to the training demo to see what happens when we apply the update rule and iterate.</p>`;
+      break;
+  }
+}
+function stepBwd() { if (bwdState.step < bwdState.max) { bwdState.step++; renderBwdStep(); } }
+function prevBwd() { if (bwdState.step > 0) { bwdState.step--; renderBwdStep(); } }
+function resetBwd() { bwdState.step = 0; renderBwdStep(); }
+function runAllBwd() {
+  resetBwd();
+  const iv = setInterval(() => { if (bwdState.step >= bwdState.max) { clearInterval(iv); return; } stepBwd(); }, 1000);
+}
+
+// ============================================================
+// TRAINING DEMO (forward + backward + update)
+// ============================================================
+const trainState = { iter: 0, losses: [], weights: null };
+
+function getInitialTrainWeights() {
+  return {
+    W1: [[0.2, 0.4], [0.3, 0.1]],
+    b1: [0.1, 0.1],
+    w2: [0.5, 0.6],
+    b2: 0.2
+  };
+}
+
+function resetTraining() {
+  trainState.iter = 0;
+  trainState.losses = [];
+  trainState.weights = getInitialTrainWeights();
+  renderTrainingStep();
+}
+
+function stepTraining() {
+  const lr = readNum('bp-lr', 0.5);
+  const x = [readNum('bp-tr-x1', 0.5), readNum('bp-tr-x2', 0.8)];
+  const y = readNum('bp-tr-y', 1);
+  const w = trainState.weights;
+
+  // Forward
+  const z11 = w.W1[0][0]*x[0] + w.W1[1][0]*x[1] + w.b1[0];
+  const z12 = w.W1[0][1]*x[0] + w.W1[1][1]*x[1] + w.b1[1];
+  const h1 = sigmoid(z11);
+  const h2 = sigmoid(z12);
+  const z2 = w.w2[0]*h1 + w.w2[1]*h2 + w.b2;
+  const yhat = sigmoid(z2);
+  const loss = 0.5 * (yhat - y) ** 2;
+
+  // Backward
+  const d2 = (yhat - y) * sigmoidPrime(yhat);
+  const d11 = d2 * w.w2[0] * sigmoidPrime(h1);
+  const d12 = d2 * w.w2[1] * sigmoidPrime(h2);
+
+  // Update
+  w.w2[0] -= lr * d2 * h1;
+  w.w2[1] -= lr * d2 * h2;
+  w.b2    -= lr * d2;
+  w.W1[0][0] -= lr * d11 * x[0];
+  w.W1[1][0] -= lr * d11 * x[1];
+  w.W1[0][1] -= lr * d12 * x[0];
+  w.W1[1][1] -= lr * d12 * x[1];
+  w.b1[0]    -= lr * d11;
+  w.b1[1]    -= lr * d12;
+
+  trainState.losses.push(loss);
+  trainState.iter++;
+  renderTrainingStep(yhat, loss);
+}
+
+function renderTrainingStep(yhat, loss) {
+  document.getElementById('bp-train-progress').textContent = `Iteration ${trainState.iter}`;
+  const yhatEl = document.getElementById('bp-train-yhat');
+  const lossEl = document.getElementById('bp-train-loss');
+  if (yhat !== undefined) {
+    yhatEl.textContent = `ŷ = ${fmt(yhat)}`;
+    lossEl.textContent = `L = ${fmt(loss)}`;
+  } else {
+    yhatEl.textContent = 'ŷ = ?';
+    lossEl.textContent = 'L = ?';
+  }
+  // Render loss graph
+  const losses = trainState.losses;
+  const pointsG = document.getElementById('bp-train-loss-points');
+  const pathG = document.getElementById('bp-train-loss-path');
+  pointsG.innerHTML = '';
+  pathG.innerHTML = '';
+  if (losses.length > 0) {
+    const maxL = Math.max(...losses, 0.01);
+    const w = 400, h = 160;
+    const pts = losses.map((l, i) => {
+      const x = 10 + (i / Math.max(losses.length - 1, 1)) * w;
+      const y = 20 + (1 - l / maxL) * h;
+      return [x, y];
+    });
+    const d = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p[0]},${p[1]}`).join(' ');
+    pathG.innerHTML = `<path d="${d}" stroke="#22d3ee" stroke-width="2" fill="none"/>`;
+    pts.forEach(([x, y]) => {
+      pointsG.innerHTML += `<circle cx="${x}" cy="${y}" r="3" fill="#f472b6"/>`;
+    });
+  }
+  // Update explanation
+  const explain = document.getElementById('bp-train-explain');
+  if (trainState.iter === 0) {
+    explain.innerHTML = `<h5>READY</h5><p>Press Step → to run one full iteration. The loss graph will start filling in.</p>`;
+  } else {
+    const lr = readNum('bp-lr', 0.5);
+    explain.innerHTML = `
+      <h5>ITERATION ${trainState.iter} · η = ${lr}</h5>
+      <div class="sf-math">ŷ → ${fmt(yhat)} (target ${fmt(readNum('bp-tr-y'))})</div>
+      <div class="sf-math">Loss: ${fmt(loss)}</div>
+      <p style="font-size:12px;color:#8a93a6">Each step runs forward → backward → update with the same (x,y) pair. In real training you'd sample different (x,y) pairs from a dataset each iteration.</p>`;
+  }
+}
+
+function runAllTraining() {
+  const iv = setInterval(() => {
+    if (trainState.iter >= 20) { clearInterval(iv); return; }
+    stepTraining();
+  }, 150);
+}
+
+['bp-lr','bp-tr-x1','bp-tr-x2','bp-tr-y'].forEach(id => {
+  document.getElementById(id).addEventListener('input', resetTraining);
+});
+
+// ============================================================
+// INIT
+// ============================================================
+renderFwdStep();
+renderBwdStep();
+resetTraining();
+</script>
+<script defer src="../search-index.js"></script>
+<script defer src="../search.js"></script>
+</body>
+</html>

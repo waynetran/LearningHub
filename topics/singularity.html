@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Singularity — Deep Dive</title>
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError: false});"></script>
+</head>
+<body>
+<div id="tooltip"></div>
+
+<nav class="topic-nav">
+  <a class="back" href="../ai-ml.html">← Back to AI/ML</a>
+  <div class="crumb">Deep Dives / <span class="topic-name">The Singularity</span></div>
+</nav>
+
+<div class="topic-layout">
+  <aside class="topic-toc">
+    <h4>ON THIS PAGE</h4>
+    <ul>
+      <li><a href="#intro">1. Where the word comes from</a></li>
+      <li><a href="#good">2. I.J. Good's 1965 argument</a></li>
+      <li><a href="#math">3. The intelligence-explosion math</a></li>
+      <li><a href="#takeoff">4. Takeoff speeds</a></li>
+      <li><a href="#demo">5. Interactive: takeoff simulator</a></li>
+      <li><a href="#kurzweil">6. Kurzweil's curves</a></li>
+      <li><a href="#critiques">7. Critiques and counter-arguments</a></li>
+      <li><a href="#summary">8. What to take away</a></li>
+    </ul>
+  </aside>
+
+  <article class="topic-content">
+    <h1>The Singularity</h1>
+    <p class="subtitle">"The Singularity" is shorthand for a hypothesized moment — or interval — in which AI starts improving itself faster than humans can improve it, and the resulting feedback loop produces something we cannot extrapolate past. This page unpacks where the idea comes from, writes down the math carefully, and then lets you play with the parameters to see how much the conclusion depends on them.</p>
+    <div class="meta-tags">
+      <span>Prereq: basic calculus, scaling</span>
+      <span>Read time: ~20 min</span>
+      <span>Interactive figures: 1</span>
+      <span>Sources: Good, Vinge, Kurzweil, Yudkowsky, Christiano</span>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="intro">1. Where the word comes from</h2>
+
+    <p>In mathematics, a "singularity" is a point where a function misbehaves — it blows up, becomes undefined, or otherwise stops being extrapolatable. A black hole is a gravitational singularity; a function $1/x$ has a singularity at zero. The phrase "technological singularity" borrows the idea: a point in history past which current trends can't be extended in any meaningful way because the underlying assumptions break.</p>
+
+    <p>The first recorded use of the phrase in this sense is attributed to <strong>John von Neumann</strong> in the 1950s — Stanislaw Ulam wrote in a 1958 eulogy that von Neumann had speculated about "the ever accelerating progress of technology and changes in the mode of human life, which gives the appearance of approaching some essential singularity in the history of the race beyond which human affairs, as we know them, could not continue."</p>
+
+    <p>Von Neumann didn't elaborate. The idea lay mostly dormant for half a century until AI researchers picked it up and gave it a concrete mechanism.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="good">2. I.J. Good's 1965 argument</h2>
+
+    <p>Irving John Good — a Bletchley Park cryptanalyst who worked with Turing during WWII — wrote a paper in 1965 titled <em>Speculations Concerning the First Ultraintelligent Machine</em>. The core of the paper is four sentences that have been quoted in every AGI discussion since:</p>
+
+    <div class="callout">
+      <div class="label">Good, 1965</div>
+      <p style="margin:6px 0;font-style:italic;">"Let an ultraintelligent machine be defined as a machine that can far surpass all the intellectual activities of any man however clever. Since the design of machines is one of these intellectual activities, an ultraintelligent machine could design even better machines; there would then unquestionably be an 'intelligence explosion,' and the intelligence of man would be left far behind. Thus the first ultraintelligent machine is the last invention that man need ever make, provided that the machine is docile enough to tell us how to keep it under control."</p>
+    </div>
+
+    <p>The argument is a four-step syllogism:</p>
+    <ol>
+      <li>Designing machines is a kind of intellectual work.</li>
+      <li>A machine smarter than any human can therefore do machine design better than any human.</li>
+      <li>A machine better at machine design can design a still-better machine — which is itself better at machine design, which can design a still-still-better machine, and so on.</li>
+      <li>This recursive improvement loop is a positive-feedback system. Positive feedback with no limiting term diverges.</li>
+    </ol>
+
+    <p>The provision in the last sentence — "<em>provided that the machine is docile enough to tell us how to keep it under control</em>" — is the origin of the alignment problem. Good saw that the same loop that produces a superintelligent ally produces a superintelligent adversary if you haven't solved the steering problem in advance.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="math">3. The intelligence-explosion math</h2>
+
+    <p>You can write Good's argument as a differential equation. Let $I(t)$ be some scalar "intelligence" of the system at time $t$. Good's claim is that the rate at which the system improves itself is proportional to its current intelligence — because smarter systems can produce larger improvements per unit time.</p>
+
+    <div class="math-display">$$\frac{dI}{dt} = k \, I(t)$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Linear-feedback intelligence explosion</p>
+      <dl>
+        <dt>$I(t)$</dt><dd>A scalar "effective intelligence" of the system at time $t$. In practice this is a stand-in for "quality of research output per unit wall-clock." Different authors operationalize it differently.</dd>
+        <dt>$k$</dt><dd>A rate constant — how efficiently more intelligence converts into improvements. Includes compute, data, and research-productivity factors.</dd>
+        <dt>$dI/dt$</dt><dd>The instantaneous rate of improvement.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Intuition</strong> This is the same equation as compound interest, population growth, and radioactive decay — it's the math of "rate proportional to current amount." Its solution is exponential growth: $I(t) = I_0 e^{k t}$. Every doubling takes the same amount of wall-clock time.</p>
+    </div>
+
+    <p>Exponential growth is fast but <em>not</em> a singularity — the function is defined for all finite $t$. To get a true singularity you need the rate to grow <em>faster</em> than linearly with intelligence. Good's original argument is usually read as saying intelligence enables improvements <em>that themselves are exponential</em>:</p>
+
+    <div class="math-display">$$\frac{dI}{dt} = k \, I(t)^{1 + \epsilon}, \quad \epsilon > 0$$</div>
+
+    <p>With $\epsilon = 1$ (the rate grows as $I^2$), the equation is separable:</p>
+
+    <div class="math-display">$$\int \frac{dI}{I^2} = \int k \, dt \implies -\frac{1}{I} = k t + C$$</div>
+
+    <div class="math-display">$$I(t) = \frac{I_0}{1 - k I_0 \, t}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Hyperbolic blow-up</p>
+      <dl>
+        <dt>$t^* = 1/(k I_0)$</dt><dd>The "singularity time" — the wall-clock moment at which $I(t)$ goes to infinity. For any initial intelligence and rate constant, the hyperbolic solution reaches infinity in <em>finite</em> wall-clock time.</dd>
+        <dt>$\epsilon$</dt><dd>Controls how much faster the rate grows than linear feedback. $\epsilon = 0$ gives exponential growth (no singularity). $\epsilon > 0$ gives a finite-time blow-up. $\epsilon < 0$ gives sub-exponential growth that eventually plateaus.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>What this tells you</strong> The debate about whether a "singularity" exists is mostly a debate about the sign of $\epsilon$. It is <em>not</em> a debate about whether AI gets better — everyone agrees it's getting better. It's a debate about whether the curve is <em>sub</em>-exponential (plateau), exponential (fast but open-ended), or <em>super</em>-exponential (finite-time blow-up).</p>
+    </div>
+
+    <p>Almost no modern treatment uses $\epsilon > 0$. Tom Davidson's "compute-centric framework for takeoff speeds" (Open Philanthropy, 2023), Paul Christiano's earlier "Takeoff speeds" post, and Epoch AI's models all use <em>sub</em>-linear returns — more intelligence produces more improvement, but with diminishing returns per unit. Those models still give dramatic speedups, just without the infinity.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="takeoff">4. Takeoff speeds — the live debate</h2>
+
+    <p>"Takeoff speed" is the term of art for how fast the transition from roughly-human AI to vastly-superhuman AI happens. Three archetypes:</p>
+
+    <div class="grid">
+      <div class="card">
+        <h4>Fast / hard takeoff</h4>
+        <p>Days to months. Typical cause: recursive self-improvement inside a single lab with single-digit key insights. Associated with early Yudkowsky (MIRI), also with some recent AI-2027-style scenarios. Scary but, most researchers now think, unlikely because training a new model still requires lots of real-world compute you can't wish into existence.</p>
+      </div>
+      <div class="card">
+        <h4>Slow / soft takeoff</h4>
+        <p>Years. Capability diffuses across multiple labs; models are expensive to train, get adopted, deployed, integrated, and produce economic feedback that funds the next generation. Christiano's <a href="https://www.alignmentforum.org/posts/AfGmsjGPXN97kNp57/arguments-about-fast-takeoff" target="_blank" rel="noopener">"Takeoff speeds"</a> (2018) is the canonical defense of this view; Karnofsky's "most important century" series is a book-length version.</p>
+      </div>
+      <div class="card">
+        <h4>No takeoff</h4>
+        <p>Current methods hit a wall. Scaling exhausts data, reasoning hits verification limits, agent reliability doesn't keep up. The system keeps getting better but not qualitatively; we get very good assistants, not a singularity. LeCun's position.</p>
+      </div>
+    </div>
+
+    <p>The thing that's changed between 2018 and 2025: the "soft takeoff" scenario is now clearly consistent with what we observe. We've had three years of dramatic, continuous-looking capability gains with multiple labs at the frontier, with capability gains being funded directly by commercial deployment. Nothing in the public record looks like a discontinuity. Whether that extrapolates is the question.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="demo">5. Interactive: takeoff simulator</h2>
+
+    <p>The toy model below is deliberately simple. Starting from intelligence $I_0 = 1$ at $t = 0$, it integrates <code>dI/dt = k · I^(1+ε)</code> until either $I$ exceeds 10⁶ (superintelligence reached) or $t$ exceeds 10 years (plateau). Drag the sliders to change the rate constant $k$ and the super-linearity exponent $\epsilon$.</p>
+
+    <div class="viz-3d">
+      <div class="v3-controls">
+        <span class="v3-label">k (rate):</span>
+        <input id="sinK" type="range" min="0.1" max="3" value="0.7" step="0.05" style="flex:1;max-width:220px;">
+        <span id="sinKLabel" style="min-width:50px;color:#63b3ff;font-family:ui-monospace,monospace;">0.70</span>
+        <span class="v3-label" style="margin-left:18px;">ε (curvature):</span>
+        <input id="sinEps" type="range" min="-0.5" max="1.0" value="0.0" step="0.05" style="flex:1;max-width:220px;">
+        <span id="sinEpsLabel" style="min-width:50px;color:#63b3ff;font-family:ui-monospace,monospace;">0.00</span>
+      </div>
+      <svg id="sinSvg" viewBox="0 0 720 360" style="width:100%;height:auto;background:#0a0d12;border-radius:6px;"></svg>
+      <p class="v3-caption" id="sinCaption">ε &lt; 0 : sub-exponential plateau. ε = 0 : clean exponential (no singularity). ε &gt; 0 : hyperbolic blow-up in finite time.</p>
+    </div>
+
+    <div class="callout warn">
+      <div class="label">This is a toy model — what it is and isn't</div>
+      <p style="margin:6px 0">The dynamics above are a caricature. Real takeoff models (Davidson 2023, Epoch AI 2024) use a multi-factor production function with compute, data, and labor, include feedback through empirical returns to research, and fit against observed FLOP/loss curves. But the qualitative conclusion survives: <em>the sign of returns matters more than the magnitude</em>. If returns to research effort are diminishing enough, no feedback loop runs away; if they're flat or increasing, all bets are off.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="kurzweil">6. Kurzweil's curves</h2>
+
+    <p>Ray Kurzweil's <em>The Singularity Is Near</em> (2005) is the book most people associate with "the singularity." His core empirical claim is called the <strong>Law of Accelerating Returns</strong>: the rate of exponential improvement in information technology is itself exponential, so that plotted on a log scale, progress curves <em>upward</em> rather than being straight lines.</p>
+
+    <p>Kurzweil's 2005 predictions, graded against 2026 reality:</p>
+
+    <table class="rank-table">
+      <thead>
+        <tr><th>Prediction</th><th>Year predicted</th><th>Reality</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>A $1000 computer performs at the level of the human brain (~10¹⁶ cps)</td><td>2020s</td><td>Roughly on schedule. An H100 hits ~2 × 10¹⁵ FP16 FLOPs; cluster cost per human-brain-equivalent is getting there.</td></tr>
+        <tr><td>Human-level machine intelligence (passes a rigorous Turing test)</td><td>2029</td><td>On track. Frontier LLMs pass short-form Turing tests today; a rigorous long-form version is not yet settled.</td></tr>
+        <tr><td>Most human knowledge workers augmented by AI</td><td>2020s</td><td>Happening right now. 2025 was the year "I use Claude/ChatGPT at work" became majority.</td></tr>
+        <tr><td>Technological singularity — AI surpasses all human intelligence combined</td><td>2045</td><td>Unresolved. Nobody has a credible benchmark for "all human intelligence combined."</td></tr>
+        <tr><td>Nanobots in the bloodstream keeping people indefinitely young</td><td>2030s</td><td>Speculative. Progress on senescence-related biology is real (rapamycin, NAD+, partial reprogramming) but nowhere near this description.</td></tr>
+      </tbody>
+    </table>
+
+    <p>Kurzweil is usually derided in academic circles and lionized in futurist ones. The fair assessment: his mid-term technology predictions have aged <em>much</em> better than contemporary critics expected, while his long-term biology predictions have aged worse. His core methodological claim — that exponential curves hold over longer timescales than people's intuitions expect — has survived.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="critiques">7. Critiques and counter-arguments</h2>
+
+    <p>The singularity thesis has been attacked on multiple fronts. The strongest criticisms:</p>
+
+    <ul>
+      <li><strong>No-free-lunch for intelligence.</strong> Francois Chollet argues that "intelligence" is not a scalar; different tasks require qualitatively different cognitive strategies. A scalar $I(t)$ model is the wrong ontology. ARC-AGI was built to make this point empirically.</li>
+      <li><strong>Compute bottleneck.</strong> Training a frontier model is not a software-only activity; it's a physical project requiring GPUs, power, data centers, and time. A model that is smarter than us cannot wish new data centers into existence. This alone caps any "fast takeoff" to the time it takes to build more compute — months at least, probably years.</li>
+      <li><strong>Diminishing returns to research.</strong> Empirically, in most fields, doubling R&amp;D spending does not double the rate of progress. Bloom, Jones, Van Reenen, Webb (2020) — <em><a href="https://www.aeaweb.org/articles?id=10.1257/aer.20180338" target="_blank" rel="noopener">Are Ideas Getting Harder to Find?</a></em> — makes this empirical case at book length. If AI research follows the same pattern, recursive self-improvement gives you compound exponential growth at best, not a blow-up.</li>
+      <li><strong>Evaluation lag.</strong> Even if a model is secretly superhuman, we might not be able to verify it with current evals. That cuts both ways — it means we might not <em>notice</em> a takeoff — but it also means claims of imminent singularity are currently unfalsifiable.</li>
+      <li><strong>Coordination, not cognition, is the binding constraint.</strong> Robin Hanson's argument: the limit to human civilization is not IQ but coordination failures — trust, agency problems, institutional friction. A smarter AI doesn't trivially solve those, because they're adversarial rather than intellectual.</li>
+    </ul>
+
+    <p>The strongest pro-singularity responses:</p>
+
+    <ul>
+      <li><strong>The trend line is what matters.</strong> Every benchmark that was supposed to survive for 5 years has survived 1. That's not consistent with "we're about to hit a wall."</li>
+      <li><strong>Compute is not as hard to scale as cognition.</strong> $500B Stargate-level investments show the physical bottleneck is being attacked aggressively. Power is the real constraint and it is being solved with nuclear, solar, and grid build-out.</li>
+      <li><strong>Automated AI research is already showing returns.</strong> 2024–25 saw multiple papers (METR, OpenAI, DeepMind) in which LLMs meaningfully contribute to AI research itself. The self-improvement loop isn't hypothetical — it's 10% engaged already.</li>
+    </ul>
+
+    <!-- ========================================================== -->
+    <h2 id="summary">8. What to take away</h2>
+
+    <ul>
+      <li>"The Singularity" is a mathematical concept — a finite-time blow-up in a feedback system — that AI researchers imported by analogy. The math is real and simple; whether current AI matches the math is a judgment call.</li>
+      <li>Good's 1965 intelligence-explosion argument is still the canonical formulation. Modern treatments (Christiano, Davidson, Yudkowsky, Epoch AI) are mostly arguing over the sign and magnitude of the feedback exponent.</li>
+      <li>A singularity in the <em>strict</em> finite-time-blow-up sense requires super-linear returns to cognition. Almost no serious model has this. Most expect dramatic exponential growth, not literal infinity.</li>
+      <li>Takeoff-speed debates are about <em>years</em> vs. <em>months</em> vs. <em>decades</em>. The fastest credible takeoff path goes through automated AI research (PASTA, AI-2027). The slowest goes through data and compute bottlenecks forcing linear progress.</li>
+      <li>Kurzweil's 2029 human-level-AI prediction has aged well. His 2045 singularity prediction is still open — everyone has moved from "when?" to "how well does it go?"</li>
+      <li>The honest assessment: we are certainly in an <em>exponential growth regime</em> of AI capabilities. Whether it's the start of a singularity or the middle of a long S-curve is not yet distinguishable from the inside.</li>
+    </ul>
+
+    <div class="bib">
+      <h4>Further reading</h4>
+      <ul>
+        <li>Good, I.J. (1965) — <em>Speculations Concerning the First Ultraintelligent Machine</em>.</li>
+        <li>Vinge, Vernor (1993) — <em><a href="https://edoras.sdsu.edu/~vinge/misc/singularity.html" target="_blank" rel="noopener">The Coming Technological Singularity</a></em>. NASA VISION-21 Symposium.</li>
+        <li>Kurzweil, Ray (2005) — <em>The Singularity Is Near: When Humans Transcend Biology</em>. Viking.</li>
+        <li>Yudkowsky, Eliezer (2013) — <em><a href="https://intelligence.org/files/IEM.pdf" target="_blank" rel="noopener">Intelligence Explosion Microeconomics</a></em>.</li>
+        <li>Christiano, Paul (2018) — <em><a href="https://sideways-view.com/2018/02/24/takeoff-speeds/" target="_blank" rel="noopener">Takeoff speeds</a></em>. Sideways View blog.</li>
+        <li>Davidson, Tom (2023) — <em><a href="https://www.openphilanthropy.org/research/what-a-compute-centric-framework-says-about-ai-takeoff-speeds/" target="_blank" rel="noopener">What a Compute-Centric Framework Says About AI Takeoff Speeds</a></em>. Open Philanthropy.</li>
+        <li>Karnofsky, Holden (2021) — <em><a href="https://www.cold-takes.com/most-important-century/" target="_blank" rel="noopener">The Most Important Century</a></em>. Cold Takes blog series.</li>
+        <li>Bloom, Jones, Van Reenen, Webb (2020) — <em>Are Ideas Getting Harder to Find?</em> American Economic Review.</li>
+        <li>Chollet, Francois (2019) — <em><a href="https://arxiv.org/abs/1911.01547" target="_blank" rel="noopener">On the Measure of Intelligence</a></em>. The ARC-AGI paper.</li>
+      </ul>
+    </div>
+
+    <div class="next-card">
+      <div class="label">NEXT UP</div>
+      <a href="society.html">→ AI &amp; Society</a>
+      <p>The math is abstract. The effects on labor, governance, and public epistemics are already measurable. The next page is sourced claims only — what has actually happened, what is measured, what credible forecasts say.</p>
+    </div>
+
+  </article>
+</div>
+
+<script>
+// =========================================================
+// Takeoff simulator
+(function() {
+  const svg = document.getElementById('sinSvg');
+  if (!svg) return;
+  const NS = 'http://www.w3.org/2000/svg';
+  const kSlider = document.getElementById('sinK');
+  const kLabel = document.getElementById('sinKLabel');
+  const epsSlider = document.getElementById('sinEps');
+  const epsLabel = document.getElementById('sinEpsLabel');
+  const caption = document.getElementById('sinCaption');
+
+  const W = 720, H = 360, pad = {l: 68, r: 20, t: 24, b: 48};
+  const x0 = pad.l, x1 = W - pad.r;
+  const y0 = H - pad.b, y1 = pad.t;
+
+  function simulate(k, eps) {
+    // dI/dt = k * I^(1+eps), integrate from I=1, t=0
+    let I = 1, t = 0;
+    const dt = 0.001;
+    const tMax = 10;
+    const pts = [[t, I]];
+    while (t < tMax && I < 1e10) {
+      const dI = k * Math.pow(I, 1 + eps) * dt;
+      I = I + dI;
+      t = t + dt;
+      if (pts.length < 5000 && t - pts[pts.length - 1][0] > 0.01) {
+        pts.push([t, I]);
+      }
+    }
+    pts.push([t, I]);
+    return pts;
+  }
+
+  function render() {
+    const k = parseFloat(kSlider.value);
+    const eps = parseFloat(epsSlider.value);
+    kLabel.textContent = k.toFixed(2);
+    epsLabel.textContent = eps.toFixed(2);
+
+    const pts = simulate(k, eps);
+
+    svg.innerHTML = '';
+
+    // Grid - log Y
+    const yMin = Math.log10(1);
+    const yMax = Math.log10(1e6);
+    const tMax = 10;
+    const xScale = t => x0 + (t / tMax) * (x1 - x0);
+    const yScale = I => y0 - (Math.log10(Math.max(I, 1)) - yMin) / (yMax - yMin) * (y0 - y1);
+
+    for (let i = 0; i <= 6; i++) {
+      const y = y0 - i / 6 * (y0 - y1);
+      const l = document.createElementNS(NS, 'line');
+      l.setAttribute('x1', x0); l.setAttribute('x2', x1);
+      l.setAttribute('y1', y); l.setAttribute('y2', y);
+      l.setAttribute('stroke', '#1a2030');
+      l.setAttribute('stroke-dasharray', '2 3');
+      svg.appendChild(l);
+      const t = document.createElementNS(NS, 'text');
+      t.setAttribute('x', x0 - 8); t.setAttribute('y', y + 4);
+      t.setAttribute('text-anchor', 'end');
+      t.setAttribute('fill', '#6b7590');
+      t.setAttribute('font-family', 'ui-monospace,monospace');
+      t.setAttribute('font-size', '11');
+      t.textContent = '10^' + i;
+      svg.appendChild(t);
+    }
+
+    for (let i = 0; i <= 10; i += 2) {
+      const xp = xScale(i);
+      const tk = document.createElementNS(NS, 'line');
+      tk.setAttribute('x1', xp); tk.setAttribute('x2', xp);
+      tk.setAttribute('y1', y0); tk.setAttribute('y2', y0 + 5);
+      tk.setAttribute('stroke', '#6b7590');
+      svg.appendChild(tk);
+      const tl = document.createElementNS(NS, 'text');
+      tl.setAttribute('x', xp); tl.setAttribute('y', y0 + 20);
+      tl.setAttribute('text-anchor', 'middle');
+      tl.setAttribute('fill', '#6b7590');
+      tl.setAttribute('font-family', 'ui-monospace,monospace');
+      tl.setAttribute('font-size', '11');
+      tl.textContent = i + 'y';
+      svg.appendChild(tl);
+    }
+
+    // Axes
+    const xa = document.createElementNS(NS, 'line');
+    xa.setAttribute('x1', x0); xa.setAttribute('x2', x1);
+    xa.setAttribute('y1', y0); xa.setAttribute('y2', y0);
+    xa.setAttribute('stroke', '#384050'); xa.setAttribute('stroke-width', '1.5');
+    svg.appendChild(xa);
+    const ya = document.createElementNS(NS, 'line');
+    ya.setAttribute('x1', x0); ya.setAttribute('x2', x0);
+    ya.setAttribute('y1', y1); ya.setAttribute('y2', y0);
+    ya.setAttribute('stroke', '#384050'); ya.setAttribute('stroke-width', '1.5');
+    svg.appendChild(ya);
+
+    // Superintelligence threshold line
+    const sy = yScale(1e6);
+    const thr = document.createElementNS(NS, 'line');
+    thr.setAttribute('x1', x0); thr.setAttribute('x2', x1);
+    thr.setAttribute('y1', sy); thr.setAttribute('y2', sy);
+    thr.setAttribute('stroke', '#f472b6');
+    thr.setAttribute('stroke-width', '1.5');
+    thr.setAttribute('stroke-dasharray', '4 4');
+    svg.appendChild(thr);
+    const thrLabel = document.createElementNS(NS, 'text');
+    thrLabel.setAttribute('x', x1 - 5); thrLabel.setAttribute('y', sy - 6);
+    thrLabel.setAttribute('text-anchor', 'end');
+    thrLabel.setAttribute('fill', '#f9a8d4');
+    thrLabel.setAttribute('font-family', 'ui-monospace,monospace');
+    thrLabel.setAttribute('font-size', '11');
+    thrLabel.textContent = 'I = 10⁶ (superintelligence threshold)';
+    svg.appendChild(thrLabel);
+
+    // Curve
+    const pathPts = pts
+      .filter(p => p[1] < 1e7)
+      .map(p => `${xScale(p[0]).toFixed(1)},${yScale(p[1]).toFixed(1)}`)
+      .join(' ');
+    const pl = document.createElementNS(NS, 'polyline');
+    pl.setAttribute('points', pathPts);
+    pl.setAttribute('fill', 'none');
+    pl.setAttribute('stroke', '#22d3ee');
+    pl.setAttribute('stroke-width', '2.5');
+    svg.appendChild(pl);
+
+    // Did we reach threshold?
+    let reachedT = null;
+    for (const p of pts) {
+      if (p[1] >= 1e6) { reachedT = p[0]; break; }
+    }
+
+    // Axis labels
+    const xl = document.createElementNS(NS, 'text');
+    xl.setAttribute('x', (x0 + x1) / 2); xl.setAttribute('y', H - 6);
+    xl.setAttribute('text-anchor', 'middle');
+    xl.setAttribute('fill', '#94a3b8');
+    xl.setAttribute('font-family', 'ui-monospace,monospace');
+    xl.setAttribute('font-size', '11');
+    xl.textContent = 'time (years)';
+    svg.appendChild(xl);
+
+    const yl = document.createElementNS(NS, 'text');
+    yl.setAttribute('x', 16); yl.setAttribute('y', (y0 + y1) / 2);
+    yl.setAttribute('fill', '#94a3b8');
+    yl.setAttribute('font-family', 'ui-monospace,monospace');
+    yl.setAttribute('font-size', '11');
+    yl.setAttribute('transform', `rotate(-90, 16, ${(y0 + y1) / 2})`);
+    yl.setAttribute('text-anchor', 'middle');
+    yl.textContent = 'intelligence (log scale)';
+    svg.appendChild(yl);
+
+    let msg = '';
+    if (reachedT !== null) {
+      msg = `Superintelligence reached at t ≈ ${reachedT.toFixed(2)} years (ε = ${eps.toFixed(2)}, k = ${k.toFixed(2)}).`;
+      if (eps > 0.01) msg += ' Super-linear feedback: curve bends upward.';
+      else if (eps < -0.01) msg += ' Despite sub-linear returns, rate constant is high enough to still get there.';
+      else msg += ' Clean exponential — each doubling takes the same wall-clock time.';
+    } else {
+      const finalI = pts[pts.length - 1][1];
+      msg = `No takeoff in 10 years — curve plateaus at I ≈ ${finalI.toFixed(0)}. ε = ${eps.toFixed(2)} gives sub-exponential returns.`;
+    }
+    caption.textContent = msg;
+  }
+
+  kSlider.addEventListener('input', render);
+  epsSlider.addEventListener('input', render);
+  render();
+})();
+</script>
+
+<script defer src="../search-index.js"></script>
+
+<script defer src="../search.js"></script>
+</body>
+</html>

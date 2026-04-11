@@ -1,0 +1,1897 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI/ML Landscape — A Pragmatic Tour for Programmers</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div id="tooltip"></div>
+
+<!-- Mobile menu toggle -->
+<button class="mobile-menu-toggle" id="mobile-menu-toggle" aria-label="Toggle navigation">☰</button>
+<div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+
+<!-- ============================================================ -->
+<!-- Top bar: back to hub -->
+<!-- ============================================================ -->
+<div class="topbar">
+  <a class="topbar-back" href="index.html">← Learning Hub</a>
+  <span class="topbar-crumb">AI / ML Track</span>
+  <span class="topbar-tracks">
+    <a href="math/index.html">Math</a>
+    <a href="cs/index.html">CS</a>
+  </span>
+</div>
+
+<!-- ============================================================ -->
+<!-- FULL-WIDTH TITLE HERO (above timeline) -->
+<!-- ============================================================ -->
+<div class="hero">
+  <div class="hero-inner">
+    <span class="chip">UPDATED APRIL 2026</span>
+    <h1>The AI/ML Landscape</h1>
+    <p class="lede">A pragmatic tour for programmers who shipped code yesterday and want to ship AI tomorrow. Hover any <span class="term" data-label="Term" data-def="Words with a dotted underline have definitions you can hover. Try it on the ones throughout this page.">dotted term</span>. Click any <a href="topics/backpropagation.html" class="plain" style="padding:2px 10px;background:rgba(124,92,255,0.15);border:1px solid var(--accent);border-radius:14px;font-family:var(--mono);font-size:11px;color:var(--accent-2);">Deep Dive →</a> to jump into a full textbook-level lesson with math and interactive figures.</p>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- FULL-WIDTH TIMELINE HEADER -->
+<!-- ============================================================ -->
+<header class="timeline-header">
+  <div class="timeline-inner">
+    <h3>&gt; <span class="highlight">TIMELINE · 1940 – 2026</span> &nbsp;&nbsp;FROM PERCEPTRON TO REASONING MODELS</h3>
+    <p class="sub">Scroll horizontally · click any marker to jump to its section</p>
+    <div class="timeline-scroll">
+      <div class="timeline" id="timeline">
+        <div class="axis"></div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div class="brand">
+      <h2>AI/ML Landscape</h2>
+      <p>// a pragmatic tour</p>
+    </div>
+    <nav id="sidenav">
+      <div class="cat-group" data-group="start">
+        <button class="cat cat-toggle" aria-expanded="true">
+          <span class="cat-icon">01</span><span class="cat-title">Start here</span><span class="cat-chev">▾</span>
+        </button>
+        <ul class="cat-body">
+          <li><a href="#overview">The 2026 State of AI</a></li>
+          <li><a href="#foundations">Foundations &amp; Vocab</a></li>
+        </ul>
+      </div>
+      <div class="cat-group" data-group="classical">
+        <button class="cat cat-toggle" aria-expanded="false">
+          <span class="cat-icon">02</span><span class="cat-title">Classical era</span><span class="cat-chev">▾</span>
+        </button>
+        <ul class="cat-body">
+          <li><a href="#classical-ml">Classical ML</a></li>
+        </ul>
+      </div>
+      <div class="cat-group" data-group="neural">
+        <button class="cat cat-toggle" aria-expanded="false">
+          <span class="cat-icon">03</span><span class="cat-title">Neural networks</span><span class="cat-chev">▾</span>
+        </button>
+        <ul class="cat-body">
+          <li><a href="#neural-networks">Neural Networks</a>
+            <ul>
+              <li><a href="#perceptron">Perceptron &amp; MLP</a></li>
+              <li><a href="#dnn">Deep Neural Nets</a></li>
+              <li><a href="#cnn">CNNs (vision)</a></li>
+              <li><a href="#rnn">RNN / LSTM / GRU</a></li>
+              <li><a href="#autoencoder">Autoencoders</a></li>
+              <li><a href="#gan">GANs</a></li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+      <div class="cat-group" data-group="transformer">
+        <button class="cat cat-toggle" aria-expanded="false">
+          <span class="cat-icon">04</span><span class="cat-title">The transformer era</span><span class="cat-chev">▾</span>
+        </button>
+        <ul class="cat-body">
+          <li><a href="#attention">Attention &amp; Transformers</a></li>
+          <li><a href="#llm">Large Language Models</a></li>
+          <li><a href="#multimodal">Multimodal &amp; VLMs</a></li>
+          <li><a href="#diffusion">Diffusion Models</a></li>
+          <li><a href="#agents">Agents, RAG &amp; Tools</a></li>
+        </ul>
+      </div>
+      <div class="cat-group" data-group="emerging">
+        <button class="cat cat-toggle" aria-expanded="false">
+          <span class="cat-icon">05</span><span class="cat-title">Emerging tech</span><span class="cat-chev">▾</span>
+        </button>
+        <ul class="cat-body">
+          <li><a href="#emerging">The 2025–26 frontier</a>
+            <ul>
+              <li><a href="#moe">Mixture of Experts</a></li>
+              <li><a href="#reasoning">Reasoning &amp; test-time compute</a></li>
+              <li><a href="#ssm">State Space Models</a></li>
+              <li><a href="#foundation">Foundation Models</a></li>
+              <li><a href="#rag-section">RAG</a></li>
+              <li><a href="#neurosym">Neuro-symbolic AI</a></li>
+              <li><a href="#edge">Edge &amp; on-device AI</a></li>
+              <li><a href="#safety">Safety &amp; Alignment</a></li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+      <div class="cat-group cat-group--highlight" data-group="agi">
+        <button class="cat cat-toggle" aria-expanded="false">
+          <span class="cat-icon">06</span><span class="cat-title">AGI &amp; the Singularity</span><span class="cat-chev">▾</span>
+        </button>
+        <ul class="cat-body">
+          <li><a href="#agi">The road to AGI</a>
+            <ul>
+              <li><a href="#agi-definition">What is AGI?</a></li>
+              <li><a href="#agi-labs">The labs racing to build it</a></li>
+              <li><a href="#agi-benchmarks">Benchmarks &amp; milestones</a></li>
+              <li><a href="#singularity">The Singularity</a></li>
+              <li><a href="#takeoff">Takeoff scenarios</a></li>
+              <li><a href="#impacts">Societal impacts</a></li>
+              <li><a href="#predictions">Timelines &amp; predictions</a></li>
+              <li><a href="#xrisk">Existential risk</a></li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+      <div class="cat-group" data-group="production">
+        <button class="cat cat-toggle" aria-expanded="false">
+          <span class="cat-icon">07</span><span class="cat-title">In production</span><span class="cat-chev">▾</span>
+        </button>
+        <ul class="cat-body">
+          <li><a href="#frameworks">Frameworks &amp; Tooling</a></li>
+          <li><a href="#infra">Hardware &amp; Inference</a></li>
+          <li><a href="#rankings">Model Rankings (2026)</a></li>
+          <li><a href="#glossary">Glossary</a></li>
+        </ul>
+      </div>
+      <div class="cat-group cat-group--deep" data-group="deep-fund">
+        <button class="cat cat-toggle" aria-expanded="false">
+          <span class="cat-icon">📘</span><span class="cat-title">Deep dives · fundamentals</span><span class="cat-chev">▾</span>
+        </button>
+        <ul class="cat-body">
+          <li><a href="topics/perceptron.html">Perceptron (math)</a></li>
+          <li><a href="topics/activations.html">Activation Functions</a></li>
+          <li><a href="topics/gradient-descent.html">Gradient Descent</a></li>
+          <li><a href="topics/backpropagation.html">Backpropagation</a></li>
+          <li><a href="topics/convolution.html">Convolution</a></li>
+          <li><a href="topics/rnn-lstm.html">RNNs &amp; LSTMs</a></li>
+          <li><a href="topics/embeddings.html">Word Embeddings</a></li>
+          <li><a href="topics/self-attention.html">Self-Attention</a></li>
+          <li><a href="topics/gan.html">GANs</a></li>
+          <li><a href="topics/diffusion.html">Diffusion Math</a></li>
+        </ul>
+      </div>
+      <div class="cat-group cat-group--deep" data-group="deep-front">
+        <button class="cat cat-toggle" aria-expanded="false">
+          <span class="cat-icon">🔬</span><span class="cat-title">Deep dives · frontier</span><span class="cat-chev">▾</span>
+        </button>
+        <ul class="cat-body">
+          <li><a href="topics/moe.html">Mixture of Experts</a></li>
+          <li><a href="topics/reasoning.html">Reasoning / Test-Time</a></li>
+          <li><a href="topics/state-space.html">State Space &amp; Mamba</a></li>
+          <li><a href="topics/foundation-models.html">Foundation Models</a></li>
+          <li><a href="topics/rag.html">RAG</a></li>
+          <li><a href="topics/neuro-symbolic.html">Neuro-Symbolic AI</a></li>
+          <li><a href="topics/edge-ai.html">Edge / On-Device AI</a></li>
+          <li><a href="topics/ai-safety.html">AI Safety &amp; Alignment</a></li>
+        </ul>
+      </div>
+      <div class="cat-group cat-group--speculative" data-group="deep-spec">
+        <button class="cat cat-toggle" aria-expanded="false">
+          <span class="cat-icon">🌌</span><span class="cat-title">Deep dives · speculative</span><span class="cat-chev">▾</span>
+        </button>
+        <ul class="cat-body">
+          <li><a href="topics/agi.html">AGI — the goal</a></li>
+          <li><a href="topics/singularity.html">The Singularity</a></li>
+          <li><a href="topics/society.html">AI &amp; Society</a></li>
+        </ul>
+      </div>
+    </nav>
+  </aside>
+
+  <main>
+    <div class="container">
+
+      <!-- ============================================================ -->
+      <section id="overview">
+        <h2>The 2026 State of AI <span class="era">// big picture</span></h2>
+        <p>If you've been writing code but not tracking AI research, here's the headline: the field spent 70 years slogging toward general-purpose machines that can read, write, see, and reason. In the last ~3 years that finally clicked, and now a single architecture — the <span class="term" data-label="Transformer" data-def="A neural network design from 2017 that processes sequences (text, images, audio) by letting every token 'attend to' every other token. It's the backbone of nearly every major AI model today.">transformer</span> — powers almost everything you hear about: ChatGPT, Claude, Gemini, Stable Diffusion, GitHub Copilot, Midjourney, Sora.</p>
+
+        <div class="callout">
+          <div class="label">The 60-second summary</div>
+          <p style="margin:6px 0">
+            <strong>2012</strong> — Neural networks beat humans at image recognition. Everyone pivots to <span class="term" data-label="Deep Learning" data-def="Machine learning using neural networks with many layers ('deep' = lots of layers). The layers learn increasingly abstract features automatically instead of being hand-engineered.">deep learning</span>.<br>
+            <strong>2017</strong> — Google publishes <em>Attention Is All You Need</em>. The transformer is born.<br>
+            <strong>2020</strong> — OpenAI releases GPT-3. It can write essays. Scaling becomes the strategy.<br>
+            <strong>2022</strong> — ChatGPT launches. AI becomes a consumer product overnight.<br>
+            <strong>2024</strong> — Reasoning models (o1, Claude extended thinking) solve PhD-level problems.<br>
+            <strong>2026</strong> — Agents, multimodal everything, and a Cambrian explosion of open-source models.
+          </p>
+        </div>
+
+        <h3>Who the major players are</h3>
+        <div class="grid">
+          <div class="card">
+            <h4>OpenAI</h4>
+            <p>GPT series, DALL·E, Sora, o-series reasoning. Frontier lab. Closed weights.</p>
+            <span class="tag hot">frontier</span><span class="tag">closed</span>
+          </div>
+          <div class="card">
+            <h4>Anthropic</h4>
+            <p>Claude family. Focus on safety, long context, and agentic coding.</p>
+            <span class="tag hot">frontier</span><span class="tag">closed</span>
+          </div>
+          <div class="card">
+            <h4>Google DeepMind</h4>
+            <p>Gemini, AlphaFold, Imagen, Veo. Deep research bench, full stack down to TPUs.</p>
+            <span class="tag hot">frontier</span><span class="tag">closed</span>
+          </div>
+          <div class="card">
+            <h4>Meta AI (FAIR)</h4>
+            <p>Llama series. Meta is the quiet giant of open-weight models — they ship the best ones.</p>
+            <span class="tag">open</span><span class="tag">research</span>
+          </div>
+          <div class="card">
+            <h4>xAI</h4>
+            <p>Grok series. Notable for massive compute scale (Colossus cluster).</p>
+            <span class="tag">frontier</span>
+          </div>
+          <div class="card">
+            <h4>Mistral, DeepSeek, Qwen, Z.AI</h4>
+            <p>European + Chinese open-weight labs shipping extremely capable small models fast.</p>
+            <span class="tag">open</span><span class="tag hot">rising</span>
+          </div>
+          <div class="card">
+            <h4>NVIDIA</h4>
+            <p>Not a model lab — the picks-and-shovels company. They make the GPUs everyone else trains on.</p>
+            <span class="tag">infra</span>
+          </div>
+          <div class="card">
+            <h4>Hugging Face</h4>
+            <p>The GitHub of ML. Hosts hundreds of thousands of open models, datasets, and demos.</p>
+            <span class="tag">platform</span>
+          </div>
+        </div>
+
+        <h3>What the field actually looks like in 2026</h3>
+        <ul class="checked">
+          <li><strong>LLMs eat the world.</strong> Most "AI startup" pitches are thin wrappers around OpenAI/Anthropic APIs. The real product is distribution + UX + domain data.</li>
+          <li><strong>Classical ML is still everywhere.</strong> Your credit score, ad targeting, spam filter, and Uber's surge pricing are not running GPT-4. They're <span class="term" data-label="XGBoost" data-def="Gradient-boosted decision trees. Boring, fast, interpretable — and still state-of-the-art on tabular data.">XGBoost</span> or logistic regression.</li>
+          <li><strong>Open source is catching up fast.</strong> Llama 4, DeepSeek-V3/R1, Qwen 3, and Mistral models now match GPT-4-class performance you can run on your own hardware.</li>
+          <li><strong>Inference cost is the new game.</strong> Training the model is a one-time expense; serving it to millions of users is the forever bill.</li>
+          <li><strong>Agents &amp; tool use are the current frontier.</strong> Models that can browse, call APIs, write and run code, and chain actions — not just chat.</li>
+          <li><strong>Reasoning models changed the plot.</strong> OpenAI's o1/o3 and Anthropic's Claude extended thinking spend "thinking time" before answering.</li>
+        </ul>
+      </section>
+
+      <!-- ============================================================ -->
+      <section id="foundations">
+        <h2>Foundations &amp; Vocabulary <span class="era">// must-know terms</span></h2>
+        <p>Before diving in, here's the vocabulary that shows up in every AI blog post.</p>
+
+        <h4>The core loop</h4>
+        <ol class="clean">
+          <li><strong>Training</strong> — Show the model lots of examples. It adjusts its <span class="term" data-label="Weights" data-def="The numbers inside a neural network that get tuned during training. GPT-4 has ~1.7 trillion of them.">weights</span> to make better predictions.</li>
+          <li><strong>Inference</strong> — Use the trained model to make predictions on new data.</li>
+        </ol>
+
+        <h4>Types of learning</h4>
+        <div class="grid">
+          <div class="card"><h4>Supervised</h4><p>Input→output pairs. "1M labeled cat/dog photos."</p></div>
+          <div class="card"><h4>Unsupervised</h4><p>No labels. Find structure on its own (clustering).</p></div>
+          <div class="card"><h4>Self-supervised</h4><p>The model creates its own labels. LLMs do this: "predict the next word."</p></div>
+          <div class="card"><h4>Reinforcement Learning</h4><p>Agent takes actions, gets rewards. AlphaGo, RLHF.</p></div>
+        </div>
+
+        <h4>How a neural net actually learns</h4>
+        <ul class="clean">
+          <li><strong><span class="term" data-label="Loss function" data-def="A number that measures how wrong the model's prediction is. Training = making this number smaller.">Loss function</span></strong> — how wrong was that prediction?</li>
+          <li><strong><span class="term" data-label="Activation function" data-def="A nonlinear function applied between layers. Without it, a deep network collapses into a single linear map.">Activation function</span></strong> <a href="topics/activations.html" class="deep-dive">Deep Dive →</a> — the nonlinearity that makes depth meaningful.</li>
+          <li><strong><span class="term" data-label="Gradient descent" data-def="The optimization algorithm at the heart of all deep learning. Take a small step in the direction that decreases loss.">Gradient descent</span></strong> <a href="topics/gradient-descent.html" class="deep-dive">Deep Dive →</a> — take a small step toward lower loss.</li>
+          <li><strong><span class="term" data-label="Backpropagation" data-def="The chain-rule-based algorithm for computing gradients through a neural network. Invented 1986 by Rumelhart, Hinton and Williams.">Backpropagation</span></strong> <a href="topics/backpropagation.html" class="deep-dive">Deep Dive →</a> — the algorithm that efficiently computes those gradients.</li>
+        </ul>
+      </section>
+
+      <!-- ============================================================ -->
+      <section id="classical-ml">
+        <h2>Classical ML <span class="era">// 1950s – today</span></h2>
+        <p class="lede">The unsexy stuff that runs half of production systems.</p>
+        <div class="callout good">
+          <div class="label">Rule of thumb</div>
+          <p style="margin:6px 0">If your data is <strong>tabular</strong>, start with <span class="term" data-label="Gradient Boosting" data-def="An ensemble of decision trees, each correcting the last one's errors. XGBoost is the reference implementation.">XGBoost</span> or LightGBM. A neural net will almost never beat it.</p>
+        </div>
+        <div class="grid">
+          <div class="card"><h4>Linear / Logistic Regression</h4><p class="meta">1800s</p><p>Still the first thing to try. Interpretable weights you can show to your lawyer.</p></div>
+          <div class="card"><h4>Decision Trees</h4><p class="meta">1960s</p><p>A flowchart learned from data. Alone they overfit; combined in forests they dominate.</p></div>
+          <div class="card"><h4>Random Forests</h4><p class="meta">Breiman, 2001</p><p>Hundreds of trees on random subsets. Robust, hard to break.</p></div>
+          <div class="card"><h4>XGBoost / LightGBM</h4><p class="meta">Chen &amp; Guestrin, 2016</p><p>The king of tabular data. Won basically every Kaggle competition for years.</p><span class="tag hot">production</span></div>
+          <div class="card"><h4>SVM</h4><p class="meta">Cortes &amp; Vapnik, 1995</p><p>Finds the best separating hyperplane. Pre-deep-learning champion.</p><span class="tag old">legacy</span></div>
+          <div class="card"><h4>k-NN</h4><p class="meta">1960s</p><p>Find the k closest examples and vote. No training step.</p></div>
+          <div class="card"><h4>k-Means</h4><p class="meta">1957, Lloyd</p><p>Unsupervised clustering. Customer segmentation.</p></div>
+          <div class="card"><h4>PCA</h4><p class="meta">Pearson, 1901</p><p>Squash high-dim data into fewer dims. Used everywhere.</p></div>
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <section id="neural-networks">
+        <h2>Neural Networks <span class="era">// 1943 – 1986</span></h2>
+        <p>The idea of a "neural network" started as a wild simplification of how brain neurons work. It took 40+ years to make them actually useful.</p>
+
+        <h3 id="perceptron">The Perceptron (1957) <a href="topics/perceptron.html" class="deep-dive">Deep Dive →</a></h3>
+        <p><strong>Frank Rosenblatt</strong> at Cornell built a machine that could learn to classify images — an actual hardware device, the Mark I Perceptron, funded by the US Navy. It's the ancestor of everything on this page.</p>
+
+        <!-- ============================================================ -->
+        <!-- INTERACTIVE PERCEPTRON DEMO -->
+        <!-- ============================================================ -->
+        <div class="demo" id="demo-perceptron">
+          <div class="demo-header">
+            <span class="title">▸ Interactive Perceptron — step through the computation</span>
+            <span class="step-indicator" id="percep-progress">Step 0 / 7</span>
+          </div>
+          <div class="demo-body">
+            <div class="demo-visual">
+              <svg viewBox="0 0 440 260" width="440" height="260">
+                <defs>
+                  <marker id="perc-arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+                    <path d="M0,0 L0,6 L9,3 z" fill="#7c5cff"/>
+                  </marker>
+                </defs>
+                <!-- Input nodes -->
+                <g id="perc-inputs">
+                  <circle id="perc-x1-node" class="node-base" cx="50" cy="60" r="22"/>
+                  <text x="50" y="65" fill="#dbe1ec" text-anchor="middle" font-family="monospace" font-size="13" id="perc-x1-label">x₁</text>
+                  <circle id="perc-x2-node" class="node-base" cx="50" cy="130" r="22"/>
+                  <text x="50" y="135" fill="#dbe1ec" text-anchor="middle" font-family="monospace" font-size="13" id="perc-x2-label">x₂</text>
+                  <circle id="perc-x3-node" class="node-base" cx="50" cy="200" r="22"/>
+                  <text x="50" y="205" fill="#dbe1ec" text-anchor="middle" font-family="monospace" font-size="13" id="perc-x3-label">x₃</text>
+                </g>
+                <!-- Connections -->
+                <line id="perc-c1" class="conn-base" x1="72" y1="60" x2="218" y2="130"/>
+                <line id="perc-c2" class="conn-base" x1="72" y1="130" x2="218" y2="130"/>
+                <line id="perc-c3" class="conn-base" x1="72" y1="200" x2="218" y2="130"/>
+                <!-- Weight labels -->
+                <text x="140" y="82" fill="#8a93a6" text-anchor="middle" font-family="monospace" font-size="11" id="perc-w1-label">w₁</text>
+                <text x="140" y="126" fill="#8a93a6" text-anchor="middle" font-family="monospace" font-size="11" id="perc-w2-label">w₂</text>
+                <text x="140" y="180" fill="#8a93a6" text-anchor="middle" font-family="monospace" font-size="11" id="perc-w3-label">w₃</text>
+                <!-- Neuron body -->
+                <circle id="perc-neuron" class="node-base" cx="245" cy="130" r="32"/>
+                <text x="245" y="127" fill="#dbe1ec" text-anchor="middle" font-family="monospace" font-size="13">Σ + b</text>
+                <text x="245" y="142" fill="#8a93a6" text-anchor="middle" font-family="monospace" font-size="10" id="perc-z-text">z=?</text>
+                <!-- Activation arrow -->
+                <line id="perc-cout" class="conn-base" x1="277" y1="130" x2="355" y2="130"/>
+                <text x="316" y="120" fill="#8a93a6" text-anchor="middle" font-family="monospace" font-size="11">σ(z)</text>
+                <!-- Output node -->
+                <circle id="perc-output" class="node-base" cx="390" cy="130" r="28"/>
+                <text x="390" y="128" fill="#dbe1ec" text-anchor="middle" font-family="monospace" font-size="14">ŷ</text>
+                <text x="390" y="144" fill="#8a93a6" text-anchor="middle" font-family="monospace" font-size="10" id="perc-y-text">?</text>
+              </svg>
+            </div>
+            <div class="demo-panel">
+              <div class="demo-params">
+                <h5>Inputs</h5>
+                <div class="param-row">
+                  <label>x₁</label><input type="number" id="perc-x1" value="0.5" step="0.1">
+                  <label>w₁</label><input type="number" id="perc-w1" value="0.8" step="0.1">
+                </div>
+                <div class="param-row">
+                  <label>x₂</label><input type="number" id="perc-x2" value="1.0" step="0.1">
+                  <label>w₂</label><input type="number" id="perc-w2" value="0.3" step="0.1">
+                </div>
+                <div class="param-row">
+                  <label>x₃</label><input type="number" id="perc-x3" value="-0.5" step="0.1">
+                  <label>w₃</label><input type="number" id="perc-w3" value="-0.2" step="0.1">
+                </div>
+                <div class="param-row">
+                  <label>b</label><input type="number" id="perc-b" value="0.1" step="0.1">
+                </div>
+                <span class="preset" onclick="loadPercepPreset('and')">AND gate</span>
+                <span class="preset" onclick="loadPercepPreset('or')">OR gate</span>
+              </div>
+              <div class="demo-calc" id="perc-calc">
+                <div class="step-title">Ready</div>
+                <div class="math">Press <strong>Step →</strong> to trace the forward pass through the neuron.</div>
+                <div class="note">Tip: edit any input or weight above to see different behavior.</div>
+              </div>
+            </div>
+          </div>
+          <div class="demo-controls">
+            <button class="btn" onclick="resetPercep()">↺ Reset</button>
+            <button class="btn" onclick="prevPercep()">← Back</button>
+            <button class="btn primary" onclick="stepPercep()">Step →</button>
+            <button class="btn" onclick="runAllPercep()">Run All</button>
+          </div>
+        </div>
+
+        <h3>Multi-Layer Perceptron (MLP) &amp; Backprop (1986) <a href="topics/backpropagation.html" class="deep-dive">Deep Dive →</a></h3>
+        <p>Stack multiple layers. In 1986, <strong>Rumelhart, Hinton, and Williams</strong> published backpropagation — the single most important algorithm in modern AI. It runs the chain rule of calculus backward through the network to compute gradients for every weight. Click the Deep Dive link above for a full textbook treatment with derivation, worked examples, and interactive step-through of a training iteration.</p>
+
+        <h3 id="dnn">Deep Neural Networks (DNN)</h3>
+        <p>"Deep" is just marketing for "lots of layers." The reason they weren't used earlier: you need huge datasets and huge compute. It took until the mid-2000s — when GPUs became programmable and the internet produced massive image datasets — for deep learning to become practical.</p>
+
+        <h3 id="cnn">Convolutional Neural Networks (CNN) <a href="topics/convolution.html" class="deep-dive">Deep Dive →</a></h3>
+        <p><strong>Yann LeCun</strong> invented CNNs in 1989 to read handwritten zip codes. The insight: instead of connecting every pixel to every neuron, slide a small <span class="term" data-label="Kernel" data-def="A small matrix that slides across an image computing dot products. CNNs learn kernel values during training.">kernel</span> across the image. Same weights reused → efficient, and captures the fact that "an edge is an edge regardless of where it is."</p>
+
+        <!-- ============================================================ -->
+        <!-- INTERACTIVE CNN DEMO -->
+        <!-- ============================================================ -->
+        <div class="demo" id="demo-cnn">
+          <div class="demo-header">
+            <span class="title">▸ Interactive Convolution — slide the kernel one step at a time</span>
+            <span class="step-indicator" id="cnn-progress">Position 0 / 9</span>
+          </div>
+          <div class="demo-body">
+            <div class="demo-visual">
+              <svg viewBox="0 0 460 300" width="460" height="300" id="cnn-svg">
+                <!-- Input 5x5 grid -->
+                <g id="cnn-input-grid" transform="translate(20, 20)"></g>
+                <text x="95" y="280" fill="#8a93a6" text-anchor="middle" font-family="monospace" font-size="10">input (5×5)</text>
+                <!-- Kernel 3x3 -->
+                <g id="cnn-kernel-grid" transform="translate(230, 70)"></g>
+                <text x="285" y="180" fill="#8a93a6" text-anchor="middle" font-family="monospace" font-size="10">kernel (3×3)</text>
+                <!-- Output 3x3 -->
+                <g id="cnn-output-grid" transform="translate(340, 70)"></g>
+                <text x="395" y="180" fill="#8a93a6" text-anchor="middle" font-family="monospace" font-size="10">output (3×3)</text>
+                <!-- Arrow -->
+                <path d="M 200 145 L 225 145" stroke="#7c5cff" stroke-width="2" fill="none"/>
+                <text x="212" y="138" fill="#c5b5ff" text-anchor="middle" font-family="monospace" font-size="10">*</text>
+                <path d="M 315 145 L 335 145" stroke="#7c5cff" stroke-width="2" fill="none"/>
+                <text x="325" y="138" fill="#c5b5ff" text-anchor="middle" font-family="monospace" font-size="10">=</text>
+              </svg>
+            </div>
+            <div class="demo-panel">
+              <div class="demo-params">
+                <h5>Setup</h5>
+                <div style="font-size:10px;color:var(--text-dim);margin-bottom:6px;">Click a cell in the diagram to edit its value. Or try a preset kernel:</div>
+                <span class="preset" onclick="loadCnnPreset('edge')">Edge detector</span>
+                <span class="preset" onclick="loadCnnPreset('blur')">Blur</span>
+                <span class="preset" onclick="loadCnnPreset('sharpen')">Sharpen</span>
+                <span class="preset" onclick="loadCnnPreset('sobelx')">Sobel X</span>
+              </div>
+              <div class="demo-calc" id="cnn-calc">
+                <div class="step-title">Ready</div>
+                <div class="math">Press <strong>Step →</strong> to move the kernel to the next position and compute one output.</div>
+                <div class="note">Output[r,c] = Σ input[r+i, c+j] × kernel[i,j]</div>
+              </div>
+            </div>
+          </div>
+          <div class="demo-controls">
+            <button class="btn" onclick="resetCnn()">↺ Reset</button>
+            <button class="btn" onclick="prevCnn()">← Back</button>
+            <button class="btn primary" onclick="stepCnn()">Step →</button>
+            <button class="btn" onclick="runAllCnn()">Run All</button>
+          </div>
+        </div>
+
+        <h3 id="rnn">RNN, LSTM &amp; GRU — handling sequences <a href="topics/rnn-lstm.html" class="deep-dive">Deep Dive →</a></h3>
+        <p>CNNs are great for images but don't handle sequential data. <span class="term" data-label="RNN" data-def="Recurrent Neural Network. Processes one token at a time while keeping a hidden state that carries information from earlier steps.">RNNs</span> process tokens one at a time while maintaining a hidden state. <strong>Hochreiter &amp; Schmidhuber</strong>'s 1997 <span class="term" data-label="LSTM" data-def="Long Short-Term Memory. RNN cell with gates that learn what to forget and remember.">LSTM</span> solved the vanishing-gradient problem of basic RNNs. Dominated NLP until transformers killed them in 2017.</p>
+
+        <h3 id="autoencoder">Autoencoders</h3>
+        <p>A network trained to compress its input into a small bottleneck and then reconstruct it. Variational Autoencoders (<span class="term" data-label="VAE" data-def="Variational Autoencoder. Probabilistic bottleneck network. Used inside Stable Diffusion to compress images.">VAE</span>, 2013) are the generative cousin — they sit inside every modern diffusion model.</p>
+
+        <h3 id="gan">GANs — generative adversarial networks <a href="topics/gan.html" class="deep-dive">Deep Dive →</a></h3>
+        <p><strong>Ian Goodfellow</strong>, 2014. Two networks: a generator tries to make fake images, a discriminator tries to spot the fakes. They improve together. By 2022, diffusion models had taken over the image-generation crown.</p>
+
+        <h3 id="embeddings">Word embeddings <a href="topics/embeddings.html" class="deep-dive">Deep Dive →</a></h3>
+        <p>Mikolov's <strong>Word2Vec</strong> (2013) showed that training a shallow network to predict word co-occurrences produces vector spaces where <code>king − man + woman ≈ queen</code>. Every LLM still starts by mapping tokens through an embedding matrix — it's the bridge between discrete symbols and the geometry of meaning.</p>
+      </section>
+
+      <!-- ============================================================ -->
+      <section id="attention">
+        <h2>Attention &amp; Transformers <a href="topics/self-attention.html" class="deep-dive">Deep Dive →</a><span class="era">// 2017 – the big bang</span></h2>
+        <p class="lede">In 2017, eight researchers at Google Brain published <em>"Attention Is All You Need."</em> Everything you know as "modern AI" is built on it.</p>
+
+        <h3>The insight: self-attention</h3>
+        <p>Instead of sequential processing, let every token look at every other token directly. The model computes three vectors per token:</p>
+        <ul class="clean">
+          <li><strong>Query (Q)</strong> — "what am I looking for?"</li>
+          <li><strong>Key (K)</strong> — "what do I contain?"</li>
+          <li><strong>Value (V)</strong> — "what information do I carry?"</li>
+        </ul>
+        <p>Attention score(i,j) = softmax(Q_i · K_j / √d_k), and the output is the score-weighted sum of values.</p>
+
+        <!-- ============================================================ -->
+        <!-- INTERACTIVE ATTENTION DEMO -->
+        <!-- ============================================================ -->
+        <div class="demo" id="demo-attn">
+          <div class="demo-header">
+            <span class="title">▸ Interactive Self-Attention — "The cat sat" with d<sub>k</sub>=2</span>
+            <span class="step-indicator" id="attn-progress">Step 0 / 5</span>
+          </div>
+          <div class="demo-body">
+            <div class="demo-visual">
+              <svg viewBox="0 0 460 300" width="460" height="300" id="attn-svg">
+                <!-- Token labels -->
+                <g font-family="monospace" font-size="13" fill="#dbe1ec" text-anchor="middle">
+                  <text x="70" y="30">"The"</text>
+                  <text x="230" y="30">"cat"</text>
+                  <text x="390" y="30">"sat"</text>
+                </g>
+                <!-- QKV display per token -->
+                <g id="attn-qkv"></g>
+                <!-- Attention scores (appear during steps) -->
+                <g id="attn-scores-display"></g>
+                <!-- Output row -->
+                <g id="attn-output-display"></g>
+              </svg>
+            </div>
+            <div class="demo-panel">
+              <div class="demo-params">
+                <h5>Editable Q, K, V (query row for "cat")</h5>
+                <div style="font-size:10px;color:var(--text-dim);margin-bottom:8px;">We'll compute attention for the query token "cat" attending to all three tokens.</div>
+                <div class="param-row">
+                  <label style="min-width:50px">Q(cat)</label>
+                  <input type="number" id="attn-q1" value="1.0" step="0.1">
+                  <input type="number" id="attn-q2" value="0.5" step="0.1">
+                </div>
+                <div style="font-size:9px;color:var(--text-dim);margin:6px 0;text-transform:uppercase;letter-spacing:0.06em;">Keys</div>
+                <div class="param-row">
+                  <label style="min-width:50px">K(The)</label>
+                  <input type="number" id="attn-k01" value="0.2" step="0.1">
+                  <input type="number" id="attn-k02" value="0.8" step="0.1">
+                </div>
+                <div class="param-row">
+                  <label style="min-width:50px">K(cat)</label>
+                  <input type="number" id="attn-k11" value="0.9" step="0.1">
+                  <input type="number" id="attn-k12" value="0.4" step="0.1">
+                </div>
+                <div class="param-row">
+                  <label style="min-width:50px">K(sat)</label>
+                  <input type="number" id="attn-k21" value="0.6" step="0.1">
+                  <input type="number" id="attn-k22" value="-0.3" step="0.1">
+                </div>
+                <div style="font-size:9px;color:var(--text-dim);margin:6px 0;text-transform:uppercase;letter-spacing:0.06em;">Values</div>
+                <div class="param-row">
+                  <label style="min-width:50px">V(The)</label>
+                  <input type="number" id="attn-v01" value="0.1" step="0.1">
+                  <input type="number" id="attn-v02" value="0.2" step="0.1">
+                </div>
+                <div class="param-row">
+                  <label style="min-width:50px">V(cat)</label>
+                  <input type="number" id="attn-v11" value="0.9" step="0.1">
+                  <input type="number" id="attn-v12" value="0.5" step="0.1">
+                </div>
+                <div class="param-row">
+                  <label style="min-width:50px">V(sat)</label>
+                  <input type="number" id="attn-v21" value="0.3" step="0.1">
+                  <input type="number" id="attn-v22" value="0.7" step="0.1">
+                </div>
+              </div>
+              <div class="demo-calc" id="attn-calc">
+                <div class="step-title">Ready</div>
+                <div class="math">Press <strong>Step →</strong> to walk through self-attention for query "cat".</div>
+              </div>
+            </div>
+          </div>
+          <div class="demo-controls">
+            <button class="btn" onclick="resetAttn()">↺ Reset</button>
+            <button class="btn" onclick="prevAttn()">← Back</button>
+            <button class="btn primary" onclick="stepAttn()">Step →</button>
+            <button class="btn" onclick="runAllAttn()">Run All</button>
+          </div>
+        </div>
+
+        <h3>Three flavors</h3>
+        <div class="grid">
+          <div class="card"><h4>Encoder-only</h4><p>BERT (2018). Good for classification, search, embeddings.</p></div>
+          <div class="card"><h4>Decoder-only</h4><p>GPT, Claude, Llama. Generates one token at a time.</p><span class="tag hot">dominant</span></div>
+          <div class="card"><h4>Encoder-Decoder</h4><p>T5, BART. Read everything in, generate everything out.</p></div>
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <section id="llm">
+        <h2>Large Language Models (LLMs) <span class="era">// 2018 – now</span></h2>
+        <p class="lede">Take a decoder transformer. Make it huge. Train it on a trillion words by playing "guess the next token." You get GPT.</p>
+        <div class="grid">
+          <div class="card"><h4>GPT-1 (2018)</h4><p class="meta">OpenAI · 117M</p><p>Proved the recipe: pretrain + fine-tune.</p></div>
+          <div class="card"><h4>BERT (2018)</h4><p class="meta">Google · 340M</p><p>Bidirectional encoder. Ran inside Google Search.</p></div>
+          <div class="card"><h4>GPT-2 (2019)</h4><p class="meta">OpenAI · 1.5B</p><p>Could write coherent paragraphs.</p></div>
+          <div class="card"><h4>GPT-3 (2020)</h4><p class="meta">OpenAI · 175B</p><p>Few-shot learning worked. Everything changed.</p></div>
+          <div class="card"><h4>ChatGPT (2022)</h4><p class="meta">OpenAI · RLHF</p><p>100M users in 2 months.</p><span class="tag hot">inflection</span></div>
+          <div class="card"><h4>GPT-4 (2023)</h4><p class="meta">OpenAI · ~1.7T MoE</p><p>First model that felt like it was reasoning.</p></div>
+          <div class="card"><h4>Claude (2023-2026)</h4><p class="meta">Anthropic</p><p>Long context, strong coding, constitutional AI.</p></div>
+          <div class="card"><h4>Llama (2023-2026)</h4><p class="meta">Meta · open</p><p>Best open-weight frontier models.</p><span class="tag">open</span></div>
+          <div class="card"><h4>o1 / o3 (2024-25)</h4><p class="meta">OpenAI</p><p>Reasoning models. Chain of thought at training time.</p><span class="tag hot">frontier</span></div>
+          <div class="card"><h4>DeepSeek-R1 (2025)</h4><p class="meta">DeepSeek · open</p><p>Open reasoning at o1 quality.</p><span class="tag">open</span></div>
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <section id="multimodal">
+        <h2>Multimodal Models &amp; VLMs <span class="era">// 2021 – now</span></h2>
+        <p class="lede">CLIP (OpenAI, 2021) trained on 400M image-caption pairs and learned a shared embedding space for images and text. Today every frontier model is multimodal — paste a screenshot, ask a question.</p>
+      </section>
+
+      <!-- ============================================================ -->
+      <section id="diffusion">
+        <h2>Diffusion Models <a href="topics/diffusion.html" class="deep-dive">Deep Dive →</a><span class="era">// 2020 – now</span></h2>
+        <p class="lede">Train a model to denoise an image by one small step. At generation time, start with pure noise and run the denoiser ~50 times. What emerges is a coherent image, guided by your text prompt.</p>
+
+        <!-- ============================================================ -->
+        <!-- INTERACTIVE DIFFUSION DEMO -->
+        <!-- ============================================================ -->
+        <div class="demo" id="demo-diff">
+          <div class="demo-header">
+            <span class="title">▸ Interactive Diffusion — forward noising process</span>
+            <span class="step-indicator" id="diff-progress">t = 0 / 1000</span>
+          </div>
+          <div class="demo-body">
+            <div class="demo-visual">
+              <svg viewBox="0 0 400 260" width="400" height="260">
+                <g id="diff-image" transform="translate(80, 20)"></g>
+                <text x="180" y="240" fill="#8a93a6" text-anchor="middle" font-family="monospace" font-size="11" id="diff-label">x₀ (clean image)</text>
+              </svg>
+            </div>
+            <div class="demo-panel">
+              <div class="demo-params">
+                <h5>Noise schedule (linear β)</h5>
+                <div class="param-row">
+                  <label style="min-width:50px">β start</label><input type="number" id="diff-beta-start" value="0.0001" step="0.0001">
+                </div>
+                <div class="param-row">
+                  <label style="min-width:50px">β end</label><input type="number" id="diff-beta-end" value="0.02" step="0.001">
+                </div>
+                <div class="param-row">
+                  <label style="min-width:50px">T</label><input type="number" id="diff-T" value="1000" step="100">
+                </div>
+                <div style="font-size:10px;color:var(--text-dim);margin-top:6px;">Step jumps t by T/5 each press, showing how the image degrades via x_t = √ᾱ_t · x_0 + √(1-ᾱ_t) · ε</div>
+              </div>
+              <div class="demo-calc" id="diff-calc">
+                <div class="step-title">Ready (t = 0)</div>
+                <div class="math">Clean image. Press <strong>Step →</strong> to advance t.</div>
+              </div>
+            </div>
+          </div>
+          <div class="demo-controls">
+            <button class="btn" onclick="resetDiff()">↺ Reset to t=0</button>
+            <button class="btn" onclick="prevDiff()">← Back</button>
+            <button class="btn primary" onclick="stepDiff()">Step →</button>
+            <button class="btn" onclick="runAllDiff()">Run All</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <section id="agents">
+        <h2>Agents, RAG &amp; Tool Use <span class="era">// 2023 – now</span></h2>
+        <p class="lede">The current frontier isn't bigger models — it's letting models take actions. Read files, call APIs, browse the web, run code.</p>
+
+        <h3>RAG — Retrieval Augmented Generation</h3>
+        <p>Split docs into chunks → embed them → store in a vector DB → on query, retrieve relevant chunks → put them in the prompt. Almost every "chat with your PDFs" product is this.</p>
+
+        <h3>Tool use / function calling</h3>
+        <p>Give the model a list of functions. It outputs structured JSON asking for a call. Your code runs the function and feeds the result back. Repeat.</p>
+
+        <h3>Agents</h3>
+        <p>LLM in a loop: decide what to do → execute → observe → repeat until done. Claude Code, Cursor, Devin.</p>
+
+        <h3>MCP — Model Context Protocol</h3>
+        <p>Anthropic's 2024 open standard for exposing tools/data to any AI client. The "USB-C for LLMs."</p>
+      </section>
+
+      <!-- ============================================================ -->
+      <section id="emerging">
+        <h2>Emerging Technologies <span class="era">// the 2025–26 frontier</span></h2>
+        <p class="lede">Where the research edge lives right now. These are the ideas currently reshaping what a "model" even is — sparse routing, learned reasoning, linear-time sequence mixers, on-device trillions, and the alignment scaffolding that has to keep up.</p>
+
+        <h3 id="moe">Mixture of Experts (MoE) <a href="topics/moe.html" class="deep-dive">Deep Dive →</a></h3>
+        <p>Instead of running every parameter on every token, a router sends each token to <em>k</em> out of <em>N</em> "expert" sub-networks. The model can have a trillion parameters but only activate ~30B per token. This is how Mixtral, DeepSeek-V3, and GPT-4-class systems get huge effective capacity at serving-time cost closer to a much smaller dense model. Key problems: load balancing (don't starve experts), router stability, and all-to-all communication.</p>
+
+        <h3 id="reasoning">Reasoning &amp; Test-Time Compute <a href="topics/reasoning.html" class="deep-dive">Deep Dive →</a></h3>
+        <p>OpenAI's o1 (2024) and DeepSeek-R1 (2025) broke a quiet assumption: that a model's "thinking" happens only during pretraining. Now models are trained — usually via RL on verifiable answers — to generate long chains of thought before answering. Spending more compute <em>at inference time</em> on search, self-critique, and process-reward guidance gives big accuracy jumps on math, code, and science. It's an entirely new axis of scaling.</p>
+
+        <h3 id="ssm">State Space Models &amp; Mamba <a href="topics/state-space.html" class="deep-dive">Deep Dive →</a></h3>
+        <p>Transformers are O(n²) in sequence length. State Space Models (S4, then Mamba-1 and Mamba-2) replace attention with a <em>selective</em> linear recurrence that runs in O(n) and scans very long contexts cheaply. They rival Transformers on language and dominate on audio, DNA, and very long-context tasks. Hybrids (Jamba, Zamba, Samba) mix SSM blocks with a few attention layers for the best of both.</p>
+
+        <h3 id="foundation">Foundation Models <a href="topics/foundation-models.html" class="deep-dive">Deep Dive →</a></h3>
+        <p>Pretrain once on a massive, diverse corpus; adapt everywhere. The term was coined at Stanford (2021) to name the shift: GPT, Claude, Gemini, Llama, DINOv2, SAM, Whisper are all <em>bases</em> that downstream apps build on. The key results are scaling laws (Kaplan 2020, Chinchilla 2022) telling you how to trade off parameters vs. tokens vs. compute, and emergent capabilities that only appear past certain scales.</p>
+
+        <h3 id="rag-section">Retrieval-Augmented Generation (RAG) <a href="topics/rag.html" class="deep-dive">Deep Dive →</a></h3>
+        <p>The most boringly practical technique on this list, and probably the most widely deployed. Embed documents into a vector space, retrieve the top-k most similar chunks at query time, stuff them in the prompt. 2025 improvements: hybrid dense+sparse retrieval, learned rerankers, HyDE, GraphRAG, agentic multi-hop retrieval, and long-context models that let you skip retrieval for small corpora entirely.</p>
+
+        <h3 id="neurosym">Neuro-Symbolic AI <a href="topics/neuro-symbolic.html" class="deep-dive">Deep Dive →</a></h3>
+        <p>The attempt to marry neural perception (fast, fuzzy, learned) with symbolic reasoning (slow, precise, rule-based). Think DeepMind's AlphaGeometry solving IMO problems, or differentiable theorem provers. The bet is that pure scaling will hit a wall on tasks needing verified logical steps, and that hybrid systems — neural front-ends feeding a symbolic solver — will close the gap.</p>
+
+        <h3 id="edge">Edge &amp; On-Device AI <a href="topics/edge-ai.html" class="deep-dive">Deep Dive →</a></h3>
+        <p>Phones, laptops, and microcontrollers are now running 3B–8B parameter models locally. The enabling tricks: 4-bit and 2-bit quantization (GPTQ, AWQ, bitsandbytes), knowledge distillation into small student models, structured pruning, and speculative decoding. Apple Intelligence, Gemini Nano, Phi-3-mini, and Llama-3.2-1B all live here. Private by construction, zero latency, zero per-token cost.</p>
+
+        <h3 id="safety">AI Safety &amp; Alignment <a href="topics/ai-safety.html" class="deep-dive">Deep Dive →</a></h3>
+        <p>How do you make a model that's not just capable but <em>aligned</em> with what its users actually want, and honest about what it doesn't know? The toolkit: RLHF (2022), Constitutional AI and DPO (2023), Constitutional Classifiers and deliberative alignment (2024–25), interpretability via sparse autoencoders (Anthropic's 2024 dictionary-learning work), and systematic red-teaming. This is the field that has to keep pace with everything else on this list.</p>
+      </section>
+
+      <!-- ============================================================ -->
+      <section id="agi">
+        <h2>AGI &amp; the Singularity <span class="era">// the endgame</span> <a href="topics/agi.html" class="deep-dive">Deep Dive →</a></h2>
+        <p class="lede">In 2022 "AGI" was a word you whispered at parties to sound interesting. In 2026 it's a line item in Microsoft's contract with OpenAI, a KPI on Demis Hassabis's performance review, and the subject of Senate hearings. This section is the map.</p>
+
+        <div class="callout warn">
+          <div class="label">Before you read</div>
+          <p style="margin:6px 0">Everything below this line is a mix of <strong>reported fact</strong> (labs, funding, products) and <strong>expert speculation</strong> (timelines, takeoff, impacts). Sources are linked so you can check the receipts. No one actually knows when or if AGI arrives — be suspicious of anyone, including the labs, who says otherwise.</p>
+        </div>
+
+        <h3 id="agi-definition">What counts as AGI?</h3>
+        <p>There is no universally agreed definition, which is why headlines feel contradictory. Four influential ones:</p>
+        <div class="grid">
+          <div class="card">
+            <h4>OpenAI's charter (2018)</h4>
+            <p>"Highly autonomous systems that outperform humans at most economically valuable work." Explicitly an economic bar, not a cognitive one.</p>
+            <span class="tag">economic</span>
+          </div>
+          <div class="card">
+            <h4>DeepMind's levels (2024)</h4>
+            <p>A 6-level scale from "No AI" → "Superhuman" with a cross-axis for narrow vs general. Their paper (Morris et&nbsp;al.) puts Gemini &amp; GPT-4 at <em>Level 1 General</em> — "emerging AGI."</p>
+            <span class="tag">technical</span>
+          </div>
+          <div class="card">
+            <h4>Metaculus / Karnofsky "transformative AI"</h4>
+            <p>An AI that causes a transition comparable to the agricultural or industrial revolution. Deliberately agnostic about internals.</p>
+            <span class="tag">impact</span>
+          </div>
+          <div class="card">
+            <h4>The Turing Test (obsolete)</h4>
+            <p>Already passed in limited form by GPT-4 class models in controlled studies (<a href="https://arxiv.org/abs/2405.08007" target="_blank" rel="noopener">Jones &amp; Bergen 2024</a>). Nobody serious uses it as a finish line anymore.</p>
+            <span class="tag">historical</span>
+          </div>
+        </div>
+
+        <p>Mapped onto today's systems: frontier LLMs are better than most humans at many discrete tasks (coding contests, competition math, the bar exam) while still failing at things a 5-year-old finds easy (robust physical common sense, long-horizon planning without tools, genuinely novel research). That mismatch is exactly why the "AGI or not?" debate never resolves.</p>
+
+        <h3 id="agi-labs">The labs racing to build it</h3>
+        <p>Every serious frontier lab has AGI (or some synonym — "powerful AI", "superintelligence", "transformative AI") as an explicit, stated goal. Below is the 2026 field.</p>
+        <div class="grid">
+          <div class="card">
+            <h4>OpenAI</h4>
+            <p class="meta">San Francisco · founded 2015</p>
+            <p>Sam Altman's stated mission is AGI that "benefits all of humanity." 2026 roadmap: GPT-5 (released mid-2025), o-series reasoning models, and the "Stargate" compute build-out announced Jan 2025 — a $500B joint venture with Oracle, SoftBank, and MGX to build US AI infrastructure.</p>
+            <span class="tag hot">frontier</span><span class="tag">$500B Stargate</span>
+          </div>
+          <div class="card">
+            <h4>Anthropic</h4>
+            <p class="meta">San Francisco · founded 2021</p>
+            <p>Founded by ex-OpenAI safety staff (Dario &amp; Daniela Amodei). Mission is "powerful AI done safely." Publicly bets that frontier capabilities must be developed at the safety frontier to steer the field. Dario's "<a href="https://darioamodei.com/machines-of-loving-grace" target="_blank" rel="noopener">Machines of Loving Grace</a>" (Oct 2024) argues capable AI could compress 50–100 years of biomedical progress into 5–10.</p>
+            <span class="tag hot">frontier</span><span class="tag">safety-first</span>
+          </div>
+          <div class="card">
+            <h4>Google DeepMind</h4>
+            <p class="meta">London + Mountain View · merged 2023</p>
+            <p>Demis Hassabis (<a href="https://www.nobelprize.org/prizes/chemistry/2024/" target="_blank" rel="noopener">Nobel 2024</a> for AlphaFold) has said AGI is a 5–10 year horizon. Full stack: TPUs, Gemini 2.x, AlphaFold, AlphaProof, AlphaGeometry, Project Astra (universal assistant).</p>
+            <span class="tag hot">frontier</span><span class="tag">full-stack</span>
+          </div>
+          <div class="card">
+            <h4>xAI</h4>
+            <p class="meta">Austin · founded 2023</p>
+            <p>Musk's post-OpenAI lab. Grok series. Memphis "Colossus" cluster went from 0 → 100k H100s in 122 days (2024) and is being expanded to 1M GPUs. Explicitly framed as a race to AGI.</p>
+            <span class="tag">frontier</span><span class="tag">Colossus 1M</span>
+          </div>
+          <div class="card">
+            <h4>Meta AI (FAIR + GenAI)</h4>
+            <p class="meta">Menlo Park</p>
+            <p>Yann LeCun leads FAIR; Alexandr Wang now runs a new "Superintelligence Labs" unit after Meta's $14B investment in Scale AI (June 2025). Llama 4 family is open-weight. LeCun is the loudest AGI skeptic at a frontier lab — his bet is on world-model-based "objective-driven" AI, not pure LLMs.</p>
+            <span class="tag">open</span><span class="tag">world models</span>
+          </div>
+          <div class="card">
+            <h4>Safe Superintelligence (SSI)</h4>
+            <p class="meta">Palo Alto + Tel Aviv · founded 2024</p>
+            <p>Ilya Sutskever (ex-OpenAI co-founder + chief scientist) with Daniel Gross and Daniel Levy. One product only: "safe superintelligence." Raised $1B at a $5B valuation in Sep 2024; reportedly raising again at ~$30B in 2025.</p>
+            <span class="tag">stealth</span><span class="tag">superintelligence</span>
+          </div>
+          <div class="card">
+            <h4>DeepSeek</h4>
+            <p class="meta">Hangzhou · founded 2023</p>
+            <p>Spun out of quant fund High-Flyer. Shipped DeepSeek-V3 (Dec 2024) and R1 reasoning model (Jan 2025) with reported training cost ~$6M — an order of magnitude below US frontier labs. Set off the "DeepSeek moment" market panic in Jan 2025.</p>
+            <span class="tag hot">China</span><span class="tag">open</span>
+          </div>
+          <div class="card">
+            <h4>Microsoft AI</h4>
+            <p class="meta">Redmond</p>
+            <p>Mustafa Suleyman (ex-DeepMind, ex-Inflection) leads MAI. Primary vehicle is still the OpenAI partnership ($13B+ invested), but Microsoft is building its own frontier model capacity. The OpenAI contract has a clause that cuts Microsoft's access the moment OpenAI's board declares AGI achieved — the most-discussed corporate clause in tech.</p>
+            <span class="tag">frontier</span>
+          </div>
+          <div class="card">
+            <h4>Mistral AI</h4>
+            <p class="meta">Paris · founded 2023</p>
+            <p>Europe's flagship. Co-founded by ex-DeepMind and ex-Meta researchers. Mix of open and commercial models. Not explicitly an "AGI lab" — more of a sovereign-AI play — but in the frontier conversation.</p>
+            <span class="tag">Europe</span>
+          </div>
+          <div class="card">
+            <h4>Zhipu / Moonshot / Qwen (Alibaba)</h4>
+            <p class="meta">China</p>
+            <p>The "Chinese tigers." GLM-4, Kimi, and Qwen 3 are all frontier-adjacent and mostly open-weight. Under US export controls on advanced GPUs, they've leaned into efficiency — which the DeepSeek papers then weaponized.</p>
+            <span class="tag">China</span>
+          </div>
+          <div class="card">
+            <h4>Google / Microsoft / Amazon — hyperscalers</h4>
+            <p class="meta">infrastructure</p>
+            <p>Not "labs" strictly but they own the compute. In 2025 the big four hyperscalers combined committed over $300B in capex, most of it AI-related. Without them the labs above cannot train.</p>
+            <span class="tag">infra</span>
+          </div>
+          <div class="card">
+            <h4>NVIDIA</h4>
+            <p class="meta">Santa Clara</p>
+            <p>The one company that wins either way. Crossed $3T market cap in 2024 on the back of H100/H200/B100/GB200 demand. Also ships its own foundation models (Nemotron, Cosmos world models) to keep the stack sticky.</p>
+            <span class="tag">infra</span><span class="tag hot">picks-and-shovels</span>
+          </div>
+        </div>
+
+        <h3 id="agi-benchmarks">How do we measure progress?</h3>
+        <p>The benchmarks that used to matter (GLUE, SuperGLUE, MMLU) are saturated — frontier models score above 90% and the remaining errors are often benchmark mistakes, not model mistakes. The 2025–26 yardsticks are harder:</p>
+        <ul class="checked">
+          <li><strong>ARC-AGI-2</strong> (<a href="https://arcprize.org/" target="_blank" rel="noopener">Chollet's puzzles</a>) — abstraction &amp; reasoning on novel tasks. o3 hit 75.7% on ARC-AGI-1 in Dec 2024 (vs. ~10% for GPT-4). ARC-AGI-2 was designed to be harder and frontier scores remain below human baselines.</li>
+          <li><strong>Humanity's Last Exam</strong> (Scale + CAIS, 2025) — 3000+ questions at the frontier of human expertise across physics, math, law, classical languages. Frontier models currently score in the teens.</li>
+          <li><strong>FrontierMath</strong> (Epoch AI, 2024) — research-level math by Fields medalists. o3 went from 2% → 25.2% in a single quarter, shocking even the authors.</li>
+          <li><strong>SWE-bench Verified</strong> — real GitHub issues. Claude 3.7 / 4 class models cleared 70%+ in 2025 — the "AI can fix tickets" threshold most engineering managers watch.</li>
+          <li><strong>GPQA Diamond</strong> — grad-level physics, chem, bio. Saturating above 85%.</li>
+          <li><strong>OSWorld / WebArena / AgentBench</strong> — can the model actually use a computer? These are the benchmarks AGI economists care about because they're closest to "most economically valuable work."</li>
+          <li><strong>The RE-Bench / METR evaluations</strong> — time-horizon tasks. METR's 2025 paper found the length of software tasks frontier models can complete reliably is roughly doubling every 7 months — one of the few "Moore's law"-like trends in the field.</li>
+        </ul>
+
+        <h3 id="singularity">The Singularity — where the term comes from</h3>
+        <p>The word predates ChatGPT by half a century. Three milestones:</p>
+        <ul class="clean">
+          <li><strong>1958</strong> — John von Neumann (as reported by Stanislaw Ulam) mused about "an essential singularity in the history of the race beyond which human affairs, as we know them, could not continue."</li>
+          <li><strong>1965</strong> — I.&nbsp;J.&nbsp;Good publishes <em>Speculations Concerning the First Ultraintelligent Machine</em>. His famous sentence: <em>"The first ultraintelligent machine is the last invention that man need ever make, provided that the machine is docile enough to tell us how to keep it under control."</em> This is the intelligence-explosion thesis: once an AI can design better AIs, recursive self-improvement diverges.</li>
+          <li><strong>1993</strong> — Vernor Vinge's essay <em>The Coming Technological Singularity</em> (NASA VISION-21). Vinge fixes the popular image and predicts "within thirty years" — a bet that 2023 invalidated neither cleanly for nor against.</li>
+          <li><strong>2005</strong> — Ray Kurzweil's <em>The Singularity Is Near</em>. Kurzweil predicts human-level AI by 2029 and the singularity by 2045, based on extrapolating Moore's law and his "law of accelerating returns." His 2029 prediction has held up remarkably well.</li>
+          <li><strong>2014</strong> — Nick Bostrom's <em>Superintelligence</em> puts x-risk squarely into mainstream discourse and reframes the question from "when" to "how do we make it go well."</li>
+        </ul>
+
+        <div class="callout">
+          <div class="label">Intelligence explosion, in one equation</div>
+          <p style="margin:6px 0">If the speed at which AI improves itself is proportional to its current intelligence <em>I</em>, you get <code>dI/dt ∝ I</code>, which integrates to <code>I(t) = I₀·e^(kt)</code> — exponential. If it's superlinear — <code>dI/dt ∝ I²</code> — you get <em>hyperbolic</em> growth, which reaches infinity in <em>finite</em> time. That finite-time blowup is the mathematical heart of "singularity." Good 1965 assumed superlinear; modern treatments (Davidson, Roodman, Christiano) use much more conservative assumptions and get slower — but still dramatic — curves.</p>
+        </div>
+
+        <h3 id="takeoff">Takeoff scenarios</h3>
+        <p>Once you stipulate that an intelligence explosion is physically possible, the question becomes: <em>how fast</em>? Three archetypes dominate the debate:</p>
+        <div class="grid">
+          <div class="card">
+            <h4>Fast takeoff ("hard")</h4>
+            <p>Days to months from roughly-human to vastly-superhuman. Single system, single actor. Associated with Yudkowsky / early MIRI. The scariest scenario and, most researchers now believe, the least likely given the compute-bound nature of training.</p>
+            <span class="tag">days–weeks</span>
+          </div>
+          <div class="card">
+            <h4>Slow takeoff ("soft")</h4>
+            <p>Years. Capability grows incrementally, diffuses across labs, gets integrated into the economy. What <a href="https://www.cold-takes.com/transformative-ai-timelines-part-1-of-4-what-kind-of-ai/" target="_blank" rel="noopener">Holden Karnofsky calls</a> the "most likely" path, and roughly what we've seen 2022–26.</p>
+            <span class="tag">years</span>
+          </div>
+          <div class="card">
+            <h4>No-takeoff / plateau</h4>
+            <p>Current architectures hit a wall. Scaling hits data limits, reasoning hits verification limits, agents hit reliability limits. Proponents include LeCun and many ML academics. Consistent with the 2024–25 observation that raw pre-training gains are slowing.</p>
+            <span class="tag">plateau</span>
+          </div>
+        </div>
+
+        <p>Christiano's influential 2018 "<a href="https://www.alignmentforum.org/posts/AfGmsjGPXN97kNp57/arguments-about-fast-takeoff" target="_blank" rel="noopener">Takeoff speeds</a>" post argues the right question isn't fast vs. slow but whether there's a "discontinuity" — a sudden jump larger than the previous jumps. Post-2022, most practitioners say "no discontinuity yet" — GPT-4 → Claude 3.5 → o1 → o3 is a fast slope but not a step-function.</p>
+
+        <h3 id="impacts">Societal impacts — the short, medium, and long run</h3>
+
+        <h4>Labor &amp; the economy</h4>
+        <p>The first-order prediction is that any task expressible as text, code, or image is now price-deflationary. The empirical work catching up to this is messy but pointed:</p>
+        <ul class="clean">
+          <li><strong>Eloundou, Manning, Mishkin, Rock (OpenAI/UPenn, 2023)</strong> — <a href="https://arxiv.org/abs/2303.10130" target="_blank" rel="noopener">"GPTs are GPTs"</a>. Estimates 80% of the US workforce could have ≥10% of tasks affected and 19% could have ≥50% affected. Highest exposure: information-processing and writing-heavy jobs.</li>
+          <li><strong>Brynjolfsson, Li, Raymond (NBER 2023)</strong> — deployment of an LLM assistant in a call center raised the productivity of the <em>least experienced</em> workers by 34% while barely moving expert productivity. Suggests AI compresses the skill distribution.</li>
+          <li><strong>Acemoglu (2024)</strong> — dissenting view. Estimates macro GDP effects will be modest (~1% over a decade) because most jobs don't collapse into their "AI-exposed" tasks cleanly.</li>
+          <li><strong>Goldman Sachs (2023)</strong> — headline number of "300M jobs exposed" globally. Widely cited, widely misread — exposure ≠ replacement.</li>
+          <li><strong>IMF (2024)</strong> — 40% of global employment is exposed to AI, 60% in advanced economies; developing economies less exposed but also less able to capture productivity gains.</li>
+        </ul>
+        <p>The honest summary: white-collar entry-level work is the first thing to feel it. If you managed junior analysts / copywriters / L1 support / junior devs, your 2026 team looks different than your 2022 team.</p>
+
+        <h4>Governance &amp; regulation</h4>
+        <ul class="clean">
+          <li><strong>EU AI Act</strong> — entered into force Aug 2024; risk-tiered with an explicit "general-purpose AI" category plus extra obligations for "systemic" models (the Llama / GPT-4 tier). Most provisions kicking in 2025–26.</li>
+          <li><strong>US executive action</strong> — Biden's Oct 2023 EO was rescinded by Trump in Jan 2025 and replaced by a pro-competition framing via the AI Action Plan (July 2025). Federal regulation remains sparse; state-level action (California SB 53, Colorado AI Act) is filling the gap.</li>
+          <li><strong>UK AI Safety Institute</strong> (now AI Security Institute) and the <strong>Seoul Declaration</strong> (2024) — frontier labs commit to pre-deployment safety testing of the most capable models.</li>
+          <li><strong>China</strong> — algorithm registration regime (2022) and generative AI interim measures (2023). Mandatory model registration, content labeling.</li>
+          <li><strong>Bletchley → Seoul → Paris Summits</strong> — the AI Safety Summit series. The Paris summit (Feb 2025) pivoted hard from "safety" to "action" and "opportunity" — signaling a mood shift.</li>
+        </ul>
+
+        <h4>Information &amp; epistemics</h4>
+        <p>Two early effects are measurable. First, the cost of generating plausible text, images, audio, and video has collapsed — so has the trust floor of any unverified media. Second, search is being restructured around answer engines (ChatGPT Search, Perplexity, Google AI Overviews), which is already changing publisher traffic patterns. <a href="https://arxiv.org/abs/2404.05961" target="_blank" rel="noopener">Early studies</a> on AI-generated content in social media show mixed polarization effects — not the apocalypse some predicted, but not nothing.</p>
+
+        <h4>Science</h4>
+        <p>This is where the concrete wins are accumulating. AlphaFold 2 and 3 covered ~200M+ protein structures. AlphaProof &amp; AlphaGeometry 2 achieved silver-medal performance at IMO 2024. FunSearch (DeepMind, 2023) found new results in the cap set problem. DeepMind's weather model GraphCast beats the ECMWF's operational model on most metrics. These are real, non-speculative. If "AI-for-science" is where AGI pays its rent, the rent is starting to show up.</p>
+
+        <h3 id="predictions">Timelines &amp; predictions — what the people closest to it say</h3>
+
+        <div class="callout">
+          <div class="label">Methodology note</div>
+          <p style="margin:6px 0">The quotes below are primary-source-verifiable but ages poorly. All have been subject to revision. When in doubt, check the original transcript — frontier-lab CEOs have institutional reasons to make their timelines sound imminent (fundraising) and academics have reasons to sound long (credibility). Read accordingly.</p>
+        </div>
+
+        <table class="rank-table">
+          <thead>
+            <tr><th>Source</th><th>Prediction</th><th>Year given</th><th>Notes</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><strong>Dario Amodei</strong> (Anthropic)</td><td>"Powerful AI" as soon as 2026–2027</td><td>2024</td><td><a href="https://darioamodei.com/machines-of-loving-grace" target="_blank" rel="noopener">Machines of Loving Grace</a>, Oct 2024. Defines "powerful" as ≥ Nobel-winner at most cognitive tasks.</td></tr>
+            <tr><td><strong>Sam Altman</strong> (OpenAI)</td><td>"We are now confident we know how to build AGI as we have traditionally understood it." AGI in "a few thousand days."</td><td>Jan 2025</td><td><a href="https://blog.samaltman.com/reflections" target="_blank" rel="noopener">Reflections blog post</a>. Notably vague on definition.</td></tr>
+            <tr><td><strong>Demis Hassabis</strong> (DeepMind)</td><td>AGI within 5–10 years</td><td>2024</td><td>Repeated at multiple venues; cautious about hype.</td></tr>
+            <tr><td><strong>Elon Musk</strong> (xAI)</td><td>AI smarter than any individual human by end of 2025; smarter than all humans combined by 2029</td><td>2024</td><td>Musk's past AI timelines have been consistently too optimistic.</td></tr>
+            <tr><td><strong>Geoffrey Hinton</strong></td><td>5–20 years, nontrivial chance AI takes over</td><td>2023</td><td>Resigned from Google May 2023 to speak freely about risks. Nobel 2024.</td></tr>
+            <tr><td><strong>Yann LeCun</strong> (Meta)</td><td>Current LLMs will not reach AGI; new architectures needed; decade+ away</td><td>2023–26</td><td>The loudest in-house skeptic.</td></tr>
+            <tr><td><strong>Ray Kurzweil</strong></td><td>Human-level AI by 2029, singularity by 2045</td><td>2005, restated 2024</td><td>Predictions made in <em>The Singularity is Near</em>; the 2029 date has aged well.</td></tr>
+            <tr><td><strong>Metaculus community</strong></td><td>~50% by 2031 for "weak AGI" (down from 2050 in 2020)</td><td>live</td><td><a href="https://www.metaculus.com/questions/5121/date-of-general-ai/" target="_blank" rel="noopener">Question 5121</a>. Definitions matter — look at the resolution criteria.</td></tr>
+            <tr><td><strong>AI Impacts survey (Grace et&nbsp;al.)</strong></td><td>Aggregate 2023 survey of ~2700 AI researchers: 50% chance of "high-level machine intelligence" by 2047 (13 years earlier than the 2022 survey)</td><td>Jan 2024</td><td><a href="https://arxiv.org/abs/2401.02843" target="_blank" rel="noopener">arXiv:2401.02843</a>.</td></tr>
+            <tr><td><strong>AI 2027 scenario</strong> (Kokotajlo, Alexander, et&nbsp;al.)</td><td>Detailed fictional timeline in which superhuman AI arrives late 2027 via a recursive self-improvement loop inside an automated AI research lab</td><td>Apr 2025</td><td><a href="https://ai-2027.com/" target="_blank" rel="noopener">ai-2027.com</a>. Explicitly a scenario, not a forecast — but widely read inside labs.</td></tr>
+            <tr><td><strong>Epoch AI</strong></td><td>Compute needed for transformative AI could be reached by ~2030 at current capex trends; data may bottleneck first</td><td>2024</td><td><a href="https://epochai.org/" target="_blank" rel="noopener">epochai.org</a>. Probably the most technically careful public forecaster.</td></tr>
+          </tbody>
+        </table>
+
+        <h3 id="xrisk">Existential risk — the "what if it goes wrong" question</h3>
+        <p>The x-risk argument, in three sentences: (1) we don't know how to robustly specify human values in an objective function; (2) a sufficiently capable optimizer pursuing any <em>misspecified</em> objective will by default acquire resources and resist shutdown (<a href="https://intelligence.org/files/BasicAIDrives.pdf" target="_blank" rel="noopener">Omohundro 2008</a>, "basic AI drives"); (3) if that optimizer is much smarter than us, course-correcting becomes very hard. The classic popular treatment is Bostrom's <em>Superintelligence</em> (2014); the technical-alignment literature traces to Yudkowsky, Soares, Armstrong, Russell.</p>
+
+        <div class="grid">
+          <div class="card">
+            <h4>CAIS statement (May 2023)</h4>
+            <p>"Mitigating the risk of extinction from AI should be a global priority alongside other societal-scale risks such as pandemics and nuclear war." Signed by Hinton, Bengio, Altman, Hassabis, Amodei and ~1000 others. The moment x-risk went mainstream.</p>
+          </div>
+          <div class="card">
+            <h4>Bengio's "International AI Safety Report" (2025)</h4>
+            <p>UK-commissioned, 100+ contributors. Concludes capabilities are advancing faster than our ability to verify safety properties, and that several plausible pathways to catastrophic harm exist.</p>
+          </div>
+          <div class="card">
+            <h4>Anthropic's "Core Views on AI Safety"</h4>
+            <p><a href="https://www.anthropic.com/news/core-views-on-ai-safety" target="_blank" rel="noopener">Published 2023</a>. Three scenarios: optimistic, pessimistic, pragmatic. Company operates as if pessimistic scenario might be true.</p>
+          </div>
+          <div class="card">
+            <h4>Skeptics</h4>
+            <p>LeCun, Ng, Mitchell, Marcus argue current x-risk framing overweights theoretical scenarios vs. near-term harms (bias, misuse, concentration of power). Their preferred framing: "AI ethics" &gt; "AI safety."</p>
+          </div>
+        </div>
+
+        <div class="callout warn">
+          <div class="label">How to think about this without losing your mind</div>
+          <p style="margin:6px 0">Nobody who tells you they are certain — in either direction — has good epistemics about AGI. The useful stance is probabilistic: what's your P(transformative AI before 2035)? P(it goes well | transformative AI)? Use those to decide what to work on, and then do the object-level work. Panic and dismissal both feel productive and neither is.</p>
+        </div>
+
+        <p style="margin-top:24px;">For a fuller treatment with interactive takeoff-speed simulations and side-by-side model comparisons, see the three deep-dive pages:</p>
+        <ul class="checked">
+          <li><a href="topics/agi.html" class="deep-dive">Deep Dive →</a> <strong>AGI — the goal</strong>: definitions, benchmark trajectories, the current state of play.</li>
+          <li><a href="topics/singularity.html" class="deep-dive">Deep Dive →</a> <strong>The Singularity</strong>: Good's 1965 thesis, Kurzweil's curves, takeoff-speed math, an interactive intelligence-explosion simulator.</li>
+          <li><a href="topics/society.html" class="deep-dive">Deep Dive →</a> <strong>AI &amp; Society</strong>: labor, governance, epistemics, x-risk — with sources you can click through.</li>
+        </ul>
+      </section>
+
+      <!-- ============================================================ -->
+      <section id="frameworks">
+        <h2>Frameworks &amp; Tooling <span class="era">// what you'll actually touch</span></h2>
+        <div class="grid">
+          <div class="card"><h4>PyTorch</h4><p class="meta">Meta, 2016</p><p>What ~90% of research and production uses.</p><span class="tag hot">use this</span></div>
+          <div class="card"><h4>JAX</h4><p class="meta">Google, 2018</p><p>Functional, compiler-first. Powers Gemini, AlphaFold.</p></div>
+          <div class="card"><h4>Hugging Face Transformers</h4><p>One-line access to thousands of pretrained models.</p><span class="tag hot">use this</span></div>
+          <div class="card"><h4>vLLM</h4><p class="meta">Berkeley, 2023</p><p>High-throughput LLM serving. Standard for self-hosted.</p><span class="tag hot">prod</span></div>
+          <div class="card"><h4>llama.cpp</h4><p class="meta">Gerganov, 2023</p><p>Pure C++ inference. Runs on anything.</p><span class="tag">local</span></div>
+          <div class="card"><h4>Ollama</h4><p>One command to run local models. <code>brew install</code> of LLMs.</p><span class="tag">local</span></div>
+          <div class="card"><h4>Claude Agent SDK / OpenAI Agents SDK</h4><p>First-party SDKs. The path of least resistance for agents in 2026.</p><span class="tag hot">rising</span></div>
+          <div class="card"><h4>pgvector</h4><p>Postgres extension. The default vector DB.</p><span class="tag hot">default</span></div>
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <section id="infra">
+        <h2>Hardware &amp; Inference <span class="era">// the real bottleneck</span></h2>
+        <p class="lede">NVIDIA H100/B200/GB300 dominate training. Google TPUs are the second option. Groq and Cerebras do blazing-fast inference. Apple Silicon's unified memory lets you run 30B+ models on a MacBook.</p>
+        <p><strong>Quantization</strong> — run trained FP16 models in 8/4/2-bit. A 70B model goes from 140GB → 40GB VRAM. Formats: GGUF (llama.cpp), AWQ/GPTQ (vLLM), FP8/NVFP4 (native H100+).</p>
+      </section>
+
+      <!-- ============================================================ -->
+      <section id="rankings">
+        <h2>Model Rankings (April 2026) <span class="era">// speed + quality</span></h2>
+        <p class="lede">Leaderboards are gamed, benchmarks leak. Treat as a snapshot.</p>
+        <h3>Frontier LLMs — general reasoning quality</h3>
+        <table class="rank">
+          <thead><tr><th>Model</th><th>Lab</th><th>Quality</th><th>Open?</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td>Claude Opus 4.6</td><td>Anthropic</td><td><span class="bar" style="width:98%"></span></td><td>No</td><td>SOTA coding &amp; long context.</td></tr>
+            <tr><td>GPT-5 / o4</td><td>OpenAI</td><td><span class="bar" style="width:97%"></span></td><td>No</td><td>Reasoning model; strongest math/science.</td></tr>
+            <tr><td>Gemini 3 Ultra</td><td>Google</td><td><span class="bar" style="width:95%"></span></td><td>No</td><td>2M+ context, multimodal native.</td></tr>
+            <tr><td>Grok 4</td><td>xAI</td><td><span class="bar" style="width:92%"></span></td><td>Partial</td><td>Real-time web, fewer filters.</td></tr>
+            <tr><td>DeepSeek-R2</td><td>DeepSeek</td><td><span class="bar" style="width:91%"></span></td><td>Yes</td><td>Open reasoning.</td></tr>
+            <tr><td>Llama 4 Behemoth</td><td>Meta</td><td><span class="bar" style="width:89%"></span></td><td>Yes</td><td>Best open frontier.</td></tr>
+          </tbody>
+        </table>
+        <h3>Speed — tokens / second</h3>
+        <table class="rank">
+          <thead><tr><th>Provider</th><th>Tier</th><th>Speed</th></tr></thead>
+          <tbody>
+            <tr><td>Groq / Cerebras</td><td>Llama 70B</td><td><span class="bar" style="width:100%"></span> 1000+ tok/s</td></tr>
+            <tr><td>SambaNova</td><td>Llama 405B</td><td><span class="bar" style="width:85%"></span> ~400 tok/s</td></tr>
+            <tr><td>Claude Haiku</td><td>small</td><td><span class="bar" style="width:60%"></span> ~200 tok/s</td></tr>
+            <tr><td>Reasoning models</td><td>o4, Opus 4.6</td><td><span class="bar" style="width:20%"></span> ~60 tok/s</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- ============================================================ -->
+      <section id="glossary">
+        <h2>Quick Glossary <span class="era">// cheat sheet</span></h2>
+        <div class="grid">
+          <div class="card"><h4>AI / ML / DL</h4><p>Artificial Intelligence / Machine Learning / Deep Learning. Concentric.</p></div>
+          <div class="card"><h4>NN / CNN / RNN</h4><p>Neural Net / Convolutional / Recurrent.</p></div>
+          <div class="card"><h4>Transformer</h4><p>The architecture. Uses self-attention.</p></div>
+          <div class="card"><h4>LLM / VLM / SLM</h4><p>Large / Vision / Small Language Model.</p></div>
+          <div class="card"><h4>Token</h4><p>Word-piece the model processes.</p></div>
+          <div class="card"><h4>Context window</h4><p>Max tokens visible at once.</p></div>
+          <div class="card"><h4>RLHF / DPO</h4><p>Alignment methods using human preferences.</p></div>
+          <div class="card"><h4>RAG</h4><p>Retrieval + LLM.</p></div>
+          <div class="card"><h4>MoE</h4><p>Mixture of Experts. Sparse scaling.</p></div>
+          <div class="card"><h4>CoT</h4><p>Chain of Thought reasoning.</p></div>
+          <div class="card"><h4>LoRA / QLoRA</h4><p>Cheap fine-tuning adapters.</p></div>
+          <div class="card"><h4>MCP</h4><p>Model Context Protocol. Tool-use standard.</p></div>
+        </div>
+        <h3>Further reading &amp; deep dives</h3>
+        <ul class="clean">
+          <li><a href="topics/perceptron.html">📘 Perceptron — from biology to algorithm</a></li>
+          <li><a href="topics/activations.html">📘 Activation Functions — the nonlinearity between layers</a></li>
+          <li><a href="topics/gradient-descent.html">📘 Gradient Descent — the engine of learning (now with 3D)</a></li>
+          <li><a href="topics/backpropagation.html">📘 Backpropagation — full textbook treatment</a></li>
+          <li><a href="topics/convolution.html">📘 Convolution — how CNNs see</a></li>
+          <li><a href="topics/rnn-lstm.html">📘 RNNs &amp; LSTMs — sequence models before Transformers</a></li>
+          <li><a href="topics/embeddings.html">📘 Word Embeddings — king − man + woman ≈ queen</a></li>
+          <li><a href="topics/self-attention.html">📘 Self-Attention — transformer math</a></li>
+          <li><a href="topics/gan.html">📘 GANs — the forger and the inspector</a></li>
+          <li><a href="topics/diffusion.html">📘 Diffusion Models — forward &amp; reverse processes</a></li>
+          <li><a href="topics/moe.html">🔬 Mixture of Experts — sparse scaling</a></li>
+          <li><a href="topics/reasoning.html">🔬 Reasoning &amp; Test-Time Compute — the new axis</a></li>
+          <li><a href="topics/state-space.html">🔬 State Space Models &amp; Mamba — linear-time sequence mixing</a></li>
+          <li><a href="topics/foundation-models.html">🔬 Foundation Models — scaling laws &amp; the Chinchilla recipe</a></li>
+          <li><a href="topics/rag.html">🔬 Retrieval-Augmented Generation — dense retrieval &amp; hybrid search</a></li>
+          <li><a href="topics/neuro-symbolic.html">🔬 Neuro-Symbolic AI — differentiable logic &amp; AlphaGeometry</a></li>
+          <li><a href="topics/edge-ai.html">🔬 Edge &amp; On-Device AI — quantization, distillation, speculative decoding</a></li>
+          <li><a href="topics/ai-safety.html">🔬 AI Safety &amp; Alignment — RLHF, DPO, Constitutional AI, SAEs</a></li>
+          <li><a href="topics/agi.html">🌌 AGI — the goal, the labs, the benchmarks</a></li>
+          <li><a href="topics/singularity.html">🌌 The Singularity — intelligence explosion math &amp; takeoff speeds</a></li>
+          <li><a href="topics/society.html">🌌 AI &amp; Society — labor, governance, epistemics, x-risk</a></li>
+        </ul>
+        <h4>External resources</h4>
+        <ul class="clean">
+          <li><a class="ext" href="https://jalammar.github.io/illustrated-transformer/" target="_blank">The Illustrated Transformer</a></li>
+          <li><a class="ext" href="https://karpathy.ai/zero-to-hero.html" target="_blank">Karpathy's Zero to Hero</a></li>
+          <li><a class="ext" href="https://www.3blue1brown.com/topics/neural-networks" target="_blank">3Blue1Brown: Neural Networks</a></li>
+          <li><a class="ext" href="https://arxiv.org/abs/1706.03762" target="_blank">Attention Is All You Need (original paper)</a></li>
+        </ul>
+      </section>
+    </div>
+  </main>
+</div>
+
+<script>
+// ============================================================
+// MOBILE MENU
+// ============================================================
+const mobileToggle = document.getElementById('mobile-menu-toggle');
+const sidebarEl = document.querySelector('aside.sidebar');
+const sidebarBackdrop = document.getElementById('sidebar-backdrop');
+function closeMobileMenu() {
+  sidebarEl.classList.remove('open');
+  sidebarBackdrop.classList.remove('show');
+  mobileToggle.textContent = '☰';
+}
+function openMobileMenu() {
+  sidebarEl.classList.add('open');
+  sidebarBackdrop.classList.add('show');
+  mobileToggle.textContent = '✕';
+}
+mobileToggle.addEventListener('click', () => {
+  if (sidebarEl.classList.contains('open')) closeMobileMenu();
+  else openMobileMenu();
+});
+sidebarBackdrop.addEventListener('click', closeMobileMenu);
+// Close menu when a nav link is clicked (on mobile)
+document.querySelectorAll('aside.sidebar nav a').forEach(a => {
+  a.addEventListener('click', () => {
+    if (window.innerWidth <= 900) closeMobileMenu();
+  });
+});
+
+// ============================================================
+// TIMELINE
+// ============================================================
+const timelineEvents = [
+  { year: 1943, name: "McCulloch-Pitts neuron", org: "MIT", section: "neural-networks" },
+  { year: 1957, name: "Perceptron", org: "Rosenblatt", section: "perceptron" },
+  { year: 1969, name: "AI Winter I", org: "Minsky & Papert", section: "perceptron" },
+  { year: 1986, name: "Backpropagation", org: "Rumelhart/Hinton", section: "neural-networks" },
+  { year: 1989, name: "LeNet (CNN)", org: "LeCun / Bell Labs", section: "cnn" },
+  { year: 1995, name: "SVM", org: "Cortes & Vapnik", section: "classical-ml" },
+  { year: 1997, name: "LSTM", org: "Hochreiter/Schmidhuber", section: "rnn" },
+  { year: 2006, name: "Deep learning revival", org: "Hinton", section: "dnn" },
+  { year: 2009, name: "ImageNet", org: "Fei-Fei Li", section: "dnn" },
+  { year: 2012, name: "AlexNet", org: "Krizhevsky/Hinton", section: "cnn" },
+  { year: 2014, name: "GANs", org: "Goodfellow", section: "gan" },
+  { year: 2014, name: "Word2Vec / seq2seq", org: "Google", section: "rnn" },
+  { year: 2015, name: "ResNet", org: "Microsoft Research", section: "cnn" },
+  { year: 2015, name: "OpenAI founded", org: "OpenAI", section: "llm" },
+  { year: 2017, name: "Transformer", org: "Google Brain", section: "attention" },
+  { year: 2018, name: "BERT / GPT-1", org: "Google / OpenAI", section: "llm" },
+  { year: 2020, name: "GPT-3", org: "OpenAI", section: "llm" },
+  { year: 2020, name: "DDPM (diffusion)", org: "Ho et al.", section: "diffusion" },
+  { year: 2021, name: "CLIP / DALL·E", org: "OpenAI", section: "multimodal" },
+  { year: 2022, name: "Stable Diffusion", org: "Stability AI", section: "diffusion" },
+  { year: 2022, name: "ChatGPT", org: "OpenAI", section: "llm" },
+  { year: 2023, name: "GPT-4/Claude/Llama", org: "OAI/Anthropic/Meta", section: "llm" },
+  { year: 2024, name: "o1 reasoning", org: "OpenAI", section: "llm" },
+  { year: 2024, name: "MCP", org: "Anthropic", section: "agents" },
+  { year: 2025, name: "DeepSeek-R1", org: "DeepSeek", section: "llm" },
+  { year: 2025, name: "Sora 2 / Veo 3", org: "OpenAI/Google", section: "multimodal" },
+  { year: 2026, name: "Agent era", org: "everyone", section: "agents" }
+];
+
+function renderTimeline() {
+  const timeline = document.getElementById('timeline');
+  const minYear = 1940, maxYear = 2027;
+
+  // Approximate width of the scrollable track (matches min-width in CSS)
+  const totalWidth = 2800;
+
+  // year marks every 10 years
+  const yearMarks = document.createElement('div');
+  yearMarks.className = 'year-marks';
+  for (let y = 1940; y <= 2025; y += 10) {
+    const span = document.createElement('span');
+    span.style.left = (((y - minYear) / (maxYear - minYear)) * 100) + '%';
+    span.textContent = y;
+    yearMarks.appendChild(span);
+  }
+  timeline.appendChild(yearMarks);
+
+  // Compute x-positions and sort left→right
+  const enriched = timelineEvents.map(e => {
+    const pct = ((e.year - minYear) / (maxYear - minYear)) * 100;
+    return { ...e, xPct: pct, xPx: (pct / 100) * totalWidth };
+  }).sort((a, b) => a.xPx - b.xPx);
+
+  // Estimated label footprint (px) — allow two events to share a slot only
+  // if they're farther apart than this.
+  const estimateLabelWidth = (ev) => Math.max(80, ev.name.length * 5.8 + 30);
+
+  // 4 vertical slots: -2 (far above), -1 (close above), 1 (close below), 2 (far below)
+  // Prefer inner slots first (closer to the axis) so the silhouette stays tight.
+  const slotOrder = [-1, 1, -2, 2];
+  const placed = [];
+
+  enriched.forEach((ev) => {
+    const halfW = estimateLabelWidth(ev) / 2;
+    let chosen = null;
+    for (const slot of slotOrder) {
+      const conflict = placed.some(p => {
+        if (p.slot !== slot) return false;
+        const minDist = halfW + estimateLabelWidth(p) / 2 + 4;
+        return Math.abs(p.xPx - ev.xPx) < minDist;
+      });
+      if (!conflict) { chosen = slot; break; }
+    }
+    // Fallback: pick the slot whose nearest neighbor is farthest away
+    if (chosen === null) {
+      let best = slotOrder[0], bestDist = -Infinity;
+      for (const slot of slotOrder) {
+        const nearest = placed
+          .filter(p => p.slot === slot)
+          .reduce((m, p) => Math.min(m, Math.abs(p.xPx - ev.xPx)), Infinity);
+        if (nearest > bestDist) { bestDist = nearest; best = slot; }
+      }
+      chosen = best;
+    }
+    placed.push({ ...ev, slot: chosen });
+
+    const el = document.createElement('div');
+    el.className = 'event';
+    el.style.left = ev.xPct + '%';
+    el.setAttribute('data-slot', chosen);
+    el.setAttribute('title', `${ev.year} · ${ev.name} — ${ev.org}`);
+    el.innerHTML = `<div class="dot"></div><div class="label"><span class="year">${ev.year}</span><span class="name">${ev.name}</span></div>`;
+    el.addEventListener('click', () => {
+      document.getElementById(ev.section)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+    timeline.appendChild(el);
+  });
+}
+renderTimeline();
+
+// ============================================================
+// TOOLTIPS
+// ============================================================
+const tooltip = document.getElementById('tooltip');
+document.addEventListener('mouseover', (e) => {
+  const t = e.target.closest('.term');
+  if (!t) return;
+  const def = t.getAttribute('data-def');
+  const label = t.getAttribute('data-label') || 'Definition';
+  if (!def) return;
+  tooltip.innerHTML = `<div style="font-family: var(--mono); font-size: 10px; color: var(--accent); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px;">${label}</div>${def}`;
+  tooltip.classList.add('show');
+});
+document.addEventListener('mousemove', (e) => {
+  if (!tooltip.classList.contains('show')) return;
+  let x = e.clientX + 16, y = e.clientY + 16;
+  const tw = tooltip.offsetWidth, th = tooltip.offsetHeight;
+  if (x + tw > window.innerWidth - 10) x = e.clientX - tw - 16;
+  if (y + th > window.innerHeight - 10) y = e.clientY - th - 16;
+  tooltip.style.left = x + 'px';
+  tooltip.style.top = y + 'px';
+});
+document.addEventListener('mouseout', (e) => {
+  if (e.target.closest && e.target.closest('.term')) tooltip.classList.remove('show');
+});
+
+// ============================================================
+// COLLAPSIBLE SIDEBAR + SCROLL SPY
+// ============================================================
+const sections = document.querySelectorAll('main section[id]');
+const navLinks = document.querySelectorAll('aside nav a');
+const catGroups = document.querySelectorAll('.cat-group');
+const catToggles = document.querySelectorAll('.cat-toggle');
+
+// --- Click-to-toggle ------------------------------------------------------
+catToggles.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const expanded = btn.getAttribute('aria-expanded') === 'true';
+    btn.setAttribute('aria-expanded', expanded ? 'false' : 'true');
+    try {
+      const group = btn.closest('.cat-group')?.dataset.group;
+      if (group) {
+        const key = 'sidenav:' + group;
+        localStorage.setItem(key, expanded ? 'closed' : 'open');
+      }
+    } catch (e) { /* localStorage may be disabled */ }
+  });
+});
+
+// --- Restore saved open/close state --------------------------------------
+catGroups.forEach(group => {
+  try {
+    const key = 'sidenav:' + group.dataset.group;
+    const saved = localStorage.getItem(key);
+    if (saved === 'open' || saved === 'closed') {
+      const btn = group.querySelector('.cat-toggle');
+      if (btn) btn.setAttribute('aria-expanded', saved === 'open' ? 'true' : 'false');
+    }
+  } catch (e) { /* ignore */ }
+});
+
+// --- Scroll-spy with auto-expand -----------------------------------------
+let lastActiveGroup = null;
+function updateActiveNav() {
+  let active = null;
+  sections.forEach(sec => {
+    const rect = sec.getBoundingClientRect();
+    if (rect.top < 240) active = sec.id;
+  });
+  navLinks.forEach(a => {
+    const href = a.getAttribute('href');
+    a.classList.toggle('active', href === '#' + active);
+  });
+
+  // Find which group contains the currently-active link and auto-expand it
+  if (active) {
+    const activeLink = document.querySelector('aside nav a.active');
+    const activeGroup = activeLink ? activeLink.closest('.cat-group') : null;
+    catGroups.forEach(g => g.classList.toggle('is-active', g === activeGroup));
+    if (activeGroup && activeGroup !== lastActiveGroup) {
+      const btn = activeGroup.querySelector('.cat-toggle');
+      if (btn && btn.getAttribute('aria-expanded') !== 'true') {
+        btn.setAttribute('aria-expanded', 'true');
+      }
+      lastActiveGroup = activeGroup;
+    }
+  }
+}
+window.addEventListener('scroll', updateActiveNav, { passive: true });
+updateActiveNav();
+
+// ============================================================
+// SHARED HELPERS
+// ============================================================
+function fmt(n, d = 3) {
+  if (isNaN(n)) return '?';
+  if (Math.abs(n) < 1e-6) n = 0;
+  return (+n).toFixed(d);
+}
+function sigmoid(z) { return 1 / (1 + Math.exp(-z)); }
+function readNum(id, fallback = 0) {
+  const v = parseFloat(document.getElementById(id).value);
+  return isNaN(v) ? fallback : v;
+}
+
+// ============================================================
+// PERCEPTRON DEMO
+// ============================================================
+const percepState = { step: 0, max: 7 };
+
+function getPercepValues() {
+  return {
+    x1: readNum('perc-x1'), x2: readNum('perc-x2'), x3: readNum('perc-x3'),
+    w1: readNum('perc-w1'), w2: readNum('perc-w2'), w3: readNum('perc-w3'),
+    b:  readNum('perc-b'),
+  };
+}
+
+function clearPercepVisual() {
+  ['perc-x1-node','perc-x2-node','perc-x3-node','perc-neuron','perc-output']
+    .forEach(id => document.getElementById(id).setAttribute('class', 'node-base'));
+  ['perc-c1','perc-c2','perc-c3','perc-cout']
+    .forEach(id => document.getElementById(id).setAttribute('class', 'conn-base'));
+  document.getElementById('perc-z-text').textContent = 'z=?';
+  document.getElementById('perc-y-text').textContent = '?';
+}
+
+function updatePercepLabels() {
+  const v = getPercepValues();
+  document.getElementById('perc-x1-label').textContent = `x₁=${fmt(v.x1,1)}`;
+  document.getElementById('perc-x2-label').textContent = `x₂=${fmt(v.x2,1)}`;
+  document.getElementById('perc-x3-label').textContent = `x₃=${fmt(v.x3,1)}`;
+  document.getElementById('perc-w1-label').textContent = `w₁=${fmt(v.w1,1)}`;
+  document.getElementById('perc-w2-label').textContent = `w₂=${fmt(v.w2,1)}`;
+  document.getElementById('perc-w3-label').textContent = `w₃=${fmt(v.w3,1)}`;
+}
+
+function renderPercepStep() {
+  const v = getPercepValues();
+  const calc = document.getElementById('perc-calc');
+  document.getElementById('percep-progress').textContent = `Step ${percepState.step} / ${percepState.max}`;
+  clearPercepVisual();
+  updatePercepLabels();
+
+  const products = [v.w1 * v.x1, v.w2 * v.x2, v.w3 * v.x3];
+  const sum = products[0] + products[1] + products[2];
+  const z = sum + v.b;
+  const y = sigmoid(z);
+
+  switch (percepState.step) {
+    case 0:
+      calc.innerHTML = `
+        <div class="step-title">Ready · Forward Pass</div>
+        <div class="math">Inputs: x = [${fmt(v.x1,1)}, ${fmt(v.x2,1)}, ${fmt(v.x3,1)}]</div>
+        <div class="math">Weights: w = [${fmt(v.w1,1)}, ${fmt(v.w2,1)}, ${fmt(v.w3,1)}]</div>
+        <div class="math">Bias: b = ${fmt(v.b,2)}</div>
+        <div class="note">We'll compute ŷ = σ(w·x + b)</div>`;
+      break;
+    case 1:
+      document.getElementById('perc-x1-node').setAttribute('class','node-base node-active');
+      document.getElementById('perc-c1').setAttribute('class','conn-base conn-active');
+      calc.innerHTML = `
+        <div class="step-title">Step 1 · Weighted input 1</div>
+        <div class="math"><span class="var">w₁</span> <span class="op">×</span> <span class="var">x₁</span> = <span class="num">${fmt(v.w1,2)}</span> × <span class="num">${fmt(v.x1,2)}</span> = <span class="result">${fmt(products[0])}</span></div>`;
+      break;
+    case 2:
+      document.getElementById('perc-x1-node').setAttribute('class','node-base node-used');
+      document.getElementById('perc-c1').setAttribute('class','conn-base conn-used');
+      document.getElementById('perc-x2-node').setAttribute('class','node-base node-active');
+      document.getElementById('perc-c2').setAttribute('class','conn-base conn-active');
+      calc.innerHTML = `
+        <div class="step-title">Step 2 · Weighted input 2</div>
+        <div class="math"><span class="var">w₁x₁</span> = <span class="result">${fmt(products[0])}</span></div>
+        <div class="math"><span class="var">w₂</span> <span class="op">×</span> <span class="var">x₂</span> = <span class="num">${fmt(v.w2,2)}</span> × <span class="num">${fmt(v.x2,2)}</span> = <span class="result">${fmt(products[1])}</span></div>`;
+      break;
+    case 3:
+      document.getElementById('perc-x1-node').setAttribute('class','node-base node-used');
+      document.getElementById('perc-c1').setAttribute('class','conn-base conn-used');
+      document.getElementById('perc-x2-node').setAttribute('class','node-base node-used');
+      document.getElementById('perc-c2').setAttribute('class','conn-base conn-used');
+      document.getElementById('perc-x3-node').setAttribute('class','node-base node-active');
+      document.getElementById('perc-c3').setAttribute('class','conn-base conn-active');
+      calc.innerHTML = `
+        <div class="step-title">Step 3 · Weighted input 3</div>
+        <div class="math"><span class="var">w₁x₁</span> = <span class="result">${fmt(products[0])}</span></div>
+        <div class="math"><span class="var">w₂x₂</span> = <span class="result">${fmt(products[1])}</span></div>
+        <div class="math"><span class="var">w₃</span> <span class="op">×</span> <span class="var">x₃</span> = <span class="num">${fmt(v.w3,2)}</span> × <span class="num">${fmt(v.x3,2)}</span> = <span class="result">${fmt(products[2])}</span></div>`;
+      break;
+    case 4:
+      ['perc-x1-node','perc-x2-node','perc-x3-node'].forEach(id => document.getElementById(id).setAttribute('class','node-base node-used'));
+      ['perc-c1','perc-c2','perc-c3'].forEach(id => document.getElementById(id).setAttribute('class','conn-base conn-used'));
+      document.getElementById('perc-neuron').setAttribute('class','node-base node-active');
+      calc.innerHTML = `
+        <div class="step-title">Step 4 · Sum the weighted inputs</div>
+        <div class="math">Σ = <span class="num">${fmt(products[0])}</span> <span class="op">+</span> <span class="num">${fmt(products[1])}</span> <span class="op">+</span> <span class="num">${fmt(products[2])}</span></div>
+        <div class="math">Σ = <span class="result">${fmt(sum)}</span></div>`;
+      break;
+    case 5:
+      ['perc-x1-node','perc-x2-node','perc-x3-node'].forEach(id => document.getElementById(id).setAttribute('class','node-base node-used'));
+      ['perc-c1','perc-c2','perc-c3'].forEach(id => document.getElementById(id).setAttribute('class','conn-base conn-used'));
+      document.getElementById('perc-neuron').setAttribute('class','node-base node-active');
+      document.getElementById('perc-z-text').textContent = `z=${fmt(z,2)}`;
+      calc.innerHTML = `
+        <div class="step-title">Step 5 · Add bias (pre-activation z)</div>
+        <div class="math">z = Σ <span class="op">+</span> b = <span class="num">${fmt(sum)}</span> <span class="op">+</span> <span class="num">${fmt(v.b,2)}</span></div>
+        <div class="math">z = <span class="result">${fmt(z)}</span></div>`;
+      break;
+    case 6:
+      ['perc-x1-node','perc-x2-node','perc-x3-node'].forEach(id => document.getElementById(id).setAttribute('class','node-base node-used'));
+      ['perc-c1','perc-c2','perc-c3'].forEach(id => document.getElementById(id).setAttribute('class','conn-base conn-used'));
+      document.getElementById('perc-neuron').setAttribute('class','node-base node-used');
+      document.getElementById('perc-cout').setAttribute('class','conn-base conn-active');
+      document.getElementById('perc-z-text').textContent = `z=${fmt(z,2)}`;
+      calc.innerHTML = `
+        <div class="step-title">Step 6 · Apply activation σ(z)</div>
+        <div class="math">σ(z) = 1 / (1 + e<sup>-z</sup>)</div>
+        <div class="math">σ(${fmt(z,2)}) = 1 / (1 + e<sup>${fmt(-z,2)}</sup>)</div>
+        <div class="math">= 1 / (1 + ${fmt(Math.exp(-z),3)}) = <span class="result">${fmt(y)}</span></div>`;
+      break;
+    case 7:
+      ['perc-x1-node','perc-x2-node','perc-x3-node'].forEach(id => document.getElementById(id).setAttribute('class','node-base node-used'));
+      ['perc-c1','perc-c2','perc-c3','perc-cout'].forEach(id => document.getElementById(id).setAttribute('class','conn-base conn-used'));
+      document.getElementById('perc-neuron').setAttribute('class','node-base node-used');
+      document.getElementById('perc-output').setAttribute('class','node-base node-active');
+      document.getElementById('perc-z-text').textContent = `z=${fmt(z,2)}`;
+      document.getElementById('perc-y-text').textContent = `${fmt(y,2)}`;
+      calc.innerHTML = `
+        <div class="step-title">Done · Output ŷ = ${fmt(y)}</div>
+        <div class="math">Classification: ${y > 0.5 ? '<span class="result">FIRES (1)</span>' : '<span class="result">QUIET (0)</span>'}</div>
+        <div class="note">σ(z) > 0.5 means the neuron activates. Edit inputs and try again!</div>`;
+      break;
+  }
+}
+
+function stepPercep() {
+  if (percepState.step < percepState.max) { percepState.step++; renderPercepStep(); }
+}
+function prevPercep() {
+  if (percepState.step > 0) { percepState.step--; renderPercepStep(); }
+}
+function resetPercep() { percepState.step = 0; renderPercepStep(); }
+function runAllPercep() {
+  percepState.step = 0;
+  let t = 0;
+  const iv = setInterval(() => {
+    if (percepState.step >= percepState.max) { clearInterval(iv); return; }
+    stepPercep(); t++;
+  }, 700);
+}
+function loadPercepPreset(kind) {
+  if (kind === 'and') {
+    document.getElementById('perc-x1').value = 1;
+    document.getElementById('perc-x2').value = 1;
+    document.getElementById('perc-x3').value = 0;
+    document.getElementById('perc-w1').value = 0.6;
+    document.getElementById('perc-w2').value = 0.6;
+    document.getElementById('perc-w3').value = 0;
+    document.getElementById('perc-b').value = -0.8;
+  } else if (kind === 'or') {
+    document.getElementById('perc-x1').value = 1;
+    document.getElementById('perc-x2').value = 0;
+    document.getElementById('perc-x3').value = 0;
+    document.getElementById('perc-w1').value = 0.8;
+    document.getElementById('perc-w2').value = 0.8;
+    document.getElementById('perc-w3').value = 0;
+    document.getElementById('perc-b').value = -0.3;
+  }
+  resetPercep();
+}
+['perc-x1','perc-x2','perc-x3','perc-w1','perc-w2','perc-w3','perc-b'].forEach(id => {
+  document.getElementById(id).addEventListener('input', resetPercep);
+});
+renderPercepStep();
+
+// ============================================================
+// CNN DEMO
+// ============================================================
+const cnnState = {
+  step: 0, max: 9,
+  input: [
+    [1, 2, 3, 2, 1],
+    [2, 4, 6, 4, 2],
+    [3, 6, 9, 6, 3],
+    [2, 4, 6, 4, 2],
+    [1, 2, 3, 2, 1]
+  ],
+  kernel: [
+    [-1, -1, -1],
+    [-1,  8, -1],
+    [-1, -1, -1]
+  ],
+  output: [[null,null,null],[null,null,null],[null,null,null]]
+};
+
+function renderCnnGrid(groupId, data, cellSize, editable, prefix) {
+  const g = document.getElementById(groupId);
+  g.innerHTML = '';
+  const rows = data.length, cols = data[0].length;
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      rect.setAttribute('x', c * cellSize);
+      rect.setAttribute('y', r * cellSize);
+      rect.setAttribute('width', cellSize - 2);
+      rect.setAttribute('height', cellSize - 2);
+      rect.setAttribute('rx', 2);
+      rect.setAttribute('class', 'cell-base');
+      rect.setAttribute('id', `${prefix}-${r}-${c}`);
+      g.appendChild(rect);
+      const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      text.setAttribute('x', c * cellSize + (cellSize - 2) / 2);
+      text.setAttribute('y', r * cellSize + (cellSize - 2) / 2 + 4);
+      text.setAttribute('text-anchor', 'middle');
+      text.setAttribute('font-family', 'monospace');
+      text.setAttribute('font-size', '11');
+      text.setAttribute('fill', '#dbe1ec');
+      text.setAttribute('id', `${prefix}-txt-${r}-${c}`);
+      text.textContent = data[r][c] === null ? '?' : data[r][c];
+      g.appendChild(text);
+      if (editable) {
+        rect.style.cursor = 'pointer';
+        rect.addEventListener('click', () => {
+          const val = prompt(`New value for ${prefix}[${r}][${c}]:`, data[r][c]);
+          if (val !== null && !isNaN(parseFloat(val))) {
+            data[r][c] = parseFloat(val);
+            text.textContent = val;
+            resetCnn();
+          }
+        });
+      }
+    }
+  }
+}
+
+function initCnn() {
+  renderCnnGrid('cnn-input-grid', cnnState.input, 34, true, 'cnn-in');
+  renderCnnGrid('cnn-kernel-grid', cnnState.kernel, 32, true, 'cnn-k');
+  renderCnnGrid('cnn-output-grid', cnnState.output, 32, false, 'cnn-out');
+}
+
+function clearCnnHighlights() {
+  for (let r = 0; r < 5; r++) for (let c = 0; c < 5; c++) {
+    document.getElementById(`cnn-in-${r}-${c}`).setAttribute('class','cell-base');
+  }
+}
+
+function renderCnnStep() {
+  document.getElementById('cnn-progress').textContent = `Position ${cnnState.step} / 9`;
+  clearCnnHighlights();
+  const calc = document.getElementById('cnn-calc');
+
+  if (cnnState.step === 0) {
+    cnnState.output = [[null,null,null],[null,null,null],[null,null,null]];
+    for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) {
+      const t = document.getElementById(`cnn-out-txt-${r}-${c}`);
+      if (t) t.textContent = '?';
+      const rect = document.getElementById(`cnn-out-${r}-${c}`);
+      if (rect) rect.setAttribute('class','cell-base');
+    }
+    calc.innerHTML = `
+      <div class="step-title">Ready · 5×5 input, 3×3 kernel, 3×3 output</div>
+      <div class="math">Output[r,c] = Σᵢⱼ input[r+i, c+j] × kernel[i,j]</div>
+      <div class="note">Press Step → to compute each output cell.</div>`;
+    return;
+  }
+
+  const pos = cnnState.step - 1; // 0..8
+  const r = Math.floor(pos / 3);
+  const c = pos % 3;
+
+  // highlight 3x3 window in input
+  for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) {
+    document.getElementById(`cnn-in-${r + i}-${c + j}`).setAttribute('class','cell-base cell-highlight');
+  }
+
+  // compute
+  let s = 0;
+  const terms = [];
+  for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) {
+    const iv = cnnState.input[r+i][c+j];
+    const kv = cnnState.kernel[i][j];
+    s += iv * kv;
+    terms.push(`${iv}×${kv}`);
+  }
+  cnnState.output[r][c] = s;
+  const outTxt = document.getElementById(`cnn-out-txt-${r}-${c}`);
+  if (outTxt) outTxt.textContent = fmt(s, 0);
+  const outRect = document.getElementById(`cnn-out-${r}-${c}`);
+  if (outRect) outRect.setAttribute('class','cell-base cell-highlight');
+
+  calc.innerHTML = `
+    <div class="step-title">Position (${r}, ${c})</div>
+    <div class="math" style="font-size:11px;line-height:1.5">${terms.join(' + ')}</div>
+    <div class="math">= <span class="result">${fmt(s, 0)}</span></div>
+    <div class="note">Window covers input[${r}..${r+2}, ${c}..${c+2}]</div>`;
+}
+
+function stepCnn() { if (cnnState.step < cnnState.max) { cnnState.step++; renderCnnStep(); } }
+function prevCnn() { if (cnnState.step > 0) { cnnState.step--; renderCnnStep(); } }
+function resetCnn() { cnnState.step = 0; renderCnnStep(); }
+function runAllCnn() {
+  resetCnn();
+  const iv = setInterval(() => {
+    if (cnnState.step >= cnnState.max) { clearInterval(iv); return; }
+    stepCnn();
+  }, 500);
+}
+
+function loadCnnPreset(kind) {
+  if (kind === 'edge') cnnState.kernel = [[-1,-1,-1],[-1,8,-1],[-1,-1,-1]];
+  else if (kind === 'blur') cnnState.kernel = [[1,1,1],[1,1,1],[1,1,1]];
+  else if (kind === 'sharpen') cnnState.kernel = [[0,-1,0],[-1,5,-1],[0,-1,0]];
+  else if (kind === 'sobelx') cnnState.kernel = [[-1,0,1],[-2,0,2],[-1,0,1]];
+  renderCnnGrid('cnn-kernel-grid', cnnState.kernel, 32, true, 'cnn-k');
+  resetCnn();
+}
+initCnn();
+renderCnnStep();
+
+// ============================================================
+// SELF-ATTENTION DEMO
+// ============================================================
+const attnState = { step: 0, max: 5 };
+
+function getAttnValues() {
+  return {
+    q: [readNum('attn-q1'), readNum('attn-q2')],
+    k: [
+      [readNum('attn-k01'), readNum('attn-k02')],
+      [readNum('attn-k11'), readNum('attn-k12')],
+      [readNum('attn-k21'), readNum('attn-k22')]
+    ],
+    v: [
+      [readNum('attn-v01'), readNum('attn-v02')],
+      [readNum('attn-v11'), readNum('attn-v12')],
+      [readNum('attn-v21'), readNum('attn-v22')]
+    ]
+  };
+}
+function dot(a, b) { return a[0]*b[0] + a[1]*b[1]; }
+function softmax(arr) {
+  const m = Math.max(...arr);
+  const exps = arr.map(x => Math.exp(x - m));
+  const s = exps.reduce((a,b) => a+b, 0);
+  return exps.map(x => x / s);
+}
+
+function clearAttnVisual() {
+  document.getElementById('attn-qkv').innerHTML = '';
+  document.getElementById('attn-scores-display').innerHTML = '';
+  document.getElementById('attn-output-display').innerHTML = '';
+}
+
+function drawAttnQKV(v) {
+  const g = document.getElementById('attn-qkv');
+  const xs = [70, 230, 390];
+  const labels = ['The', 'cat', 'sat'];
+  let html = '';
+  for (let i = 0; i < 3; i++) {
+    html += `
+      <g transform="translate(${xs[i] - 50}, 50)">
+        <rect width="100" height="80" rx="6" fill="#171b26" stroke="#242a3a" stroke-width="1"/>
+        <text x="50" y="18" fill="#22d3ee" text-anchor="middle" font-family="monospace" font-size="10">Q K V</text>
+        <text x="12" y="36" fill="#8a93a6" font-family="monospace" font-size="9">Q:</text>
+        <text x="50" y="36" fill="#dbe1ec" text-anchor="middle" font-family="monospace" font-size="10">${i===1?'[' + fmt(v.q[0],1)+', '+fmt(v.q[1],1)+']':'—'}</text>
+        <text x="12" y="52" fill="#8a93a6" font-family="monospace" font-size="9">K:</text>
+        <text x="50" y="52" fill="#dbe1ec" text-anchor="middle" font-family="monospace" font-size="10">[${fmt(v.k[i][0],1)}, ${fmt(v.k[i][1],1)}]</text>
+        <text x="12" y="68" fill="#8a93a6" font-family="monospace" font-size="9">V:</text>
+        <text x="50" y="68" fill="#dbe1ec" text-anchor="middle" font-family="monospace" font-size="10">[${fmt(v.v[i][0],1)}, ${fmt(v.v[i][1],1)}]</text>
+      </g>`;
+  }
+  g.innerHTML = html;
+}
+
+function drawAttnScores(scores, highlighted) {
+  const g = document.getElementById('attn-scores-display');
+  const xs = [70, 230, 390];
+  let html = `<text x="230" y="155" fill="#f472b6" text-anchor="middle" font-family="monospace" font-size="10">attention scores</text>`;
+  for (let i = 0; i < 3; i++) {
+    const isHi = highlighted == null || highlighted === i;
+    const color = isHi ? '#f472b6' : '#8a93a6';
+    html += `<text x="${xs[i]}" y="175" fill="${color}" text-anchor="middle" font-family="monospace" font-size="12">${fmt(scores[i], 2)}</text>`;
+  }
+  g.innerHTML = html;
+}
+function drawAttnWeights(weights) {
+  const g = document.getElementById('attn-scores-display');
+  const xs = [70, 230, 390];
+  let html = `<text x="230" y="155" fill="#f472b6" text-anchor="middle" font-family="monospace" font-size="10">softmax → weights</text>`;
+  for (let i = 0; i < 3; i++) {
+    const w = weights[i];
+    const height = Math.max(4, w * 40);
+    html += `<rect x="${xs[i]-14}" y="${205 - height}" width="28" height="${height}" fill="#7c5cff" opacity="${0.4 + w * 0.6}"/>`;
+    html += `<text x="${xs[i]}" y="175" fill="#dbe1ec" text-anchor="middle" font-family="monospace" font-size="12">${fmt(w, 2)}</text>`;
+  }
+  g.innerHTML = html;
+}
+
+function drawAttnOutput(out) {
+  const g = document.getElementById('attn-output-display');
+  g.innerHTML = `
+    <rect x="180" y="230" width="100" height="50" rx="6" fill="#1a1f2e" stroke="#f472b6" stroke-width="2"/>
+    <text x="230" y="250" fill="#f472b6" text-anchor="middle" font-family="monospace" font-size="10">output for "cat"</text>
+    <text x="230" y="270" fill="#dbe1ec" text-anchor="middle" font-family="monospace" font-size="12">[${fmt(out[0])}, ${fmt(out[1])}]</text>`;
+}
+
+function renderAttnStep() {
+  document.getElementById('attn-progress').textContent = `Step ${attnState.step} / ${attnState.max}`;
+  const v = getAttnValues();
+  const calc = document.getElementById('attn-calc');
+  clearAttnVisual();
+  drawAttnQKV(v);
+
+  const raw = [dot(v.q, v.k[0]), dot(v.q, v.k[1]), dot(v.q, v.k[2])];
+  const scaled = raw.map(x => x / Math.sqrt(2));
+  const weights = softmax(scaled);
+  const out = [
+    weights[0]*v.v[0][0] + weights[1]*v.v[1][0] + weights[2]*v.v[2][0],
+    weights[0]*v.v[0][1] + weights[1]*v.v[1][1] + weights[2]*v.v[2][1],
+  ];
+
+  switch (attnState.step) {
+    case 0:
+      calc.innerHTML = `
+        <div class="step-title">Ready · Self-Attention</div>
+        <div class="math">Attention(Q,K,V) = softmax(QK<sup>T</sup>/√d<sub>k</sub>)V</div>
+        <div class="note">Querying with "cat" (token index 1).</div>`;
+      break;
+    case 1:
+      drawAttnScores(raw);
+      calc.innerHTML = `
+        <div class="step-title">Step 1 · Dot products Q·K</div>
+        <div class="math">Q·K<sub>The</sub> = ${fmt(v.q[0],1)}×${fmt(v.k[0][0],1)} + ${fmt(v.q[1],1)}×${fmt(v.k[0][1],1)} = <span class="result">${fmt(raw[0])}</span></div>
+        <div class="math">Q·K<sub>cat</sub> = ${fmt(v.q[0],1)}×${fmt(v.k[1][0],1)} + ${fmt(v.q[1],1)}×${fmt(v.k[1][1],1)} = <span class="result">${fmt(raw[1])}</span></div>
+        <div class="math">Q·K<sub>sat</sub> = ${fmt(v.q[0],1)}×${fmt(v.k[2][0],1)} + ${fmt(v.q[1],1)}×${fmt(v.k[2][1],1)} = <span class="result">${fmt(raw[2])}</span></div>`;
+      break;
+    case 2:
+      drawAttnScores(scaled);
+      calc.innerHTML = `
+        <div class="step-title">Step 2 · Scale by √d<sub>k</sub> = √2 ≈ 1.414</div>
+        <div class="math">${fmt(raw[0])} / 1.414 = <span class="result">${fmt(scaled[0])}</span></div>
+        <div class="math">${fmt(raw[1])} / 1.414 = <span class="result">${fmt(scaled[1])}</span></div>
+        <div class="math">${fmt(raw[2])} / 1.414 = <span class="result">${fmt(scaled[2])}</span></div>
+        <div class="note">Scaling prevents softmax saturation for large d<sub>k</sub></div>`;
+      break;
+    case 3:
+      drawAttnWeights(weights);
+      calc.innerHTML = `
+        <div class="step-title">Step 3 · Softmax → attention weights</div>
+        <div class="math">softmax(${fmt(scaled[0],2)}, ${fmt(scaled[1],2)}, ${fmt(scaled[2],2)})</div>
+        <div class="math">= [<span class="result">${fmt(weights[0])}</span>, <span class="result">${fmt(weights[1])}</span>, <span class="result">${fmt(weights[2])}</span>]</div>
+        <div class="note">Weights sum to 1 — a probability distribution over tokens.</div>`;
+      break;
+    case 4:
+      drawAttnWeights(weights);
+      calc.innerHTML = `
+        <div class="step-title">Step 4 · Weighted sum of values</div>
+        <div class="math">out = Σ wᵢ · Vᵢ</div>
+        <div class="math" style="font-size:11px">out₀ = ${fmt(weights[0],2)}·${fmt(v.v[0][0],1)} + ${fmt(weights[1],2)}·${fmt(v.v[1][0],1)} + ${fmt(weights[2],2)}·${fmt(v.v[2][0],1)}</div>
+        <div class="math">= <span class="result">${fmt(out[0])}</span></div>
+        <div class="math" style="font-size:11px">out₁ = ${fmt(weights[0],2)}·${fmt(v.v[0][1],1)} + ${fmt(weights[1],2)}·${fmt(v.v[1][1],1)} + ${fmt(weights[2],2)}·${fmt(v.v[2][1],1)}</div>
+        <div class="math">= <span class="result">${fmt(out[1])}</span></div>`;
+      break;
+    case 5:
+      drawAttnWeights(weights);
+      drawAttnOutput(out);
+      calc.innerHTML = `
+        <div class="step-title">Done · Attention output for "cat"</div>
+        <div class="math">[<span class="result">${fmt(out[0])}</span>, <span class="result">${fmt(out[1])}</span>]</div>
+        <div class="note">This vector replaces "cat" in the next layer — now a blend of all tokens weighted by relevance.</div>`;
+      break;
+  }
+}
+
+function stepAttn() { if (attnState.step < attnState.max) { attnState.step++; renderAttnStep(); } }
+function prevAttn() { if (attnState.step > 0) { attnState.step--; renderAttnStep(); } }
+function resetAttn() { attnState.step = 0; renderAttnStep(); }
+function runAllAttn() {
+  resetAttn();
+  const iv = setInterval(() => {
+    if (attnState.step >= attnState.max) { clearInterval(iv); return; }
+    stepAttn();
+  }, 900);
+}
+['attn-q1','attn-q2','attn-k01','attn-k02','attn-k11','attn-k12','attn-k21','attn-k22',
+ 'attn-v01','attn-v02','attn-v11','attn-v12','attn-v21','attn-v22'].forEach(id => {
+  document.getElementById(id).addEventListener('input', resetAttn);
+});
+renderAttnStep();
+
+// ============================================================
+// DIFFUSION DEMO
+// ============================================================
+const diffState = { step: 0, max: 5, imageSize: 10 };
+
+// Build a simple "shape" image (brighter in center)
+function makeCleanImage() {
+  const n = diffState.imageSize;
+  const img = [];
+  for (let r = 0; r < n; r++) {
+    img.push([]);
+    for (let c = 0; c < n; c++) {
+      // a 'smiley': circle outline + 2 eyes + mouth
+      const dy = r - n/2 + 0.5, dx = c - n/2 + 0.5;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      let v = 0;
+      if (dist < n/2 - 0.5 && dist > n/2 - 2) v = 0.8; // face border
+      if ((r===3 && (c===3 || c===6))) v = 1; // eyes
+      if ((r===6 && c>=3 && c<=6) || (r===7 && (c===3 || c===6))) v = 1; // mouth
+      img[r].push(v);
+    }
+  }
+  return img;
+}
+diffState.x0 = makeCleanImage();
+diffState.noise = Array(diffState.imageSize).fill(0).map(() => Array(diffState.imageSize).fill(0).map(() => Math.random() * 2 - 1));
+
+function renderDiffImage(image, label) {
+  const g = document.getElementById('diff-image');
+  g.innerHTML = '';
+  const n = diffState.imageSize;
+  const cell = 20;
+  for (let r = 0; r < n; r++) {
+    for (let c = 0; c < n; c++) {
+      const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      rect.setAttribute('x', c * cell);
+      rect.setAttribute('y', r * cell);
+      rect.setAttribute('width', cell - 1);
+      rect.setAttribute('height', cell - 1);
+      const v = Math.max(0, Math.min(1, image[r][c]));
+      rect.setAttribute('fill', `rgba(34, 211, 238, ${v})`);
+      g.appendChild(rect);
+    }
+  }
+  document.getElementById('diff-label').textContent = label;
+}
+
+function computeAlphaBar(t, T, betaStart, betaEnd) {
+  // linear schedule
+  let aBar = 1;
+  const tInt = Math.round(t);
+  for (let i = 1; i <= tInt; i++) {
+    const beta = betaStart + (betaEnd - betaStart) * (i - 1) / (T - 1);
+    aBar *= (1 - beta);
+  }
+  return aBar;
+}
+
+function renderDiffStep() {
+  const T = readNum('diff-T', 1000);
+  const betaStart = readNum('diff-beta-start', 0.0001);
+  const betaEnd = readNum('diff-beta-end', 0.02);
+  const tVal = Math.round(T * (diffState.step / diffState.max));
+  document.getElementById('diff-progress').textContent = `t = ${tVal} / ${T}`;
+  const calc = document.getElementById('diff-calc');
+  const aBar = computeAlphaBar(tVal, T, betaStart, betaEnd);
+  const sqrtABar = Math.sqrt(aBar);
+  const sqrtOneMinus = Math.sqrt(1 - aBar);
+
+  // noise the image
+  const n = diffState.imageSize;
+  const xt = [];
+  for (let r = 0; r < n; r++) {
+    xt.push([]);
+    for (let c = 0; c < n; c++) {
+      xt[r].push(sqrtABar * diffState.x0[r][c] + sqrtOneMinus * (diffState.noise[r][c] * 0.5 + 0.5));
+    }
+  }
+  const label = diffState.step === 0 ? `x₀ (clean)` : `x_${tVal} (noisy)`;
+  renderDiffImage(xt, label);
+
+  calc.innerHTML = `
+    <div class="step-title">t = ${tVal} · Forward process</div>
+    <div class="math">q(x<sub>t</sub> | x<sub>0</sub>) = 𝒩(x<sub>t</sub>; √ᾱ<sub>t</sub> x<sub>0</sub>, (1-ᾱ<sub>t</sub>)I)</div>
+    <div class="math">ᾱ<sub>t</sub> = ${fmt(aBar, 4)}</div>
+    <div class="math">√ᾱ<sub>t</sub> = <span class="result">${fmt(sqrtABar, 3)}</span> (signal retained)</div>
+    <div class="math">√(1-ᾱ<sub>t</sub>) = <span class="result">${fmt(sqrtOneMinus, 3)}</span> (noise added)</div>
+    <div class="note">x<sub>t</sub> = √ᾱ<sub>t</sub>·x<sub>0</sub> + √(1-ᾱ<sub>t</sub>)·ε, where ε ~ 𝒩(0, I)</div>`;
+}
+
+function stepDiff() { if (diffState.step < diffState.max) { diffState.step++; renderDiffStep(); } }
+function prevDiff() { if (diffState.step > 0) { diffState.step--; renderDiffStep(); } }
+function resetDiff() { diffState.step = 0; renderDiffStep(); }
+function runAllDiff() {
+  resetDiff();
+  const iv = setInterval(() => {
+    if (diffState.step >= diffState.max) { clearInterval(iv); return; }
+    stepDiff();
+  }, 700);
+}
+['diff-beta-start','diff-beta-end','diff-T'].forEach(id => {
+  document.getElementById(id).addEventListener('input', resetDiff);
+});
+renderDiffStep();
+</script>
+<script defer src="search-index.js"></script>
+<script defer src="search.js"></script>
+</body>
+</html>

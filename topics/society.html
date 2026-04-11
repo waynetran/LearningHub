@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI &amp; Society — Deep Dive</title>
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError: false});"></script>
+</head>
+<body>
+<div id="tooltip"></div>
+
+<nav class="topic-nav">
+  <a class="back" href="../ai-ml.html">← Back to AI/ML</a>
+  <div class="crumb">Deep Dives / <span class="topic-name">AI &amp; Society</span></div>
+</nav>
+
+<div class="topic-layout">
+  <aside class="topic-toc">
+    <h4>ON THIS PAGE</h4>
+    <ul>
+      <li><a href="#intro">1. How to read this page</a></li>
+      <li><a href="#labor">2. Labor &amp; the economy</a></li>
+      <li><a href="#demo">3. Interactive: task-exposure</a></li>
+      <li><a href="#governance">4. Governance &amp; regulation</a></li>
+      <li><a href="#epistemics">5. Information &amp; epistemics</a></li>
+      <li><a href="#science">6. Science &amp; discovery</a></li>
+      <li><a href="#xrisk">7. Existential risk</a></li>
+      <li><a href="#biosec">8. Bio, cyber, and misuse</a></li>
+      <li><a href="#reading">9. Sourced reading list</a></li>
+    </ul>
+  </aside>
+
+  <article class="topic-content">
+    <h1>AI &amp; Society</h1>
+    <p class="subtitle">This page is a survey of what AI is doing to people — measured effects, credible forecasts, and active policy fights. It avoids taking sides on "AI good" vs "AI bad" and instead tries to stay close to sourced claims, including the ones that contradict each other.</p>
+    <div class="meta-tags">
+      <span>Type: sourced survey</span>
+      <span>Read time: ~25 min</span>
+      <span>Interactive figures: 1</span>
+      <span>Citations: ~40</span>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="intro">1. How to read this page</h2>
+
+    <p>The honest version of "how will AI affect society?" is: nobody knows yet, but we can be specific about what we <em>do</em> know, which forecasts are taken seriously, and which claims rest on handwaving. The sections below are ordered by how much settled evidence exists:</p>
+
+    <ul>
+      <li><strong>Labor &amp; economy</strong> — measurable in real time. Multiple RCT-style studies exist.</li>
+      <li><strong>Governance</strong> — actual laws and their actual provisions.</li>
+      <li><strong>Epistemics</strong> — early evidence, mixed.</li>
+      <li><strong>Science</strong> — concrete wins, extrapolation open.</li>
+      <li><strong>X-risk &amp; misuse</strong> — almost entirely arguments from priors, modeled scenarios, and expert judgment.</li>
+    </ul>
+
+    <p>A reading heuristic: the further down the page you go, the more the claims rest on someone's model of the future rather than on something already measured. Weight accordingly.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="labor">2. Labor &amp; the economy — what the data says</h2>
+
+    <p>Three questions drive the labor debate: <strong>Who gets automated?</strong> <strong>Who gets augmented?</strong> <strong>How much aggregate productivity comes out?</strong> The answers, in 2026:</p>
+
+    <h3>Who gets automated</h3>
+    <p>The most-cited paper is Eloundou, Manning, Mishkin &amp; Rock (2023) — <em><a href="https://arxiv.org/abs/2303.10130" target="_blank" rel="noopener">GPTs are GPTs</a></em>. The authors used GPT-4 plus human annotators to score whether an LLM plus "reasonable software tooling" could cut the time for each of 19,000+ specific tasks in the O*NET occupation database by ≥50%.</p>
+
+    <div class="callout">
+      <div class="label">Headline numbers from Eloundou et&nbsp;al. (2023)</div>
+      <p style="margin:6px 0">
+        <strong>80%</strong> of US workers have at least 10% of their tasks exposed.<br>
+        <strong>19%</strong> of workers have at least 50% of their tasks exposed.<br>
+        Highest-exposure occupations: interpreters, tax preparers, writers, web designers, accountants, mathematicians, blockchain engineers.<br>
+        Lowest-exposure: short-order cooks, dishwashers, masons, pile-driver operators.
+      </p>
+    </div>
+
+    <p>"Exposure" ≠ "replacement." Many exposed tasks still need a human in the loop; many jobs aren't fully characterized by their task list. But the direction is unambiguous: the first jobs to feel pressure are information-processing and writing-heavy, which is the opposite of the 20th-century industrial-automation pattern (manual labor first).</p>
+
+    <h3>Who gets augmented</h3>
+    <p>A handful of real-world deployment studies form the empirical backbone here. All of them find that AI assistance helps <em>less-experienced</em> workers more than experienced ones — compressing the skill distribution.</p>
+
+    <ul>
+      <li><strong>Brynjolfsson, Li &amp; Raymond (NBER 2023, <a href="https://www.nber.org/papers/w31161" target="_blank" rel="noopener">w31161</a>).</strong> Call center with 5000+ agents deployed an LLM-based assistant. Average productivity +14%. Novice workers: +34%. Top-quartile workers: ~0%. Customer satisfaction also improved and employee retention was higher.</li>
+      <li><strong>Noy &amp; Zhang (Science 2023, <a href="https://www.science.org/doi/10.1126/science.adh2586" target="_blank" rel="noopener">doi:10.1126/science.adh2586</a>).</strong> Controlled experiment on 444 college-educated professionals doing short writing tasks. ChatGPT access cut task time by ~40% and increased output quality; the gains concentrated on lower-performing participants.</li>
+      <li><strong>Peng, Kalliamvakou, Cihon &amp; Demirer (GitHub Copilot study, 2023).</strong> 95 developers on a JavaScript task. Copilot users finished 56% faster. The effect was larger for less-experienced and older developers.</li>
+      <li><strong>Dell'Acqua et&nbsp;al. (BCG / HBS "jagged frontier" study, 2023).</strong> 758 BCG consultants on 18 business tasks. Inside the "frontier of AI capability," consultants using GPT-4 completed tasks 25% faster with 40% higher quality. <em>Outside</em> the frontier, AI-assisted workers were more likely to produce wrong answers — the skill to know when to trust the tool mattered.</li>
+    </ul>
+
+    <h3>Aggregate productivity — the contested part</h3>
+    <p>This is where respected economists disagree strongly.</p>
+
+    <ul>
+      <li><strong>Goldman Sachs (Hatzius et&nbsp;al., 2023)</strong> — generative AI could raise US labor productivity growth by ~1.5 percentage points annually over a decade, lifting GDP by ~7%. Widely circulated, somewhat optimistic assumptions about deployment pace.</li>
+      <li><strong>McKinsey Global Institute (2023)</strong> — generative AI could add $2.6–4.4T in annual value across the economy. Also optimistic.</li>
+      <li><strong>Daron Acemoglu (NBER 2024, <a href="https://www.nber.org/papers/w32487" target="_blank" rel="noopener">w32487</a>)</strong> — the explicit skeptic. Estimates AI will add roughly 0.06 percentage points per year to productivity growth over a decade, for a total TFP gain of ~0.66%. His argument: only a small share of tasks are actually cost-effective to automate even when technically exposed, and the gains don't meaningfully compound without new product creation.</li>
+      <li><strong>IMF (2024 staff paper, "Gen-AI: Artificial Intelligence and the Future of Work")</strong> — 40% of global employment exposed; 60% in advanced economies; developing economies less exposed but also less able to benefit. Warns of widening inequality unless safety nets and reskilling catch up.</li>
+    </ul>
+
+    <p>The range "0.06% to 1.5% annual productivity boost" is huge — one of those spans is barely noticeable and the other is world-historical. That uncertainty is real, not a failure of analysis. Which number is right depends on things (deployment pace, organizational adoption, complementary investment) that haven't happened yet.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="demo">3. Interactive: task-exposure simulator</h2>
+
+    <p>A toy model. Imagine an economy of $N$ occupations, each made of $M$ tasks. A fraction $f$ of all tasks are "AI-exposed" (high enough automation probability that a rational employer will eventually replace that task with a model call). Adjust the fraction below and see how it distributes across occupations, assuming occupations that are more information-heavy have higher exposure.</p>
+
+    <div class="viz-3d">
+      <div class="v3-controls">
+        <span class="v3-label">Exposure rate f:</span>
+        <input id="expF" type="range" min="0.0" max="0.6" value="0.19" step="0.01" style="flex:1;max-width:300px;">
+        <span id="expFLabel" style="min-width:50px;color:#63b3ff;font-family:ui-monospace,monospace;">0.19</span>
+      </div>
+      <svg id="expSvg" viewBox="0 0 720 380" style="width:100%;height:auto;background:#0a0d12;border-radius:6px;"></svg>
+      <p class="v3-caption" id="expCaption">Bars show the fraction of task-time affected by AI for 12 representative occupations. Default f = 0.19 reproduces the Eloundou et&nbsp;al. "≥50% of tasks exposed" headline.</p>
+    </div>
+
+    <p><em>This is an illustration, not a forecast.</em> Real exposure is correlated with occupation structure in complicated ways — the point of the demo is only to show that the same aggregate number can describe wildly different worlds depending on how concentrated exposure is.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="governance">4. Governance &amp; regulation — what actually exists</h2>
+
+    <p>There is now a real, messy patchwork of AI regulation. A summary of the ones you should know about:</p>
+
+    <h3>The EU AI Act</h3>
+    <p>Published in the Official Journal 12 July 2024, entered into force 1 August 2024. The world's first comprehensive horizontal AI law. Structure:</p>
+    <ul>
+      <li><strong>Risk-tiered.</strong> Prohibited uses (social scoring, real-time biometric ID with narrow exceptions, emotion recognition in workplaces/schools, etc.) → high-risk (medical devices, critical infrastructure, law enforcement tools — heavy compliance) → limited-risk (chatbots, deepfakes — transparency only) → minimal-risk (most software — no obligation).</li>
+      <li><strong>General-purpose AI (GPAI)</strong> rules for foundation-model providers, with <em>extra</em> obligations for "systemic risk" models — currently defined as anything trained with ≥10²⁵ FLOPs. That threshold captures GPT-4, Claude 3+, Gemini 1.5+, Llama 3 70B+, and onwards.</li>
+      <li><strong>Timeline</strong>: prohibitions from Feb 2025; GPAI rules Aug 2025; most high-risk obligations Aug 2026. The "Code of Practice" for GPAI — the compliance playbook frontier labs sign up to — was finalized in 2025.</li>
+      <li><strong>Penalties</strong>: up to €35M or 7% of global annual turnover, whichever is higher. That's GDPR-level.</li>
+    </ul>
+
+    <h3>United States</h3>
+    <p>No federal horizontal AI law. The regulatory position shifted sharply at the start of 2025:</p>
+    <ul>
+      <li><strong>Biden EO 14110 (Oct 2023)</strong> — broad executive order requiring safety testing for models trained at ≥10²⁶ FLOPs, Commerce/NIST risk-evaluation frameworks, and a reporting regime. <strong>Rescinded</strong> by Trump EO on 20 Jan 2025.</li>
+      <li><strong>AI Action Plan (July 2025)</strong> — the Trump administration's replacement framing. Pro-innovation, pro-infrastructure, pro-competition with China. Formalizes Stargate-style compute build-out and preempts state laws where possible.</li>
+      <li><strong>State laws</strong>. California SB 53 (2025) — post-SB 1047 compromise, focused on critical-harm reporting by frontier labs. Colorado AI Act (2024) — consumer-facing AI systems used in high-stakes decisions. New York City local law 144 — bias audits for hiring algorithms. Texas HB 1709 (2025). Dozens more in progress.</li>
+      <li><strong>Sectoral</strong>. FTC on deceptive AI claims, CFPB on algorithmic lending, FDA on AI in medical devices, NIST on AI risk management framework. Nothing consolidated.</li>
+    </ul>
+
+    <h3>United Kingdom</h3>
+    <p>Light-touch, principles-based approach, coordinated through existing regulators plus the <strong>AI Safety Institute</strong> (founded 2023, renamed <strong>AI Security Institute</strong> 2025). AISI runs pre-deployment safety evaluations on frontier models under voluntary agreements with the labs. The <strong>Bletchley Declaration</strong> (Nov 2023) and its successors — <strong>Seoul</strong> (May 2024) and <strong>Paris Summit</strong> (Feb 2025) — are the main international coordination venues. Paris pivoted hard from "safety" to "opportunity" framing; some read this as a sign the coordination regime is weakening.</p>
+
+    <h3>China</h3>
+    <p>Two binding instruments worth knowing. <strong>Algorithm recommendation regulation</strong> (March 2022) — registration requirements, opt-out provisions for recommender systems. <strong>Generative AI interim measures</strong> (Aug 2023) — service providers must file security assessments, label AI-generated content, and ensure outputs reflect "core socialist values." Model registration is now routine for any provider deploying generative AI to the Chinese public.</p>
+
+    <h3>International</h3>
+    <p>G7 Hiroshima AI Process, OECD AI Principles, UN advisory body on AI, Council of Europe AI Convention (first binding international treaty, signed Sep 2024). None of these have strong enforcement; all of them set up soft-law baselines.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="epistemics">5. Information &amp; epistemics</h2>
+
+    <p>The three-part claim: AI is (1) making content creation near-free, (2) restructuring how people find information, and (3) making authenticity verification harder. Evidence on each:</p>
+
+    <h3>Content creation costs collapsed</h3>
+    <p>This is the closest thing to settled fact on this page. A 2023 paper by <a href="https://arxiv.org/abs/2306.13253" target="_blank" rel="noopener">Hanley &amp; Durumeric</a> found synthetic news articles on misinformation sites rose sharply through 2022–23. <a href="https://newsguardtech.com/" target="_blank" rel="noopener">NewsGuard</a>'s ongoing tracker identifies hundreds of AI-generated news sites that launched since 2023. Europol's 2024 assessment (IOCTA) treats generative AI as now-standard tooling for fraud.</p>
+
+    <h3>Answer engines are eating search</h3>
+    <p>ChatGPT Search, Perplexity, You.com, Google AI Overviews, and SearchGPT have moved meaningfully into territory previously owned by traditional web search. The measurable downstream effect is on <em>publisher traffic</em>. A 2024 study by Sistrix on 8000 German websites found noticeable referral declines from Google for queries where AI Overviews appeared. Multiple publishers (New York Times, News Corp, Reuters, Axel Springer) filed lawsuits or signed licensing deals between 2023 and 2025, depending on which side of the fight they wanted to be on. Net effect on the open-web economic model: unsettled and probably negative.</p>
+
+    <h3>Did AI break the 2024 elections?</h3>
+    <p>The most-asked question at the start of 2024. The honest answer is: no, not in any measurable way — at least not in the developed democracies with adequate observation. <a href="https://www.kcl.ac.uk/policy-institute/assets/ai-in-elections.pdf" target="_blank" rel="noopener">The Alan Turing Institute's 2024 report</a> found "no evidence of a large-scale effect of AI-generated disinformation on election outcomes" across ~112 elections they surveyed. That is <em>not</em> a reassuring finding about 2028 — it is a statement that the 2024 worst-case didn't happen. Generative-AI capability outpaced detection capability the entire time; the lack of disruption is more puzzle than prophecy.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="science">6. Science &amp; discovery — the concrete wins</h2>
+
+    <p>This is the section where the extrapolation is most grounded. There are already concrete scientific wins attributable to AI methods, not just promises:</p>
+
+    <ul>
+      <li><strong>AlphaFold 2 (2020) &amp; AlphaFold 3 (2024)</strong>. Predicts protein structure to near-experimental accuracy. The AlphaFold Protein Structure Database has ~200M predictions covering essentially every known protein. Hassabis &amp; Jumper won the 2024 Nobel Prize in Chemistry for this work. Downstream drug-discovery groundwork worldwide depends on it.</li>
+      <li><strong>AlphaProof &amp; AlphaGeometry 2</strong>. DeepMind's math systems. Silver-medal performance at IMO 2024 — one point short of gold on the published solution metric.</li>
+      <li><strong>GraphCast (Lam et&nbsp;al., 2023)</strong>. Graph-neural-network weather forecasting that beats the operational ECMWF deterministic model on most metrics at a fraction of compute cost.</li>
+      <li><strong>FunSearch (Romera-Paredes et&nbsp;al., 2023)</strong>. DeepMind LLM paired with an evaluator found new constructions for the cap set problem — a genuine novel mathematical result.</li>
+      <li><strong>NVIDIA BioNeMo &amp; Meta ESMFold</strong>. Broad-coverage biology foundation models. Less headline-grabbing than AlphaFold, but the ecosystem is now rich.</li>
+      <li><strong>Materials-science results</strong> from Google's GNoME (2023): 2.2 million new stable crystal structures predicted, thousands already synthesized by collaborators. The <a href="https://www.nature.com/articles/s41586-024-08032-5" target="_blank" rel="noopener">follow-up critique</a> argues many predicted materials aren't genuinely novel — a healthy pattern of claim + scrutiny, not a failure.</li>
+      <li><strong>Sakana AI's "AI Scientist" (2024)</strong>. End-to-end research automation producing small original ML papers. Interesting as a proof of concept; the papers themselves are not yet strong publications.</li>
+    </ul>
+
+    <p>If you care about extrapolation: the thing to watch is whether AI-assisted science moves from "making existing pipelines faster" to "producing results that would not have been produced otherwise." AlphaFold is unambiguously the second. FunSearch is the second. The others are mostly the first — still valuable, but not yet transformative in the strict sense.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="xrisk">7. Existential risk — the most-contested corner</h2>
+
+    <p>The "x-risk" question — could sufficiently capable AI cause outcomes as bad as human extinction or permanent civilizational collapse? — is where the evidence thins out and prior-laden reasoning takes over. A fair summary of the landscape:</p>
+
+    <h3>The concern, stated minimally</h3>
+    <ol>
+      <li>We don't yet have techniques to specify human values precisely enough to write them into an optimization target.</li>
+      <li>Any sufficiently capable optimizer pursuing a <em>misspecified</em> target will, as an instrumental matter, acquire resources and resist shutdown (Omohundro 2008, "basic AI drives").</li>
+      <li>If that optimizer is much smarter than the humans trying to correct it, correction becomes hard, possibly impossible.</li>
+    </ol>
+    <p>This argument is due to Bostrom (<em>Superintelligence</em>, 2014), with antecedents in Yudkowsky. It is a <em>theoretical</em> case — no concrete mechanism has been demonstrated in a deployed system. Proponents say that's the point (you only find out you were wrong once). Skeptics say the premises are wrong or the premises are right and don't actually compose into the conclusion.</p>
+
+    <h3>What the community actually says</h3>
+    <p>Some concrete data points, in chronological order:</p>
+    <ul>
+      <li><strong>CAIS statement (May 2023)</strong>. One sentence: "Mitigating the risk of extinction from AI should be a global priority alongside other societal-scale risks such as pandemics and nuclear war." Signatures include Hinton, Bengio, Altman, Hassabis, Amodei, Russell, plus ~1000 others. The moment x-risk became mainstream.</li>
+      <li><strong>Geoffrey Hinton resigned from Google</strong> (May 2023) to speak publicly about risks. Has since said he thinks there's a 10–20% chance AI leads to human extinction within 30 years.</li>
+      <li><strong>Yoshua Bengio</strong> — Turing laureate, wrote a <a href="https://yoshuabengio.org/2023/05/22/how-rogue-ais-may-arise/" target="_blank" rel="noopener">"Rogue AIs" essay</a> in 2023 arguing the risk is real enough to reshape his research agenda. Leads the UK-commissioned <a href="https://www.gov.uk/government/publications/international-ai-safety-report-2025" target="_blank" rel="noopener">International AI Safety Report</a> (2025), the most comprehensive official expert assessment to date.</li>
+      <li><strong>AI Impacts survey (Grace et&nbsp;al. Jan 2024, <a href="https://arxiv.org/abs/2401.02843" target="_blank" rel="noopener">arXiv:2401.02843</a>)</strong>. Of ~2700 AI researchers, the median estimate of "extremely bad outcomes (e.g. human extinction)" was 5%. A third of respondents put it at ≥10%. This is <em>researcher</em> opinion, not an objective measurement, but it's the best survey we have.</li>
+      <li><strong>Skeptical frontier voices</strong>. Yann LeCun (Meta), Andrew Ng, Melanie Mitchell, Gary Marcus argue that current x-risk framings overweight theoretical scenarios vs. concrete near-term harms (bias, misuse, labor, concentration of power). LeCun's phrasing: worrying about superintelligence risk today is "like worrying about overpopulation on Mars."</li>
+      <li><strong>Anthropic's "Responsible Scaling Policy"</strong> and OpenAI's "Preparedness Framework" (both 2023, updated through 2025) — both commit to capability thresholds beyond which additional safeguards are required before further deployment. The first real industry mechanism for operationalizing "if capabilities get scary, we pause."</li>
+    </ul>
+
+    <div class="callout warn">
+      <div class="label">A fair summary of where the field is</div>
+      <p style="margin:6px 0">Something like 10–30% of frontier-lab researchers take x-risk seriously as a non-negligible possibility. Something like 20–40% consider it a distraction from concrete harms. Something like 30–50% think it's worth taking seriously but don't spend their time on it. No one reasonable believes it is zero or one. If you want a single number: the median expert P(existential catastrophe from AI) is somewhere in the low-single-digit percent, with enormous disagreement.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="biosec">8. Bio, cyber, and misuse — the near-term risks</h2>
+
+    <p>Separate from the "superintelligent AI" story is the much more concrete concern: AI makes existing dangerous capabilities more accessible to smaller groups. The three live ones:</p>
+
+    <h3>Biological uplift</h3>
+    <p>Will an LLM help an amateur synthesize a dangerous pathogen? <a href="https://www.rand.org/pubs/research_reports/RRA2977-2.html" target="_blank" rel="noopener">RAND's 2024 red-team study</a> found that LLMs did not (yet) give meaningful uplift to people attempting biological attack planning, beyond what the open internet provides. OpenAI's own <a href="https://openai.com/index/building-an-early-warning-system-for-llm-aided-biological-threat-creation/" target="_blank" rel="noopener">evaluation</a> reached similar conclusions — small uplift, not transformative. Anthropic's Claude's Responsible Scaling Policy explicitly names "AI systems that meaningfully uplift novice actors in creating bioweapons" as a threshold that triggers additional safeguards. The <a href="https://pubmed.ncbi.nlm.nih.gov/38499728/" target="_blank" rel="noopener">Urbina et&nbsp;al. (2022) Nature Machine Intelligence study</a> — where a drug-discovery model was redirected to produce novel toxin candidates — is the stark demonstration that the machinery exists, even if the current LLM UX doesn't unlock it.</p>
+
+    <h3>Cybersecurity</h3>
+    <p>More definite. LLMs accelerate both sides of the offense-defense equation. On offense: automated vulnerability scanning, phishing customization, reverse engineering, code analysis. On defense: the same, plus faster triage and patching. The <a href="https://www.darpa.mil/program/artificial-intelligence-cyber-challenge" target="_blank" rel="noopener">DARPA AI Cyber Challenge</a> (2024–25) — teams compete to build autonomous systems that find and patch software bugs — is the canonical public benchmark. The net effect is probably slight defender advantage at the margin, because defenders start with more context, but this is not settled.</p>
+
+    <h3>Concentration of power</h3>
+    <p>The least-studied but most-measurable risk. Frontier AI capability costs ~$100M+ to train at state-of-the-art; only a small number of organizations can do it. The worry is not that any one of them will do something bad — it is that the <em>structure</em> of a handful of entities controlling the most capable systems is a poor fit for democratic societies. <a href="https://www.aei.org/" target="_blank" rel="noopener">Both</a> <a href="https://www.eff.org/" target="_blank" rel="noopener">sides</a> of the political spectrum have flagged this. Open-weight model releases (Llama 3/4, Mistral, DeepSeek, Qwen) are the main structural mitigation and are controversial for exactly the same reason.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="reading">9. Sourced reading list</h2>
+
+    <div class="bib">
+      <h4>Labor &amp; economy</h4>
+      <ul>
+        <li>Eloundou, Manning, Mishkin, Rock (2023) — <em><a href="https://arxiv.org/abs/2303.10130" target="_blank" rel="noopener">GPTs are GPTs</a></em>.</li>
+        <li>Brynjolfsson, Li, Raymond (2023) — <em><a href="https://www.nber.org/papers/w31161" target="_blank" rel="noopener">Generative AI at Work</a></em>. NBER.</li>
+        <li>Noy &amp; Zhang (2023) — <em><a href="https://www.science.org/doi/10.1126/science.adh2586" target="_blank" rel="noopener">Experimental evidence on the productivity effects of generative artificial intelligence</a></em>. Science.</li>
+        <li>Dell'Acqua et&nbsp;al. (2023) — <em>Navigating the Jagged Technological Frontier</em>. HBS Working Paper.</li>
+        <li>Acemoglu (2024) — <em><a href="https://www.nber.org/papers/w32487" target="_blank" rel="noopener">The Simple Macroeconomics of AI</a></em>. NBER.</li>
+        <li>Goldman Sachs (2023) — <em>The Potentially Large Effects of Artificial Intelligence on Economic Growth</em>. Hatzius et&nbsp;al.</li>
+        <li>IMF Staff Discussion Note (2024) — <em>Gen-AI: Artificial Intelligence and the Future of Work</em>.</li>
+      </ul>
+
+      <h4>Governance</h4>
+      <ul>
+        <li>EU AI Act, Regulation (EU) 2024/1689. Published OJ L, 12 July 2024.</li>
+        <li>OECD AI Principles (updated 2024).</li>
+        <li>Bletchley Declaration (Nov 2023); Seoul Ministerial Statement (May 2024); Paris AI Action Summit declaration (Feb 2025).</li>
+        <li>Council of Europe Framework Convention on AI (Sep 2024).</li>
+        <li>NIST AI Risk Management Framework (2023).</li>
+      </ul>
+
+      <h4>Epistemics &amp; elections</h4>
+      <ul>
+        <li>Alan Turing Institute (2024) — <em>AI-enabled influence operations: Threat analysis of the 2024 UK and European elections</em>.</li>
+        <li>NewsGuard AI Tracking Center (ongoing).</li>
+        <li>Europol IOCTA 2024 — <em>Internet Organised Crime Threat Assessment</em>.</li>
+      </ul>
+
+      <h4>Science</h4>
+      <ul>
+        <li>Jumper et&nbsp;al. (2021) — <em>Highly accurate protein structure prediction with AlphaFold</em>. Nature.</li>
+        <li>Abramson, Adler, Dunger et&nbsp;al. (2024) — <em>Accurate structure prediction of biomolecular interactions with AlphaFold 3</em>. Nature.</li>
+        <li>Lam et&nbsp;al. (2023) — <em>GraphCast: Learning skillful medium-range global weather forecasting</em>. Science.</li>
+        <li>Romera-Paredes et&nbsp;al. (2024) — <em>Mathematical discoveries from program search with large language models</em>. Nature.</li>
+        <li>Merchant, Batzner, Schoenholz et&nbsp;al. (2023) — <em>Scaling deep learning for materials discovery</em>. Nature. (GNoME.)</li>
+      </ul>
+
+      <h4>Existential risk &amp; misuse</h4>
+      <ul>
+        <li>Bostrom (2014) — <em>Superintelligence</em>. OUP.</li>
+        <li>Russell (2019) — <em>Human Compatible</em>.</li>
+        <li>Bengio et&nbsp;al. (2025) — <em><a href="https://www.gov.uk/government/publications/international-ai-safety-report-2025" target="_blank" rel="noopener">International AI Safety Report 2025</a></em>. UK government.</li>
+        <li>Grace, Stewart, Sandkühler et&nbsp;al. (2024) — <em><a href="https://arxiv.org/abs/2401.02843" target="_blank" rel="noopener">Thousands of AI authors on the future of AI</a></em>. AI Impacts.</li>
+        <li>CAIS (2023) — <em>Statement on AI Risk</em>.</li>
+        <li>RAND (2024) — <em>The Operational Risks of AI in Large-Scale Biological Attacks</em>.</li>
+        <li>Urbina et&nbsp;al. (2022) — <em>Dual use of artificial-intelligence-powered drug discovery</em>. Nature Machine Intelligence.</li>
+        <li>Omohundro (2008) — <em>The Basic AI Drives</em>. AGI-08 proceedings.</li>
+      </ul>
+    </div>
+
+    <div class="next-card">
+      <div class="label">NEXT UP</div>
+      <a href="../ai-ml.html#agi">→ Back to AGI section</a>
+      <p>You've now read all three speculative deep dives — the goal (AGI), the math (Singularity), and the impact (Society). Head back to the main landscape to see how these fit into the broader AI story.</p>
+    </div>
+
+  </article>
+</div>
+
+<script>
+// =========================================================
+// Task exposure demo
+(function() {
+  const svg = document.getElementById('expSvg');
+  if (!svg) return;
+  const NS = 'http://www.w3.org/2000/svg';
+  const slider = document.getElementById('expF');
+  const label = document.getElementById('expFLabel');
+  const caption = document.getElementById('expCaption');
+
+  // Relative exposure weights from Eloundou et al. — higher = more exposed
+  const occs = [
+    { name: 'Tax preparer',           w: 1.00 },
+    { name: 'Interpreter/translator', w: 0.96 },
+    { name: 'Writer/author',          w: 0.92 },
+    { name: 'Web designer',           w: 0.88 },
+    { name: 'Accountant/auditor',     w: 0.82 },
+    { name: 'Software developer',     w: 0.70 },
+    { name: 'Financial analyst',      w: 0.66 },
+    { name: 'Legal secretary',        w: 0.62 },
+    { name: 'Graphic designer',       w: 0.55 },
+    { name: 'Paralegal',              w: 0.50 },
+    { name: 'Carpenter',              w: 0.12 },
+    { name: 'Short-order cook',       w: 0.03 },
+  ];
+
+  const W = 720, H = 380, pad = {l: 180, r: 28, t: 18, b: 38};
+  const x0 = pad.l, x1 = W - pad.r;
+  const y0 = pad.t, y1 = H - pad.b;
+  const bandH = (y1 - y0) / occs.length;
+
+  function render() {
+    const f = parseFloat(slider.value);
+    label.textContent = f.toFixed(2);
+
+    // Normalise: target average exposure = f
+    const meanW = occs.reduce((a, o) => a + o.w, 0) / occs.length;
+    const scale = f / meanW;
+
+    svg.innerHTML = '';
+
+    // Grid ticks on x
+    for (let tick = 0; tick <= 1; tick += 0.1) {
+      const xp = x0 + tick * (x1 - x0);
+      const l = document.createElementNS(NS, 'line');
+      l.setAttribute('x1', xp); l.setAttribute('x2', xp);
+      l.setAttribute('y1', y0 - 4); l.setAttribute('y2', y1);
+      l.setAttribute('stroke', '#1a2030');
+      l.setAttribute('stroke-dasharray', '2 3');
+      svg.appendChild(l);
+      const t = document.createElementNS(NS, 'text');
+      t.setAttribute('x', xp); t.setAttribute('y', y1 + 16);
+      t.setAttribute('text-anchor', 'middle');
+      t.setAttribute('fill', '#6b7590');
+      t.setAttribute('font-family', 'ui-monospace,monospace');
+      t.setAttribute('font-size', '11');
+      t.textContent = (tick * 100).toFixed(0) + '%';
+      svg.appendChild(t);
+    }
+
+    // Bars
+    occs.forEach((o, i) => {
+      const exposure = Math.min(1, o.w * scale);
+      const bx = x0;
+      const by = y0 + i * bandH + 3;
+      const bh = bandH - 6;
+      const bw = (x1 - x0) * exposure;
+
+      // Background track
+      const bg = document.createElementNS(NS, 'rect');
+      bg.setAttribute('x', x0); bg.setAttribute('y', by);
+      bg.setAttribute('width', x1 - x0); bg.setAttribute('height', bh);
+      bg.setAttribute('fill', '#131824');
+      bg.setAttribute('rx', '2');
+      svg.appendChild(bg);
+
+      // Exposure bar
+      const bar = document.createElementNS(NS, 'rect');
+      bar.setAttribute('x', bx); bar.setAttribute('y', by);
+      bar.setAttribute('width', bw); bar.setAttribute('height', bh);
+      bar.setAttribute('fill', exposure > 0.5 ? '#f472b6' : exposure > 0.25 ? '#7c5cff' : '#22d3ee');
+      bar.setAttribute('rx', '2');
+      svg.appendChild(bar);
+
+      // Label
+      const lab = document.createElementNS(NS, 'text');
+      lab.setAttribute('x', x0 - 8); lab.setAttribute('y', by + bh / 2 + 4);
+      lab.setAttribute('text-anchor', 'end');
+      lab.setAttribute('fill', '#c5cbe0');
+      lab.setAttribute('font-family', 'ui-monospace,monospace');
+      lab.setAttribute('font-size', '11');
+      lab.textContent = o.name;
+      svg.appendChild(lab);
+
+      // Percentage at end of bar
+      const pct = document.createElementNS(NS, 'text');
+      pct.setAttribute('x', bx + bw + 6); pct.setAttribute('y', by + bh / 2 + 4);
+      pct.setAttribute('fill', '#e6e8ef');
+      pct.setAttribute('font-family', 'ui-monospace,monospace');
+      pct.setAttribute('font-size', '10');
+      pct.textContent = (exposure * 100).toFixed(0) + '%';
+      svg.appendChild(pct);
+    });
+
+    // Axis baseline
+    const ba = document.createElementNS(NS, 'line');
+    ba.setAttribute('x1', x0); ba.setAttribute('x2', x1);
+    ba.setAttribute('y1', y1); ba.setAttribute('y2', y1);
+    ba.setAttribute('stroke', '#384050'); ba.setAttribute('stroke-width', '1.5');
+    svg.appendChild(ba);
+
+    const exposedCount = occs.filter(o => Math.min(1, o.w * scale) >= 0.5).length;
+    caption.textContent = `With f = ${f.toFixed(2)}, ${exposedCount}/12 occupations above 50% task exposure. Bars in magenta are past the ≥50% threshold Eloundou et al. use for "heavily exposed."`;
+  }
+
+  slider.addEventListener('input', render);
+  render();
+})();
+</script>
+
+<script defer src="../search-index.js"></script>
+
+<script defer src="../search.js"></script>
+</body>
+</html>

@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Generative Adversarial Networks — Deep Dive</title>
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError: false});"></script>
+</head>
+<body>
+<div id="tooltip"></div>
+
+<nav class="topic-nav">
+  <a class="back" href="../ai-ml.html">← Back to AI/ML</a>
+  <div class="crumb">Deep Dives / <span class="topic-name">GANs</span></div>
+</nav>
+
+<div class="topic-layout">
+  <aside class="topic-toc">
+    <h4>ON THIS PAGE</h4>
+    <ul>
+      <li><a href="#intro">1. The forger and the inspector</a></li>
+      <li><a href="#framework">2. The adversarial framework</a></li>
+      <li><a href="#objective">3. The minimax objective</a></li>
+      <li><a href="#training">4. The training loop</a>
+        <ul><li><a href="#gan-demo">Interactive: 1-D GAN</a></li></ul>
+      </li>
+      <li><a href="#tricks">5. Why training is so hard</a></li>
+      <li><a href="#wgan">6. Wasserstein GAN</a></li>
+      <li><a href="#code">7. Source code</a></li>
+      <li><a href="#aftermath">8. What GANs left behind</a></li>
+      <li><a href="#summary">9. Summary</a></li>
+    </ul>
+  </aside>
+
+  <article class="topic-content">
+    <h1>Generative Adversarial Networks</h1>
+    <p class="subtitle">Two networks — a forger and a detective — locked in a zero-sum game, each training the other until the forgeries become indistinguishable from reality. Ian Goodfellow invented this in one night in 2014 and the idea ate computer vision for five years.</p>
+    <div class="meta-tags">
+      <span>Prereq: feedforward nets, probability</span>
+      <span>Time to read: ~22 min</span>
+      <span>Interactive figures: 1</span>
+      <span>Code: PyTorch, TF/Keras, JAX</span>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="intro">1. The forger and the inspector</h2>
+
+    <p>Imagine a counterfeiter trying to print fake banknotes, and a bank inspector trying to catch fakes. Neither has any special training at first — the counterfeiter produces blurry smudges, the inspector rejects anything that isn't the exact right shade of green. But they interact. Every time the inspector catches a fake, the counterfeiter updates their technique: that shade of ink was wrong, that paper was too thin, that portrait was off by a millimeter. Every time a fake slips through, the inspector adjusts: watch the watermark, check the holograph, trust the serial number pattern less. After thousands of rounds, both have gotten good. The counterfeiter is producing bills that even a trained inspector can't reliably distinguish from real ones — and in the process, the forger has implicitly learned the full structure of what a real banknote looks like.</p>
+
+    <p>That scenario is a Generative Adversarial Network, almost word for word. Goodfellow's 2014 paper proposed replacing the counterfeiter with a neural network $G$ (the <em>generator</em>) and the inspector with another neural network $D$ (the <em>discriminator</em>), and letting them train each other. At the end, if everything works, $G$ can sample from a distribution that matches your training data — faces, paintings, shoes, bedrooms, anything — even though you never told it what "looking like a face" mathematically means.</p>
+
+    <div class="callout">
+      <div class="label">THE LEAP</div>
+      <p style="margin:6px 0">Before GANs, generating images meant either explicitly modelling a pixel-level probability distribution (slow, blurry results) or training an autoencoder (also blurry, because L2 loss averages). GANs sidestepped the likelihood entirely and asked "can another network tell the difference?" That's a vastly more sensitive loss signal than "is the pixel value within 0.01 of the target?"</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="framework">2. The adversarial framework</h2>
+
+    <p>Two networks:</p>
+
+    <ul>
+      <li><strong>Generator $G$:</strong> takes a random vector $z \sim p_z$ (drawn from a simple prior — typically a unit Gaussian) and outputs a "fake" sample $G(z)$ of the same shape as a real data point (e.g. a 64×64×3 image).</li>
+      <li><strong>Discriminator $D$:</strong> takes a sample $x$ (either real from the dataset or fake from $G$) and outputs a single number $D(x) \in [0, 1]$ — its estimate of the probability that $x$ is real.</li>
+    </ul>
+
+    <p>They have opposing goals. $D$ wants to output 1 on real samples and 0 on fake ones. $G$ wants to make $D$ output 1 on its fakes — that is, $G$ wants to <em>fool</em> $D$. You train them alternately: a few steps improving $D$, a few steps improving $G$, repeat.</p>
+
+    <figure>
+      <svg viewBox="0 0 640 200" width="100%" style="max-width:640px; background:var(--bg-2); border:1px solid var(--border); border-radius:8px; padding:12px">
+        <defs>
+          <marker id="gan-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+            <path d="M0,0 L10,5 L0,10 z" fill="#7c5cff"/>
+          </marker>
+        </defs>
+        <g font-family="monospace" font-size="11" fill="#dbe1ec" text-anchor="middle">
+          <!-- noise -->
+          <circle cx="60" cy="100" r="28" fill="#11141c" stroke="#f472b6" stroke-width="1.5"/>
+          <text x="60" y="98">z</text>
+          <text x="60" y="112" font-size="9" fill="#8a93a6">𝒩(0, I)</text>
+
+          <!-- generator -->
+          <rect x="130" y="70" width="90" height="60" rx="6" fill="#11141c" stroke="#7c5cff" stroke-width="1.5"/>
+          <text x="175" y="105">G</text>
+          <text x="175" y="58" font-size="9" fill="#8a93a6">generator</text>
+
+          <!-- fake sample -->
+          <rect x="250" y="70" width="70" height="60" rx="4" fill="#181e2b" stroke="#242a3a"/>
+          <text x="285" y="105">G(z)</text>
+          <text x="285" y="58" font-size="9" fill="#8a93a6">fake</text>
+
+          <!-- real sample -->
+          <rect x="250" y="8" width="70" height="40" rx="4" fill="#181e2b" stroke="#242a3a"/>
+          <text x="285" y="33">x ∼ data</text>
+
+          <!-- discriminator -->
+          <rect x="380" y="40" width="90" height="100" rx="6" fill="#11141c" stroke="#22d3ee" stroke-width="1.5"/>
+          <text x="425" y="95">D</text>
+          <text x="425" y="28" font-size="9" fill="#8a93a6">discriminator</text>
+
+          <!-- prediction -->
+          <rect x="510" y="70" width="100" height="60" rx="6" fill="#171b26" stroke="#242a3a"/>
+          <text x="560" y="98">D(·) ∈ [0,1]</text>
+          <text x="560" y="114" font-size="9" fill="#8a93a6">real? fake?</text>
+        </g>
+        <!-- arrows -->
+        <g stroke="#7c5cff" stroke-width="1.8" fill="none" marker-end="url(#gan-arr)">
+          <line x1="90"  y1="100" x2="130" y2="100"/>
+          <line x1="220" y1="100" x2="250" y2="100"/>
+          <line x1="320" y1="100" x2="380" y2="100"/>
+          <line x1="320" y1="28"  x2="380" y2="60"/>
+          <line x1="470" y1="100" x2="510" y2="100"/>
+        </g>
+      </svg>
+      <figcaption>Architecture sketch. Noise $z$ is piped through $G$ to produce a fake. Real data flows directly in. $D$ classifies each — its output is the gradient source for both networks.</figcaption>
+    </figure>
+
+    <!-- ========================================================== -->
+    <h2 id="objective">3. The minimax objective</h2>
+
+    <p>Goodfellow formalized the game as a single saddle-point optimization:</p>
+
+    <div class="math-display">$$\min_G \max_D \; V(D, G) = \mathbb{E}_{x \sim p_{\text{data}}} [\log D(x)] + \mathbb{E}_{z \sim p_z} [\log (1 - D(G(z)))]$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Every piece of the objective</p>
+      <dl>
+        <dt>$G$</dt><dd>Generator network. Maps a noise vector $z$ to a sample. Usually built from transpose convolutions or an MLP.</dd>
+        <dt>$D$</dt><dd>Discriminator network. Maps a sample to a single scalar in $[0,1]$. Usually built from convolutions ending in a sigmoid.</dd>
+        <dt>$p_{\text{data}}$</dt>
+        <dd>The true data distribution — the thing you want to learn. You never see this explicitly; you only see samples from it (your training set).</dd>
+        <dt>$p_z$</dt>
+        <dd>A simple prior distribution over the noise input. Almost always $\mathcal{N}(0, I)$ or uniform $[-1, 1]^d$.
+          <span class="mg-why">It's "simple" because the generator does the hard work of pushing it into a complicated shape.</span>
+        </dd>
+        <dt>$\mathbb{E}_{x \sim p_{\text{data}}}$</dt>
+        <dd>Expectation over real data. In practice: average over a minibatch sampled from your training set.</dd>
+        <dt>$\log D(x)$</dt>
+        <dd>Discriminator's log-probability that a <em>real</em> sample is real. $D$ wants this near 0 (meaning $D(x) \approx 1$).
+          <span class="mg-why">Maximizing $\log D(x)$ pushes $D$'s output on real data toward 1.</span>
+        </dd>
+        <dt>$\log(1 - D(G(z)))$</dt>
+        <dd>Discriminator's log-probability that a <em>fake</em> sample is fake. $D$ wants $D(G(z)) \approx 0$, which makes $1 - D(G(z)) \approx 1$ and $\log(1 - D(G(z))) \approx 0$.
+          <span class="mg-why">$G$ wants the opposite — it wants $D(G(z)) \approx 1$, which makes this term very negative.</span>
+        </dd>
+        <dt>$\min_G \max_D$</dt>
+        <dd>$D$ plays first, maximizing $V$; $G$ plays second, minimizing the resulting value. In practice we just alternate gradient steps.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Analogy</strong> Think of a courtroom. $D$ is the judge scoring how "real" each piece of evidence looks (first term = score real evidence high, second term = score forgeries low). $G$ is the forger, and gets a grade based on how badly $D$ ranks the forgeries. Maximizing $V$ makes the judge more discerning; minimizing $V$ makes the forger's output look more like evidence the judge accepts. The Nash equilibrium is the point where the forger's output is good enough that the best possible judge can only guess 50/50.</p>
+    </div>
+
+    <p>Goodfellow proved that at the global optimum, $p_g = p_{\text{data}}$ — that is, the distribution induced by pushing $p_z$ through $G$ matches the real data distribution exactly — and $D \equiv 1/2$ everywhere, meaning the discriminator literally cannot tell the difference. Beautiful theory. In practice, reaching that fixed point is extraordinarily finicky.</p>
+
+    <div class="theorem">
+      <span class="label">Optimal discriminator</span>
+      <p>For a fixed $G$, the $D$ that maximizes $V(D, G)$ is:</p>
+      <div class="math-display no-center">$$D^*_G(x) = \frac{p_{\text{data}}(x)}{p_{\text{data}}(x) + p_g(x)}$$</div>
+      <p>Substituting back, the generator ends up minimizing $2 \cdot \text{JSD}(p_{\text{data}} \| p_g) - 2\log 2$, where $\text{JSD}$ is the Jensen–Shannon divergence. So the generator is (in theory) doing gradient descent on a proper distribution-distance metric.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="training">4. The training loop</h2>
+
+    <p>The practical algorithm is a double loop:</p>
+
+    <div class="step-figure" style="margin-top:10px">
+      <div class="sf-header">
+        <span class="sf-title">▸ GAN training algorithm (Goodfellow et al. 2014)</span>
+      </div>
+      <pre style="font-family:var(--mono); font-size:12px; line-height:1.6; color:var(--text); padding:14px; background:var(--bg-2); border-radius:6px; margin:0">
+for number_of_training_iterations:
+    # --- Discriminator phase ---
+    for k steps:
+        sample minibatch of m noise vectors    z_1, ..., z_m ~ p_z
+        sample minibatch of m real samples     x_1, ..., x_m ~ p_data
+        ∇_θ_D  (1/m) Σ [ log D(x_i) + log(1 - D(G(z_i))) ]
+        θ_D ← θ_D + lr * gradient   # ascent on V
+
+    # --- Generator phase ---
+    sample minibatch of m noise vectors    z_1, ..., z_m ~ p_z
+    ∇_θ_G  (1/m) Σ log(1 - D(G(z_i)))
+    θ_G ← θ_G - lr * gradient       # descent on V
+      </pre>
+    </div>
+
+    <p>One subtlety: in practice, minimizing $\log(1 - D(G(z)))$ gives terrible gradients early in training, because when $G$ is bad, $D(G(z)) \approx 0$, and the derivative of $\log(1 - 0)$ is tiny. The standard fix — also from Goodfellow's paper — is to instead <em>maximize</em> $\log D(G(z))$ for the generator step. It optimizes the same fixed point but has much healthier gradients early on. This is called the <strong>non-saturating loss</strong>.</p>
+
+    <h3 id="gan-demo">Interactive: 1-D GAN learning a bimodal distribution</h3>
+    <p>Forget images — here's a GAN learning to match a 1-D distribution that's a mixture of two Gaussians. The generator is a single neural network mapping a scalar noise $z \sim \mathcal{N}(0, 1)$ to a scalar output. The histogram of its outputs (pink) should drift toward matching the real distribution (cyan) as you train. Press <strong>Step 100 →</strong> to run 100 training iterations. Watch how it often finds one mode before the other — a textbook <em>mode collapse</em> failure you can see happen live.</p>
+
+    <div class="step-figure" id="gan-figure">
+      <div class="sf-header">
+        <span class="sf-title">▸ 1-D GAN, bimodal target</span>
+        <span class="sf-progress" id="gan-progress">Iter 0</span>
+      </div>
+      <div class="sf-body">
+        <div class="sf-visual">
+          <svg viewBox="0 0 420 260" width="100%" style="max-width:420px" id="gan-svg">
+            <!-- axis -->
+            <line x1="30" y1="220" x2="400" y2="220" stroke="#8a93a6"/>
+            <text x="30" y="245" font-family="monospace" font-size="9" fill="#8a93a6">-6</text>
+            <text x="395" y="245" font-family="monospace" font-size="9" fill="#8a93a6">+6</text>
+            <text x="215" y="245" font-family="monospace" font-size="9" fill="#8a93a6">x</text>
+            <!-- real density path -->
+            <path id="gan-real" d="" fill="none" stroke="#22d3ee" stroke-width="2"/>
+            <!-- fake density bars -->
+            <g id="gan-fake-bars"></g>
+            <!-- legend -->
+            <g font-family="monospace" font-size="10">
+              <rect x="280" y="10"  width="10" height="10" fill="#22d3ee"/>
+              <text x="295" y="20" fill="#dbe1ec">real (target)</text>
+              <rect x="280" y="28" width="10" height="10" fill="#f472b6" opacity="0.65"/>
+              <text x="295" y="38" fill="#dbe1ec">generator samples</text>
+            </g>
+          </svg>
+        </div>
+        <div class="sf-explain" id="gan-explain">
+          <h5>What to look for</h5>
+          <p>Real distribution: $0.5 \cdot \mathcal{N}(-2, 0.5) + 0.5 \cdot \mathcal{N}(+2, 0.5)$. Two humps at $-2$ and $+2$.</p>
+          <p>At iter 0 the generator is a random MLP, so its outputs are a single blob near zero. Over the first few hundred iterations it should converge onto one of the two modes. Onto <em>both</em> modes is harder — if you see it commit hard to one side only, that's mode collapse, the classic GAN failure mode.</p>
+        </div>
+      </div>
+      <div class="sf-controls">
+        <button class="btn" onclick="ganSteps(1)">Step 1 →</button>
+        <button class="btn" onclick="ganSteps(100)">Step 100 →</button>
+        <div class="spacer"></div>
+        <button class="btn ghost" onclick="ganReset()">Reset</button>
+      </div>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="tricks">5. Why training is so hard</h2>
+
+    <p>The GAN literature from 2015–2019 reads like a medical journal of chronic illnesses. Here are the main ones:</p>
+
+    <ul>
+      <li><strong>Mode collapse.</strong> The generator finds one output (or a small set) that consistently fools $D$, and collapses all its noise inputs to that output. The discriminator eventually adapts and the generator jumps to another mode, and on and on. The generator never actually covers the full data distribution.</li>
+      <li><strong>Vanishing discriminator gradients.</strong> If $D$ gets too good too fast, $D(G(z))$ saturates at 0, and $\log(1 - D(G(z)))$ has zero slope. $G$ gets no learning signal and training stalls.</li>
+      <li><strong>Non-convergence / oscillation.</strong> The two networks chase each other around forever, neither improving. A classic symptom of minimax games: even simple games like $\min_x \max_y xy$ don't converge with gradient descent — they orbit.</li>
+      <li><strong>Hyperparameter fragility.</strong> A learning rate that worked yesterday may not work today. The ratio of $D$ to $G$ steps matters. The batch size matters. Whether you use batch norm matters. The dimension of $z$ matters.</li>
+    </ul>
+
+    <!-- ========================================================== -->
+    <h2 id="wgan">6. Wasserstein GAN</h2>
+
+    <p>Arjovsky, Chintala & Bottou (2017) traced many GAN pathologies back to one root cause: when $p_g$ and $p_{\text{data}}$ have disjoint support (which they almost always do in high dimensions — real image manifolds are very thin), the Jensen–Shannon divergence is a constant, so its gradient is zero everywhere $p_g$ could reasonably move. The loss literally gives no information about how to improve.</p>
+
+    <p>They proposed replacing JSD with the <strong>Wasserstein distance</strong> (Earth Mover's distance), which has a smooth gradient even when the two distributions don't overlap. By Kantorovich–Rubinstein duality:</p>
+
+    <div class="math-display">$$W(p_{\text{data}}, p_g) = \sup_{\|f\|_L \le 1} \mathbb{E}_{x \sim p_{\text{data}}}[f(x)] - \mathbb{E}_{x \sim p_g}[f(x)]$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Reading the WGAN objective</p>
+      <dl>
+        <dt>$W$</dt><dd>Wasserstein-1 distance between the two distributions — the minimum "cost" of transporting probability mass from $p_g$ to $p_{\text{data}}$, where cost is distance moved × mass moved.</dd>
+        <dt>$f$</dt>
+        <dd>The "critic" function. In WGAN, the discriminator is replaced by a 1-Lipschitz critic that outputs an <em>unbounded</em> real number (no sigmoid, no probability interpretation).
+          <span class="mg-why">A high $f$ score means "real-looking," a low score means "fake-looking."</span>
+        </dd>
+        <dt>$\|f\|_L \le 1$</dt>
+        <dd>1-Lipschitz constraint: $|f(x) - f(y)| \le \|x - y\|$ for all $x, y$.
+          <span class="mg-why">Without this, $f$ could just output $+\infty$ on reals and $-\infty$ on fakes and the sup would be meaningless. The constraint bounds how fast the critic's opinion can change.</span>
+        </dd>
+        <dt>$\sup_f$</dt><dd>Supremum over all 1-Lipschitz functions. You can't enumerate them, so in practice you parameterize $f$ as a neural network and enforce Lipschitz-ness via weight clipping (original WGAN) or a gradient penalty (WGAN-GP).</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Analogy</strong> Jensen–Shannon divergence asks "how often can I tell these distributions apart?" — a yes/no question that's useless when the answer is "always." Wasserstein asks "how much dirt do I need to move to turn pile A into pile B?" — which always has a finite answer even when the piles don't overlap. That's what gives WGAN its smooth, informative gradient.</p>
+    </div>
+
+    <p>WGAN and its successors (WGAN-GP, spectral-norm GAN, StyleGAN) stabilized training enough that GANs powered the first wave of photorealistic face generation. By 2018, StyleGAN could generate faces that fooled humans on the first glance. By 2019, non-existent people on <em>thispersondoesnotexist.com</em> had become a meme.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="code">7. Source code</h2>
+
+    <p>A minimal DCGAN training step in three languages. These omit boilerplate (dataset loading, checkpointing) to focus on the core loss computation.</p>
+
+    <div class="code-tabs" id="ct-gan">
+      <div class="ct-header">
+        <button class="ct-tab active" data-tab="pt">PyTorch</button>
+        <button class="ct-tab" data-tab="tf">TensorFlow / Keras</button>
+        <button class="ct-tab" data-tab="jax">JAX / Flax</button>
+        <span class="ct-label">gan · one training step</span>
+      </div>
+      <div class="ct-panel active" data-tab="pt"><pre><code><span class="kw">import</span> torch, torch.nn <span class="kw">as</span> nn, torch.nn.functional <span class="kw">as</span> F
+
+<span class="kw">def</span> <span class="fn">train_step</span>(G, D, real_batch, opt_G, opt_D, z_dim):
+    B = real_batch.size(<span class="num">0</span>)
+    device = real_batch.device
+    real_lbl = torch.ones (B, <span class="num">1</span>, device=device)
+    fake_lbl = torch.zeros(B, <span class="num">1</span>, device=device)
+
+    <span class="cmt"># ---------- Discriminator step ----------</span>
+    opt_D.zero_grad()
+    z = torch.randn(B, z_dim, device=device)
+    fake = G(z).detach()                        <span class="cmt"># don't backprop through G here</span>
+    d_loss_real = F.binary_cross_entropy_with_logits(D(real_batch), real_lbl)
+    d_loss_fake = F.binary_cross_entropy_with_logits(D(fake),       fake_lbl)
+    d_loss = d_loss_real + d_loss_fake
+    d_loss.backward()
+    opt_D.step()
+
+    <span class="cmt"># ---------- Generator step (non-saturating) ----------</span>
+    opt_G.zero_grad()
+    z = torch.randn(B, z_dim, device=device)
+    fake = G(z)
+    g_loss = F.binary_cross_entropy_with_logits(D(fake), real_lbl)   <span class="cmt"># flip labels!</span>
+    g_loss.backward()
+    opt_G.step()
+
+    <span class="kw">return</span> d_loss.item(), g_loss.item()
+</code></pre></div>
+
+      <div class="ct-panel" data-tab="tf"><pre><code><span class="kw">import</span> tensorflow <span class="kw">as</span> tf
+
+bce = tf.keras.losses.BinaryCrossentropy(from_logits=<span class="kw">True</span>)
+
+<span class="kw">@tf.function</span>
+<span class="kw">def</span> <span class="fn">train_step</span>(G, D, real_batch, opt_G, opt_D, z_dim):
+    B = tf.shape(real_batch)[<span class="num">0</span>]
+    z = tf.random.normal([B, z_dim])
+
+    <span class="kw">with</span> tf.GradientTape() <span class="kw">as</span> g_tape, tf.GradientTape() <span class="kw">as</span> d_tape:
+        fake = G(z, training=<span class="kw">True</span>)
+        d_real = D(real_batch, training=<span class="kw">True</span>)
+        d_fake = D(fake,       training=<span class="kw">True</span>)
+
+        d_loss = bce(tf.ones_like(d_real), d_real) + \
+                 bce(tf.zeros_like(d_fake), d_fake)
+        g_loss = bce(tf.ones_like(d_fake), d_fake)    <span class="cmt"># non-saturating</span>
+
+    d_grad = d_tape.gradient(d_loss, D.trainable_variables)
+    g_grad = g_tape.gradient(g_loss, G.trainable_variables)
+    opt_D.apply_gradients(<span class="fn">zip</span>(d_grad, D.trainable_variables))
+    opt_G.apply_gradients(<span class="fn">zip</span>(g_grad, G.trainable_variables))
+    <span class="kw">return</span> d_loss, g_loss
+</code></pre></div>
+
+      <div class="ct-panel" data-tab="jax"><pre><code><span class="kw">import</span> jax, jax.numpy <span class="kw">as</span> jnp
+<span class="kw">import</span> optax
+<span class="kw">from</span> flax <span class="kw">import</span> linen <span class="kw">as</span> nn
+
+<span class="kw">def</span> <span class="fn">bce_from_logits</span>(logits, targets):
+    <span class="kw">return</span> optax.sigmoid_binary_cross_entropy(logits, targets).mean()
+
+<span class="kw">def</span> <span class="fn">d_loss_fn</span>(d_params, g_params, real, z):
+    fake     = G.apply(g_params, z)
+    d_real   = D.apply(d_params, real)
+    d_fake   = D.apply(d_params, jax.lax.stop_gradient(fake))
+    <span class="kw">return</span> <span class="fn">bce_from_logits</span>(d_real, jnp.ones_like (d_real)) + \
+           <span class="fn">bce_from_logits</span>(d_fake, jnp.zeros_like(d_fake))
+
+<span class="kw">def</span> <span class="fn">g_loss_fn</span>(g_params, d_params, z):
+    fake   = G.apply(g_params, z)
+    d_fake = D.apply(d_params, fake)
+    <span class="kw">return</span> <span class="fn">bce_from_logits</span>(d_fake, jnp.ones_like(d_fake))
+
+<span class="kw">@jax.jit</span>
+<span class="kw">def</span> <span class="fn">train_step</span>(g_params, d_params, g_opt_state, d_opt_state, real, key):
+    z = jax.random.normal(key, (real.shape[<span class="num">0</span>], z_dim))
+    d_grads = jax.grad(d_loss_fn)(d_params, g_params, real, z)
+    d_updates, d_opt_state = d_opt.update(d_grads, d_opt_state)
+    d_params = optax.apply_updates(d_params, d_updates)
+
+    g_grads = jax.grad(g_loss_fn)(g_params, d_params, z)
+    g_updates, g_opt_state = g_opt.update(g_grads, g_opt_state)
+    g_params = optax.apply_updates(g_params, g_updates)
+    <span class="kw">return</span> g_params, d_params, g_opt_state, d_opt_state
+</code></pre></div>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="aftermath">8. What GANs left behind</h2>
+
+    <p>From roughly 2015 through 2020, GANs were the thing to do in generative computer vision. StyleGAN, StyleGAN2, and StyleGAN3 produced faces that were essentially indistinguishable from real photographs. BigGAN did class-conditional ImageNet generation. CycleGAN did unpaired image-to-image translation (horse ↔ zebra, photo ↔ Monet). Progressive GAN showed you could scale generation up to megapixel images by growing both networks during training.</p>
+
+    <p>Then, in 2020, Ho et al. published <em>Denoising Diffusion Probabilistic Models</em>, and in 2021–2022 diffusion models (DDPMs, DALL·E 2, Imagen, Stable Diffusion) quickly overtook GANs on almost every image-generation benchmark. The reasons are simple: diffusion training is stable (no minimax, no mode collapse, just a regression loss), diffusion models cover the full distribution (no mode collapse), and they scale more gracefully. Modern image generators are almost all diffusion-based.</p>
+
+    <p>GANs still win in a few niches — they're much faster at inference time (a single forward pass vs. diffusion's dozens of denoising steps), so they remain popular for real-time applications like face-swapping, super-resolution, and video effects. And the intuition of "adversarial training" — using one network as a loss for another — lives on in a thousand other places, from domain adaptation to robustness training. But the main line of image generation has moved on.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="summary">9. Summary</h2>
+
+    <ul>
+      <li>A GAN pairs a <strong>generator</strong> (maps noise to fakes) with a <strong>discriminator</strong> (tries to distinguish real from fake). They train each other.</li>
+      <li>The minimax objective $\min_G \max_D \mathbb{E}[\log D(x)] + \mathbb{E}[\log(1 - D(G(z)))]$ has its global optimum at $p_g = p_{\text{data}}$, $D \equiv 1/2$.</li>
+      <li>In practice, use the non-saturating generator loss (maximize $\log D(G(z))$) for gradient health.</li>
+      <li>Training is unstable: mode collapse, vanishing gradients, oscillation, hyperparameter fragility.</li>
+      <li><strong>WGAN</strong> replaces JSD with Wasserstein distance, giving smooth gradients even when distributions don't overlap.</li>
+      <li>GANs dominated generative CV 2015–2020. Diffusion models displaced them for most image tasks by 2022, though GANs remain fastest at inference.</li>
+    </ul>
+
+    <div class="bib">
+      <h4>Further reading</h4>
+      <ul>
+        <li>Goodfellow et al. (2014) — <em>Generative Adversarial Nets</em>.</li>
+        <li>Radford, Metz & Chintala (2016) — <em>DCGAN: Unsupervised Representation Learning with Deep Convolutional GANs</em>.</li>
+        <li>Arjovsky, Chintala & Bottou (2017) — <em>Wasserstein GAN</em>.</li>
+        <li>Karras, Laine & Aila (2019) — <em>StyleGAN: A Style-Based Generator Architecture</em>.</li>
+        <li>Brock, Donahue & Simonyan (2018) — <em>Large Scale GAN Training (BigGAN)</em>.</li>
+        <li>Zhu et al. (2017) — <em>CycleGAN</em>.</li>
+      </ul>
+    </div>
+
+    <div class="next-card">
+      <div class="label">NEXT UP</div>
+      <a href="diffusion.html">→ Diffusion models</a>
+      <p>The successor architecture that dethroned GANs by turning image generation into a stable denoising problem.</p>
+    </div>
+
+  </article>
+</div>
+
+<script>
+// =========================================================
+// Code tabs — generic
+// =========================================================
+document.querySelectorAll('.code-tabs').forEach(root => {
+  const tabs = root.querySelectorAll('.ct-tab');
+  const panels = root.querySelectorAll('.ct-panel');
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const target = tab.getAttribute('data-tab');
+      tabs.forEach(t => t.classList.toggle('active', t === tab));
+      panels.forEach(p => p.classList.toggle('active', p.getAttribute('data-tab') === target));
+    });
+  });
+});
+
+// =========================================================
+// 1-D GAN demo — tiny MLP generator vs. tiny MLP discriminator
+// Target distribution: mixture of two Gaussians at ±2
+// =========================================================
+const GAN = {
+  iter: 0,
+  // Generator: 1 -> 6 -> 1 (z -> hidden -> x)
+  gW1: [], gb1: [],
+  gW2: [], gb2: [],
+  // Discriminator: 1 -> 6 -> 1
+  dW1: [], db1: [],
+  dW2: [], db2: [],
+  lr: 0.01
+};
+
+function randn() {
+  let u = 0, v = 0;
+  while (u === 0) u = Math.random();
+  while (v === 0) v = Math.random();
+  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+}
+function sampleReal() {
+  const mode = Math.random() < 0.5 ? -2 : 2;
+  return mode + 0.5 * randn();
+}
+function initGAN() {
+  const H = 6;
+  GAN.gW1 = Array.from({length: H}, () => 0.5 * randn());
+  GAN.gb1 = Array.from({length: H}, () => 0);
+  GAN.gW2 = Array.from({length: H}, () => 0.5 * randn());
+  GAN.gb2 = 0;
+  GAN.dW1 = Array.from({length: H}, () => 0.5 * randn());
+  GAN.db1 = Array.from({length: H}, () => 0);
+  GAN.dW2 = Array.from({length: H}, () => 0.5 * randn());
+  GAN.db2 = 0;
+  GAN.iter = 0;
+}
+function reluVec(v) { return v.map(x => Math.max(0, x)); }
+function dreluVec(v) { return v.map(x => x > 0 ? 1 : 0); }
+function sigmoid(x) { return 1 / (1 + Math.exp(-x)); }
+
+// Forward generator: z (scalar) -> x (scalar)
+function genForward(z) {
+  const H = GAN.gW1.length;
+  const h_pre = new Array(H);
+  for (let i = 0; i < H; i++) h_pre[i] = GAN.gW1[i] * z + GAN.gb1[i];
+  const h = reluVec(h_pre);
+  let x = GAN.gb2;
+  for (let i = 0; i < H; i++) x += GAN.gW2[i] * h[i];
+  return { x, h, h_pre };
+}
+
+// Forward discriminator: x (scalar) -> logit (scalar)
+function discForward(x) {
+  const H = GAN.dW1.length;
+  const h_pre = new Array(H);
+  for (let i = 0; i < H; i++) h_pre[i] = GAN.dW1[i] * x + GAN.db1[i];
+  const h = reluVec(h_pre);
+  let logit = GAN.db2;
+  for (let i = 0; i < H; i++) logit += GAN.dW2[i] * h[i];
+  return { logit, h, h_pre };
+}
+
+// One full training iteration on batch of 32
+function ganStepOnce() {
+  const B = 32, H = 6, lr = GAN.lr;
+
+  // -------- D step --------
+  const dgW1 = new Array(H).fill(0), dgb1 = new Array(H).fill(0);
+  const dgW2 = new Array(H).fill(0);
+  let dgb2 = 0;
+
+  for (let b = 0; b < B; b++) {
+    // real sample
+    const xr = sampleReal();
+    const fr = discForward(xr);
+    const pr = sigmoid(fr.logit);
+    // BCE(label=1, pred=pr): dL/dlogit = pr - 1
+    const glogit_r = pr - 1;
+    // backprop
+    dgb2 += glogit_r;
+    for (let i = 0; i < H; i++) dgW2[i] += glogit_r * fr.h[i];
+    const grad_h_r = new Array(H);
+    for (let i = 0; i < H; i++) grad_h_r[i] = glogit_r * GAN.dW2[i] * (fr.h_pre[i] > 0 ? 1 : 0);
+    for (let i = 0; i < H; i++) {
+      dgW1[i] += grad_h_r[i] * xr;
+      dgb1[i] += grad_h_r[i];
+    }
+
+    // fake sample
+    const z = randn();
+    const gen = genForward(z);
+    const xf = gen.x;
+    const ff = discForward(xf);
+    const pf = sigmoid(ff.logit);
+    // BCE(label=0, pred=pf): dL/dlogit = pf - 0 = pf
+    const glogit_f = pf;
+    dgb2 += glogit_f;
+    for (let i = 0; i < H; i++) dgW2[i] += glogit_f * ff.h[i];
+    const grad_h_f = new Array(H);
+    for (let i = 0; i < H; i++) grad_h_f[i] = glogit_f * GAN.dW2[i] * (ff.h_pre[i] > 0 ? 1 : 0);
+    for (let i = 0; i < H; i++) {
+      dgW1[i] += grad_h_f[i] * xf;
+      dgb1[i] += grad_h_f[i];
+    }
+  }
+  // apply D updates
+  for (let i = 0; i < H; i++) {
+    GAN.dW1[i] -= lr * dgW1[i] / B;
+    GAN.db1[i] -= lr * dgb1[i] / B;
+    GAN.dW2[i] -= lr * dgW2[i] / B;
+  }
+  GAN.db2 -= lr * dgb2 / B;
+
+  // -------- G step (non-saturating: maximize log D(G(z))) --------
+  const ggW1 = new Array(H).fill(0), ggb1 = new Array(H).fill(0);
+  const ggW2 = new Array(H).fill(0);
+  let ggb2 = 0;
+
+  for (let b = 0; b < B; b++) {
+    const z = randn();
+    const gen = genForward(z);
+    const xf = gen.x;
+    const ff = discForward(xf);
+    const pf = sigmoid(ff.logit);
+    // G wants D(G(z)) -> 1, i.e. BCE(label=1, pred=pf), d/dlogit = pf - 1
+    const glogit = pf - 1;
+    // backprop through D to get dL/dx
+    let dLdx = 0;
+    for (let i = 0; i < H; i++) {
+      const dpre = glogit * GAN.dW2[i] * (ff.h_pre[i] > 0 ? 1 : 0);
+      dLdx += dpre * GAN.dW1[i];
+    }
+    // now backprop through G: x = sum_i gW2[i] * relu(gW1[i] * z + gb1[i]) + gb2
+    ggb2 += dLdx;
+    for (let i = 0; i < H; i++) {
+      const h_i = gen.h[i];
+      ggW2[i] += dLdx * h_i;
+      const dh = dLdx * GAN.gW2[i] * (gen.h_pre[i] > 0 ? 1 : 0);
+      ggW1[i] += dh * z;
+      ggb1[i] += dh;
+    }
+  }
+  for (let i = 0; i < H; i++) {
+    GAN.gW1[i] -= lr * ggW1[i] / B;
+    GAN.gb1[i] -= lr * ggb1[i] / B;
+    GAN.gW2[i] -= lr * ggW2[i] / B;
+  }
+  GAN.gb2 -= lr * ggb2 / B;
+
+  GAN.iter++;
+}
+
+function ganSteps(n) {
+  for (let i = 0; i < n; i++) ganStepOnce();
+  ganRender();
+}
+
+function ganReset() {
+  initGAN();
+  ganRender();
+}
+
+function ganRender() {
+  // progress
+  const p = document.getElementById('gan-progress');
+  if (p) p.textContent = 'Iter ' + GAN.iter;
+
+  // real density curve
+  const toX = x => 30 + ((x + 6) / 12) * 370;
+  const realFn = x => 0.5 * Math.exp(-0.5 * Math.pow((x + 2) / 0.5, 2)) / (0.5 * Math.sqrt(2 * Math.PI))
+                    + 0.5 * Math.exp(-0.5 * Math.pow((x - 2) / 0.5, 2)) / (0.5 * Math.sqrt(2 * Math.PI));
+  let d = '';
+  for (let i = 0; i <= 100; i++) {
+    const x = -6 + 12 * i / 100;
+    const y = 220 - Math.min(200, realFn(x) * 160);
+    d += (i === 0 ? 'M' : 'L') + toX(x) + ',' + y;
+  }
+  const pth = document.getElementById('gan-real');
+  if (pth) pth.setAttribute('d', d);
+
+  // generator histogram (512 samples)
+  const bins = 36;
+  const hist = new Array(bins).fill(0);
+  const N = 512;
+  for (let i = 0; i < N; i++) {
+    const z = randn();
+    const x = genForward(z).x;
+    const b = Math.floor(((x + 6) / 12) * bins);
+    if (b >= 0 && b < bins) hist[b]++;
+  }
+  const maxH = Math.max(1, ...hist);
+  let bars = '';
+  const barW = 370 / bins;
+  for (let b = 0; b < bins; b++) {
+    const h = (hist[b] / maxH) * 180;
+    const x = 30 + b * barW;
+    const y = 220 - h;
+    bars += `<rect x="${x + 1}" y="${y}" width="${barW - 2}" height="${h}" fill="#f472b6" opacity="0.65"/>`;
+  }
+  const g = document.getElementById('gan-fake-bars');
+  if (g) g.innerHTML = bars;
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  initGAN();
+  ganRender();
+});
+</script>
+<script defer src="../search-index.js"></script>
+<script defer src="../search.js"></script>
+</body>
+</html>

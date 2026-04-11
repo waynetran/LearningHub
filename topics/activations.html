@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Activation Functions — Deep Dive</title>
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError: false});"></script>
+</head>
+<body>
+<div id="tooltip"></div>
+
+<nav class="topic-nav">
+  <a class="back" href="../ai-ml.html">← Back to AI/ML</a>
+  <div class="crumb">Deep Dives / <span class="topic-name">Activation Functions</span></div>
+</nav>
+
+<div class="topic-layout">
+  <aside class="topic-toc">
+    <h4>ON THIS PAGE</h4>
+    <ul>
+      <li><a href="#intro">1. Why you need them at all</a></li>
+      <li><a href="#step">2. Step / Heaviside</a></li>
+      <li><a href="#sigmoid">3. Sigmoid & tanh</a></li>
+      <li><a href="#relu">4. ReLU</a></li>
+      <li><a href="#variants">5. Leaky ReLU, PReLU, ELU</a></li>
+      <li><a href="#modern">6. GELU, Swish, SiLU</a></li>
+      <li><a href="#compare">7. Side-by-side comparison</a>
+        <ul><li><a href="#act-demo">Interactive explorer</a></li></ul>
+      </li>
+      <li><a href="#code">8. Source code</a></li>
+      <li><a href="#guidance">9. Which should you use?</a></li>
+      <li><a href="#summary">10. Summary</a></li>
+    </ul>
+  </aside>
+
+  <article class="topic-content">
+    <h1>Activation Functions</h1>
+    <p class="subtitle">A neural network without activation functions is just a linear regression with extra steps. The nonlinearity between layers is what turns a stack of matrix multiplies into a universal function approximator. Here's every activation worth knowing, and why the field moved from sigmoid to ReLU to GELU.</p>
+    <div class="meta-tags">
+      <span>Prereq: basic calculus</span>
+      <span>Time to read: ~18 min</span>
+      <span>Interactive figures: 1</span>
+      <span>Code: NumPy, PyTorch, JAX, CUDA</span>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="intro">1. Why you need them at all</h2>
+
+    <p>Consider a neural network with no activation functions — just a stack of matrix multiplications:</p>
+
+    <div class="math-display">$$f(\mathbf{x}) = W_3 \, (W_2 \, (W_1 \, \mathbf{x}))$$</div>
+
+    <p>Matrix multiplication is associative, so this is the same as:</p>
+
+    <div class="math-display">$$f(\mathbf{x}) = (W_3 W_2 W_1) \, \mathbf{x} = W_{\text{combined}} \, \mathbf{x}$$</div>
+
+    <p>Three layers collapsed into one. No matter how many linear layers you stack, the result is still a single linear transformation — you've burned compute for nothing. A linear map can only draw straight decision boundaries, only fit linear functions, only separate linearly separable classes. Without nonlinearity, "deep learning" is a grandiose name for logistic regression.</p>
+
+    <p>An <strong>activation function</strong> is a simple nonlinear function $\phi: \mathbb{R} \to \mathbb{R}$ applied elementwise between layers:</p>
+
+    <div class="math-display">$$f(\mathbf{x}) = W_3 \, \phi(W_2 \, \phi(W_1 \, \mathbf{x}))$$</div>
+
+    <p>Now the composition is genuinely nonlinear and can no longer be collapsed. In fact, with just one hidden layer and enough units, such a network can approximate any continuous function on a compact domain — the <em>universal approximation theorem</em> (Cybenko 1989, Hornik 1991). But not all activations are created equal; the choice has outsized effects on trainability, convergence speed, and final accuracy.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="step">2. Step / Heaviside</h2>
+
+    <div class="math-display">$$\text{step}(z) = \begin{cases} 1 & z > 0 \\ 0 & z \le 0 \end{cases}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">The step function at a glance</p>
+      <dl>
+        <dt>$z$</dt><dd>The pre-activation — the weighted sum $\mathbf{w} \cdot \mathbf{x} + b$ coming into a neuron.</dd>
+        <dt>$\text{step}(z)$</dt><dd>Output: 1 if the neuron "fires," 0 otherwise. Models a biological neuron's all-or-nothing spike.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Analogy</strong> A light switch: below threshold, off; above threshold, on. Used by the perceptron (1957). The reason it fell out of favor: the derivative is 0 almost everywhere (and undefined at 0), so gradient-based learning can't work at all. The perceptron learned via a hand-crafted rule, not backprop. When backprop came along, the step function was first on the chopping block.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="sigmoid">3. Sigmoid &amp; tanh</h2>
+
+    <div class="math-display">$$\sigma(z) = \frac{1}{1 + e^{-z}}, \qquad \tanh(z) = \frac{e^z - e^{-z}}{e^z + e^{-z}}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Sigmoid &amp; tanh — the classic smooth gates</p>
+      <dl>
+        <dt>$\sigma(z)$</dt>
+        <dd>Logistic sigmoid. Squashes any real number into $(0, 1)$.
+          <span class="mg-why">Interpretable as a probability, which is why it's still used in the final layer of binary classifiers.</span>
+        </dd>
+        <dt>$\tanh(z)$</dt>
+        <dd>Hyperbolic tangent. Squashes into $(-1, 1)$. Equivalent to a rescaled, shifted sigmoid: $\tanh(z) = 2\sigma(2z) - 1$.
+          <span class="mg-why">Zero-centered, which makes gradient flow through stacks of layers better than sigmoid.</span>
+        </dd>
+        <dt>$\sigma'(z) = \sigma(z)(1 - \sigma(z))$</dt>
+        <dd>Derivative is maximized at $z = 0$, where $\sigma'(0) = 0.25$. At $|z| = 5$, it's already down to about $0.007$.
+          <span class="mg-why">This is where the "vanishing gradient" problem comes from: stack 10 sigmoid layers and gradients multiply by at most $0.25^{10} \approx 10^{-6}$.</span>
+        </dd>
+        <dt>$\tanh'(z) = 1 - \tanh^2(z)$</dt>
+        <dd>Maximized at 0 where $\tanh'(0) = 1$. A little healthier than sigmoid, but still saturates for large $|z|$.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Analogy</strong> A sigmoid is like a thermostat that slowly warms up as the input rises and plateaus near the max. Fine for one or two layers. Stack six of them and by the time a gradient signal has passed through, it's been squeezed toward zero so many times that the early layers receive almost no information about how to improve. This is why deep networks were stuck at 2–3 layers throughout the 1990s and early 2000s.</p>
+    </div>
+
+    <div class="callout">
+      <div class="label">THE VANISHING GRADIENT, MADE EXPLICIT</div>
+      <p style="margin:6px 0">If every layer's pre-activation sits near the saturated region of the sigmoid, the backprop signal through that layer is multiplied by roughly 0.01. Ten layers later: $10^{-20}$. No finite learning rate can make $10^{-20}$ gradients do anything. The weights in the early layers never budge. The network "doesn't train." Every deep learning practitioner in 2010 knew this pain intimately.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="relu">4. ReLU</h2>
+
+    <div class="math-display">$$\text{ReLU}(z) = \max(0, z)$$</div>
+
+    <p>The Rectified Linear Unit. Described by Nair &amp; Hinton (2010) and popularized by AlexNet (2012). Offensively simple, and it broke deep learning wide open.</p>
+
+    <div class="math-glossary">
+      <p class="mg-title">Why ReLU changed everything</p>
+      <dl>
+        <dt>$\text{ReLU}(z)$</dt>
+        <dd>Pass positive values through unchanged; clamp negatives to 0.
+          <span class="mg-why">Dead simple to compute. No exponentials, no divisions — just a sign check.</span>
+        </dd>
+        <dt>$\text{ReLU}'(z)$</dt>
+        <dd>$1$ for $z > 0$, $0$ for $z < 0$, undefined at $z = 0$ (usually set to $0$ by convention).
+          <span class="mg-why">Here's the magic: <em>the gradient is 1</em> on the active side. No decay, no squashing. A gradient flowing back through 20 active ReLU layers comes out with its full magnitude.</span>
+        </dd>
+      </dl>
+      <p class="mg-analogy"><strong>Analogy</strong> Think of a sigmoid as a bureaucrat's rubber stamp that inks lighter and lighter as you push harder. ReLU is just "yes, pass" or "no, blocked." Every active unit ships the gradient at full strength. And because about half the units are zero at any given time, the representation is sparse — a form of built-in regularization. When AlexNet showed that a ReLU network could train in a few days on ImageNet and crush every sigmoid-based baseline, every paper after 2012 switched.</p>
+    </div>
+
+    <p>ReLU has one famous failure mode: the <strong>dying ReLU</strong>. If a unit's pre-activation is negative for every training example, its output is always 0, its gradient is always 0, and the weights feeding into it never update. The unit is dead and the network capacity that funded it is wasted. In practice this happens when learning rates are too high or weights are badly initialized; it can permanently kill a significant fraction of units.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="variants">5. Leaky ReLU, PReLU, ELU</h2>
+
+    <p>All three fix the dying ReLU by making the negative side nonzero.</p>
+
+    <div class="math-display">$$\text{LeakyReLU}(z) = \begin{cases} z & z > 0 \\ \alpha z & z \le 0 \end{cases} \quad (\alpha = 0.01 \text{ typical})$$</div>
+
+    <div class="math-display">$$\text{PReLU}(z) = \begin{cases} z & z > 0 \\ a \, z & z \le 0 \end{cases} \quad (a \text{ is learned})$$</div>
+
+    <div class="math-display">$$\text{ELU}(z) = \begin{cases} z & z > 0 \\ \alpha (e^z - 1) & z \le 0 \end{cases}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Variant glossary</p>
+      <dl>
+        <dt>$\alpha$ (Leaky)</dt>
+        <dd>Small fixed slope on the negative side, usually $0.01$. Keeps the gradient nonzero so a unit can "wake up" if its pre-activation drifts.</dd>
+        <dt>$a$ (PReLU)</dt>
+        <dd>Parametric ReLU — the negative slope is itself a learned parameter, one per unit or one per channel. Adds a few more weights but often pays for itself.</dd>
+        <dt>ELU</dt>
+        <dd>Exponential Linear Unit (Clevert et al. 2015). Negative side is a smooth saturating curve, which pushes the mean activation closer to zero and helps with normalization.
+          <span class="mg-why">Smoother derivative at 0 than Leaky ReLU, and bounded negative output (can't go below $-\alpha$).</span>
+        </dd>
+      </dl>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="modern">6. GELU, Swish / SiLU</h2>
+
+    <p>Around 2016–2017, researchers started experimenting with smooth activations that behaved like ReLU in the large but were differentiable everywhere. Two winners emerged:</p>
+
+    <div class="math-display">$$\text{GELU}(z) = z \cdot \Phi(z) \approx 0.5 z \left(1 + \tanh\left[\sqrt{2/\pi}(z + 0.044715 z^3)\right]\right)$$</div>
+
+    <div class="math-display">$$\text{SiLU}(z) = \text{Swish}(z) = z \cdot \sigma(z) = \frac{z}{1 + e^{-z}}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Modern smooth activations</p>
+      <dl>
+        <dt>$\Phi(z)$</dt>
+        <dd>Cumulative distribution function of the standard normal distribution: $\Phi(z) = \mathbb{P}(Z \le z)$ for $Z \sim \mathcal{N}(0,1)$.
+          <span class="mg-why">So GELU is "multiply $z$ by the probability that a Gaussian random variable is smaller than $z$" — a probabilistic interpretation of the gate.</span>
+        </dd>
+        <dt>GELU</dt>
+        <dd>Gaussian Error Linear Unit (Hendrycks &amp; Gimpel 2016). Looks almost exactly like ReLU for $|z| > 2$ but smoothly transitions around 0.
+          <span class="mg-why">Default activation in BERT, GPT-2, GPT-3, and most modern Transformers. The smoothness gives slightly better gradients and empirically a small but consistent quality boost.</span>
+        </dd>
+        <dt>SiLU / Swish</dt>
+        <dd>$z \cdot \sigma(z)$. Discovered via automated architecture search (Ramachandran et al. 2017) and independently named SiLU by Elfwing et al. Used in EfficientNet, Llama, Mistral.
+          <span class="mg-why">Self-gated: the input $z$ multiplies its own sigmoid, letting the function pass values through scaled by a soft gate.</span>
+        </dd>
+      </dl>
+      <p class="mg-analogy"><strong>Analogy</strong> ReLU is a step-function gate: "below 0, closed; above 0, open." GELU and SiLU are the same idea but implemented with a soft lever instead of a hard switch. For very negative inputs the gate is essentially closed; for very positive inputs it's wide open; in between, the function smoothly rolls the gate open in proportion to how "confident" the input is positive. A smooth gate gives cleaner gradients during training, at the cost of a slightly more expensive forward pass.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="compare">7. Side-by-side comparison</h2>
+
+    <p>Here's how seven activations look on the same axes — and how their derivatives compare.</p>
+
+    <figure>
+      <svg viewBox="0 0 720 320" width="100%" style="max-width:720px; background:var(--bg-2); border:1px solid var(--border); border-radius:8px; padding:16px">
+        <!-- left plot: function values -->
+        <g transform="translate(20, 10)">
+          <text x="160" y="12" text-anchor="middle" font-family="monospace" font-size="11" fill="#8a93a6">activation φ(z)</text>
+          <!-- axes -->
+          <line x1="20" y1="150" x2="310" y2="150" stroke="#3a4258"/>
+          <line x1="165" y1="20" x2="165" y2="280" stroke="#3a4258"/>
+          <text x="310" y="165" font-size="10" fill="#8a93a6" font-family="monospace">z</text>
+          <text x="170" y="20" font-size="10" fill="#8a93a6" font-family="monospace">φ</text>
+          <!-- gridlines -->
+          <g stroke="#242a3a" stroke-dasharray="2 3">
+            <line x1="20" y1="80"  x2="310" y2="80"/>
+            <line x1="20" y1="220" x2="310" y2="220"/>
+            <line x1="95"  y1="20" x2="95"  y2="280"/>
+            <line x1="240" y1="20" x2="240" y2="280"/>
+          </g>
+          <!-- curves, drawn by JS -->
+          <g id="act-curves-val" fill="none" stroke-width="1.8"></g>
+        </g>
+        <!-- right plot: derivatives -->
+        <g transform="translate(380, 10)">
+          <text x="160" y="12" text-anchor="middle" font-family="monospace" font-size="11" fill="#8a93a6">derivative φ'(z)</text>
+          <line x1="20" y1="150" x2="310" y2="150" stroke="#3a4258"/>
+          <line x1="165" y1="20" x2="165" y2="280" stroke="#3a4258"/>
+          <text x="310" y="165" font-size="10" fill="#8a93a6" font-family="monospace">z</text>
+          <text x="170" y="20" font-size="10" fill="#8a93a6" font-family="monospace">φ'</text>
+          <g stroke="#242a3a" stroke-dasharray="2 3">
+            <line x1="20" y1="80"  x2="310" y2="80"/>
+            <line x1="20" y1="220" x2="310" y2="220"/>
+            <line x1="95"  y1="20" x2="95"  y2="280"/>
+            <line x1="240" y1="20" x2="240" y2="280"/>
+          </g>
+          <g id="act-curves-der" fill="none" stroke-width="1.8"></g>
+        </g>
+        <!-- legend -->
+        <g transform="translate(20, 300)" font-family="monospace" font-size="10">
+          <g fill="#22d3ee"><rect x="0"   y="0" width="10" height="3"/><text x="14" y="8" fill="#dbe1ec">sigmoid</text></g>
+          <g fill="#7c5cff"><rect x="80"  y="0" width="10" height="3"/><text x="94" y="8" fill="#dbe1ec">tanh</text></g>
+          <g fill="#f472b6"><rect x="140" y="0" width="10" height="3"/><text x="154" y="8" fill="#dbe1ec">ReLU</text></g>
+          <g fill="#fbbf24"><rect x="210" y="0" width="10" height="3"/><text x="224" y="8" fill="#dbe1ec">Leaky</text></g>
+          <g fill="#34d399"><rect x="280" y="0" width="10" height="3"/><text x="294" y="8" fill="#dbe1ec">ELU</text></g>
+          <g fill="#f87171"><rect x="350" y="0" width="10" height="3"/><text x="364" y="8" fill="#dbe1ec">GELU</text></g>
+          <g fill="#a78bfa"><rect x="420" y="0" width="10" height="3"/><text x="434" y="8" fill="#dbe1ec">SiLU</text></g>
+        </g>
+      </svg>
+      <figcaption>Left: each activation's output as a function of its input. Right: derivatives. Notice how sigmoid/tanh derivatives vanish in the tails (the vanishing-gradient regime), while ReLU/GELU/SiLU all converge to 1 for large positive $z$ and stay healthy far from the origin.</figcaption>
+    </figure>
+
+    <h3 id="act-demo">Interactive explorer</h3>
+    <p>Click any activation below to see its value and derivative at a specific $z$. The dot on each curve shows where you are.</p>
+
+    <div class="step-figure" id="act-figure">
+      <div class="sf-header">
+        <span class="sf-title">▸ Evaluate at z</span>
+        <span class="sf-progress" id="act-progress">z = 0.00</span>
+      </div>
+      <div class="sf-body">
+        <div class="sf-visual">
+          <svg viewBox="0 0 360 280" width="100%" style="max-width:360px" id="act-svg">
+            <line x1="30" y1="140" x2="330" y2="140" stroke="#3a4258"/>
+            <line x1="180" y1="20" x2="180" y2="260" stroke="#3a4258"/>
+            <g stroke="#242a3a" stroke-dasharray="2 3">
+              <line x1="30"  y1="70"  x2="330" y2="70"/>
+              <line x1="30"  y1="210" x2="330" y2="210"/>
+              <line x1="105" y1="20" x2="105" y2="260"/>
+              <line x1="255" y1="20" x2="255" y2="260"/>
+            </g>
+            <text x="330" y="155" font-size="9" fill="#8a93a6" font-family="monospace">z</text>
+            <text x="185" y="20" font-size="9" fill="#8a93a6" font-family="monospace">φ</text>
+            <path id="act-curve" fill="none" stroke="#22d3ee" stroke-width="2"/>
+            <line id="act-zline" stroke="#fbbf24" stroke-dasharray="3 2" y1="20" y2="260"/>
+            <circle id="act-dot" r="5" fill="#fbbf24"/>
+          </svg>
+        </div>
+        <div class="sf-explain" id="act-explain">
+          <h5>Pick an activation</h5>
+          <p>Click a button below. Move the slider to change $z$. Watch both $\phi(z)$ (the curve value at the dot) and the derivative $\phi'(z)$.</p>
+          <div id="act-readout" style="font-family:var(--mono); font-size:12px; margin-top:12px; padding:8px 10px; background:var(--bg-3); border-radius:4px; color:var(--text-dim)">select an activation to begin</div>
+        </div>
+      </div>
+      <div class="sf-controls">
+        <button class="btn" onclick="actPick('sigmoid')">sigmoid</button>
+        <button class="btn" onclick="actPick('tanh')">tanh</button>
+        <button class="btn" onclick="actPick('relu')">ReLU</button>
+        <button class="btn" onclick="actPick('leaky')">Leaky</button>
+        <button class="btn" onclick="actPick('gelu')">GELU</button>
+        <button class="btn" onclick="actPick('silu')">SiLU</button>
+      </div>
+      <div class="sf-params">
+        <label>z = <input type="range" id="act-z-slider" min="-5" max="5" step="0.05" value="0" oninput="actZUpdate(this.value)"></label>
+      </div>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="code">8. Source code</h2>
+
+    <p>All the modern activations are one-liners. Here's a grab-bag.</p>
+
+    <div class="code-tabs" id="ct-act">
+      <div class="ct-header">
+        <button class="ct-tab active" data-tab="np">NumPy</button>
+        <button class="ct-tab" data-tab="pt">PyTorch</button>
+        <button class="ct-tab" data-tab="jax">JAX</button>
+        <button class="ct-tab" data-tab="cu">CUDA kernel</button>
+        <span class="ct-label">activations · forward pass</span>
+      </div>
+      <div class="ct-panel active" data-tab="np"><pre><code><span class="kw">import</span> numpy <span class="kw">as</span> np
+
+<span class="kw">def</span> <span class="fn">sigmoid</span>(z): <span class="kw">return</span> <span class="num">1</span> / (<span class="num">1</span> + np.exp(-z))
+<span class="kw">def</span> <span class="fn">tanh</span>(z):    <span class="kw">return</span> np.tanh(z)
+<span class="kw">def</span> <span class="fn">relu</span>(z):    <span class="kw">return</span> np.maximum(<span class="num">0</span>, z)
+<span class="kw">def</span> <span class="fn">leaky</span>(z, a=<span class="num">0.01</span>):  <span class="kw">return</span> np.where(z &gt; <span class="num">0</span>, z, a * z)
+<span class="kw">def</span> <span class="fn">elu</span>(z, a=<span class="num">1.0</span>):     <span class="kw">return</span> np.where(z &gt; <span class="num">0</span>, z, a * (np.exp(z) - <span class="num">1</span>))
+<span class="kw">def</span> <span class="fn">gelu</span>(z):    <span class="kw">return</span> <span class="num">0.5</span> * z * (<span class="num">1</span> + np.tanh(np.sqrt(<span class="num">2</span> / np.pi) * (z + <span class="num">0.044715</span> * z**<span class="num">3</span>)))
+<span class="kw">def</span> <span class="fn">silu</span>(z):    <span class="kw">return</span> z * <span class="fn">sigmoid</span>(z)
+</code></pre></div>
+
+      <div class="ct-panel" data-tab="pt"><pre><code><span class="kw">import</span> torch
+<span class="kw">import</span> torch.nn.functional <span class="kw">as</span> F
+
+<span class="cmt"># All fused, all on GPU, all already handled by autograd.</span>
+y = torch.sigmoid(z)
+y = torch.tanh(z)
+y = F.relu(z)
+y = F.leaky_relu(z, negative_slope=<span class="num">0.01</span>)
+y = F.elu(z, alpha=<span class="num">1.0</span>)
+y = F.gelu(z)                            <span class="cmt"># 'none' approx by default since PyTorch 1.12</span>
+y = F.silu(z)                            <span class="cmt"># a.k.a. Swish</span>
+</code></pre></div>
+
+      <div class="ct-panel" data-tab="jax"><pre><code><span class="kw">import</span> jax.numpy <span class="kw">as</span> jnp
+<span class="kw">from</span> jax <span class="kw">import</span> nn
+
+y = nn.sigmoid(z)
+y = jnp.tanh(z)
+y = nn.relu(z)
+y = nn.leaky_relu(z, negative_slope=<span class="num">0.01</span>)
+y = nn.elu(z)
+y = nn.gelu(z, approximate=<span class="kw">True</span>)         <span class="cmt"># tanh-based approximation</span>
+y = nn.silu(z)
+</code></pre></div>
+
+      <div class="ct-panel" data-tab="cu"><pre><code><span class="cmt">// Elementwise ReLU kernel. The forward pass of ReLU in cuDNN
+// is basically this, plus bounds checks and vector loads.</span>
+<span class="kw">__global__</span> <span class="kw">void</span> <span class="fn">relu_forward</span>(<span class="kw">const float</span>* __restrict__ x,
+                             <span class="kw">float</span>* __restrict__ y,
+                             <span class="kw">int</span> n) {
+    <span class="kw">int</span> i = blockIdx.x * blockDim.x + threadIdx.x;
+    <span class="kw">if</span> (i &lt; n) y[i] = x[i] &gt; <span class="num">0</span>.f ? x[i] : <span class="num">0</span>.f;
+}
+
+<span class="cmt">// GELU (tanh approximation)</span>
+<span class="kw">__device__</span> <span class="kw">inline float</span> <span class="fn">gelu_approx</span>(<span class="kw">float</span> x) {
+    <span class="kw">const float</span> c = <span class="num">0.7978845608f</span>;     <span class="cmt">// sqrt(2/pi)</span>
+    <span class="kw">float</span> inner = c * (x + <span class="num">0.044715f</span> * x * x * x);
+    <span class="kw">return</span> <span class="num">0.5f</span> * x * (<span class="num">1</span>.f + <span class="fn">tanhf</span>(inner));
+}
+
+<span class="kw">__global__</span> <span class="kw">void</span> <span class="fn">gelu_forward</span>(<span class="kw">const float</span>* x, <span class="kw">float</span>* y, <span class="kw">int</span> n) {
+    <span class="kw">int</span> i = blockIdx.x * blockDim.x + threadIdx.x;
+    <span class="kw">if</span> (i &lt; n) y[i] = <span class="fn">gelu_approx</span>(x[i]);
+}
+</code></pre></div>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="guidance">9. Which should you use?</h2>
+
+    <ul>
+      <li><strong>Feedforward hidden layers, vanilla CNN:</strong> ReLU. It's fast, it works, you can't go wrong.</li>
+      <li><strong>Transformers (attention MLP blocks):</strong> GELU (BERT, GPT-2/3) or SiLU (Llama, Mistral). The smoothness is worth the small extra compute.</li>
+      <li><strong>Very deep CNN backbones (EfficientNet, MobileNetV3):</strong> SiLU / Swish. Found by NAS to be better than ReLU.</li>
+      <li><strong>Output layer of a binary classifier:</strong> sigmoid. The probability interpretation is what you want.</li>
+      <li><strong>Output layer of a multi-class classifier:</strong> softmax (technically a vector-valued activation, but the same idea scaled across logits).</li>
+      <li><strong>LSTM/GRU internals:</strong> sigmoid for gates, tanh for candidate states. This is prescribed by the architecture, not a hyperparameter you tune.</li>
+      <li><strong>When in doubt:</strong> use whatever the state-of-the-art paper in your area uses. The difference between ReLU and GELU is rarely more than 0.5% accuracy, and rarely the bottleneck.</li>
+    </ul>
+
+    <!-- ========================================================== -->
+    <h2 id="summary">10. Summary</h2>
+
+    <ul>
+      <li>Without a nonlinear activation function, a deep network collapses to a single linear map. Activation functions are what make depth meaningful.</li>
+      <li><strong>Sigmoid</strong> and <strong>tanh</strong> dominated early networks but suffer from vanishing gradients when stacked deep.</li>
+      <li><strong>ReLU</strong> changed the game in 2010–2012: gradients of 1 on the positive side let deep networks train. Dying ReLU is a real but manageable failure mode.</li>
+      <li><strong>Leaky / PReLU / ELU</strong> fix the dying-ReLU problem with a non-zero negative branch.</li>
+      <li><strong>GELU</strong> and <strong>SiLU (Swish)</strong> are the modern choices for Transformers and SOTA CNNs. Smooth, self-gating, empirically slightly better than ReLU.</li>
+      <li>The choice usually matters less than hyperparameters, architecture, and data. But it does matter.</li>
+    </ul>
+
+    <div class="bib">
+      <h4>Further reading</h4>
+      <ul>
+        <li>Nair &amp; Hinton (2010) — <em>Rectified Linear Units Improve Restricted Boltzmann Machines</em>.</li>
+        <li>Glorot, Bordes &amp; Bengio (2011) — <em>Deep Sparse Rectifier Neural Networks</em>.</li>
+        <li>Clevert, Unterthiner &amp; Hochreiter (2015) — <em>Fast and Accurate Deep Network Learning by Exponential Linear Units (ELUs)</em>.</li>
+        <li>Hendrycks &amp; Gimpel (2016) — <em>Gaussian Error Linear Units (GELUs)</em>.</li>
+        <li>Ramachandran, Zoph &amp; Le (2017) — <em>Searching for Activation Functions</em> (Swish).</li>
+      </ul>
+    </div>
+
+    <div class="next-card">
+      <div class="label">NEXT UP</div>
+      <a href="backpropagation.html">→ Backpropagation</a>
+      <p>Once you have a differentiable activation, backprop is what turns it into a learning signal. The algorithm that ties everything together.</p>
+    </div>
+
+  </article>
+</div>
+
+<script>
+// =========================================================
+// Code tabs
+// =========================================================
+document.querySelectorAll('.code-tabs').forEach(root => {
+  const tabs = root.querySelectorAll('.ct-tab');
+  const panels = root.querySelectorAll('.ct-panel');
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const target = tab.getAttribute('data-tab');
+      tabs.forEach(t => t.classList.toggle('active', t === tab));
+      panels.forEach(p => p.classList.toggle('active', p.getAttribute('data-tab') === target));
+    });
+  });
+});
+
+// =========================================================
+// Activation functions — definitions + derivatives
+// =========================================================
+const ACT = {
+  sigmoid: {
+    f: z => 1 / (1 + Math.exp(-z)),
+    d: z => { const s = 1 / (1 + Math.exp(-z)); return s * (1 - s); },
+    color: '#22d3ee',
+    name: 'sigmoid',
+  },
+  tanh: {
+    f: z => Math.tanh(z),
+    d: z => 1 - Math.tanh(z) ** 2,
+    color: '#7c5cff',
+    name: 'tanh',
+  },
+  relu: {
+    f: z => Math.max(0, z),
+    d: z => z > 0 ? 1 : 0,
+    color: '#f472b6',
+    name: 'ReLU',
+  },
+  leaky: {
+    f: z => z > 0 ? z : 0.1 * z,
+    d: z => z > 0 ? 1 : 0.1,
+    color: '#fbbf24',
+    name: 'Leaky ReLU (α=0.1)',
+  },
+  elu: {
+    f: z => z > 0 ? z : (Math.exp(z) - 1),
+    d: z => z > 0 ? 1 : Math.exp(z),
+    color: '#34d399',
+    name: 'ELU',
+  },
+  gelu: {
+    f: z => {
+      const c = Math.sqrt(2 / Math.PI);
+      return 0.5 * z * (1 + Math.tanh(c * (z + 0.044715 * z * z * z)));
+    },
+    d: z => {
+      const eps = 1e-4;
+      return (ACT.gelu.f(z + eps) - ACT.gelu.f(z - eps)) / (2 * eps);
+    },
+    color: '#f87171',
+    name: 'GELU',
+  },
+  silu: {
+    f: z => z / (1 + Math.exp(-z)),
+    d: z => {
+      const s = 1 / (1 + Math.exp(-z));
+      return s + z * s * (1 - s);
+    },
+    color: '#a78bfa',
+    name: 'SiLU / Swish',
+  },
+};
+
+// Draw all curves on the comparison figure
+function drawCompareCurves() {
+  const pathFromFn = (fn, scaleY, clip) => {
+    let d = '';
+    const N = 100;
+    for (let i = 0; i <= N; i++) {
+      const z = -5 + 10 * i / N;
+      let y = fn(z) * scaleY;
+      if (clip) y = Math.max(-3, Math.min(3, y));
+      const px = 20 + ((z + 5) / 10) * 290;
+      const py = 150 - y * 35;
+      d += (i === 0 ? 'M' : 'L') + px.toFixed(1) + ',' + py.toFixed(1);
+    }
+    return d;
+  };
+
+  const valG = document.getElementById('act-curves-val');
+  const derG = document.getElementById('act-curves-der');
+  if (!valG || !derG) return;
+
+  let vals = '', ders = '';
+  Object.keys(ACT).forEach(key => {
+    const a = ACT[key];
+    vals += `<path d="${pathFromFn(a.f, 1, true)}" stroke="${a.color}"/>`;
+    ders += `<path d="${pathFromFn(a.d, 1, true)}" stroke="${a.color}"/>`;
+  });
+  valG.innerHTML = vals;
+  derG.innerHTML = ders;
+}
+
+// Interactive single-curve explorer
+let actPicked = null;
+function actPick(key) {
+  actPicked = key;
+  const a = ACT[key];
+  // draw curve
+  let d = '';
+  const N = 100;
+  for (let i = 0; i <= N; i++) {
+    const z = -5 + 10 * i / N;
+    const y = Math.max(-3, Math.min(3, a.f(z)));
+    const px = 30 + ((z + 5) / 10) * 300;
+    const py = 140 - y * 35;
+    d += (i === 0 ? 'M' : 'L') + px.toFixed(1) + ',' + py.toFixed(1);
+  }
+  const curve = document.getElementById('act-curve');
+  curve.setAttribute('d', d);
+  curve.setAttribute('stroke', a.color);
+  document.getElementById('act-dot').setAttribute('fill', a.color);
+  document.getElementById('act-zline').setAttribute('stroke', a.color);
+  document.getElementById('act-progress').textContent = a.name;
+  actZUpdate(document.getElementById('act-z-slider').value);
+}
+
+function actZUpdate(val) {
+  if (!actPicked) return;
+  const z = parseFloat(val);
+  const a = ACT[actPicked];
+  const y = Math.max(-3, Math.min(3, a.f(z)));
+  const px = 30 + ((z + 5) / 10) * 300;
+  const py = 140 - y * 35;
+  document.getElementById('act-dot').setAttribute('cx', px);
+  document.getElementById('act-dot').setAttribute('cy', py);
+  document.getElementById('act-zline').setAttribute('x1', px);
+  document.getElementById('act-zline').setAttribute('x2', px);
+  document.getElementById('act-progress').textContent = `${a.name} — z = ${z.toFixed(2)}`;
+  document.getElementById('act-readout').innerHTML =
+    `<div>z        = ${z.toFixed(3)}</div>` +
+    `<div>φ(z)    = ${a.f(z).toFixed(4)}</div>` +
+    `<div>φ'(z)   = ${a.d(z).toFixed(4)}</div>`;
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  drawCompareCurves();
+  actPick('relu');
+});
+</script>
+<script defer src="../search-index.js"></script>
+<script defer src="../search.js"></script>
+</body>
+</html>

@@ -1,0 +1,1829 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mathematics — A Pragmatic Tour for Programmers</title>
+<link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+<div id="tooltip"></div>
+
+<!-- Mobile menu toggle -->
+<button class="mobile-menu-toggle" id="mobile-menu-toggle" aria-label="Toggle navigation">☰</button>
+<div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+
+<!-- ============================================================ -->
+<!-- Top bar: back to hub -->
+<!-- ============================================================ -->
+<div class="topbar">
+  <a class="topbar-back" href="../index.html">← Learning Hub</a>
+  <span class="topbar-crumb">Mathematics Track</span>
+  <span class="topbar-tracks">
+    <a href="../ai-ml.html">AI / ML</a>
+    <a href="../cs/index.html">CS</a>
+  </span>
+</div>
+
+<!-- ============================================================ -->
+<!-- FULL-WIDTH TITLE HERO -->
+<!-- ============================================================ -->
+<div class="hero">
+  <div class="hero-inner">
+    <span class="chip">UPDATED APRIL 2026</span>
+    <h1>Mathematics for Modern Computing</h1>
+    <p class="lede">A working tour of the seven math subjects you actually need to read AI papers, debug training loops, and understand why your probability intuition keeps lying to you. Hover any <span class="term" data-label="Term" data-def="Words with a dotted underline have definitions you can hover. Try it on the ones throughout this page.">dotted term</span>. Poke at the interactive figures. When a section feels too thin, click its Deep Dive link — every subject here has a full textbook-length lesson one click away.</p>
+  </div>
+</div>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div class="brand">
+      <h2>Mathematics</h2>
+      <p>// prerequisites for everything</p>
+    </div>
+    <nav id="sidenav">
+      <div class="cat-group" data-group="start">
+        <button class="cat cat-toggle" aria-expanded="true">
+          <span class="cat-icon">01</span><span class="cat-title">Start here</span><span class="cat-chev">▾</span>
+        </button>
+        <ul class="cat-body">
+          <li><a href="#overview">What math you actually need</a></li>
+          <li><a href="#how-to-use">How to use this track</a></li>
+        </ul>
+      </div>
+      <div class="cat-group" data-group="classical">
+        <button class="cat cat-toggle" aria-expanded="false">
+          <span class="cat-icon">02</span><span class="cat-title">Calculus</span><span class="cat-chev">▾</span>
+        </button>
+        <ul class="cat-body">
+          <li><a href="#calculus">Calculus</a>
+            <ul>
+              <li><a href="#deriv">Derivatives</a></li>
+              <li><a href="#integral">Integrals</a></li>
+              <li><a href="#taylor">Taylor series</a></li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+      <div class="cat-group" data-group="neural">
+        <button class="cat cat-toggle" aria-expanded="false">
+          <span class="cat-icon">03</span><span class="cat-title">Multivar calc</span><span class="cat-chev">▾</span>
+        </button>
+        <ul class="cat-body">
+          <li><a href="#multivar">Multivariable calculus</a>
+            <ul>
+              <li><a href="#gradient">Gradient</a></li>
+              <li><a href="#jacobian">Jacobian</a></li>
+              <li><a href="#hessian">Hessian</a></li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+      <div class="cat-group" data-group="transformer">
+        <button class="cat cat-toggle" aria-expanded="false">
+          <span class="cat-icon">04</span><span class="cat-title">Linear algebra</span><span class="cat-chev">▾</span>
+        </button>
+        <ul class="cat-body">
+          <li><a href="#linalg">Linear algebra</a>
+            <ul>
+              <li><a href="#vector">Vectors</a></li>
+              <li><a href="#matrix">Matrices</a></li>
+              <li><a href="#eig">Eigenvalues</a></li>
+              <li><a href="#svd">SVD &amp; PCA</a></li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+      <div class="cat-group" data-group="emerging">
+        <button class="cat cat-toggle" aria-expanded="false">
+          <span class="cat-icon">05</span><span class="cat-title">Probability</span><span class="cat-chev">▾</span>
+        </button>
+        <ul class="cat-body">
+          <li><a href="#probability">Probability</a>
+            <ul>
+              <li><a href="#rv">Random variables</a></li>
+              <li><a href="#bayes">Bayes' theorem</a></li>
+              <li><a href="#entropy">Entropy &amp; KL</a></li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+      <div class="cat-group" data-group="agi">
+        <button class="cat cat-toggle" aria-expanded="false">
+          <span class="cat-icon">06</span><span class="cat-title">Statistics</span><span class="cat-chev">▾</span>
+        </button>
+        <ul class="cat-body">
+          <li><a href="#statistics">Statistics</a>
+            <ul>
+              <li><a href="#estimation">Estimation &amp; MLE</a></li>
+              <li><a href="#hypothesis">Hypothesis testing</a></li>
+              <li><a href="#regression">Regression</a></li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+      <div class="cat-group" data-group="production">
+        <button class="cat cat-toggle" aria-expanded="false">
+          <span class="cat-icon">07</span><span class="cat-title">Discrete math</span><span class="cat-chev">▾</span>
+        </button>
+        <ul class="cat-body">
+          <li><a href="#discrete">Discrete mathematics</a>
+            <ul>
+              <li><a href="#logic">Logic &amp; proofs</a></li>
+              <li><a href="#combinatorics">Combinatorics</a></li>
+              <li><a href="#graphs">Graph theory</a></li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+      <div class="cat-group" data-group="classical">
+        <button class="cat cat-toggle" aria-expanded="false">
+          <span class="cat-icon">08</span><span class="cat-title">Numerical analysis</span><span class="cat-chev">▾</span>
+        </button>
+        <ul class="cat-body">
+          <li><a href="#numerical">Numerical analysis</a>
+            <ul>
+              <li><a href="#float">Floating point</a></li>
+              <li><a href="#newton">Newton's method</a></li>
+              <li><a href="#quadrature">Quadrature</a></li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+      <div class="cat-group cat-group--deep" data-group="deep-math">
+        <button class="cat cat-toggle" aria-expanded="false">
+          <span class="cat-icon">📘</span><span class="cat-title">Deep dives · subjects</span><span class="cat-chev">▾</span>
+        </button>
+        <ul class="cat-body">
+          <li><a href="calculus.html">Calculus (full lesson)</a></li>
+          <li><a href="multivariable-calculus.html">Multivariable Calculus</a></li>
+          <li><a href="linear-algebra.html">Linear Algebra</a></li>
+          <li><a href="probability.html">Probability</a></li>
+          <li><a href="statistics.html">Statistics</a></li>
+          <li><a href="discrete-math.html">Discrete Mathematics</a></li>
+          <li><a href="numerical-analysis.html">Numerical Analysis</a></li>
+        </ul>
+      </div>
+      <div class="cat-group cat-group--deep" data-group="deep-ml">
+        <button class="cat cat-toggle" aria-expanded="false">
+          <span class="cat-icon">🔬</span><span class="cat-title">Where it's used in ML</span><span class="cat-chev">▾</span>
+        </button>
+        <ul class="cat-body">
+          <li><a href="../topics/gradient-descent.html">Gradient Descent</a></li>
+          <li><a href="../topics/backpropagation.html">Backpropagation</a></li>
+          <li><a href="../topics/self-attention.html">Self-Attention</a></li>
+          <li><a href="../topics/embeddings.html">Embeddings</a></li>
+          <li><a href="../topics/diffusion.html">Diffusion Math</a></li>
+        </ul>
+      </div>
+    </nav>
+  </aside>
+
+  <main>
+    <div class="container">
+
+      <!-- ============================================================ -->
+      <section id="overview">
+        <h2>What math you actually need <span class="era">// big picture</span></h2>
+        <p>You don't need to remember everything from your last math class. You need a working command of about seven subjects — the ones the rest of computing is built on top of. If you know calculus well enough to believe the chain rule, linear algebra well enough to read a matrix multiplication without panic, and probability well enough to not confuse P(A|B) with P(B|A), you can read ninety percent of the AI papers published this year.</p>
+
+        <p>The other ten percent use tools from statistics, discrete math, or numerical analysis. Those tools show up less often, but when they do they are unavoidable — you cannot build a <span class="term" data-label="Bayesian model" data-def="A probability model that treats unknown parameters as random variables and updates them with observed data via Bayes' theorem.">Bayesian model</span> without statistics, you cannot reason about a graph algorithm without graph theory, and you cannot explain why your square-root function returns 0.9999999999 without floating-point arithmetic.</p>
+
+        <p>This page is a fast tour of all seven. Each section is a 3–5 paragraph summary with one interactive figure you can poke at, followed by a link to the full deep-dive page. Read the ones you need, skip the ones you don't, come back when ML humbles you. What you don't need, mostly: abstract algebra past "groups exist," real analysis past "limits are a pain to formalize," Galois theory (unless you're doing cryptography), category theory (unless you're writing Haskell), and most of olympiad-style problem-solving. Fun, but not on the critical path.</p>
+
+        <div class="callout">
+          <div class="label">The 60-second summary</div>
+          <p style="margin:6px 0">
+            <strong>Calculus</strong> — instantaneous change. The chain rule is the secret behind every training loop.<br>
+            <strong>Multivariable calculus</strong> — change in many directions at once. Gradients, Jacobians, Hessians.<br>
+            <strong>Linear algebra</strong> — the language of ML. Vectors, matrices, eigenvalues, SVD.<br>
+            <strong>Probability</strong> — reasoning under uncertainty. Random variables, Bayes, entropy.<br>
+            <strong>Statistics</strong> — from a pile of data to a defensible claim. Estimation, testing, regression.<br>
+            <strong>Discrete mathematics</strong> — the grammar of CS. Sets, logic, counting, graphs.<br>
+            <strong>Numerical analysis</strong> — what a real computer does when asked to do math it cannot do exactly.
+          </p>
+        </div>
+
+        <h3>What modern ML actually asks of you</h3>
+        <ul class="checked">
+          <li><strong>Derivatives.</strong> Training a model is minimizing a loss — the <span class="term" data-label="Loss" data-def="A number that measures how wrong a model's predictions are. Training is the process of making it smaller by adjusting weights.">loss</span> — and the only tool for pointing the knobs in the right direction is the derivative.</li>
+          <li><strong>Matrix shapes.</strong> Every bug in a training script is eventually a shape mismatch. Knowing what a matrix means, not just what its <code>shape</code> attribute is, prevents hours of staring.</li>
+          <li><strong>Probabilities that sum to one.</strong> Every classifier, every language model, every diffusion model is ultimately outputting a probability distribution. Softmax, cross-entropy, and KL divergence are the same idea in three costumes.</li>
+          <li><strong>Sample size intuition.</strong> If your benchmark uses 50 prompts, your confidence interval is enormous. Statistics tells you how enormous.</li>
+          <li><strong>Floating-point sanity.</strong> Mixed-precision training, quantization, and "why does my loss go to NaN" are all numerical-analysis problems in disguise.</li>
+        </ul>
+      </section>
+
+      <!-- ============================================================ -->
+      <section id="how-to-use">
+        <h2>How to use this track <span class="era">// four goal-driven paths</span></h2>
+        <p>The seven subjects interlock. You can read them in any order, but if you have a specific goal in mind, here are the shortest paths through. Each one points at sections on this page plus the deep-dive pages that flesh them out.</p>
+        <div class="grid">
+          <div class="card">
+            <h4>"I want to understand backpropagation."</h4>
+            <p class="meta">calculus → multivar → linalg</p>
+            <p>Read <a href="#calculus">Calculus</a> for the chain rule. Then <a href="#multivar">Multivariable Calculus</a> for gradients and the multivariable chain rule. Then <a href="#linalg">Linear Algebra</a> so the matrix-valued chain rule stops looking like noise. Finish at <a href="../topics/backpropagation.html" class="deep-dive">Backpropagation →</a>.</p>
+            <span class="tag hot">popular path</span>
+          </div>
+          <div class="card">
+            <h4>"I want transformers to click."</h4>
+            <p class="meta">linalg → probability</p>
+            <p>Start with <a href="#linalg">Linear Algebra</a> — dot products, projections, matrix multiplication as composition. Then <a href="#probability">Probability</a> for softmax and the information theory that runs the loss. Payoff: <a href="../topics/self-attention.html" class="deep-dive">Self-Attention →</a>.</p>
+            <span class="tag hot">popular path</span>
+          </div>
+          <div class="card">
+            <h4>"I want to derive gradient descent."</h4>
+            <p class="meta">multivar → numerical → cs/optimization</p>
+            <p><a href="#multivar">Multivariable Calculus</a> first (gradients point uphill). Then <a href="#numerical">Numerical Analysis</a> for step size, conditioning, and convergence. Cross-track finish at <a href="../cs/optimization.html">CS: Optimization</a>.</p>
+            <span class="tag">path</span>
+          </div>
+          <div class="card">
+            <h4>"I want Bayesian inference to click."</h4>
+            <p class="meta">probability → statistics</p>
+            <p><a href="#probability">Probability</a> up through Bayes' theorem, then <a href="#statistics">Statistics</a> for MLE and the Bayesian-vs-frequentist split. Payoff: you will never again confuse P(A|B) with P(B|A) in a meeting.</p>
+            <span class="tag">path</span>
+          </div>
+        </div>
+
+        <div class="callout good">
+          <div class="label">Rule of thumb</div>
+          <p style="margin:6px 0">Read the overview, then any one subject whose demo you find interesting. Do the demo. Click the Deep Dive link. Come back to this page when you need the next piece. Trying to read all seven sections in one sitting is a way of reading nothing.</p>
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <section id="calculus">
+        <h2>Calculus <span class="era">// single-variable foundation</span></h2>
+        <p class="lede">Two ancient questions — "how fast is this changing right now?" and "what's the area under this curve?" — turn out to be the same question, and there's a mechanical procedure for solving either one.</p>
+
+        <p>Calculus starts with a problem that sounds nonsensical: if your speedometer reads 37 mph, what does that number mean at <em>an instant</em>? You weren't going 37 mph for an hour. You were at 37 mph for no time at all, which makes "distance over time" a division by zero. The trick, invented in the 1660s by Newton and Leibniz independently, is to form that ratio over a tiny interval and then ask what it approaches as the interval shrinks. That approaching value is called a <span class="term" data-label="Limit" data-def="The value a function gets arbitrarily close to as the input approaches some point. The foundational idea of calculus — without it, 'instantaneous rate of change' is nonsense.">limit</span>, and it is the single foundational idea in all of calculus.</p>
+
+        <h3 id="deriv">Derivatives — instantaneous rates of change</h3>
+        <p>Take the limit of the average rate of change, and you get the <span class="term" data-label="Derivative" data-def="The instantaneous rate of change of a function at a point. Geometrically, the slope of the tangent line to the curve.">derivative</span>, written <code>f'(x)</code> or <code>df/dx</code>. Geometrically: the slope of the tangent line to the graph of <code>f</code> at the point <code>x</code>. Mechanically: a new function that tells you, at every input, how fast the original function is changing. For <code>f(x) = x²</code>, the derivative is <code>f'(x) = 2x</code>, which you can read as "at x = 3, the curve is getting steeper at a rate of 6." The four or five rules you memorize in a semester (power rule, product rule, quotient rule, chain rule) are really just the consequences of that one definition plus algebra.</p>
+
+        <p>The only rule that matters for machine learning is the <strong>chain rule</strong>: if <code>h(x) = f(g(x))</code>, then <code>h'(x) = f'(g(x)) · g'(x)</code>. In words: to differentiate a composition, differentiate the outer function with the inner one plugged in, times the derivative of the inner. Every neural network is a composition of simple functions, one per layer. Training one means computing <code>dLoss/dWeight</code> for every weight, which means applying the chain rule thousands of times. That's what <span class="term" data-label="Backpropagation" data-def="The algorithm that efficiently computes gradients of a neural network's loss with respect to every weight, by running the chain rule backward through the layers.">backpropagation</span> is — the chain rule, bookkept cleverly.</p>
+
+        <h3 id="integral">Integrals — accumulated totals</h3>
+        <p>The other half of calculus is the opposite move: given a rate of change, recover the total. If you know your speed at every instant, you can recover the total distance travelled by "adding up" speed times tiny time slices. That's an integral, written with an elongated S (which Leibniz chose because it was the initial of <em>summa</em>). Written <code>∫ f(x) dx</code> and read "the integral of f of x, dx."</p>
+
+        <p>The <strong>Fundamental Theorem of Calculus</strong> is the payoff: differentiation and integration are inverses of each other, the way addition and subtraction are inverses. If you can find an antiderivative — a function whose derivative is <code>f</code> — you can evaluate <code>∫ₐᵇ f(x) dx</code> exactly by subtracting the antiderivative's values at the endpoints. Half of calculus class is learning tricks to find antiderivatives (substitution, integration by parts, partial fractions). The good news is that numerical methods have mostly made those tricks obsolete for working programmers. See <a href="#numerical">Numerical Analysis</a> for how a computer actually does integrals.</p>
+
+        <h3 id="taylor">Taylor series — polynomial approximation of everything</h3>
+        <p>The last big idea in single-variable calculus: near a point, almost any smooth function looks like a polynomial. Specifically, <code>f(x) ≈ f(a) + f'(a)(x−a) + ½ f''(a)(x−a)² + …</code>. This is the <span class="term" data-label="Taylor series" data-def="An expansion that approximates a smooth function near a point as an infinite polynomial built from the function's derivatives at that point.">Taylor series</span>, and it's the reason why calculators can compute <code>sin(x)</code>, why <code>e^x</code> has a nice definition, and why every optimization method you'll meet — Newton's method, quasi-Newton, Gauss-Newton — starts by replacing a complicated function with its first- or second-order Taylor approximation and solving that instead.</p>
+
+        <div class="callout good">
+          <div class="label">Rule of thumb</div>
+          <p style="margin:6px 0">If you can explain why <code>d/dx[sin(x²)] = cos(x²) · 2x</code> out loud using the words "outer function" and "inner function," you understand the chain rule well enough to read any ML paper written this decade.</p>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- INTERACTIVE DERIVATIVE DEMO -->
+        <!-- ============================================================ -->
+        <div class="demo" id="demo-deriv">
+          <div class="demo-header">
+            <span class="title">▸ Interactive derivative — drag the tangent</span>
+            <span class="step-indicator" id="deriv-progress">x = 1.00</span>
+          </div>
+          <div class="demo-body">
+            <div class="demo-visual">
+              <svg viewBox="0 0 720 320" width="720" height="320" id="deriv-svg">
+                <rect x="0" y="0" width="720" height="320" fill="#0a0d12"/>
+                <g id="deriv-grid"></g>
+                <line x1="40" y1="160" x2="700" y2="160" stroke="#384050" stroke-width="1"/>
+                <line x1="360" y1="20" x2="360" y2="300" stroke="#384050" stroke-width="1"/>
+                <path id="deriv-curve" d="" stroke="#22d3ee" stroke-width="2" fill="none"/>
+                <line id="deriv-tangent" x1="0" y1="0" x2="0" y2="0" stroke="#f472b6" stroke-width="2"/>
+                <circle id="deriv-point" cx="360" cy="160" r="6" fill="#f472b6" stroke="#0a0d12" stroke-width="2"/>
+                <text x="360" y="18" fill="#8a93a6" text-anchor="middle" font-family="monospace" font-size="10">f(x)</text>
+                <text x="700" y="175" fill="#8a93a6" text-anchor="end" font-family="monospace" font-size="10">x</text>
+              </svg>
+            </div>
+            <div class="demo-panel">
+              <div class="demo-params">
+                <h5>Function &amp; point</h5>
+                <div class="param-row">
+                  <label>x</label><input type="number" id="deriv-x" value="1.0" step="0.1" min="-3" max="3">
+                </div>
+                <div style="font-size:10px;color:var(--text-dim);margin:4px 0 6px;">Pick a function to differentiate:</div>
+                <span class="preset" onclick="loadDerivPreset('square')">f(x) = x²</span>
+                <span class="preset" onclick="loadDerivPreset('cube')">f(x) = x³</span>
+                <span class="preset" onclick="loadDerivPreset('sin')">f(x) = sin(x)</span>
+                <span class="preset" onclick="loadDerivPreset('exp')">f(x) = eˣ</span>
+              </div>
+              <div class="demo-calc" id="deriv-calc">
+                <div class="step-title">Ready</div>
+                <div class="math">Press <strong>Step →</strong> to walk through the derivative's definition at this point.</div>
+                <div class="note">Tip: change x, or pick another function with a preset.</div>
+              </div>
+            </div>
+          </div>
+          <div class="demo-controls">
+            <button class="btn" onclick="resetDeriv()">↺ Reset</button>
+            <button class="btn" onclick="prevDeriv()">← Back</button>
+            <button class="btn primary" onclick="stepDeriv()">Step →</button>
+            <button class="btn" onclick="runAllDeriv()">Run All</button>
+          </div>
+        </div>
+
+        <p>A sibling topic that belongs here but pays off later: <strong>limits of sequences and series</strong>. Knowing when an infinite sum converges matters any time you see an algorithm that iterates "until close enough." See <a href="#numerical">Numerical Analysis</a> for the practical side.</p>
+
+        <p><a href="calculus.html" class="deep-dive">Deep Dive — full lesson with limits, proofs, integration tricks, and Taylor series →</a></p>
+      </section>
+
+      <!-- ============================================================ -->
+      <section id="multivar">
+        <h2>Multivariable Calculus <span class="era">// the ML gradient</span></h2>
+        <p class="lede">Once a function has more than one input, "slope" splits into a whole vector of slopes — one per input. That vector is the gradient, and it is the single most-used object in machine learning.</p>
+
+        <p>A machine learning model is a function with a huge number of inputs: every weight is an input, and the output is a single number (the loss). For GPT-4 that's roughly a trillion inputs and one output. Single-variable calculus handles one-in, one-out. For a trillion-in, one-out you need multivariable calculus — which mostly means learning the right vocabulary for "derivatives in many directions at once."</p>
+
+        <h3 id="gradient">Partial derivatives and the gradient</h3>
+        <p>The simplest generalization is the <span class="term" data-label="Partial derivative" data-def="The derivative of a multivariable function with respect to one input, holding all others fixed.">partial derivative</span>, written <code>∂f/∂xᵢ</code>. You freeze every input except the i-th one and take a normal derivative. Do this for every input and you get a vector of partials called the <strong>gradient</strong>, written <code>∇f</code> (read "grad f"). The gradient has a beautiful geometric meaning: at any point, it points in the direction of steepest ascent of the function, and its length is how fast the function is climbing in that direction. This is the single fact behind <a href="../topics/gradient-descent.html" class="deep-dive">Gradient Descent →</a> — to minimize a loss, step in the direction opposite the gradient.</p>
+
+        <div class="math-display">∇f(x) = [ ∂f/∂x₁ , ∂f/∂x₂ , … , ∂f/∂xₙ ]</div>
+        <div class="math-glossary">
+          <p class="mg-title">The gradient vector</p>
+          <dl>
+            <dt>∇f</dt><dd>"Grad f." The gradient of the function <code>f</code> at the point <code>x</code>. It's a vector with the same shape as the input.</dd>
+            <dt>∂f/∂xᵢ</dt><dd>Partial derivative of <code>f</code> with respect to the i-th input. "If I nudge only <code>xᵢ</code> up by a tiny amount, how fast does <code>f</code> change?"</dd>
+            <dt>x</dt><dd>The point at which we're evaluating the gradient — itself a vector of n numbers.</dd>
+            <dt>n</dt><dd>The number of inputs. For a neural network, this is the total number of trainable weights.</dd>
+          </dl>
+          <p class="mg-analogy"><strong>Analogy.</strong> You're standing on a hill in fog. Kneel down and feel the slope with your hand in every direction. The compass bearing where the slope is steepest uphill is the gradient's direction. The steepness itself is the gradient's length. To minimize, walk the opposite way.</p>
+        </div>
+
+        <h3 id="jacobian">Jacobians — many inputs AND many outputs</h3>
+        <p>If the output is also a vector (say, a layer in a neural net maps a 768-dim vector to another 768-dim vector), then "derivative" becomes a whole matrix — the <span class="term" data-label="Jacobian" data-def="The matrix of all first-order partial derivatives of a vector-valued function. Generalizes 'slope' to the case where both input and output are vectors.">Jacobian</span>, written <code>J</code>. Entry <code>J[i, j]</code> is <code>∂(output i)/∂(input j)</code>. The Jacobian is the linear map that best approximates the function near a point, and the <strong>multivariable chain rule</strong> — "the Jacobian of a composition is the product of the Jacobians" — is literally how backprop propagates gradients backward through a network. Each layer contributes a Jacobian; the final gradient is the product of all of them.</p>
+
+        <h3 id="hessian">Hessians — curvature</h3>
+        <p>Take the derivative of the gradient and you get the <span class="term" data-label="Hessian" data-def="The matrix of second partial derivatives of a scalar function. Describes curvature — how the gradient itself changes as you move.">Hessian</span>, a square matrix of second partial derivatives. It describes curvature: whether you're in a bowl (positive definite Hessian, local minimum), on a ridge (indefinite, saddle), or on a dome (negative definite, maximum). Second-order optimization methods like Newton's method use the Hessian directly. First-order methods like plain SGD don't, which is why they sometimes get stuck on saddle points that a second-order method would walk straight off of.</p>
+
+        <p>You do not need to compute a trillion-by-trillion Hessian by hand. You need to know what one is so you can read a paper that says "the loss landscape has poor conditioning near the minimum" without flinching.</p>
+
+        <!-- ============================================================ -->
+        <!-- INTERACTIVE 2D GRADIENT DEMO -->
+        <!-- ============================================================ -->
+        <div class="demo" id="demo-grad2d">
+          <div class="demo-header">
+            <span class="title">▸ 2-D gradient field — click anywhere to see the gradient</span>
+            <span class="step-indicator" id="grad2d-progress">click to start</span>
+          </div>
+          <div class="demo-body">
+            <div class="demo-visual">
+              <svg viewBox="0 0 720 360" width="720" height="360" id="grad2d-svg">
+                <rect x="0" y="0" width="720" height="360" fill="#0a0d12"/>
+                <g id="grad2d-contours"></g>
+                <g id="grad2d-arrows"></g>
+                <circle id="grad2d-point" cx="360" cy="180" r="6" fill="#f472b6" stroke="#0a0d12" stroke-width="2"/>
+                <line id="grad2d-grad" x1="360" y1="180" x2="360" y2="180" stroke="#f472b6" stroke-width="3" marker-end="url(#grad2d-arrow)"/>
+                <defs>
+                  <marker id="grad2d-arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+                    <path d="M0,0 L0,6 L9,3 z" fill="#f472b6"/>
+                  </marker>
+                </defs>
+              </svg>
+            </div>
+            <div class="demo-panel">
+              <div class="demo-params">
+                <h5>Function</h5>
+                <div style="font-size:10px;color:var(--text-dim);margin:4px 0 6px;">Pick a surface:</div>
+                <span class="preset" onclick="loadGrad2dPreset('bowl')">x² + y²</span>
+                <span class="preset" onclick="loadGrad2dPreset('saddle')">x² − y²</span>
+                <span class="preset" onclick="loadGrad2dPreset('rosen')">Rosenbrock</span>
+                <span class="preset" onclick="loadGrad2dPreset('sine')">sin(x)·cos(y)</span>
+                <div class="param-row">
+                  <label>x</label><input type="number" id="grad2d-x" value="1.5" step="0.1">
+                  <label>y</label><input type="number" id="grad2d-y" value="1.0" step="0.1">
+                </div>
+              </div>
+              <div class="demo-calc" id="grad2d-calc">
+                <div class="step-title">Ready</div>
+                <div class="math">Press <strong>Step →</strong> to descend one gradient-descent step, or edit (x, y) to jump.</div>
+                <div class="note">Arrows show the gradient direction at each sampled point. Pink line is the current gradient.</div>
+              </div>
+            </div>
+          </div>
+          <div class="demo-controls">
+            <button class="btn" onclick="resetGrad2d()">↺ Reset</button>
+            <button class="btn" onclick="prevGrad2d()">← Back</button>
+            <button class="btn primary" onclick="stepGrad2d()">Step →</button>
+            <button class="btn" onclick="runAllGrad2d()">Run All</button>
+          </div>
+        </div>
+
+        <p><a href="multivariable-calculus.html" class="deep-dive">Deep Dive — partials, gradients, Jacobians, Hessians, Lagrange multipliers →</a>
+           &nbsp;·&nbsp;
+           <a href="../topics/backpropagation.html" class="deep-dive">Backpropagation →</a></p>
+      </section>
+
+      <!-- ============================================================ -->
+      <section id="linalg">
+        <h2>Linear Algebra <span class="era">// the language of ML</span></h2>
+        <p class="lede">Every modern ML paper is written in linear algebra. Get comfortable reading it and the notation stops being a wall.</p>
+
+        <p>Linear algebra begins from a simple observation: most of the operations you want to do on lists of numbers — rotations, projections, weighted sums, changes of coordinates — can be written using two primitive operations (adding vectors and multiplying by a scalar) combined into a third (multiplying by a matrix). Once you accept that framing, every "transformer attention" diagram, every "embedding lookup," every "projection into residual stream" becomes a well-defined piece of linear algebra instead of a vague metaphor.</p>
+
+        <h3 id="vector">Vectors — lists with geometry</h3>
+        <p>A <span class="term" data-label="Vector" data-def="An ordered list of numbers. Geometrically, an arrow from the origin to a point in space.">vector</span> is an ordered list of numbers. It represents a point in n-dimensional space, or equivalently an arrow from the origin to that point. The two things you can do to vectors are: add them (tip-to-tail), and scale them (stretch or shrink). Vectors of the same length live in a <strong>vector space</strong>, and everything else in linear algebra is consequences of those two operations.</p>
+
+        <p>The most important operation on two vectors is the <strong>dot product</strong>: multiply corresponding entries and sum. The dot product has a geometric interpretation that is secretly the whole reason linear algebra is useful in ML: <code>a · b = ∥a∥ ∥b∥ cos(θ)</code>, where θ is the angle between the two vectors. If two vectors point in the same direction, their dot product is big and positive. If they point perpendicular, it's zero. If they point opposite, it's big and negative. Every attention score, every similarity metric, every "how much does this query match this key" is a dot product.</p>
+
+        <h3 id="matrix">Matrices — functions in disguise</h3>
+        <p>A <span class="term" data-label="Matrix" data-def="A rectangular array of numbers. Represents a linear function from one vector space to another.">matrix</span> is a grid of numbers, but the useful thing about it is that it represents a <strong>linear function</strong> from one vector space to another. The function takes a vector in, multiplies, and spits out another vector. Matrix multiplication is just function composition: if <code>M</code> turns a vector into another vector, and <code>N</code> does the same, then <code>NM</code> is "first do M, then do N." This is why matrix multiplication is not commutative (first hat, then pants ≠ first pants, then hat), and why the shapes have to line up.</p>
+
+        <p>Every layer of a neural network is, before the activation function, a matrix multiplication. The weights of the layer are the matrix. The activations going in are the input vector. The pre-activations coming out are the output vector. A modern transformer is, at the level of linear algebra, "a few dozen of these stacked, with some nonlinearities and attention sprinkled in between."</p>
+
+        <h3 id="eig">Eigenvalues — directions the transform leaves alone</h3>
+        <p>Most vectors, when you hit them with a matrix, get rotated and rescaled into some new direction. But some special vectors get only rescaled — they come out pointing the same way, just stretched or shrunk. Those are <span class="term" data-label="Eigenvectors" data-def="Special input vectors that a matrix only stretches or shrinks, without rotating. The stretch factor is the eigenvalue.">eigenvectors</span>, and the scale factor is the <strong>eigenvalue</strong>. "Eigen" is German for "own," as in "its own direction." If you can find a full set of eigenvectors, you can diagonalize the matrix and its iterated behavior becomes trivial to understand. PageRank is an eigenvector. The stationary distribution of a Markov chain is an eigenvector. The principal components of a dataset are eigenvectors of the covariance matrix. It keeps coming up.</p>
+
+        <h3 id="svd">SVD and PCA — the everything-decomposition</h3>
+        <p>The <strong>Singular Value Decomposition</strong> generalizes eigenvalues to non-square matrices and is the most powerful tool in all of applied linear algebra. Every matrix <code>M</code>, no matter how weird, factors as <code>M = U Σ V<sup>T</sup></code>, where U and V are rotation matrices and Σ is a diagonal matrix of <em>singular values</em> — non-negative numbers that measure how much M stretches each direction. Truncate Σ to the top k singular values and you get the best rank-k approximation of M, which is the mathematical engine inside PCA, latent semantic analysis, and every low-rank adaptation scheme (LoRA, for example). If you understand SVD, you understand compression, dimensionality reduction, and half of "solving <code>Ax = b</code> when A is badly conditioned."</p>
+
+        <!-- ============================================================ -->
+        <!-- INTERACTIVE 2x2 MATRIX DEMO -->
+        <!-- ============================================================ -->
+        <div class="demo" id="demo-mt2d">
+          <div class="demo-header">
+            <span class="title">▸ 2×2 matrix transform — watch the unit square move</span>
+            <span class="step-indicator" id="mt2d-progress">det = 1.00</span>
+          </div>
+          <div class="demo-body">
+            <div class="demo-visual">
+              <svg viewBox="0 0 720 360" width="720" height="360" id="mt2d-svg">
+                <rect x="0" y="0" width="720" height="360" fill="#0a0d12"/>
+                <g id="mt2d-grid"></g>
+                <line x1="40" y1="180" x2="700" y2="180" stroke="#384050" stroke-width="1"/>
+                <line x1="360" y1="20" x2="360" y2="340" stroke="#384050" stroke-width="1"/>
+                <polygon id="mt2d-square-before" points="" fill="rgba(34,211,238,0.08)" stroke="#22d3ee" stroke-width="1" stroke-dasharray="3,3"/>
+                <polygon id="mt2d-square-after" points="" fill="rgba(124,92,255,0.15)" stroke="#7c5cff" stroke-width="2"/>
+                <line id="mt2d-i-before" x1="360" y1="180" x2="420" y2="180" stroke="#22d3ee" stroke-width="1.5" stroke-dasharray="3,3"/>
+                <line id="mt2d-j-before" x1="360" y1="180" x2="360" y2="120" stroke="#22d3ee" stroke-width="1.5" stroke-dasharray="3,3"/>
+                <line id="mt2d-i-after" x1="360" y1="180" x2="420" y2="180" stroke="#f472b6" stroke-width="2" marker-end="url(#mt2d-ar)"/>
+                <line id="mt2d-j-after" x1="360" y1="180" x2="360" y2="120" stroke="#facc15" stroke-width="2" marker-end="url(#mt2d-aj)"/>
+                <defs>
+                  <marker id="mt2d-ar" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#f472b6"/></marker>
+                  <marker id="mt2d-aj" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#facc15"/></marker>
+                </defs>
+              </svg>
+            </div>
+            <div class="demo-panel">
+              <div class="demo-params">
+                <h5>Matrix M</h5>
+                <div class="param-row">
+                  <label>a</label><input type="number" id="mt2d-a" value="1" step="0.1">
+                  <label>b</label><input type="number" id="mt2d-b" value="0" step="0.1">
+                </div>
+                <div class="param-row">
+                  <label>c</label><input type="number" id="mt2d-c" value="0" step="0.1">
+                  <label>d</label><input type="number" id="mt2d-d" value="1" step="0.1">
+                </div>
+                <span class="preset" onclick="loadMt2dPreset('rotate')">Rotate 45°</span>
+                <span class="preset" onclick="loadMt2dPreset('scale')">Scale 2×</span>
+                <span class="preset" onclick="loadMt2dPreset('shear')">Shear</span>
+                <span class="preset" onclick="loadMt2dPreset('flip')">Reflect</span>
+              </div>
+              <div class="demo-calc" id="mt2d-calc">
+                <div class="step-title">Ready</div>
+                <div class="math">Edit the matrix entries or pick a preset. The dashed teal is the original unit square; solid violet is where M sends it.</div>
+                <div class="note">det(M) is the signed area ratio. Negative means M flipped orientation.</div>
+              </div>
+            </div>
+          </div>
+          <div class="demo-controls">
+            <button class="btn" onclick="resetMt2d()">↺ Reset</button>
+            <button class="btn" onclick="prevMt2d()">← Back</button>
+            <button class="btn primary" onclick="stepMt2d()">Step →</button>
+            <button class="btn" onclick="runAllMt2d()">Run All</button>
+          </div>
+        </div>
+
+        <p>Linear algebra is also the tool you'll reach for when you finally stop being afraid of the word "manifold" and start reading about <a href="../topics/embeddings.html" class="deep-dive">Embeddings →</a> and <a href="../topics/self-attention.html" class="deep-dive">Self-Attention →</a>.</p>
+
+        <p><a href="linear-algebra.html" class="deep-dive">Deep Dive — vectors, matrices, eigenvalues, SVD, PCA, full code →</a></p>
+      </section>
+
+      <!-- ============================================================ -->
+      <section id="probability">
+        <h2>Probability <span class="era">// from dice to Bayes</span></h2>
+        <p class="lede">Probability is how you do math on uncertainty. Skip it and every loss function, every generative model, and every discussion of model calibration will read like a foreign language.</p>
+
+        <p>Start with the simplest object: a <span class="term" data-label="Random variable" data-def="A number whose value comes from a random process. The weather, a coin flip, the output of a neural net on noisy input — all random variables.">random variable</span>, which is just "a number whose value depends on chance." A fair die roll is a random variable with values 1..6. A user's click-through is a random variable with values 0 or 1. A model's predicted logit for "cat" is a random variable because the input image might be noisy. Probability assigns weights to the possible values — the <span class="term" data-label="Distribution" data-def="The full specification of which values a random variable can take and with what probabilities.">distribution</span> — and everything else follows.</p>
+
+        <h3 id="rv">Random variables, distributions, expectation</h3>
+        <p>Distributions split into discrete (finitely many or countably many values) and continuous (a whole interval of values). Discrete ones you describe with a <strong>probability mass function</strong> that assigns a probability to each value. Continuous ones you describe with a <strong>probability density</strong>, which is <em>not</em> a probability — it's a number you integrate over a region to get a probability. This distinction trips everyone up on first meeting and is the reason <code>log p(x)</code> in a diffusion model paper can be negative: densities can be bigger than 1.</p>
+
+        <p>The most important summary of a distribution is its <span class="term" data-label="Expectation" data-def="The long-run average value of a random variable, weighted by its probability distribution. Written E[X].">expected value</span>, written <code>E[X]</code> — the average value you'd see if you drew from the distribution many times. The expectation is the probabilistic version of "center of mass," and most loss functions in ML are expectations of something.</p>
+
+        <h3 id="bayes">Bayes' theorem — updating belief</h3>
+        <p>The single most important formula in probability, written in one line: <code>P(A | B) = P(B | A) · P(A) / P(B)</code>. Read it out loud: the probability of A given that B happened is the probability of B given A, scaled by how likely A was to begin with, normalized by how likely B was overall. Bayes' theorem is how you flip a conditional probability. It's also the foundation of every spam filter, medical-test interpretation, and Bayesian neural network. Most people's intuition fails at Bayesian reasoning on the first try — the classic "a 99% accurate medical test comes back positive; what's the chance you actually have the disease?" is almost always answered incorrectly by people who have never seen the calculation.</p>
+
+        <div class="math-display">P(A | B) &nbsp; = &nbsp; P(B | A) · P(A) &nbsp; / &nbsp; P(B)</div>
+        <div class="math-glossary">
+          <p class="mg-title">Bayes' theorem</p>
+          <dl>
+            <dt>P(A | B)</dt><dd>The <em>posterior</em>. The probability of A after we've learned that B happened. This is usually what we want to know.</dd>
+            <dt>P(B | A)</dt><dd>The <em>likelihood</em>. If A is really the case, how likely was it that we'd have seen B?</dd>
+            <dt>P(A)</dt><dd>The <em>prior</em>. How likely we thought A was before we saw any evidence.</dd>
+            <dt>P(B)</dt><dd>The <em>evidence</em> or marginal. How likely B is overall, averaging over whether A is true or not. Often computed as P(B|A)P(A) + P(B|¬A)P(¬A).</dd>
+          </dl>
+          <p class="mg-analogy"><strong>Analogy.</strong> Imagine 10,000 people. One percent (100) have the disease. A test with 99% sensitivity and 99% specificity flags 99 of the sick and 99 of the healthy. If your test is positive, you're one of 198 people — and only 99 of them are sick. Your posterior is 50%, not 99%.</p>
+        </div>
+
+        <h3 id="entropy">Entropy, cross-entropy, KL</h3>
+        <p><strong>Entropy</strong>, <code>H(p) = −Σ p(x) log p(x)</code>, measures how uncertain a distribution is. A fair coin has maximum entropy (one bit). A loaded coin has less. <strong>Cross-entropy</strong> between two distributions — the actual loss function used to train every language model ever — measures how surprised you'd be if you used distribution q to encode samples that really came from p. <strong>KL divergence</strong>, <code>D_KL(p || q) = Σ p log(p/q)</code>, is cross-entropy minus entropy and measures "how far apart" two distributions are. It shows up in variational inference, in diffusion model losses, and in the RL objective PPO minimizes. All three are the same idea in different clothes.</p>
+
+        <!-- ============================================================ -->
+        <!-- INTERACTIVE BAYES DEMO -->
+        <!-- ============================================================ -->
+        <div class="demo" id="demo-bayes">
+          <div class="demo-header">
+            <span class="title">▸ Bayes updater — diagnostic test</span>
+            <span class="step-indicator" id="bayes-progress">P(sick | +) = ?</span>
+          </div>
+          <div class="demo-body">
+            <div class="demo-visual">
+              <svg viewBox="0 0 720 300" width="720" height="300" id="bayes-svg">
+                <rect x="0" y="0" width="720" height="300" fill="#0a0d12"/>
+                <text x="360" y="30" fill="#8a93a6" text-anchor="middle" font-family="monospace" font-size="12">Population of 10,000 people</text>
+                <g id="bayes-people"></g>
+                <g id="bayes-labels"></g>
+              </svg>
+            </div>
+            <div class="demo-panel">
+              <div class="demo-params">
+                <h5>Inputs</h5>
+                <div class="param-row">
+                  <label>P(sick)</label><input type="number" id="bayes-prior" value="0.01" step="0.01" min="0" max="1">
+                </div>
+                <div class="param-row">
+                  <label>P(+|sick)</label><input type="number" id="bayes-sens" value="0.99" step="0.01" min="0" max="1">
+                </div>
+                <div class="param-row">
+                  <label>P(+|well)</label><input type="number" id="bayes-fpr" value="0.01" step="0.01" min="0" max="1">
+                </div>
+                <span class="preset" onclick="loadBayesPreset('covid')">COVID-like</span>
+                <span class="preset" onclick="loadBayesPreset('rare')">Rare disease</span>
+                <span class="preset" onclick="loadBayesPreset('common')">Common disease</span>
+              </div>
+              <div class="demo-calc" id="bayes-calc">
+                <div class="step-title">Ready</div>
+                <div class="math">Press <strong>Step →</strong> to walk through the Bayes calculation one term at a time.</div>
+                <div class="note">Blue dots are sick, grey dots are well. After stepping you'll see who tested positive.</div>
+              </div>
+            </div>
+          </div>
+          <div class="demo-controls">
+            <button class="btn" onclick="resetBayes()">↺ Reset</button>
+            <button class="btn" onclick="prevBayes()">← Back</button>
+            <button class="btn primary" onclick="stepBayes()">Step →</button>
+            <button class="btn" onclick="runAllBayes()">Run All</button>
+          </div>
+        </div>
+
+        <p><a href="probability.html" class="deep-dive">Deep Dive — axioms, random variables, Bayes, all the distributions →</a>
+          &nbsp;·&nbsp;
+          <a href="../topics/diffusion.html" class="deep-dive">Diffusion Math →</a></p>
+      </section>
+
+      <!-- ============================================================ -->
+      <section id="statistics">
+        <h2>Statistics <span class="era">// from data to claims</span></h2>
+        <p class="lede">Probability asks "given this model, what data might we see?" Statistics asks the backwards question: "given this data, which model should we believe?"</p>
+
+        <p>Statistics is the art of turning a pile of observations into a defensible claim. There are two philosophical camps. The <strong>frequentist</strong> camp treats parameters as fixed unknown constants and asks questions like "over many repetitions of the experiment, how often would my procedure get the wrong answer?" The <strong>Bayesian</strong> camp treats parameters as random variables with priors and uses <a href="#bayes">Bayes' theorem</a> to update those priors given data. The two camps mostly agree on what to do when the data is large, and mostly disagree when it's small. Modern ML borrows tools from both.</p>
+
+        <h3 id="estimation">Estimation and MLE</h3>
+        <p>Suppose you have a bag of coin flips and you want to estimate the coin's bias. The <span class="term" data-label="Maximum Likelihood Estimation" data-def="Pick the parameter value that makes the observed data most probable under your model. The default training objective for most ML models.">maximum likelihood estimator</span> (MLE) picks the bias value that makes the observed flips most probable. For a coin, the MLE is just "fraction of heads," which is a relief. But the recipe generalizes: write down the likelihood of your data as a function of the parameters, differentiate with respect to the parameters, set to zero, solve. Nearly every loss function in ML is, under the hood, a negative log likelihood. Training a model by gradient descent <em>is</em> running MLE, one tiny step at a time.</p>
+
+        <h3 id="hypothesis">Hypothesis testing and confidence</h3>
+        <p>A <strong>hypothesis test</strong> asks: "is the pattern I see in the data real, or did I just get unlucky?" The classical recipe — pick a null, compute a p-value, compare to 0.05 — is widely misused but it exists for a reason: it's a disciplined way to say "I can't rule out chance." <strong>Confidence intervals</strong> are the same idea rotated: instead of yes/no, they give you a range of parameter values the data is consistent with. If your model's accuracy is 72% ± 5%, that interval is a confidence interval, and it tells you whether to trust that 72%.</p>
+
+        <h3 id="regression">Linear regression and its children</h3>
+        <p><strong>Linear regression</strong> — fitting a straight line to data — is the oldest statistical model and still one of the most useful. It has a closed-form solution that falls out of linear algebra (<code>(X<sup>T</sup>X)⁻¹ X<sup>T</sup> y</code>, the "normal equations"), and it is the mathematical ancestor of almost every ML model. Logistic regression adds a sigmoid to the output. A neural network is a stack of nonlinear regressions. XGBoost is hundreds of tiny regressions ensembled. If you understand linear regression, bias-variance, and the geometry of "projecting onto the column space of X," you have a real foothold.</p>
+
+        <!-- ============================================================ -->
+        <!-- INTERACTIVE MLE DEMO -->
+        <!-- ============================================================ -->
+        <div class="demo" id="demo-mle">
+          <div class="demo-header">
+            <span class="title">▸ Gaussian MLE — fit μ and σ to 8 samples</span>
+            <span class="step-indicator" id="mle-progress">log L = ?</span>
+          </div>
+          <div class="demo-body">
+            <div class="demo-visual">
+              <svg viewBox="0 0 720 320" width="720" height="320" id="mle-svg">
+                <rect x="0" y="0" width="720" height="320" fill="#0a0d12"/>
+                <g id="mle-grid"></g>
+                <line x1="40" y1="260" x2="700" y2="260" stroke="#384050" stroke-width="1"/>
+                <path id="mle-curve" d="" stroke="#22d3ee" stroke-width="2" fill="none"/>
+                <g id="mle-samples"></g>
+                <g id="mle-likelihoods"></g>
+              </svg>
+            </div>
+            <div class="demo-panel">
+              <div class="demo-params">
+                <h5>Gaussian parameters</h5>
+                <div class="param-row">
+                  <label>μ</label><input type="number" id="mle-mu" value="5" step="0.1">
+                </div>
+                <div class="param-row">
+                  <label>σ</label><input type="number" id="mle-sigma" value="2" step="0.1" min="0.1">
+                </div>
+                <span class="preset" onclick="loadMlePreset('best')">Jump to MLE</span>
+                <span class="preset" onclick="loadMlePreset('off')">Bad fit</span>
+              </div>
+              <div class="demo-calc" id="mle-calc">
+                <div class="step-title">Ready</div>
+                <div class="math">Samples: fixed list of 8 numbers. Adjust μ and σ to maximize the log-likelihood.</div>
+                <div class="note">Tall vertical bars = high density at each sample. Peak density under the samples = MLE.</div>
+              </div>
+            </div>
+          </div>
+          <div class="demo-controls">
+            <button class="btn" onclick="resetMle()">↺ Reset</button>
+            <button class="btn" onclick="prevMle()">← Back</button>
+            <button class="btn primary" onclick="stepMle()">Step →</button>
+            <button class="btn" onclick="runAllMle()">Run All</button>
+          </div>
+        </div>
+
+        <p><a href="statistics.html" class="deep-dive">Deep Dive — sampling, MLE, hypothesis tests, regression, Bayesian vs frequentist →</a></p>
+      </section>
+
+      <!-- ============================================================ -->
+      <section id="discrete">
+        <h2>Discrete Mathematics <span class="era">// the grammar of CS</span></h2>
+        <p class="lede">Sets, logic, proofs, counting, graphs. This is the subject that teaches you to <em>reason</em> about algorithms, not just use them.</p>
+
+        <p>Continuous math — calculus, probability, linear algebra — is about quantities that can slide smoothly. Discrete math is about things you can count: sets, permutations, logical statements, graph vertices. It's where computer science gets its backbone. Every proof of algorithm correctness, every induction argument, every complexity analysis, and every crypto protocol lives in discrete-math territory.</p>
+
+        <h3 id="logic">Logic and proof by induction</h3>
+        <p>Start with <strong>propositional logic</strong> — AND, OR, NOT, IMPLIES — and the observation that "truth tables" mechanically verify whether a compound statement is a tautology. Add quantifiers (∀ "for all" and ∃ "there exists") and you have <strong>predicate logic</strong>, the language every math paper is secretly written in. The most useful proof technique is <span class="term" data-label="Induction" data-def="Prove a base case, then prove that if P(n) holds, so does P(n+1). Together those give you P for all n. The recursive version of 'do it once, do it forever.'">mathematical induction</span>: prove a statement for n = 0 or 1, then prove that "if it holds for n, it holds for n+1." Bingo, it holds forever. Induction is how you prove that quicksort sorts, that a recursive function terminates, and that every tree with n nodes has n−1 edges.</p>
+
+        <h3 id="combinatorics">Combinatorics — counting without listing</h3>
+        <p><strong>Combinatorics</strong> is the art of counting configurations without enumerating them. The core formulas — permutations <code>n!</code>, combinations <code>C(n, k) = n! / (k!(n−k)!)</code>, the inclusion-exclusion principle, pigeonhole — look like children's math, but they underlie every probability calculation, every hash-collision analysis, and every "how many ways can we partition..." question. If you're calibrating a load-balancer or computing an expected number of collisions, you're doing combinatorics whether you call it that or not.</p>
+
+        <h3 id="graphs">Graph theory — dots and lines</h3>
+        <p>A <span class="term" data-label="Graph" data-def="A set of vertices (nodes) with a set of edges (connections between them). The abstract structure underneath social networks, road maps, dependency graphs, and more.">graph</span> is a set of vertices connected by edges. Graphs are how you model social networks, road maps, dependency trees, circuit diagrams, Markov chains, web links, and neural networks. The algorithms you meet first — BFS, DFS, shortest path, minimum spanning tree, topological sort — are the bread and butter of CS, and their correctness proofs use exactly the induction and counting arguments from above. Graph theory also sneaks into ML: attention heads define an implicit graph over tokens, graph neural networks are a thing, and the connectivity of a neural network's computation graph determines how backprop proceeds.</p>
+
+        <p>Finally there's a thin slice of <strong>number theory</strong> — modular arithmetic, primes, Fermat's little theorem, the extended Euclidean algorithm — that was niche until public-key cryptography made it essential. If you ever need to understand why RSA works, you need number theory.</p>
+
+        <!-- ============================================================ -->
+        <!-- INTERACTIVE BFS DEMO -->
+        <!-- ============================================================ -->
+        <div class="demo" id="demo-bfs">
+          <div class="demo-header">
+            <span class="title">▸ BFS vs DFS — step through a small graph</span>
+            <span class="step-indicator" id="bfs-progress">Step 0 / 6</span>
+          </div>
+          <div class="demo-body">
+            <div class="demo-visual">
+              <svg viewBox="0 0 720 300" width="720" height="300" id="bfs-svg">
+                <rect x="0" y="0" width="720" height="300" fill="#0a0d12"/>
+                <g id="bfs-edges"></g>
+                <g id="bfs-nodes"></g>
+              </svg>
+            </div>
+            <div class="demo-panel">
+              <div class="demo-params">
+                <h5>Traversal</h5>
+                <span class="preset" onclick="setBfsMode('bfs')">BFS</span>
+                <span class="preset" onclick="setBfsMode('dfs')">DFS</span>
+                <div style="font-size:10px;color:var(--text-dim);margin-top:8px;">Start node: A. Watch the frontier (blue) and visited (grey) sets evolve.</div>
+              </div>
+              <div class="demo-calc" id="bfs-calc">
+                <div class="step-title">Ready</div>
+                <div class="math">Press <strong>Step →</strong> to visit the next node. Press Run All to watch the whole traversal.</div>
+                <div class="note">Queue (BFS) or stack (DFS) shown at the bottom of the graph.</div>
+              </div>
+            </div>
+          </div>
+          <div class="demo-controls">
+            <button class="btn" onclick="resetBfs()">↺ Reset</button>
+            <button class="btn" onclick="prevBfs()">← Back</button>
+            <button class="btn primary" onclick="stepBfs()">Step →</button>
+            <button class="btn" onclick="runAllBfs()">Run All</button>
+          </div>
+        </div>
+
+        <p><a href="discrete-math.html" class="deep-dive">Deep Dive — sets, logic, proofs, combinatorics, graphs, number theory →</a>
+          &nbsp;·&nbsp;
+          <a href="../cs/algorithms.html" class="deep-dive">CS: Algorithms →</a></p>
+      </section>
+
+      <!-- ============================================================ -->
+      <section id="numerical">
+        <h2>Numerical Analysis <span class="era">// when exactness breaks</span></h2>
+        <p class="lede">Real computers don't do real math. They do floating-point math, which is close enough most of the time — until it isn't.</p>
+
+        <p>Every other subject on this page assumes you can compute exact real numbers. Real computers can't. They use <span class="term" data-label="Floating point" data-def="A format for storing real numbers in a fixed number of bits: a sign, a mantissa, and an exponent. Approximate, not exact. The IEEE 754 standard defines the details.">floating-point</span> numbers, which store a sign, a mantissa, and an exponent. The result is a finite approximation to the reals that is extremely good most of the time and catastrophically wrong some of the time. Numerical analysis is the subject that teaches you which is which.</p>
+
+        <h3 id="float">Floating point and catastrophic cancellation</h3>
+        <p>A 64-bit <code>double</code> gives you about 15–16 decimal digits of precision. That sounds like a lot, but two disasters are waiting. First, <strong>catastrophic cancellation</strong>: if you subtract two numbers that are almost equal, nearly all the significant digits cancel and you're left with garbage. The classic example is computing <code>sin(x) − sin(x + ε)</code> directly versus using a trig identity — the identity version gives 10 digits of precision, the direct version gives 0. Second, <strong>overflow and underflow</strong>: multiply too many small probabilities together and you get zero; add too many big logits and you get <code>inf</code>. Both are why ML libraries compute <code>log_softmax</code> with a stabilization trick and why losses in mixed precision sometimes NaN out of nowhere.</p>
+
+        <h3 id="newton">Iterative solvers and Newton's method</h3>
+        <p>If you can't solve an equation exactly, you solve it approximately by iteration. <strong>Newton's method</strong> is the cleanest example: to find a root of <code>f(x) = 0</code>, start with a guess <code>x₀</code>, pretend <code>f</code> is linear (use its tangent line — see <a href="#deriv">derivatives</a>), solve the linear approximation exactly, and call that your next guess. Repeat. When it works, Newton's method converges <em>quadratically</em> — the number of correct digits doubles each step. When it doesn't, it diverges wildly. Knowing the difference is what "numerical" in "numerical analysis" really means.</p>
+
+        <h3 id="quadrature">Quadrature and conditioning</h3>
+        <p><strong>Quadrature</strong> is the numerical side of integration: approximate <code>∫ f(x) dx</code> by evaluating f at a few cleverly-chosen points and summing with weights. The trapezoid rule and Simpson's rule are the names you'll see first; Gaussian quadrature is the fancy one that nails the answer to full precision with a handful of evaluations. <strong>Conditioning</strong>, finally, is a measure of how sensitive a problem is to small input errors. A well-conditioned matrix can be inverted reliably; an ill-conditioned one will amplify the tiniest floating-point error into a useless answer. Every "why is my training unstable" story eventually involves conditioning.</p>
+
+        <!-- ============================================================ -->
+        <!-- INTERACTIVE NEWTON'S METHOD DEMO -->
+        <!-- ============================================================ -->
+        <div class="demo" id="demo-newton">
+          <div class="demo-header">
+            <span class="title">▸ Newton's method — computing √a</span>
+            <span class="step-indicator" id="newton-progress">iter 0 · x = ?</span>
+          </div>
+          <div class="demo-body">
+            <div class="demo-visual">
+              <svg viewBox="0 0 720 320" width="720" height="320" id="newton-svg">
+                <rect x="0" y="0" width="720" height="320" fill="#0a0d12"/>
+                <g id="newton-grid"></g>
+                <line x1="40" y1="260" x2="700" y2="260" stroke="#384050" stroke-width="1"/>
+                <line x1="80" y1="20" x2="80" y2="300" stroke="#384050" stroke-width="1"/>
+                <path id="newton-curve" d="" stroke="#22d3ee" stroke-width="2" fill="none"/>
+                <line id="newton-axis-root" x1="0" y1="0" x2="0" y2="0" stroke="#facc15" stroke-width="1" stroke-dasharray="3,3"/>
+                <g id="newton-tangents"></g>
+                <g id="newton-points"></g>
+              </svg>
+            </div>
+            <div class="demo-panel">
+              <div class="demo-params">
+                <h5>Find √a via f(x)=x²−a</h5>
+                <div class="param-row">
+                  <label>a</label><input type="number" id="newton-a" value="2" step="0.5" min="0.1">
+                </div>
+                <div class="param-row">
+                  <label>x₀</label><input type="number" id="newton-x0" value="3" step="0.5">
+                </div>
+                <span class="preset" onclick="loadNewtonPreset('sqrt2')">√2 from 3</span>
+                <span class="preset" onclick="loadNewtonPreset('sqrt9')">√9 from 4</span>
+                <span class="preset" onclick="loadNewtonPreset('hard')">bad start</span>
+              </div>
+              <div class="demo-calc" id="newton-calc">
+                <div class="step-title">Ready</div>
+                <div class="math">xₙ₊₁ = xₙ − f(xₙ) / f'(xₙ) &nbsp; = &nbsp; xₙ − (xₙ² − a) / (2xₙ) &nbsp; = &nbsp; ½ ( xₙ + a / xₙ )</div>
+                <div class="note">That last form is the ancient "Babylonian method" for square roots — Newton's method rediscovered it 2000 years later.</div>
+              </div>
+            </div>
+          </div>
+          <div class="demo-controls">
+            <button class="btn" onclick="resetNewton()">↺ Reset</button>
+            <button class="btn" onclick="prevNewton()">← Back</button>
+            <button class="btn primary" onclick="stepNewton()">Step →</button>
+            <button class="btn" onclick="runAllNewton()">Run All</button>
+          </div>
+        </div>
+
+        <div class="callout warn">
+          <div class="label">Trap</div>
+          <p style="margin:6px 0">Never test floating-point numbers for equality. <code>a == b</code> is a bug waiting to fire. Use <code>|a − b| &lt; ε</code> with a tolerance appropriate to your scale. This is the single most common numerical mistake in production code.</p>
+        </div>
+
+        <p><a href="numerical-analysis.html" class="deep-dive">Deep Dive — floating point, error analysis, root-finding, quadrature, ODEs →</a></p>
+      </section>
+
+      <!-- ============================================================ -->
+      <section id="outro">
+        <h2>Where to go next <span class="era">// exits</span></h2>
+        <p>If you read this page top to bottom, you now have a working map of the math under modern AI, ML, and CS. Each subject has a deep-dive page waiting, each with worked examples, proofs, and code. From there the natural next moves are:</p>
+        <ul class="clean">
+          <li><strong>Into AI/ML.</strong> <a href="../ai-ml.html">The AI/ML landscape</a> — the track that this math supports. Start with <a href="../topics/backpropagation.html" class="deep-dive">Backpropagation →</a> if you want to see the calculus pay off.</li>
+          <li><strong>Into CS.</strong> <a href="../cs/index.html">The CS track</a> — algorithms, complexity, optimization. <a href="../cs/algorithms.html" class="deep-dive">CS: Algorithms →</a> builds directly on the <a href="#discrete">discrete math</a> section above.</li>
+          <li><strong>Sideways into a specific subject.</strong> Pick the deep-dive link at the end of any section and spend an hour on it. Come back and tackle another when it's settled.</li>
+        </ul>
+        <p>Math rewards patience. Nothing on this page has to click on the first read. The goal is that when you meet these words in the wild, they no longer look like a foreign language.</p>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<script>
+// ============================================================
+// MOBILE MENU
+// ============================================================
+const mobileToggle = document.getElementById('mobile-menu-toggle');
+const sidebarEl = document.querySelector('aside.sidebar');
+const sidebarBackdrop = document.getElementById('sidebar-backdrop');
+function closeMobileMenu() {
+  sidebarEl.classList.remove('open');
+  sidebarBackdrop.classList.remove('show');
+  mobileToggle.textContent = '☰';
+}
+function openMobileMenu() {
+  sidebarEl.classList.add('open');
+  sidebarBackdrop.classList.add('show');
+  mobileToggle.textContent = '✕';
+}
+mobileToggle.addEventListener('click', () => {
+  if (sidebarEl.classList.contains('open')) closeMobileMenu();
+  else openMobileMenu();
+});
+sidebarBackdrop.addEventListener('click', closeMobileMenu);
+document.querySelectorAll('aside.sidebar nav a').forEach(a => {
+  a.addEventListener('click', () => {
+    if (window.innerWidth <= 900) closeMobileMenu();
+  });
+});
+
+// ============================================================
+// TOOLTIPS
+// ============================================================
+const tooltip = document.getElementById('tooltip');
+document.addEventListener('mouseover', (e) => {
+  const t = e.target.closest('.term');
+  if (!t) return;
+  const def = t.getAttribute('data-def');
+  const label = t.getAttribute('data-label') || 'Definition';
+  if (!def) return;
+  tooltip.innerHTML = `<div style="font-family: var(--mono); font-size: 10px; color: var(--accent); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px;">${label}</div>${def}`;
+  tooltip.classList.add('show');
+});
+document.addEventListener('mousemove', (e) => {
+  if (!tooltip.classList.contains('show')) return;
+  let x = e.clientX + 16, y = e.clientY + 16;
+  const tw = tooltip.offsetWidth, th = tooltip.offsetHeight;
+  if (x + tw > window.innerWidth - 10) x = e.clientX - tw - 16;
+  if (y + th > window.innerHeight - 10) y = e.clientY - th - 16;
+  tooltip.style.left = x + 'px';
+  tooltip.style.top = y + 'px';
+});
+document.addEventListener('mouseout', (e) => {
+  if (e.target.closest && e.target.closest('.term')) tooltip.classList.remove('show');
+});
+
+// ============================================================
+// COLLAPSIBLE SIDEBAR + SCROLL SPY
+// ============================================================
+const sections = document.querySelectorAll('main section[id]');
+const navLinks = document.querySelectorAll('aside nav a');
+const catGroups = document.querySelectorAll('.cat-group');
+const catToggles = document.querySelectorAll('.cat-toggle');
+
+catToggles.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const expanded = btn.getAttribute('aria-expanded') === 'true';
+    btn.setAttribute('aria-expanded', expanded ? 'false' : 'true');
+    try {
+      const group = btn.closest('.cat-group')?.dataset.group;
+      if (group) {
+        const key = 'sidenav-math:' + group;
+        localStorage.setItem(key, expanded ? 'closed' : 'open');
+      }
+    } catch (e) { /* ignore */ }
+  });
+});
+
+catGroups.forEach(group => {
+  try {
+    const key = 'sidenav-math:' + group.dataset.group;
+    const saved = localStorage.getItem(key);
+    if (saved === 'open' || saved === 'closed') {
+      const btn = group.querySelector('.cat-toggle');
+      if (btn) btn.setAttribute('aria-expanded', saved === 'open' ? 'true' : 'false');
+    }
+  } catch (e) { /* ignore */ }
+});
+
+let lastActiveGroup = null;
+function updateActiveNav() {
+  let active = null;
+  sections.forEach(sec => {
+    const rect = sec.getBoundingClientRect();
+    if (rect.top < 240) active = sec.id;
+  });
+  navLinks.forEach(a => {
+    const href = a.getAttribute('href');
+    a.classList.toggle('active', href === '#' + active);
+  });
+  if (active) {
+    const activeLink = document.querySelector('aside nav a.active');
+    const activeGroup = activeLink ? activeLink.closest('.cat-group') : null;
+    catGroups.forEach(g => g.classList.toggle('is-active', g === activeGroup));
+    if (activeGroup && activeGroup !== lastActiveGroup) {
+      const btn = activeGroup.querySelector('.cat-toggle');
+      if (btn && btn.getAttribute('aria-expanded') !== 'true') {
+        btn.setAttribute('aria-expanded', 'true');
+      }
+      lastActiveGroup = activeGroup;
+    }
+  }
+}
+window.addEventListener('scroll', updateActiveNav, { passive: true });
+updateActiveNav();
+
+// ============================================================
+// SHARED HELPERS
+// ============================================================
+function fmt(n, d = 3) {
+  if (isNaN(n)) return '?';
+  if (!isFinite(n)) return n > 0 ? '∞' : '−∞';
+  if (Math.abs(n) < 1e-6) n = 0;
+  return (+n).toFixed(d);
+}
+function readNum(id, fallback = 0) {
+  const el = document.getElementById(id);
+  if (!el) return fallback;
+  const v = parseFloat(el.value);
+  return isNaN(v) ? fallback : v;
+}
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+// ============================================================
+// DERIVATIVE DEMO
+// ============================================================
+const derivState = {
+  step: 0, max: 4,
+  fn: 'square',
+  fns: {
+    square: { f: x => x*x,         df: x => 2*x,        label: 'x²',    dlabel: '2x' },
+    cube:   { f: x => x*x*x,       df: x => 3*x*x,      label: 'x³',    dlabel: '3x²' },
+    sin:    { f: x => Math.sin(x), df: x => Math.cos(x),label: 'sin(x)',dlabel: 'cos(x)' },
+    exp:    { f: x => Math.exp(x), df: x => Math.exp(x),label: 'eˣ',    dlabel: 'eˣ' },
+  }
+};
+
+function derivXscale(x) { return 360 + x * 100; }
+function derivYscale(y) { return 160 - y * 40; }
+
+function renderDerivGrid() {
+  const g = document.getElementById('deriv-grid');
+  g.innerHTML = '';
+  for (let gx = -3; gx <= 3; gx++) {
+    const x = derivXscale(gx);
+    g.innerHTML += `<line x1="${x}" y1="20" x2="${x}" y2="300" stroke="#1a2030" stroke-width="1"/>`;
+  }
+  for (let gy = -3; gy <= 3; gy++) {
+    const y = derivYscale(gy);
+    g.innerHTML += `<line x1="40" y1="${y}" x2="700" y2="${y}" stroke="#1a2030" stroke-width="1"/>`;
+  }
+}
+
+function renderDerivCurve() {
+  const fn = derivState.fns[derivState.fn];
+  let d = '';
+  for (let i = 0; i <= 200; i++) {
+    const x = -3.2 + (6.4 * i / 200);
+    const y = fn.f(x);
+    const sx = derivXscale(x), sy = derivYscale(y);
+    if (sy < 20 || sy > 300) { d += ''; continue; }
+    d += (d === '' ? 'M' : 'L') + sx + ',' + sy + ' ';
+  }
+  document.getElementById('deriv-curve').setAttribute('d', d);
+}
+
+function renderDerivStep() {
+  renderDerivGrid();
+  renderDerivCurve();
+  const fn = derivState.fns[derivState.fn];
+  const x = readNum('deriv-x', 1);
+  const y = fn.f(x);
+  const slope = fn.df(x);
+  const sx = derivXscale(x), sy = derivYscale(y);
+  document.getElementById('deriv-point').setAttribute('cx', sx);
+  document.getElementById('deriv-point').setAttribute('cy', sy);
+  // tangent line: y = slope*(X - x) + y
+  const x1 = x - 1.5, x2 = x + 1.5;
+  const y1 = slope * (x1 - x) + y;
+  const y2 = slope * (x2 - x) + y;
+  document.getElementById('deriv-tangent').setAttribute('x1', derivXscale(x1));
+  document.getElementById('deriv-tangent').setAttribute('y1', derivYscale(y1));
+  document.getElementById('deriv-tangent').setAttribute('x2', derivXscale(x2));
+  document.getElementById('deriv-tangent').setAttribute('y2', derivYscale(y2));
+  document.getElementById('deriv-progress').textContent = `x = ${fmt(x,2)}`;
+
+  const calc = document.getElementById('deriv-calc');
+  switch (derivState.step) {
+    case 0:
+      calc.innerHTML = `
+        <div class="step-title">Step 0 · pick a point</div>
+        <div class="math">f(x) = <span class="var">${fn.label}</span></div>
+        <div class="math">x = <span class="num">${fmt(x,2)}</span>, f(x) = <span class="result">${fmt(y)}</span></div>
+        <div class="note">Press Step → to form the secant, shrink it, and read off the slope.</div>`;
+      break;
+    case 1: {
+      const h = 0.5;
+      const slopeH = (fn.f(x+h) - y) / h;
+      calc.innerHTML = `
+        <div class="step-title">Step 1 · secant over h = 0.5</div>
+        <div class="math">[f(x+h) − f(x)] / h</div>
+        <div class="math">= (${fmt(fn.f(x+h))} − ${fmt(y)}) / 0.5 = <span class="result">${fmt(slopeH)}</span></div>`;
+      break;
+    }
+    case 2: {
+      const h = 0.1;
+      const slopeH = (fn.f(x+h) - y) / h;
+      calc.innerHTML = `
+        <div class="step-title">Step 2 · shrink to h = 0.1</div>
+        <div class="math">[f(x+h) − f(x)] / h = <span class="result">${fmt(slopeH)}</span></div>
+        <div class="note">Getting closer to the true slope.</div>`;
+      break;
+    }
+    case 3: {
+      const h = 0.001;
+      const slopeH = (fn.f(x+h) - y) / h;
+      calc.innerHTML = `
+        <div class="step-title">Step 3 · h = 0.001 — essentially the limit</div>
+        <div class="math">[f(x+h) − f(x)] / h = <span class="result">${fmt(slopeH)}</span></div>`;
+      break;
+    }
+    case 4:
+      calc.innerHTML = `
+        <div class="step-title">Done · f'(x) in closed form</div>
+        <div class="math">f'(x) = <span class="var">${fn.dlabel}</span></div>
+        <div class="math">f'(${fmt(x,2)}) = <span class="result">${fmt(slope)}</span></div>
+        <div class="note">The pink line's slope matches this number exactly.</div>`;
+      break;
+  }
+}
+
+function stepDeriv() { if (derivState.step < derivState.max) { derivState.step++; renderDerivStep(); } }
+function prevDeriv() { if (derivState.step > 0) { derivState.step--; renderDerivStep(); } }
+function resetDeriv() { derivState.step = 0; renderDerivStep(); }
+function runAllDeriv() {
+  resetDeriv();
+  const iv = setInterval(() => {
+    if (derivState.step >= derivState.max) { clearInterval(iv); return; }
+    stepDeriv();
+  }, 800);
+}
+function loadDerivPreset(kind) {
+  derivState.fn = kind;
+  if (kind === 'sin') document.getElementById('deriv-x').value = 1.0;
+  if (kind === 'exp') document.getElementById('deriv-x').value = 0.5;
+  if (kind === 'square') document.getElementById('deriv-x').value = 1.0;
+  if (kind === 'cube') document.getElementById('deriv-x').value = 1.0;
+  resetDeriv();
+}
+document.getElementById('deriv-x').addEventListener('input', () => { derivState.step = derivState.max; renderDerivStep(); });
+renderDerivStep();
+
+// ============================================================
+// 2-D GRADIENT DEMO
+// ============================================================
+const grad2dState = {
+  step: 0, max: 10,
+  fn: 'bowl',
+  fns: {
+    bowl:  { f: (x,y) => x*x + y*y,           gx: (x,y) => 2*x,      gy: (x,y) => 2*y,      label: 'x² + y²' },
+    saddle:{ f: (x,y) => x*x - y*y,           gx: (x,y) => 2*x,      gy: (x,y) => -2*y,     label: 'x² − y²' },
+    rosen: { f: (x,y) => (1-x)*(1-x) + 100*(y-x*x)*(y-x*x), gx: (x,y) => -2*(1-x) - 400*x*(y-x*x), gy: (x,y) => 200*(y-x*x), label: 'Rosenbrock' },
+    sine:  { f: (x,y) => Math.sin(x)*Math.cos(y), gx: (x,y) => Math.cos(x)*Math.cos(y), gy: (x,y) => -Math.sin(x)*Math.sin(y), label: 'sin(x)cos(y)' },
+  }
+};
+
+function grad2dXscale(x) { return 360 + x * 80; }
+function grad2dYscale(y) { return 180 - y * 80; }
+function grad2dFromPx(sx, sy) { return [ (sx - 360) / 80, (180 - sy) / 80 ]; }
+
+function renderGrad2dContours() {
+  const g = document.getElementById('grad2d-contours');
+  const fn = grad2dState.fns[grad2dState.fn];
+  g.innerHTML = '';
+  // Draw simple colored rectangles as a heatmap
+  const step = 18;
+  let fmin = Infinity, fmax = -Infinity;
+  for (let sx = 40; sx < 700; sx += step)
+    for (let sy = 20; sy < 340; sy += step) {
+      const [x, y] = grad2dFromPx(sx, sy);
+      const v = fn.f(x, y);
+      if (isFinite(v)) {
+        if (v < fmin) fmin = v;
+        if (v > fmax) fmax = v;
+      }
+    }
+  const range = Math.max(1e-6, fmax - fmin);
+  for (let sx = 40; sx < 700; sx += step) {
+    for (let sy = 20; sy < 340; sy += step) {
+      const [x, y] = grad2dFromPx(sx, sy);
+      const v = fn.f(x, y);
+      const t = clamp((v - fmin) / range, 0, 1);
+      const alpha = 0.08 + t * 0.35;
+      g.innerHTML += `<rect x="${sx}" y="${sy}" width="${step-1}" height="${step-1}" fill="rgba(124,92,255,${alpha})"/>`;
+    }
+  }
+}
+
+function renderGrad2dArrows() {
+  const g = document.getElementById('grad2d-arrows');
+  const fn = grad2dState.fns[grad2dState.fn];
+  g.innerHTML = '';
+  const spacing = 54;
+  for (let sx = 80; sx < 700; sx += spacing) {
+    for (let sy = 40; sy < 340; sy += spacing) {
+      const [x, y] = grad2dFromPx(sx, sy);
+      const gxv = fn.gx(x, y), gyv = fn.gy(x, y);
+      const mag = Math.sqrt(gxv*gxv + gyv*gyv) + 1e-9;
+      const L = Math.min(18, 6 + 3 * Math.log(1 + mag));
+      const ux = gxv / mag * L;
+      const uy = -gyv / mag * L; // flip for svg y
+      g.innerHTML += `<line x1="${sx}" y1="${sy}" x2="${sx+ux}" y2="${sy+uy}" stroke="#22d3ee" stroke-width="1.5" opacity="0.7"/>`;
+    }
+  }
+}
+
+function renderGrad2dStep() {
+  renderGrad2dContours();
+  renderGrad2dArrows();
+  const fn = grad2dState.fns[grad2dState.fn];
+  const x = readNum('grad2d-x', 1.5);
+  const y = readNum('grad2d-y', 1.0);
+  const gxv = fn.gx(x, y), gyv = fn.gy(x, y);
+  const fv = fn.f(x, y);
+  const sx = grad2dXscale(x), sy = grad2dYscale(y);
+  document.getElementById('grad2d-point').setAttribute('cx', sx);
+  document.getElementById('grad2d-point').setAttribute('cy', sy);
+  const mag = Math.sqrt(gxv*gxv + gyv*gyv) + 1e-9;
+  const L = 40;
+  const ux = gxv / mag * L;
+  const uy = -gyv / mag * L;
+  document.getElementById('grad2d-grad').setAttribute('x1', sx);
+  document.getElementById('grad2d-grad').setAttribute('y1', sy);
+  document.getElementById('grad2d-grad').setAttribute('x2', sx + ux);
+  document.getElementById('grad2d-grad').setAttribute('y2', sy + uy);
+  document.getElementById('grad2d-progress').textContent = `step ${grad2dState.step} / ${grad2dState.max}`;
+
+  const calc = document.getElementById('grad2d-calc');
+  calc.innerHTML = `
+    <div class="step-title">${fn.label} &nbsp;·&nbsp; step ${grad2dState.step}</div>
+    <div class="math">point: (<span class="num">${fmt(x,2)}</span>, <span class="num">${fmt(y,2)}</span>)</div>
+    <div class="math">f(x,y) = <span class="result">${fmt(fv)}</span></div>
+    <div class="math">∇f = (<span class="result">${fmt(gxv,2)}</span>, <span class="result">${fmt(gyv,2)}</span>)</div>
+    <div class="math">∥∇f∥ = <span class="result">${fmt(mag)}</span></div>
+    <div class="note">Step → walks one gradient-descent step with lr = 0.1.</div>`;
+}
+
+function stepGrad2d() {
+  if (grad2dState.step >= grad2dState.max) return;
+  const fn = grad2dState.fns[grad2dState.fn];
+  const x = readNum('grad2d-x', 1.5), y = readNum('grad2d-y', 1.0);
+  const lr = 0.1;
+  const nx = x - lr * fn.gx(x, y);
+  const ny = y - lr * fn.gy(x, y);
+  document.getElementById('grad2d-x').value = fmt(nx, 3);
+  document.getElementById('grad2d-y').value = fmt(ny, 3);
+  grad2dState.step++;
+  renderGrad2dStep();
+}
+function prevGrad2d() { if (grad2dState.step > 0) { grad2dState.step--; renderGrad2dStep(); } }
+function resetGrad2d() {
+  grad2dState.step = 0;
+  renderGrad2dStep();
+}
+function runAllGrad2d() {
+  grad2dState.step = 0;
+  const iv = setInterval(() => {
+    if (grad2dState.step >= grad2dState.max) { clearInterval(iv); return; }
+    stepGrad2d();
+  }, 500);
+}
+function loadGrad2dPreset(kind) {
+  grad2dState.fn = kind;
+  if (kind === 'bowl')   { document.getElementById('grad2d-x').value = 1.5; document.getElementById('grad2d-y').value = 1.0; }
+  if (kind === 'saddle') { document.getElementById('grad2d-x').value = 1.0; document.getElementById('grad2d-y').value = 0.5; }
+  if (kind === 'rosen')  { document.getElementById('grad2d-x').value = -1.0; document.getElementById('grad2d-y').value = 1.0; }
+  if (kind === 'sine')   { document.getElementById('grad2d-x').value = 1.0; document.getElementById('grad2d-y').value = 1.0; }
+  resetGrad2d();
+}
+['grad2d-x','grad2d-y'].forEach(id => document.getElementById(id).addEventListener('input', renderGrad2dStep));
+// click on SVG to jump
+document.getElementById('grad2d-svg').addEventListener('click', (e) => {
+  const rect = e.currentTarget.getBoundingClientRect();
+  const sx = (e.clientX - rect.left) * (720 / rect.width);
+  const sy = (e.clientY - rect.top) * (360 / rect.height);
+  const [x, y] = grad2dFromPx(sx, sy);
+  document.getElementById('grad2d-x').value = fmt(x, 2);
+  document.getElementById('grad2d-y').value = fmt(y, 2);
+  grad2dState.step = 0;
+  renderGrad2dStep();
+});
+renderGrad2dStep();
+
+// ============================================================
+// 2x2 MATRIX TRANSFORM DEMO
+// ============================================================
+const mt2dState = { step: 0, max: 3 };
+
+function mt2dXscale(x) { return 360 + x * 60; }
+function mt2dYscale(y) { return 180 - y * 60; }
+
+function renderMt2dGrid() {
+  const g = document.getElementById('mt2d-grid');
+  g.innerHTML = '';
+  for (let gx = -5; gx <= 5; gx++) {
+    const x = mt2dXscale(gx);
+    g.innerHTML += `<line x1="${x}" y1="20" x2="${x}" y2="340" stroke="#1a2030" stroke-width="1"/>`;
+  }
+  for (let gy = -3; gy <= 3; gy++) {
+    const y = mt2dYscale(gy);
+    g.innerHTML += `<line x1="40" y1="${y}" x2="700" y2="${y}" stroke="#1a2030" stroke-width="1"/>`;
+  }
+}
+
+function renderMt2dStep() {
+  renderMt2dGrid();
+  const a = readNum('mt2d-a', 1), b = readNum('mt2d-b', 0);
+  const c = readNum('mt2d-c', 0), d = readNum('mt2d-d', 1);
+
+  // original unit square vertices: (0,0), (1,0), (1,1), (0,1)
+  const v0 = [0,0], v1 = [1,0], v2 = [1,1], v3 = [0,1];
+  const to = (vx, vy) => [a*vx + b*vy, c*vx + d*vy];
+
+  const before = [v0, v1, v2, v3]
+    .map(([x,y]) => `${mt2dXscale(x)},${mt2dYscale(y)}`).join(' ');
+  document.getElementById('mt2d-square-before').setAttribute('points', before);
+
+  const after = [v0, v1, v2, v3]
+    .map(([x,y]) => to(x, y))
+    .map(([x,y]) => `${mt2dXscale(x)},${mt2dYscale(y)}`).join(' ');
+  document.getElementById('mt2d-square-after').setAttribute('points', after);
+
+  // basis vectors
+  document.getElementById('mt2d-i-before').setAttribute('x2', mt2dXscale(1));
+  document.getElementById('mt2d-i-before').setAttribute('y2', mt2dYscale(0));
+  document.getElementById('mt2d-j-before').setAttribute('x2', mt2dXscale(0));
+  document.getElementById('mt2d-j-before').setAttribute('y2', mt2dYscale(1));
+
+  const iT = to(1, 0), jT = to(0, 1);
+  document.getElementById('mt2d-i-after').setAttribute('x2', mt2dXscale(iT[0]));
+  document.getElementById('mt2d-i-after').setAttribute('y2', mt2dYscale(iT[1]));
+  document.getElementById('mt2d-j-after').setAttribute('x2', mt2dXscale(jT[0]));
+  document.getElementById('mt2d-j-after').setAttribute('y2', mt2dYscale(jT[1]));
+
+  const det = a*d - b*c;
+  document.getElementById('mt2d-progress').textContent = `det = ${fmt(det,2)}`;
+
+  const calc = document.getElementById('mt2d-calc');
+  const tr = a + d;
+  const disc = tr*tr - 4*det;
+  let eig = '';
+  if (disc >= 0) {
+    const l1 = (tr + Math.sqrt(disc)) / 2;
+    const l2 = (tr - Math.sqrt(disc)) / 2;
+    eig = `eigenvalues: <span class="result">${fmt(l1,2)}</span>, <span class="result">${fmt(l2,2)}</span>`;
+  } else {
+    eig = `eigenvalues: complex (${fmt(tr/2,2)} ± ${fmt(Math.sqrt(-disc)/2,2)}i) — this is a rotation`;
+  }
+  calc.innerHTML = `
+    <div class="step-title">M = [[${fmt(a,1)}, ${fmt(b,1)}], [${fmt(c,1)}, ${fmt(d,1)}]]</div>
+    <div class="math">det(M) = <span class="num">${fmt(a,1)}</span>·<span class="num">${fmt(d,1)}</span> − <span class="num">${fmt(b,1)}</span>·<span class="num">${fmt(c,1)}</span> = <span class="result">${fmt(det,2)}</span></div>
+    <div class="math">M·(1,0) = (<span class="result">${fmt(iT[0],2)}</span>, <span class="result">${fmt(iT[1],2)}</span>)  ← pink</div>
+    <div class="math">M·(0,1) = (<span class="result">${fmt(jT[0],2)}</span>, <span class="result">${fmt(jT[1],2)}</span>)  ← yellow</div>
+    <div class="math">${eig}</div>
+    <div class="note">The area of the violet parallelogram equals |det|. Negative det = orientation flipped.</div>`;
+}
+
+function stepMt2d() { renderMt2dStep(); }
+function prevMt2d() { renderMt2dStep(); }
+function resetMt2d() {
+  document.getElementById('mt2d-a').value = 1;
+  document.getElementById('mt2d-b').value = 0;
+  document.getElementById('mt2d-c').value = 0;
+  document.getElementById('mt2d-d').value = 1;
+  renderMt2dStep();
+}
+function runAllMt2d() {
+  // animate a rotation
+  let t = 0;
+  const iv = setInterval(() => {
+    t += 0.12;
+    if (t > Math.PI * 2) { clearInterval(iv); return; }
+    document.getElementById('mt2d-a').value = fmt(Math.cos(t), 2);
+    document.getElementById('mt2d-b').value = fmt(-Math.sin(t), 2);
+    document.getElementById('mt2d-c').value = fmt(Math.sin(t), 2);
+    document.getElementById('mt2d-d').value = fmt(Math.cos(t), 2);
+    renderMt2dStep();
+  }, 60);
+}
+function loadMt2dPreset(kind) {
+  if (kind === 'rotate') {
+    const r = Math.PI / 4;
+    document.getElementById('mt2d-a').value = fmt(Math.cos(r), 2);
+    document.getElementById('mt2d-b').value = fmt(-Math.sin(r), 2);
+    document.getElementById('mt2d-c').value = fmt(Math.sin(r), 2);
+    document.getElementById('mt2d-d').value = fmt(Math.cos(r), 2);
+  } else if (kind === 'scale') {
+    document.getElementById('mt2d-a').value = 2;
+    document.getElementById('mt2d-b').value = 0;
+    document.getElementById('mt2d-c').value = 0;
+    document.getElementById('mt2d-d').value = 2;
+  } else if (kind === 'shear') {
+    document.getElementById('mt2d-a').value = 1;
+    document.getElementById('mt2d-b').value = 1;
+    document.getElementById('mt2d-c').value = 0;
+    document.getElementById('mt2d-d').value = 1;
+  } else if (kind === 'flip') {
+    document.getElementById('mt2d-a').value = -1;
+    document.getElementById('mt2d-b').value = 0;
+    document.getElementById('mt2d-c').value = 0;
+    document.getElementById('mt2d-d').value = 1;
+  }
+  renderMt2dStep();
+}
+['mt2d-a','mt2d-b','mt2d-c','mt2d-d'].forEach(id => {
+  document.getElementById(id).addEventListener('input', renderMt2dStep);
+});
+renderMt2dStep();
+
+// ============================================================
+// BAYES DEMO
+// ============================================================
+const bayesState = { step: 0, max: 4 };
+
+function renderBayesPeople(prior, sens, fpr, step) {
+  const g = document.getElementById('bayes-people');
+  const lbl = document.getElementById('bayes-labels');
+  g.innerHTML = '';
+  lbl.innerHTML = '';
+  const total = 400; // dots shown (10,000 / 25)
+  const sick = Math.round(total * prior);
+  const well = total - sick;
+  const cols = 40, rows = 10;
+  const x0 = 60, y0 = 60, cell = 15;
+  for (let i = 0; i < total; i++) {
+    const row = Math.floor(i / cols);
+    const col = i % cols;
+    const cx = x0 + col * cell;
+    const cy = y0 + row * cell;
+    const isSick = i < sick;
+    let color = isSick ? '#f472b6' : '#384050';
+    let opacity = '1';
+    let r = 4;
+    if (step >= 2) {
+      // reveal positives
+      const isPositive = isSick ? (Math.random() < sens || true) : (Math.random() < fpr);
+      // deterministic: first floor(sens*sick) of sick are positive, first floor(fpr*well) of well
+      const sickPosCount = Math.round(sens * sick);
+      const wellPosCount = Math.round(fpr * well);
+      const indexInSick = i;
+      const indexInWell = i - sick;
+      const actualPositive = isSick ? (indexInSick < sickPosCount) : (indexInWell < wellPosCount);
+      if (actualPositive) {
+        color = isSick ? '#f472b6' : '#facc15';
+        r = 5;
+      } else {
+        opacity = '0.2';
+      }
+      if (step >= 3 && !actualPositive) { opacity = '0.08'; }
+    }
+    g.innerHTML += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${color}" opacity="${opacity}"/>`;
+  }
+  // legend
+  lbl.innerHTML = `
+    <text x="60" y="235" fill="#f472b6" font-family="monospace" font-size="11">● sick (${sick})</text>
+    <text x="180" y="235" fill="#384050" font-family="monospace" font-size="11">● well (${well})</text>
+    <text x="300" y="235" fill="#facc15" font-family="monospace" font-size="11">● false positive</text>
+  `;
+}
+
+function renderBayesStep() {
+  const prior = clamp(readNum('bayes-prior', 0.01), 0, 1);
+  const sens = clamp(readNum('bayes-sens', 0.99), 0, 1);
+  const fpr = clamp(readNum('bayes-fpr', 0.01), 0, 1);
+  const pPos = sens * prior + fpr * (1 - prior);
+  const posterior = pPos > 0 ? (sens * prior) / pPos : 0;
+  document.getElementById('bayes-progress').textContent = `P(sick | +) = ${fmt(posterior * 100, 1)}%`;
+  renderBayesPeople(prior, sens, fpr, bayesState.step);
+
+  const calc = document.getElementById('bayes-calc');
+  switch (bayesState.step) {
+    case 0:
+      calc.innerHTML = `
+        <div class="step-title">Step 0 · prior</div>
+        <div class="math">P(sick) = <span class="num">${fmt(prior*100,2)}%</span></div>
+        <div class="note">Before any test, this is the base rate.</div>`;
+      break;
+    case 1:
+      calc.innerHTML = `
+        <div class="step-title">Step 1 · sensitivity and false positive rate</div>
+        <div class="math">P(+ | sick) = <span class="num">${fmt(sens*100,1)}%</span></div>
+        <div class="math">P(+ | well) = <span class="num">${fmt(fpr*100,1)}%</span></div>`;
+      break;
+    case 2:
+      calc.innerHTML = `
+        <div class="step-title">Step 2 · marginal P(+)</div>
+        <div class="math">P(+) = P(+|sick)·P(sick) + P(+|well)·P(well)</div>
+        <div class="math">= ${fmt(sens,3)}·${fmt(prior,3)} + ${fmt(fpr,3)}·${fmt(1-prior,3)}</div>
+        <div class="math">= <span class="result">${fmt(pPos,4)}</span></div>`;
+      break;
+    case 3:
+      calc.innerHTML = `
+        <div class="step-title">Step 3 · apply Bayes</div>
+        <div class="math">P(sick | +) = P(+|sick)·P(sick) / P(+)</div>
+        <div class="math">= ${fmt(sens,3)}·${fmt(prior,3)} / ${fmt(pPos,4)}</div>
+        <div class="math">= <span class="result">${fmt(posterior,4)}</span>  (${fmt(posterior*100,1)}%)</div>`;
+      break;
+    case 4:
+      calc.innerHTML = `
+        <div class="step-title">Done · posterior</div>
+        <div class="math">P(sick | +) = <span class="result">${fmt(posterior*100,1)}%</span></div>
+        <div class="note">Counter-intuitive? For a rare disease with a 1% false-positive rate, most "positive" results are still healthy people.</div>`;
+      break;
+  }
+}
+
+function stepBayes() { if (bayesState.step < bayesState.max) { bayesState.step++; renderBayesStep(); } }
+function prevBayes() { if (bayesState.step > 0) { bayesState.step--; renderBayesStep(); } }
+function resetBayes() { bayesState.step = 0; renderBayesStep(); }
+function runAllBayes() {
+  resetBayes();
+  const iv = setInterval(() => {
+    if (bayesState.step >= bayesState.max) { clearInterval(iv); return; }
+    stepBayes();
+  }, 900);
+}
+function loadBayesPreset(kind) {
+  if (kind === 'covid') {
+    document.getElementById('bayes-prior').value = 0.02;
+    document.getElementById('bayes-sens').value = 0.85;
+    document.getElementById('bayes-fpr').value = 0.02;
+  } else if (kind === 'rare') {
+    document.getElementById('bayes-prior').value = 0.001;
+    document.getElementById('bayes-sens').value = 0.99;
+    document.getElementById('bayes-fpr').value = 0.01;
+  } else if (kind === 'common') {
+    document.getElementById('bayes-prior').value = 0.3;
+    document.getElementById('bayes-sens').value = 0.95;
+    document.getElementById('bayes-fpr').value = 0.05;
+  }
+  resetBayes();
+}
+['bayes-prior','bayes-sens','bayes-fpr'].forEach(id => {
+  document.getElementById(id).addEventListener('input', resetBayes);
+});
+renderBayesStep();
+
+// ============================================================
+// MLE DEMO
+// ============================================================
+const mleState = {
+  step: 0, max: 3,
+  samples: [2.1, 3.4, 4.0, 4.8, 5.2, 5.9, 6.7, 7.3]
+};
+
+function mleXscale(x) { return 40 + (x - 0) * 65; }
+function mleYscale(y) { return 260 - y * 280; }
+
+function gaussPdf(x, mu, sigma) {
+  const s2 = sigma * sigma;
+  return Math.exp(-0.5 * (x - mu) * (x - mu) / s2) / Math.sqrt(2 * Math.PI * s2);
+}
+
+function renderMleGrid() {
+  const g = document.getElementById('mle-grid');
+  g.innerHTML = '';
+  for (let gx = 0; gx <= 10; gx++) {
+    const x = mleXscale(gx);
+    g.innerHTML += `<line x1="${x}" y1="30" x2="${x}" y2="260" stroke="#1a2030" stroke-width="1"/>`;
+    g.innerHTML += `<text x="${x}" y="278" fill="#384050" text-anchor="middle" font-family="monospace" font-size="9">${gx}</text>`;
+  }
+}
+
+function renderMleStep() {
+  renderMleGrid();
+  const mu = readNum('mle-mu', 5);
+  const sigma = Math.max(0.1, readNum('mle-sigma', 2));
+  // curve
+  let d = '';
+  for (let i = 0; i <= 200; i++) {
+    const x = 0 + (10 * i / 200);
+    const y = gaussPdf(x, mu, sigma);
+    const sx = mleXscale(x), sy = mleYscale(y);
+    d += (d === '' ? 'M' : 'L') + sx + ',' + sy + ' ';
+  }
+  document.getElementById('mle-curve').setAttribute('d', d);
+
+  // samples
+  const sg = document.getElementById('mle-samples');
+  sg.innerHTML = '';
+  let logL = 0;
+  const lg = document.getElementById('mle-likelihoods');
+  lg.innerHTML = '';
+  mleState.samples.forEach(s => {
+    const sx = mleXscale(s);
+    sg.innerHTML += `<circle cx="${sx}" cy="260" r="4" fill="#f472b6"/>`;
+    const y = gaussPdf(s, mu, sigma);
+    const sy = mleYscale(y);
+    lg.innerHTML += `<line x1="${sx}" y1="260" x2="${sx}" y2="${sy}" stroke="#facc15" stroke-width="1.5" stroke-dasharray="2,2" opacity="0.7"/>`;
+    lg.innerHTML += `<circle cx="${sx}" cy="${sy}" r="3" fill="#facc15"/>`;
+    logL += Math.log(Math.max(1e-12, y));
+  });
+
+  const empMu = mleState.samples.reduce((a,b) => a+b, 0) / mleState.samples.length;
+  const empVar = mleState.samples.reduce((a,b) => a + (b - empMu)*(b - empMu), 0) / mleState.samples.length;
+  const empSigma = Math.sqrt(empVar);
+
+  document.getElementById('mle-progress').textContent = `log L = ${fmt(logL, 2)}`;
+
+  const calc = document.getElementById('mle-calc');
+  switch (mleState.step) {
+    case 0:
+      calc.innerHTML = `
+        <div class="step-title">Ready · pick μ and σ</div>
+        <div class="math">8 samples: ${mleState.samples.join(', ')}</div>
+        <div class="math">current μ = <span class="num">${fmt(mu,2)}</span>, σ = <span class="num">${fmt(sigma,2)}</span></div>
+        <div class="note">The yellow lines are the likelihood of each sample. Taller is better.</div>`;
+      break;
+    case 1:
+      calc.innerHTML = `
+        <div class="step-title">Step 1 · log-likelihood</div>
+        <div class="math">log L(μ, σ) = Σ log p(xᵢ ; μ, σ)</div>
+        <div class="math">= <span class="result">${fmt(logL, 3)}</span></div>
+        <div class="note">Less negative = better fit. Try adjusting μ and σ.</div>`;
+      break;
+    case 2:
+      calc.innerHTML = `
+        <div class="step-title">Step 2 · the MLE in closed form</div>
+        <div class="math">μ̂ = (1/n) Σ xᵢ = <span class="result">${fmt(empMu, 3)}</span></div>
+        <div class="math">σ̂ = √((1/n) Σ (xᵢ − μ̂)²) = <span class="result">${fmt(empSigma, 3)}</span></div>
+        <div class="note">Plug those in for the maximum.</div>`;
+      break;
+    case 3:
+      calc.innerHTML = `
+        <div class="step-title">Done</div>
+        <div class="math">MLE: μ̂ = <span class="result">${fmt(empMu,3)}</span>, σ̂ = <span class="result">${fmt(empSigma,3)}</span></div>
+        <div class="math">current: μ = ${fmt(mu,2)}, σ = ${fmt(sigma,2)}</div>
+        <div class="math">log L = <span class="result">${fmt(logL, 3)}</span></div>
+        <div class="note">Every neural network trained with cross-entropy is doing a much fancier version of this loop.</div>`;
+      break;
+  }
+}
+
+function stepMle() { if (mleState.step < mleState.max) { mleState.step++; renderMleStep(); } }
+function prevMle() { if (mleState.step > 0) { mleState.step--; renderMleStep(); } }
+function resetMle() { mleState.step = 0; renderMleStep(); }
+function runAllMle() {
+  resetMle();
+  const iv = setInterval(() => {
+    if (mleState.step >= mleState.max) { clearInterval(iv); return; }
+    stepMle();
+  }, 900);
+}
+function loadMlePreset(kind) {
+  if (kind === 'best') {
+    const m = mleState.samples.reduce((a,b) => a+b, 0) / mleState.samples.length;
+    const v = mleState.samples.reduce((a,b) => a + (b-m)*(b-m), 0) / mleState.samples.length;
+    document.getElementById('mle-mu').value = fmt(m, 2);
+    document.getElementById('mle-sigma').value = fmt(Math.sqrt(v), 2);
+  } else if (kind === 'off') {
+    document.getElementById('mle-mu').value = 2;
+    document.getElementById('mle-sigma').value = 0.5;
+  }
+  renderMleStep();
+}
+['mle-mu','mle-sigma'].forEach(id => document.getElementById(id).addEventListener('input', renderMleStep));
+renderMleStep();
+
+// ============================================================
+// BFS/DFS DEMO
+// ============================================================
+const bfsState = {
+  step: 0, max: 6,
+  mode: 'bfs',
+  nodes: [
+    { id: 'A', x: 120, y: 80 },
+    { id: 'B', x: 260, y: 50 },
+    { id: 'C', x: 260, y: 130 },
+    { id: 'D', x: 400, y: 40 },
+    { id: 'E', x: 400, y: 120 },
+    { id: 'F', x: 540, y: 80 },
+  ],
+  edges: [
+    ['A','B'], ['A','C'], ['B','D'], ['B','E'], ['C','E'], ['D','F'], ['E','F']
+  ],
+  order: [],
+  frontier: []
+};
+
+function computeBfsOrder(mode) {
+  const adj = {};
+  bfsState.nodes.forEach(n => adj[n.id] = []);
+  bfsState.edges.forEach(([a,b]) => { adj[a].push(b); adj[b].push(a); });
+  const visited = new Set();
+  const order = [];
+  const frontierPerStep = [];
+  if (mode === 'bfs') {
+    const q = ['A'];
+    visited.add('A');
+    while (q.length) {
+      const u = q.shift();
+      order.push(u);
+      frontierPerStep.push([...q]);
+      for (const v of adj[u]) {
+        if (!visited.has(v)) { visited.add(v); q.push(v); }
+      }
+    }
+  } else {
+    const stk = ['A'];
+    visited.add('A');
+    while (stk.length) {
+      const u = stk.pop();
+      order.push(u);
+      frontierPerStep.push([...stk]);
+      for (const v of adj[u]) {
+        if (!visited.has(v)) { visited.add(v); stk.push(v); }
+      }
+    }
+  }
+  return { order, frontierPerStep };
+}
+
+function renderBfsStep() {
+  const eg = document.getElementById('bfs-edges');
+  const ng = document.getElementById('bfs-nodes');
+  eg.innerHTML = '';
+  ng.innerHTML = '';
+
+  const { order, frontierPerStep } = computeBfsOrder(bfsState.mode);
+  const visitedUpTo = order.slice(0, bfsState.step);
+  const currentFrontier = frontierPerStep[Math.max(0, bfsState.step - 1)] || [];
+
+  bfsState.edges.forEach(([a, b]) => {
+    const na = bfsState.nodes.find(n => n.id === a);
+    const nb = bfsState.nodes.find(n => n.id === b);
+    const bothVisited = visitedUpTo.includes(a) && visitedUpTo.includes(b);
+    const stroke = bothVisited ? '#7c5cff' : '#384050';
+    const w = bothVisited ? 2 : 1;
+    eg.innerHTML += `<line x1="${na.x}" y1="${na.y}" x2="${nb.x}" y2="${nb.y}" stroke="${stroke}" stroke-width="${w}"/>`;
+  });
+
+  bfsState.nodes.forEach(n => {
+    let fill = '#171b26', stroke = '#384050', tc = '#8a93a6';
+    if (visitedUpTo.includes(n.id)) { fill = 'rgba(124,92,255,0.3)'; stroke = '#7c5cff'; tc = '#dbe1ec'; }
+    if (currentFrontier.includes(n.id)) { fill = 'rgba(34,211,238,0.2)'; stroke = '#22d3ee'; tc = '#22d3ee'; }
+    if (bfsState.step > 0 && order[bfsState.step - 1] === n.id) { fill = 'rgba(244,114,182,0.3)'; stroke = '#f472b6'; tc = '#f472b6'; }
+    ng.innerHTML += `
+      <circle cx="${n.x}" cy="${n.y}" r="22" fill="${fill}" stroke="${stroke}" stroke-width="2"/>
+      <text x="${n.x}" y="${n.y+4}" fill="${tc}" text-anchor="middle" font-family="monospace" font-size="13">${n.id}</text>`;
+  });
+
+  // frontier text
+  const labelY = 220;
+  const frontLabel = bfsState.mode === 'bfs' ? 'queue' : 'stack';
+  ng.innerHTML += `<text x="60" y="${labelY}" fill="#8a93a6" font-family="monospace" font-size="11">${frontLabel}: [${currentFrontier.join(', ')}]</text>`;
+  ng.innerHTML += `<text x="60" y="${labelY+20}" fill="#8a93a6" font-family="monospace" font-size="11">visited: [${visitedUpTo.join(', ')}]</text>`;
+
+  document.getElementById('bfs-progress').textContent = `${bfsState.mode.toUpperCase()} · Step ${bfsState.step} / ${bfsState.max}`;
+
+  const calc = document.getElementById('bfs-calc');
+  if (bfsState.step === 0) {
+    calc.innerHTML = `
+      <div class="step-title">Ready · ${bfsState.mode.toUpperCase()} from A</div>
+      <div class="math">${bfsState.mode === 'bfs' ? 'BFS uses a FIFO queue — visits layer by layer.' : 'DFS uses a LIFO stack — dives as deep as possible first.'}</div>
+      <div class="note">Press Step → to visit the next node.</div>`;
+  } else {
+    const current = order[bfsState.step - 1];
+    calc.innerHTML = `
+      <div class="step-title">Step ${bfsState.step} · visit ${current}</div>
+      <div class="math">order so far: <span class="result">${visitedUpTo.join(' → ')}</span></div>
+      <div class="math">${frontLabel}: [${currentFrontier.join(', ')}]</div>`;
+  }
+}
+
+function stepBfs() { if (bfsState.step < bfsState.max) { bfsState.step++; renderBfsStep(); } }
+function prevBfs() { if (bfsState.step > 0) { bfsState.step--; renderBfsStep(); } }
+function resetBfs() { bfsState.step = 0; renderBfsStep(); }
+function runAllBfs() {
+  resetBfs();
+  const iv = setInterval(() => {
+    if (bfsState.step >= bfsState.max) { clearInterval(iv); return; }
+    stepBfs();
+  }, 700);
+}
+function setBfsMode(m) { bfsState.mode = m; resetBfs(); }
+renderBfsStep();
+
+// ============================================================
+// NEWTON'S METHOD DEMO
+// ============================================================
+const newtonState = { step: 0, max: 6, history: [] };
+
+function newtonXscale(x) { return 80 + x * 80; }
+function newtonYscale(y) { return 260 - y * 24; }
+
+function renderNewtonGrid() {
+  const g = document.getElementById('newton-grid');
+  g.innerHTML = '';
+  for (let gx = -1; gx <= 7; gx++) {
+    const x = newtonXscale(gx);
+    g.innerHTML += `<line x1="${x}" y1="20" x2="${x}" y2="300" stroke="#1a2030" stroke-width="1"/>`;
+    g.innerHTML += `<text x="${x}" y="278" fill="#384050" text-anchor="middle" font-family="monospace" font-size="9">${gx}</text>`;
+  }
+  for (let gy = -4; gy <= 8; gy++) {
+    const y = newtonYscale(gy);
+    g.innerHTML += `<line x1="40" y1="${y}" x2="700" y2="${y}" stroke="#1a2030" stroke-width="1"/>`;
+  }
+}
+
+function renderNewtonStep() {
+  renderNewtonGrid();
+  const a = Math.max(0.1, readNum('newton-a', 2));
+  const x0 = readNum('newton-x0', 3);
+
+  // curve f(x) = x^2 - a
+  let d = '';
+  for (let i = 0; i <= 200; i++) {
+    const x = -1 + (8 * i / 200);
+    const y = x*x - a;
+    const sx = newtonXscale(x), sy = newtonYscale(y);
+    d += (d === '' ? 'M' : 'L') + sx + ',' + sy + ' ';
+  }
+  document.getElementById('newton-curve').setAttribute('d', d);
+
+  // root markers
+  const root = Math.sqrt(a);
+  document.getElementById('newton-axis-root').setAttribute('x1', newtonXscale(root));
+  document.getElementById('newton-axis-root').setAttribute('y1', 20);
+  document.getElementById('newton-axis-root').setAttribute('x2', newtonXscale(root));
+  document.getElementById('newton-axis-root').setAttribute('y2', 300);
+
+  // iterate
+  const hist = [x0];
+  for (let i = 0; i < newtonState.step; i++) {
+    const x = hist[hist.length - 1];
+    if (Math.abs(x) < 1e-10) break;
+    const nx = 0.5 * (x + a / x);
+    hist.push(nx);
+  }
+
+  const tg = document.getElementById('newton-tangents');
+  const pg = document.getElementById('newton-points');
+  tg.innerHTML = '';
+  pg.innerHTML = '';
+  for (let i = 0; i < hist.length; i++) {
+    const x = hist[i];
+    const y = x*x - a;
+    const sx = newtonXscale(x), sy = newtonYscale(y);
+    // point on curve
+    pg.innerHTML += `<circle cx="${sx}" cy="${sy}" r="4" fill="#f472b6"/>`;
+    // vertical drop to axis
+    const sy0 = newtonYscale(0);
+    pg.innerHTML += `<line x1="${sx}" y1="${sy}" x2="${sx}" y2="${sy0}" stroke="#f472b6" stroke-width="1" stroke-dasharray="2,2" opacity="0.7"/>`;
+    // tangent line (if not last)
+    if (i < hist.length - 1) {
+      const slope = 2 * x; // f'(x)
+      const xLeft = hist[i+1] - 0.5, xRight = x + 0.5;
+      const yLeft = slope * (xLeft - x) + y;
+      const yRight = slope * (xRight - x) + y;
+      tg.innerHTML += `<line x1="${newtonXscale(xLeft)}" y1="${newtonYscale(yLeft)}" x2="${newtonXscale(xRight)}" y2="${newtonYscale(yRight)}" stroke="#facc15" stroke-width="1.5" opacity="0.8"/>`;
+    }
+    // label
+    pg.innerHTML += `<text x="${sx + 6}" y="${sy - 6}" fill="#f472b6" font-family="monospace" font-size="10">x${i}</text>`;
+  }
+
+  const xn = hist[hist.length - 1];
+  const err = Math.abs(xn - root);
+  document.getElementById('newton-progress').textContent = `iter ${newtonState.step} · x = ${fmt(xn, 5)}`;
+
+  const calc = document.getElementById('newton-calc');
+  if (newtonState.step === 0) {
+    calc.innerHTML = `
+      <div class="step-title">Ready · solve x² = ${fmt(a,2)}</div>
+      <div class="math">true root: √${fmt(a,2)} = <span class="result">${fmt(root, 6)}</span></div>
+      <div class="math">starting guess x₀ = <span class="num">${fmt(x0, 2)}</span></div>
+      <div class="note">Press Step → to apply one Newton iteration.</div>`;
+  } else {
+    const prev = hist[hist.length - 2];
+    const nextX = 0.5 * (prev + a / prev);
+    calc.innerHTML = `
+      <div class="step-title">Step ${newtonState.step}</div>
+      <div class="math">x<sub>${newtonState.step}</sub> = ½ (x<sub>${newtonState.step-1}</sub> + a/x<sub>${newtonState.step-1}</sub>)</div>
+      <div class="math">= ½ (${fmt(prev,4)} + ${fmt(a,2)}/${fmt(prev,4)})</div>
+      <div class="math">= <span class="result">${fmt(nextX, 6)}</span></div>
+      <div class="math">error: <span class="result">${fmt(err, 6)}</span></div>`;
+  }
+}
+
+function stepNewton() { if (newtonState.step < newtonState.max) { newtonState.step++; renderNewtonStep(); } }
+function prevNewton() { if (newtonState.step > 0) { newtonState.step--; renderNewtonStep(); } }
+function resetNewton() { newtonState.step = 0; renderNewtonStep(); }
+function runAllNewton() {
+  resetNewton();
+  const iv = setInterval(() => {
+    if (newtonState.step >= newtonState.max) { clearInterval(iv); return; }
+    stepNewton();
+  }, 800);
+}
+function loadNewtonPreset(kind) {
+  if (kind === 'sqrt2') {
+    document.getElementById('newton-a').value = 2;
+    document.getElementById('newton-x0').value = 3;
+  } else if (kind === 'sqrt9') {
+    document.getElementById('newton-a').value = 9;
+    document.getElementById('newton-x0').value = 4;
+  } else if (kind === 'hard') {
+    document.getElementById('newton-a').value = 2;
+    document.getElementById('newton-x0').value = 0.1;
+  }
+  resetNewton();
+}
+['newton-a','newton-x0'].forEach(id => document.getElementById(id).addEventListener('input', resetNewton));
+renderNewtonStep();
+</script>
+<script defer src="../search-index.js"></script>
+<script defer src="../search.js"></script>
+</body>
+</html>

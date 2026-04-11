@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Edge & On-Device AI — Deep Dive</title>
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError: false});"></script>
+</head>
+<body>
+<div id="tooltip"></div>
+
+<nav class="topic-nav">
+  <a class="back" href="../ai-ml.html">← Back to AI/ML</a>
+  <div class="crumb">Deep Dives / <span class="topic-name">Edge &amp; On-Device AI</span></div>
+</nav>
+
+<div class="topic-layout">
+  <aside class="topic-toc">
+    <h4>ON THIS PAGE</h4>
+    <ul>
+      <li><a href="#intro">1. Why bring the model to you?</a></li>
+      <li><a href="#quant">2. Quantization</a></li>
+      <li><a href="#demo">3. Interactive quantization</a></li>
+      <li><a href="#distill">4. Knowledge distillation</a></li>
+      <li><a href="#prune">5. Pruning</a></li>
+      <li><a href="#spec">6. Speculative decoding</a></li>
+      <li><a href="#code">7. Source code</a></li>
+      <li><a href="#summary">8. Summary</a></li>
+    </ul>
+  </aside>
+
+  <article class="topic-content">
+    <h1>Edge &amp; On-Device AI</h1>
+    <p class="subtitle">How you fit a language model onto a phone, a laptop, a microcontroller. The four main tricks — quantization, distillation, pruning, speculative decoding — and the math that makes each of them lose less accuracy than you'd expect.</p>
+    <div class="meta-tags">
+      <span>Prereq: neural networks, linear algebra</span>
+      <span>Time to read: ~20 min</span>
+      <span>Interactive figures: 1</span>
+      <span>Code: PyTorch, C, CUDA</span>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="intro">1. Why bring the model to you?</h2>
+
+    <p>For most of deep learning's history, inference ran on servers. You sent your input to a GPU cluster, a big model crunched on it, and you got an answer back. That worked for vision APIs and chatbots but breaks down for anything where you can't afford the round trip: voice assistants, live camera effects, keyboards, cars, medical devices.</p>
+
+    <p>By 2024, the trend has reversed. Phones, laptops, and even microcontrollers are running multi-billion-parameter models <em>locally</em>. Apple Intelligence runs a ~3B on-device model. Gemini Nano ships with Pixel phones. Llama-3.2-1B and Phi-3-mini are designed to be fast on consumer hardware. Copilot+ PCs have NPUs rated at 40 TOPS for exactly this workload.</p>
+
+    <p>Three reasons this matters:</p>
+
+    <ul>
+      <li><strong>Latency.</strong> A local model responds in ~10 ms; a server round trip is 100–1000 ms. For voice, typing, camera, this difference is the difference between "useful" and "broken."</li>
+      <li><strong>Privacy.</strong> Your photos, messages, health data never leave the device. Some applications (EU healthcare, financial compliance, enterprise) can't legally use cloud inference.</li>
+      <li><strong>Cost.</strong> The marginal cost of one more inference on a user's device is zero. At a few billion queries a day, this turns into serious savings.</li>
+    </ul>
+
+    <p>The challenge is that consumer hardware has ~10× less memory and ~100× less compute than server GPUs. You need aggressive compression that doesn't destroy accuracy. Four techniques carry the load.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="quant">2. Quantization</h2>
+
+    <p>Models are trained in 16- or 32-bit floats. Inference doesn't need that precision. <em>Quantization</em> reduces the number of bits per parameter — from 16 down to 8, 4, or even 2 — and in exchange you get smaller models and faster matmuls (int8 and int4 kernels run 2–4× faster than fp16 on GPUs, and many-fold faster on NPUs).</p>
+
+    <p>The basic int8 mapping for a weight tensor $\mathbf{W}$ with range $[w_\text{min}, w_\text{max}]$ is:</p>
+
+    <div class="math-display">$$s = \frac{w_\text{max} - w_\text{min}}{255}, \quad z = \text{round}\!\left(-\frac{w_\text{min}}{s}\right)$$</div>
+    <div class="math-display">$$q = \text{round}\!\left(\frac{w}{s} + z\right), \quad \hat{w} = s \, (q - z)$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Affine int8 quantization</p>
+      <dl>
+        <dt>$w$</dt><dd>The original full-precision weight (a 16- or 32-bit float).</dd>
+        <dt>$s$</dt><dd>The scale — one float per tensor (or per channel). It maps the integer range $[0, 255]$ back to the original weight range.</dd>
+        <dt>$z$</dt><dd>The zero point — an integer offset so that the int value $z$ represents the float 0. Matters if your weight distribution isn't symmetric around zero.</dd>
+        <dt>$q \in [0, 255]$</dt><dd>The quantized 8-bit unsigned integer actually stored in memory. Each weight is one byte.</dd>
+        <dt>$\hat{w}$</dt><dd>The dequantized weight — the approximation we get back from the integer. Typically within ~0.5% of $w$ for int8.</dd>
+        <dt>$255$</dt><dd>The number of representable levels for unsigned int8. For signed int8 it's 256; for int4 it's only 16.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Analogy</strong> A ruler with 256 tick marks instead of 4 billion. You lose precision, but if your measurement is "about 3.7 cm," 256 ticks is still more than enough. For most weights in a neural net, this is true — the extra bits of fp16 weren't actually carrying information. For some outliers, it isn't, and that's where modern techniques (AWQ, GPTQ, SmoothQuant) earn their keep.</p>
+    </div>
+
+    <p>Going further — <strong>int4</strong> quantization, as in QLoRA, GPTQ, and AWQ — gives you 4× compression over fp16 at a cost of 1-3% accuracy for well-designed schemes. <em>Group quantization</em> (one scale per 64 or 128 weights instead of per-tensor) is what makes int4 work at all; without it, the dynamic range is too tight to represent.</p>
+
+    <p>The 2024 frontier: <strong>int2</strong> and <strong>1.58-bit</strong> (BitNet b1.58, Ma et al.). BitNet replaces weights with $\{-1, 0, 1\}$ and gets surprisingly close to full-precision accuracy — if you train from scratch with quantization in the loop (Quantization-Aware Training) rather than post-hoc quantizing a pretrained model.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="demo">3. Interactive quantization</h2>
+
+    <p>A histogram of a single layer's weights. Drag the slider to change the bit width; the bins coarsen, and the reconstruction error rises. Notice how int8 is visually indistinguishable from fp32, while int4 starts to show rounding.</p>
+
+    <div class="viz-3d">
+      <div class="v3-controls">
+        <span class="v3-label">Bits:</span>
+        <input id="qBits" type="range" min="1" max="8" value="4" step="1" style="flex:1;max-width:340px;">
+        <span id="qBitsLabel" style="min-width:40px;color:#63b3ff;font-family:ui-monospace,monospace;">4</span>
+      </div>
+      <svg id="qSvg" viewBox="0 0 720 340" style="width:100%;height:auto;background:#0a0d12;border-radius:6px;"></svg>
+      <p class="v3-caption" id="qCaption">Blue: the original fp32 weight distribution. Orange: the quantized approximation. The RMS error grows as bit width shrinks.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="distill">4. Knowledge distillation</h2>
+
+    <p>Instead of compressing a big model, you train a small one to <em>imitate</em> the big one's output distribution. The canonical recipe (Hinton, Vinyals, Dean 2015):</p>
+
+    <div class="math-display">$$\mathcal{L}_\text{KD} = (1 - \lambda) \, \text{CE}(y, p_S) + \lambda \, \tau^2 \, \text{KL}\!\left( p_T / \tau \,\Big\|\, p_S / \tau \right)$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Distillation loss</p>
+      <dl>
+        <dt>$p_T, p_S$</dt><dd>The teacher's and student's output distributions (the softmax logits). Teacher is big and frozen; student is small and being trained.</dd>
+        <dt>$\text{CE}(y, p_S)$</dt><dd>Standard cross-entropy on the ground-truth label $y$. Keeps the student grounded in real labels.</dd>
+        <dt>$\text{KL}(p_T \| p_S)$</dt><dd>KL divergence between teacher and student distributions. This is the "imitation" term: the student learns to match the teacher's full probability vector, not just its top-1 answer.</dd>
+        <dt>$\tau$</dt><dd>Temperature. Applied to both distributions before the softmax. Larger $\tau$ softens the distributions, making the "wrong class" probabilities more visible. Typically 2–4.</dd>
+        <dt>$\lambda$</dt><dd>The mixing coefficient. Often 0.5 — half real labels, half teacher.</dd>
+        <dt>$\tau^2$</dt><dd>A scaling factor on the KL term. Compensates for the fact that softening the distributions with $\tau$ shrinks the gradient magnitude by $1/\tau^2$.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why it helps</strong> The teacher's distribution contains "dark knowledge" — information about relative similarities between classes that a one-hot label throws away. "This is a cat" is less informative than "this is 70% cat, 20% lynx, 5% dog, 5% other." The student learns these similarities and generalizes better. Distilled models often match their teachers to within 1-2% while being 4-10× smaller.</p>
+    </div>
+
+    <p>Modern on-device LLMs — Gemini Nano, Phi-3-mini, Llama-3.2-1B — are all distilled from larger siblings. The distillation happens on a mix of the teacher's outputs on real data and synthetic data generated by the teacher. For a 1B student trained on a 70B teacher, the results are within 3–5 points on most benchmarks at a fraction of the compute.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="prune">5. Pruning</h2>
+
+    <p>A surprising fact about trained neural networks: most of their weights are near zero and contribute little to the output. Pruning zeroes out the small ones, turning a dense matrix into a sparse one. Two regimes:</p>
+
+    <ul>
+      <li><strong>Unstructured pruning.</strong> Individually set the smallest 50–90% of weights to zero. You get big model-size savings, but most hardware can't actually run sparse matmul faster than dense, so you need specialized kernels (cuSPARSE, NVIDIA's 2:4 sparsity) to see speedups.</li>
+      <li><strong>Structured pruning.</strong> Remove whole rows, channels, attention heads, or layers. Keeps the computation dense, so every mainstream GPU benefits. More aggressive accuracy loss, but easier to deploy.</li>
+    </ul>
+
+    <p>The <strong>Lottery Ticket Hypothesis</strong> (Frankle &amp; Carbin, 2019) gave pruning theoretical weight: a randomly initialized network contains, with high probability, a subnetwork that — if you pruned the rest and reset the remaining weights to their original random values — can be trained to match the full network's accuracy. Suggested that big networks are "over-parameterized" primarily for optimization purposes, not representation.</p>
+
+    <p>In 2024, structured pruning is used heavily to make Llama- and Mistral-sized models fit edge budgets (NVIDIA's Minitron line starts from Llama-3.1-8B and prunes it down to 4B or smaller with light re-training). Unstructured pruning is more niche.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="spec">6. Speculative decoding</h2>
+
+    <p>A different kind of inference speedup, orthogonal to compression: <em>speculative decoding</em> (Leviathan et al. 2023; independently Chen et al. 2023). Use a small, fast "draft" model to propose the next several tokens, then verify them all in one parallel pass of the big model. If the big model agrees with the draft, you got several tokens for the price of one forward pass.</p>
+
+    <p>The expected speedup is governed by the <em>acceptance rate</em> $\alpha$ — the probability that the draft's token matches what the big model would have sampled. For a budget of $\gamma$ draft tokens per step:</p>
+
+    <div class="math-display">$$\mathbb{E}[\text{accepted}] = \frac{1 - \alpha^{\gamma + 1}}{1 - \alpha}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Speculative decoding math</p>
+      <dl>
+        <dt>$\alpha$</dt><dd>Acceptance probability — chance the draft model's proposed token matches the big model's sampled token. Typically 0.6–0.9 for a well-paired draft/target.</dd>
+        <dt>$\gamma$</dt><dd>The draft budget — how many tokens the small model speculates ahead per step. Usually 4–8.</dd>
+        <dt>$\mathbb{E}[\text{accepted}]$</dt><dd>The expected number of tokens ultimately accepted from a $\gamma$-token speculation. The formula is a geometric series.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>In practice</strong> With $\alpha = 0.8$ and $\gamma = 5$, you accept $\sim 3.4$ tokens per big-model forward pass on average. That's a ~3× throughput speedup for free — correct token-by-token probability distributions, just amortized cost. Llama.cpp, vLLM, and transformers all ship this now. It's a pure-systems win.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="code">7. Source code</h2>
+
+    <p>Three compression techniques as one-pagers.</p>
+
+    <div class="code-tabs" id="ct-edge">
+      <div class="ct-header">
+        <button class="ct-tab active" data-tab="q">int8 quantize</button>
+        <button class="ct-tab" data-tab="d">Distillation</button>
+        <button class="ct-tab" data-tab="s">Spec decoding</button>
+        <span class="ct-label">on-device · compression tricks</span>
+      </div>
+      <div class="ct-panel active" data-tab="q"><pre><code><span class="kw">import</span> torch
+
+<span class="kw">def</span> <span class="fn">quantize_int8</span>(w):
+    <span class="cmt"># Symmetric per-tensor int8: map [-|w|_max, |w|_max] → [-127, 127]</span>
+    scale = w.abs().max() / <span class="num">127</span>
+    q = torch.round(w / scale).clamp(-<span class="num">127</span>, <span class="num">127</span>).<span class="fn">to</span>(torch.int8)
+    <span class="kw">return</span> q, scale
+
+<span class="kw">def</span> <span class="fn">dequantize</span>(q, scale):
+    <span class="kw">return</span> q.<span class="fn">float</span>() * scale
+
+<span class="kw">def</span> <span class="fn">int4_group</span>(w, group=<span class="num">128</span>):
+    <span class="cmt"># Group quantization: one scale per group of 128 weights. The trick that</span>
+    <span class="cmt"># makes int4 work without destroying outlier-sensitive layers.</span>
+    w = w.reshape(-<span class="num">1</span>, group)                        <span class="cmt"># (G, 128)</span>
+    scale = w.abs().max(dim=<span class="num">1</span>, keepdim=<span class="kw">True</span>).values / <span class="num">7</span>
+    q = torch.round(w / scale).clamp(-<span class="num">7</span>, <span class="num">7</span>)           <span class="cmt"># 4-bit signed</span>
+    <span class="kw">return</span> q, scale
+
+<span class="cmt"># To run a quantized linear layer:</span>
+<span class="cmt">#   out = (x @ dequantize(q_w, s).T) + b   ← still fp, but memory is 4x smaller</span>
+<span class="cmt"># With fused kernels (bitsandbytes, exllama) the matmul runs directly on ints.</span>
+</code></pre></div>
+
+      <div class="ct-panel" data-tab="d"><pre><code><span class="kw">import</span> torch, torch.nn.functional <span class="kw">as</span> F
+
+<span class="kw">def</span> <span class="fn">distillation_loss</span>(student_logits, teacher_logits, labels,
+                      T=<span class="num">3.0</span>, lam=<span class="num">0.5</span>):
+    <span class="cmt"># Hard-label cross-entropy on the student's raw logits</span>
+    ce = F.cross_entropy(student_logits, labels)
+
+    <span class="cmt"># Soft-label KL divergence at temperature T</span>
+    s_soft = F.log_softmax(student_logits / T, dim=-<span class="num">1</span>)
+    t_soft = F.softmax(teacher_logits / T, dim=-<span class="num">1</span>)
+    kl = F.kl_div(s_soft, t_soft, reduction=<span class="str">"batchmean"</span>) * (T ** <span class="num">2</span>)
+
+    <span class="kw">return</span> (<span class="num">1</span> - lam) * ce + lam * kl
+
+<span class="cmt"># Training loop</span>
+<span class="kw">for</span> batch <span class="kw">in</span> loader:
+    <span class="kw">with</span> torch.no_grad():
+        t_logits = teacher(batch[<span class="str">"x"</span>])              <span class="cmt"># frozen</span>
+    s_logits = student(batch[<span class="str">"x"</span>])
+    loss = <span class="fn">distillation_loss</span>(s_logits, t_logits, batch[<span class="str">"y"</span>])
+    optimizer.zero_grad(); loss.backward(); optimizer.step()
+</code></pre></div>
+
+      <div class="ct-panel" data-tab="s"><pre><code><span class="kw">import</span> torch
+
+<span class="kw">def</span> <span class="fn">speculative_decode</span>(target, draft, prompt, gamma=<span class="num">5</span>, max_new=<span class="num">128</span>):
+    <span class="cmt"># target: the big, accurate model; draft: a small fast model</span>
+    x = prompt
+    <span class="kw">while</span> x.shape[-<span class="num">1</span>] - prompt.shape[-<span class="num">1</span>] &lt; max_new:
+        <span class="cmt"># 1. Draft model speculates γ tokens ahead</span>
+        draft_tokens = []
+        draft_probs  = []
+        dx = x.clone()
+        <span class="kw">for</span> _ <span class="kw">in</span> <span class="fn">range</span>(gamma):
+            p_d = torch.softmax(draft(dx)[<span class="num">0</span>, -<span class="num">1</span>], -<span class="num">1</span>)
+            tok = torch.multinomial(p_d, <span class="num">1</span>)
+            draft_tokens.append(tok)
+            draft_probs.append(p_d[tok])
+            dx = torch.cat([dx, tok[<span class="kw">None</span>]], -<span class="num">1</span>)
+
+        <span class="cmt"># 2. Verify all γ in one big-model pass</span>
+        logits = target(dx)
+        p_t = torch.softmax(logits[<span class="num">0</span>, -(gamma + <span class="num">1</span>):-<span class="num">1</span>], -<span class="num">1</span>)
+
+        <span class="cmt"># 3. Accept as many prefix tokens as agree</span>
+        accepted = <span class="num">0</span>
+        <span class="kw">for</span> i, tok <span class="kw">in</span> <span class="fn">enumerate</span>(draft_tokens):
+            r = torch.rand(<span class="num">1</span>)
+            <span class="kw">if</span> r &lt; (p_t[i, tok] / draft_probs[i]).clamp(max=<span class="num">1</span>):
+                accepted += <span class="num">1</span>
+            <span class="kw">else</span>:
+                <span class="kw">break</span>
+        x = dx[..., :prompt.shape[-<span class="num">1</span>] + (x.shape[-<span class="num">1</span>] - prompt.shape[-<span class="num">1</span>]) + accepted + <span class="num">1</span>]
+    <span class="kw">return</span> x
+</code></pre></div>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="summary">8. Summary</h2>
+
+    <ul>
+      <li>Edge AI shrinks models to fit phones, laptops, and microcontrollers — trading a little accuracy for huge wins in latency, privacy, and cost.</li>
+      <li><strong>Quantization</strong> drops weights from fp16 to int8, int4, or even int2, with group-wise scales and outlier handling keeping accuracy high.</li>
+      <li><strong>Distillation</strong> trains a small student to imitate a big teacher's probability distribution. "Dark knowledge" transfers generalization.</li>
+      <li><strong>Pruning</strong> zeroes out or removes unimportant weights. Structured pruning works with standard kernels; unstructured pruning needs sparse matmul.</li>
+      <li><strong>Speculative decoding</strong> uses a small draft model to pre-generate tokens that the big model verifies in parallel — a 2-4× throughput win with zero accuracy loss.</li>
+      <li>Apple Intelligence, Gemini Nano, Phi-3, Llama-3.2-1B all live on this stack. Expect 2026 consumer devices to routinely run 8B+ models.</li>
+    </ul>
+
+    <div class="bib">
+      <h4>Further reading</h4>
+      <ul>
+        <li>Hinton, Vinyals &amp; Dean (2015) — <em>Distilling the Knowledge in a Neural Network</em>.</li>
+        <li>Frantar et al. (2022) — <em>GPTQ: Accurate Post-Training Quantization for Generative Pre-trained Transformers</em>.</li>
+        <li>Lin et al. (2023) — <em>AWQ: Activation-aware Weight Quantization for LLM Compression</em>.</li>
+        <li>Ma et al. (2024) — <em>The Era of 1-bit LLMs: All Large Language Models are in 1.58 Bits</em>.</li>
+        <li>Leviathan, Kalman &amp; Matias (2023) — <em>Fast Inference from Transformers via Speculative Decoding</em>.</li>
+      </ul>
+    </div>
+
+    <div class="next-card">
+      <div class="label">NEXT UP</div>
+      <a href="ai-safety.html">→ AI Safety &amp; Alignment</a>
+      <p>Once the model is small enough to ship everywhere, the question of whether it's safe to ship everywhere gets urgent. Read on.</p>
+    </div>
+
+  </article>
+</div>
+
+<script>
+// =========================================================
+// Code tabs
+document.querySelectorAll('.code-tabs').forEach(root => {
+  const tabs = root.querySelectorAll('.ct-tab');
+  const panels = root.querySelectorAll('.ct-panel');
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const target = tab.getAttribute('data-tab');
+      tabs.forEach(t => t.classList.toggle('active', t === tab));
+      panels.forEach(p => p.classList.toggle('active', p.getAttribute('data-tab') === target));
+    });
+  });
+});
+
+// =========================================================
+// Quantization demo
+(function() {
+  const svg = document.getElementById('qSvg');
+  if (!svg) return;
+  const NS = 'http://www.w3.org/2000/svg';
+  const slider = document.getElementById('qBits');
+  const label = document.getElementById('qBitsLabel');
+  const caption = document.getElementById('qCaption');
+
+  // Fake weight distribution: mostly Gaussian with a few heavy-tail outliers
+  const rng = (function() { let s = 7; return () => (s = (s * 1103515245 + 12345) % 0x7fffffff) / 0x7fffffff; })();
+  function gauss() {
+    const u = rng(), v = rng();
+    return Math.sqrt(-2 * Math.log(u + 1e-9)) * Math.cos(2 * Math.PI * v);
+  }
+  const N = 4000;
+  const weights = new Float64Array(N);
+  for (let i = 0; i < N; i++) weights[i] = gauss() * 0.15;
+  // A few outliers
+  for (let i = 0; i < 20; i++) weights[Math.floor(rng() * N)] = (rng() < 0.5 ? -1 : 1) * (0.7 + rng() * 0.3);
+
+  function quantize(w, bits) {
+    const absMax = Math.max(...w.map(Math.abs));
+    const levels = Math.pow(2, bits - 1) - 1;  // symmetric signed
+    const scale = absMax / Math.max(1, levels);
+    const q = new Float64Array(w.length);
+    for (let i = 0; i < w.length; i++) {
+      q[i] = Math.max(-levels, Math.min(levels, Math.round(w[i] / scale))) * scale;
+    }
+    return q;
+  }
+
+  function rms(a, b) {
+    let s = 0;
+    for (let i = 0; i < a.length; i++) s += (a[i] - b[i]) ** 2;
+    return Math.sqrt(s / a.length);
+  }
+
+  function histogram(data, nbins, lo, hi) {
+    const h = new Array(nbins).fill(0);
+    for (const v of data) {
+      const bin = Math.floor((v - lo) / (hi - lo) * nbins);
+      if (bin >= 0 && bin < nbins) h[bin]++;
+    }
+    return h;
+  }
+
+  function draw() {
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+    const bits = parseInt(slider.value, 10);
+    label.textContent = bits;
+
+    const q = quantize(weights, bits);
+    const err = rms(weights, q);
+
+    const W = 720, H = 340;
+    const ml = 50, mr = 30, mt = 30, mb = 50;
+    const plotW = W - ml - mr;
+    const plotH = H - mt - mb;
+
+    const lo = -1.1, hi = 1.1;
+    const nbins = 80;
+    const h1 = histogram(weights, nbins, lo, hi);
+    const h2 = histogram(q, nbins, lo, hi);
+    const maxH = Math.max(...h1, ...h2);
+
+    // Frame
+    const fr = document.createElementNS(NS, 'rect');
+    fr.setAttribute('x', ml); fr.setAttribute('y', mt);
+    fr.setAttribute('width', plotW); fr.setAttribute('height', plotH);
+    fr.setAttribute('fill', '#0f131a');
+    fr.setAttribute('stroke', '#2a3446');
+    svg.appendChild(fr);
+
+    // Bars
+    const barW = plotW / nbins;
+    for (let i = 0; i < nbins; i++) {
+      const x = ml + i * barW;
+      const h1h = (h1[i] / maxH) * plotH;
+      const h2h = (h2[i] / maxH) * plotH;
+      const r1 = document.createElementNS(NS, 'rect');
+      r1.setAttribute('x', x); r1.setAttribute('y', mt + plotH - h1h);
+      r1.setAttribute('width', barW - 0.5); r1.setAttribute('height', h1h);
+      r1.setAttribute('fill', '#63b3ff');
+      r1.setAttribute('fill-opacity', 0.3);
+      svg.appendChild(r1);
+      const r2 = document.createElementNS(NS, 'rect');
+      r2.setAttribute('x', x); r2.setAttribute('y', mt + plotH - h2h);
+      r2.setAttribute('width', barW - 0.5); r2.setAttribute('height', h2h);
+      r2.setAttribute('fill', '#ff8a5b');
+      r2.setAttribute('fill-opacity', 0.55);
+      svg.appendChild(r2);
+    }
+
+    // X-axis
+    const ax = document.createElementNS(NS, 'line');
+    ax.setAttribute('x1', ml); ax.setAttribute('y1', mt + plotH);
+    ax.setAttribute('x2', ml + plotW); ax.setAttribute('y2', mt + plotH);
+    ax.setAttribute('stroke', '#2a3446'); svg.appendChild(ax);
+    [-1, -0.5, 0, 0.5, 1].forEach(v => {
+      const x = ml + (v - lo) / (hi - lo) * plotW;
+      const tl = document.createElementNS(NS, 'text');
+      tl.setAttribute('x', x); tl.setAttribute('y', mt + plotH + 16);
+      tl.setAttribute('text-anchor', 'middle');
+      tl.setAttribute('fill', '#7a8a9a');
+      tl.setAttribute('font-size', 11);
+      tl.setAttribute('font-family', 'ui-monospace, monospace');
+      tl.textContent = v.toFixed(1);
+      svg.appendChild(tl);
+    });
+
+    // Legend
+    const lg1 = document.createElementNS(NS, 'text');
+    lg1.setAttribute('x', ml + 10); lg1.setAttribute('y', mt + 18);
+    lg1.setAttribute('fill', '#63b3ff');
+    lg1.setAttribute('font-size', 11);
+    lg1.setAttribute('font-family', 'ui-monospace, monospace');
+    lg1.textContent = 'fp32 weights';
+    svg.appendChild(lg1);
+    const lg2 = document.createElementNS(NS, 'text');
+    lg2.setAttribute('x', ml + 140); lg2.setAttribute('y', mt + 18);
+    lg2.setAttribute('fill', '#ff8a5b');
+    lg2.setAttribute('font-size', 11);
+    lg2.setAttribute('font-family', 'ui-monospace, monospace');
+    lg2.textContent = `int${bits} quantized  (RMS error = ${err.toFixed(4)})`;
+    svg.appendChild(lg2);
+
+    // Axis title
+    const xt = document.createElementNS(NS, 'text');
+    xt.setAttribute('x', ml + plotW / 2); xt.setAttribute('y', H - 10);
+    xt.setAttribute('text-anchor', 'middle');
+    xt.setAttribute('fill', '#b4c4d4');
+    xt.setAttribute('font-size', 12);
+    xt.setAttribute('font-family', 'ui-monospace, monospace');
+    xt.textContent = 'weight value';
+    svg.appendChild(xt);
+
+    const msg = bits >= 7 ? 'int8 is nearly indistinguishable from fp32 — the industry default for a reason.'
+              : bits >= 4 ? 'int4: visible binning, but accuracy drops are usually a few %. Workable with good calibration.'
+              : bits >= 2 ? 'int2–3: severe binning. Only works with quantization-aware training.'
+              : 'int1: essentially binary weights. Requires end-to-end training (BitNet).';
+    caption.textContent = `${bits}-bit quantization, RMS error ${err.toFixed(4)}.  ${msg}`;
+  }
+
+  slider.addEventListener('input', draw);
+  draw();
+})();
+</script>
+<script defer src="../search-index.js"></script>
+<script defer src="../search.js"></script>
+</body>
+</html>

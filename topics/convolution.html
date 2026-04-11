@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Convolution — Deep Dive</title>
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError: false});"></script>
+</head>
+<body>
+<div id="tooltip"></div>
+
+<nav class="topic-nav">
+  <a class="back" href="../ai-ml.html">← Back to AI/ML</a>
+  <div class="crumb">Deep Dives / <span class="topic-name">Convolution</span></div>
+</nav>
+
+<div class="topic-layout">
+  <aside class="topic-toc">
+    <h4>ON THIS PAGE</h4>
+    <ul>
+      <li><a href="#intro">1. Why CNNs exist</a></li>
+      <li><a href="#1d">2. 1D convolution</a></li>
+      <li><a href="#2d">3. 2D convolution on images</a>
+        <ul><li><a href="#conv-demo">Sliding-window demo</a></li></ul>
+      </li>
+      <li><a href="#kernels">4. Famous kernels</a></li>
+      <li><a href="#padding">5. Padding, stride, dilation</a></li>
+      <li><a href="#shape">6. Output shape formula</a></li>
+      <li><a href="#channels">7. Multi-channel convolutions</a></li>
+      <li><a href="#pooling">8. Pooling</a></li>
+      <li><a href="#learned">9. Why learned filters beat hand-crafted</a></li>
+      <li><a href="#architectures">10. Classic CNN architectures</a></li>
+      <li><a href="#summary">11. Summary</a></li>
+    </ul>
+  </aside>
+
+  <article class="topic-content">
+    <h1>Convolution</h1>
+    <p class="subtitle">The operation that taught neural networks to see. A small learnable filter slides across an image, computing dot products — and somehow, this turns out to be the right shape for understanding pictures.</p>
+    <div class="meta-tags">
+      <span>Prereq: matrix multiplication, basic image model</span>
+      <span>Time to read: ~25 min</span>
+      <span>Interactive figures: 1</span>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="intro">1. Why CNNs exist</h2>
+
+    <p>A grayscale image at 224×224 resolution has $224 \times 224 = 50{,}176$ pixels. A fully-connected layer mapping this image to a hidden layer of size 1000 would need $50{,}176 \cdot 1000 \approx 5 \times 10^7$ weights. That's already huge — and this is just the <em>first</em> layer of one small network. Worse, the network learns from scratch that the pixel at position $(10, 20)$ and the pixel at position $(11, 20)$ are neighbors, that shifting the image by one pixel shouldn't change the classification, and so on. Every translation invariance has to be learned from data.</p>
+
+    <p>Convolutional layers encode three assumptions about images directly into the architecture, and in doing so they slash the parameter count and dramatically improve sample efficiency:</p>
+
+    <ul class="clean">
+      <li><strong>Locality.</strong> A pixel is most related to its neighbors. You don't need to connect every pixel to every hidden unit — you only need small local patches.</li>
+      <li><strong>Translation invariance.</strong> A cat is a cat regardless of where in the frame it appears. The same pattern-detector should apply everywhere.</li>
+      <li><strong>Hierarchy of features.</strong> Complex features (a cat's face) are composed of simpler ones (eyes, nose, ears), which are composed of simpler ones still (edges, corners, textures).</li>
+    </ul>
+
+    <p>The convolution operation delivers the first two directly: a single small filter is applied (with shared weights) at every location in the image. Stacking convolutional layers delivers the third: deeper layers see wider "receptive fields" built from the outputs of earlier layers.</p>
+
+    <div class="callout">
+      <div class="label">THE TRADE</div>
+      <p style="margin:6px 0">A 3×3 convolutional layer processing a 224×224 image with 64 output channels has $3 \times 3 \times 64 = 576$ weights. A fully-connected layer with the same number of output units would have $50{,}176 \times 64 \approx 3.2 \times 10^6$ weights. That's a <strong>5500×</strong> parameter reduction — for free, by encoding the structure of images.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="1d">2. 1D convolution</h2>
+
+    <p>Before tackling images, let's define convolution on a 1D sequence. Let $x$ be a signal of length $N$ and $k$ a filter ("kernel") of length $K$. The (discrete) cross-correlation — what deep learning actually computes, and confusingly calls "convolution" — is:</p>
+
+    <div class="math-display">$$y[i] = \sum_{j=0}^{K-1} k[j] \cdot x[i + j]$$</div>
+
+    <div class="defn">
+      <span class="label">Convolution vs cross-correlation</span>
+      <p>Formal mathematical convolution flips the kernel: $y[i] = \sum_j k[j] \cdot x[i - j]$. Cross-correlation does not: $y[i] = \sum_j k[j] \cdot x[i + j]$. Deep learning calls both "convolution" but always computes cross-correlation. The distinction matters only if you care about sign conventions when transferring formulas from signal processing textbooks. Since the kernel is <em>learned</em>, flipping the indices just learns a flipped kernel — the operation is the same up to a reindexing.</p>
+    </div>
+
+    <div class="example">
+      <span class="label">1D convolution, worked out</span>
+      <p>$x = [1, 2, 3, 4, 5]$, $k = [1, 0, -1]$ (a crude derivative filter).</p>
+      <p>$y[0] = 1\cdot 1 + 0\cdot 2 + (-1)\cdot 3 = -2$</p>
+      <p>$y[1] = 1\cdot 2 + 0\cdot 3 + (-1)\cdot 4 = -2$</p>
+      <p>$y[2] = 1\cdot 3 + 0\cdot 4 + (-1)\cdot 5 = -2$</p>
+      <p>Output $y = [-2, -2, -2]$. Every output value is the signed difference across a width-3 window — exactly what a finite-difference derivative computes.</p>
+    </div>
+
+    <p>Notice the output has length $N - K + 1 = 5 - 3 + 1 = 3$. The filter fits into the signal in 3 distinct positions. We'll recover the general formula in the padding section below.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="2d">3. 2D convolution on images</h2>
+
+    <p>An image is just a 2D array, and 2D convolution is the straightforward generalization. For an $H \times W$ input and a $K_h \times K_w$ kernel:</p>
+
+    <div class="math-display">$$y[i, j] = \sum_{u=0}^{K_h - 1} \sum_{v=0}^{K_w - 1} k[u, v] \cdot x[i + u,\ j + v]$$</div>
+
+    <p>In plain English: place the kernel on the image so its top-left corner is at $(i, j)$; multiply each kernel entry by the image pixel beneath it; sum everything. That's one output pixel. Then slide the kernel over by one position and do it again. Keep sliding until you've covered the image.</p>
+
+    <h3 id="conv-demo">Interactive: watch a kernel slide across an image</h3>
+    <p>The 5×5 input below represents a tiny image. The 3×3 kernel slides over it; at each position, the nine products are computed and summed. Press <strong>Step →</strong> to advance to the next output cell. Click any input cell to edit its value, and pick a kernel preset to see different feature detectors in action.</p>
+
+    <div class="step-figure" id="conv-figure">
+      <div class="sf-header">
+        <span class="sf-title">▸ 2D convolution · 5×5 input × 3×3 kernel</span>
+        <span class="sf-progress" id="conv-progress">Position 0 / 9</span>
+      </div>
+      <div class="sf-body">
+        <div class="sf-visual">
+          <svg viewBox="0 0 480 260" width="100%" style="max-width:480px" id="conv-svg">
+            <!-- input grid -->
+            <g id="conv-input">
+              <text x="70" y="20" text-anchor="middle" fill="#8a93a6" font-family="monospace" font-size="10">input (5×5)</text>
+            </g>
+            <!-- kernel overlay (moving) -->
+            <rect id="conv-overlay" x="30" y="30" width="90" height="90" fill="none" stroke="#fbbf24" stroke-width="2.5" rx="2"/>
+            <!-- kernel display -->
+            <g id="conv-kernel">
+              <text x="215" y="20" text-anchor="middle" fill="#8a93a6" font-family="monospace" font-size="10">kernel (3×3)</text>
+            </g>
+            <!-- output grid -->
+            <g id="conv-output">
+              <text x="370" y="20" text-anchor="middle" fill="#8a93a6" font-family="monospace" font-size="10">output (3×3)</text>
+            </g>
+            <!-- computation display -->
+            <text x="240" y="200" text-anchor="middle" fill="#f472b6" font-family="monospace" font-size="11" id="conv-calc">?</text>
+            <text x="240" y="220" text-anchor="middle" fill="#22d3ee" font-family="monospace" font-size="11" id="conv-result">?</text>
+          </svg>
+        </div>
+        <div class="sf-explain" id="conv-explain">
+          <h5>READY</h5>
+          <p>The yellow box is the current kernel position. Each step multiplies 9 pairs and sums them — the result becomes one output pixel.</p>
+        </div>
+      </div>
+      <div class="sf-params">
+        <label>Preset
+          <select id="conv-preset" onchange="applyConvPreset()">
+            <option value="edge">Edge detect</option>
+            <option value="sobel-x">Sobel X</option>
+            <option value="sobel-y">Sobel Y</option>
+            <option value="blur">Blur</option>
+            <option value="sharpen">Sharpen</option>
+            <option value="identity">Identity</option>
+          </select>
+        </label>
+      </div>
+      <div class="sf-controls">
+        <button class="btn" onclick="resetConv()">↺ Reset</button>
+        <button class="btn" onclick="prevConv()">← Back</button>
+        <div class="spacer"></div>
+        <button class="btn primary" onclick="stepConv()">Step →</button>
+        <button class="btn" onclick="runConvAll()">Run All</button>
+      </div>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="kernels">4. Famous hand-crafted kernels</h2>
+
+    <p>Before deep learning, computer vision engineers designed filters by hand. Each one responds to a specific visual pattern. Understanding them gives intuition for what learned convolutional filters do (roughly — the real story is more complicated).</p>
+
+    <div class="grid">
+      <div class="card">
+        <h4>Edge detector</h4>
+        <p>$\begin{bmatrix} -1 & -1 & -1 \\ -1 & 8 & -1 \\ -1 & -1 & -1 \end{bmatrix}$</p>
+        <p>Output is large where the center pixel differs from its neighbors (i.e. at edges) and zero on flat regions. Sum of entries is 0 — flat regions output zero.</p>
+      </div>
+      <div class="card">
+        <h4>Sobel X</h4>
+        <p>$\begin{bmatrix} -1 & 0 & 1 \\ -2 & 0 & 2 \\ -1 & 0 & 1 \end{bmatrix}$</p>
+        <p>Approximates the horizontal derivative. Large positive response at rising vertical edges, large negative at falling. The Sobel Y filter is its transpose.</p>
+      </div>
+      <div class="card">
+        <h4>Gaussian blur</h4>
+        <p>$\frac{1}{16}\begin{bmatrix} 1 & 2 & 1 \\ 2 & 4 & 2 \\ 1 & 2 & 1 \end{bmatrix}$</p>
+        <p>Smooths the image by averaging each pixel with its neighbors, weighted by a Gaussian. Entries sum to 1 so average brightness is preserved.</p>
+      </div>
+      <div class="card">
+        <h4>Sharpen</h4>
+        <p>$\begin{bmatrix} 0 & -1 & 0 \\ -1 & 5 & -1 \\ 0 & -1 & 0 \end{bmatrix}$</p>
+        <p>Amplifies the difference between each pixel and its neighbors. Equivalent to "identity + edge enhance." Sums to 1 so brightness is preserved.</p>
+      </div>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="padding">5. Padding, stride, dilation</h2>
+
+    <h3>Padding</h3>
+    <p>Convolving an $H \times W$ image with a $K \times K$ kernel naively yields a $(H - K + 1) \times (W - K + 1)$ output. The output shrinks each layer — after several layers you run out of image. To fix this we <em>pad</em> the input with extra rows and columns (usually zeros) before convolving.</p>
+
+    <div class="defn">
+      <span class="label">Padding modes</span>
+      <ul class="clean">
+        <li><strong>Valid / no padding:</strong> no padding added. Output shrinks by $K - 1$ in each dimension.</li>
+        <li><strong>Same padding:</strong> pad by enough to make the output the same size as the input. For a $K \times K$ kernel with odd $K$, that means $(K - 1)/2$ on each side.</li>
+        <li><strong>Full padding:</strong> pad by $K - 1$ on each side. Output is larger than input — rarely used.</li>
+      </ul>
+    </div>
+
+    <h3>Stride</h3>
+    <p>Normal convolution slides the kernel by 1 position at a time. A stride of $s$ skips $s$ positions between applications. Stride 2, for instance, halves the output resolution — a cheap way to downsample. Strided convolution is an alternative to pooling for shrinking the spatial dimensions.</p>
+
+    <h3>Dilation (atrous convolution)</h3>
+    <p>A dilated kernel samples input positions that are $d$ pixels apart instead of adjacent. A $3 \times 3$ kernel with dilation 2 covers a $5 \times 5$ receptive field but still has only 9 weights. Dilation is critical in segmentation networks where you want a large receptive field without extra parameters or downsampling.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="shape">6. Output shape formula</h2>
+
+    <p>Putting padding, stride, and dilation together, the output size of a 1D convolution is:</p>
+
+    <div class="math-display">$$O = \left\lfloor \frac{I + 2P - D(K - 1) - 1}{S} \right\rfloor + 1$$</div>
+
+    <p>where $I$ is input size, $P$ is padding (on each side), $K$ is kernel size, $D$ is dilation, $S$ is stride. 2D is identical, computed independently for height and width.</p>
+
+    <div class="example">
+      <span class="label">Three worked examples</span>
+      <p>$I = 28$, $K = 3$, $P = 0$, $S = 1$, $D = 1$ &nbsp; $\rightarrow$ &nbsp; $O = \lfloor (28 + 0 - 2 - 1)/1 \rfloor + 1 = 26$</p>
+      <p>$I = 28$, $K = 3$, $P = 1$, $S = 1$, $D = 1$ (same padding) &nbsp; $\rightarrow$ &nbsp; $O = \lfloor (28 + 2 - 2 - 1)/1 \rfloor + 1 = 28$</p>
+      <p>$I = 28$, $K = 3$, $P = 1$, $S = 2$, $D = 1$ (strided downsample) &nbsp; $\rightarrow$ &nbsp; $O = \lfloor (28 + 2 - 2 - 1)/2 \rfloor + 1 = 14$</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="channels">7. Multi-channel convolutions</h2>
+
+    <p>Real images have 3 color channels (RGB). After the first layer, feature maps typically have dozens or hundreds of channels. A convolutional layer needs to consume all input channels and produce all output channels.</p>
+
+    <p>For an input with $C_\text{in}$ channels and an output with $C_\text{out}$ channels, the kernel is a 4D tensor of shape $[C_\text{out}, C_\text{in}, K, K]$. Each output channel is computed as the sum of <em>separate</em> 2D convolutions applied to each input channel, with a different kernel per input channel:</p>
+
+    <div class="math-display">$$y_{c_\text{out}}[i, j] = \sum_{c_\text{in}=0}^{C_\text{in}-1} \sum_{u,v} k_{c_\text{out}, c_\text{in}}[u, v] \cdot x_{c_\text{in}}[i+u,\ j+v]$$</div>
+
+    <p>The number of weights in such a layer is $C_\text{out} \cdot C_\text{in} \cdot K \cdot K$, plus $C_\text{out}$ biases.</p>
+
+    <div class="example">
+      <span class="label">Parameter counting</span>
+      <p>The first layer of a typical CNN might be: input 3 channels (RGB), output 64 channels, kernel 3×3.</p>
+      <p>Weights: $64 \times 3 \times 3 \times 3 = 1{,}728$ weights + 64 biases = 1,792 parameters.</p>
+      <p>For comparison: a fully-connected layer taking a $224 \times 224 \times 3$ image to 64 hidden units would need $\approx 9.6 \times 10^6$ parameters.</p>
+    </div>
+
+    <h3>1×1 convolutions</h3>
+    <p>A kernel with $K = 1$ has no spatial extent — it just mixes channels at each pixel. 1×1 convolutions are surprisingly useful: they provide a cheap way to change the number of channels, let the network learn per-pixel channel recombinations, and form the backbone of "bottleneck" blocks in ResNets and similar architectures.</p>
+
+    <h3>Depthwise separable convolutions</h3>
+    <p>A standard 3×3 convolution with $C_\text{in} = C_\text{out} = C$ has $9 C^2$ weights. A <em>depthwise separable</em> convolution factors this into two cheaper operations:</p>
+    <ul class="clean">
+      <li><strong>Depthwise:</strong> one 3×3 spatial filter per input channel ($9 C$ weights) — no channel mixing.</li>
+      <li><strong>Pointwise:</strong> a 1×1 convolution mixing channels ($C^2$ weights).</li>
+    </ul>
+    <p>Total: $9 C + C^2$ weights instead of $9 C^2$ — roughly $9\times$ cheaper for large $C$. This factorization is the core insight of MobileNet, used on every phone camera.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="pooling">8. Pooling</h2>
+
+    <p>Pooling downsamples a feature map, reducing spatial resolution while preserving the strongest responses. Unlike convolution, pooling has no learnable parameters. The two common variants:</p>
+
+    <div class="grid">
+      <div class="card">
+        <h4>Max pooling</h4>
+        <p>Take a window (typically $2 \times 2$, stride 2) and output the maximum value. This preserves the strongest response in each region and adds a small amount of translation invariance. Dominant in the AlexNet/VGG era.</p>
+      </div>
+      <div class="card">
+        <h4>Average pooling</h4>
+        <p>Output the mean of the window. Smoother than max pooling; sometimes used for global downsampling at the very end of a network (<em>global average pooling</em> = one output per channel).</p>
+      </div>
+    </div>
+
+    <p>Modern architectures (ResNet and after) often replace pooling with strided convolutions, on the theory that a learned downsampler is better than a fixed one. You'll still see max pooling in many production networks, though.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="learned">9. Why learned filters beat hand-crafted</h2>
+
+    <p>Visualize the filters in the first layer of a CNN trained on natural images and you will see something striking: many of them look like Gabor filters (oriented edge and blob detectors) — <em>the same</em> filters that 1960s neuroscientists found in the primary visual cortex of cats. The network rediscovers, from data alone, the primitives that biology evolved and that computer vision engineers hand-coded for decades.</p>
+
+    <p>Deeper layers respond to more complex patterns: textures, parts, objects. This hierarchy is not programmed; it emerges from stacking simple convolutions and training end-to-end on a classification objective. This is the shift from 2012 onward: instead of designing features, we design architectures and let gradient descent learn the features.</p>
+
+    <div class="callout good">
+      <div class="label">THE KEY IDEA</div>
+      <p style="margin:6px 0">A CNN's receptive field grows linearly with depth in a plain conv-stack and <em>exponentially</em> with dilated convolutions. By layer 10 or so, a neuron "sees" most of the image — but through a hierarchy of simple pattern detectors, not a single giant matrix multiplication.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="architectures">10. A timeline of classic CNNs</h2>
+
+    <ul class="clean">
+      <li><strong>LeNet-5 (LeCun, 1998)</strong> — 7 layers, ~60K parameters. Recognized zip-code digits for the US Postal Service. Architecture: conv → pool → conv → pool → FC → FC → softmax. Everything after is a variation on this theme.</li>
+      <li><strong>AlexNet (Krizhevsky, 2012)</strong> — 8 layers, ~60M parameters. Won ImageNet 2012 by ten points, kicked off the deep learning revolution. Key tricks: ReLU, dropout, GPU training, data augmentation.</li>
+      <li><strong>VGG-16/19 (Simonyan &amp; Zisserman, 2014)</strong> — demonstrated that depth alone buys accuracy. Simple recipe: stacks of 3×3 convs and 2×2 maxpools, nothing fancy. ~140M parameters.</li>
+      <li><strong>GoogLeNet / Inception (Szegedy et al., 2014)</strong> — introduced the Inception module: parallel 1×1, 3×3, 5×5 convs concatenated along the channel axis. Much more parameter-efficient than VGG.</li>
+      <li><strong>ResNet (He et al., 2015)</strong> — residual connections ($h_{l+1} = h_l + f(h_l)$) let the network learn identity mappings by default, enabling training of 152-layer networks that had previously been untrainable. The single most influential architecture change of the decade.</li>
+      <li><strong>DenseNet (Huang et al., 2017)</strong> — every layer receives input from every previous layer (concatenation instead of addition). Efficient reuse of features.</li>
+      <li><strong>EfficientNet (Tan &amp; Le, 2019)</strong> — principled scaling of depth, width, and resolution together. State-of-the-art accuracy per FLOP for image classification.</li>
+      <li><strong>Vision Transformers (2020)</strong> — discard convolution entirely and process images as sequences of patches with self-attention. For a while everyone thought this was the end of CNNs; it's actually shaping up to be a convergence: modern hybrids use convolutions early and attention later.</li>
+    </ul>
+
+    <!-- ========================================================== -->
+    <h2 id="summary">11. Summary</h2>
+
+    <div class="callout good">
+      <div class="label">ONE-PARAGRAPH SUMMARY</div>
+      <p style="margin:6px 0">A convolution slides a small learnable filter across an image, computing a dot product at each position. Because the filter weights are shared across all locations, convolutions encode locality and translation invariance directly into the architecture — dramatically reducing parameter count compared to fully-connected layers. Stacked convolutional layers build hierarchical features: early layers detect edges and textures, deeper layers detect parts and objects. The whole thing is trained end-to-end with backpropagation, and it is the reason computers can see.</p>
+    </div>
+
+    <h3>Where to go next</h3>
+    <ul class="clean">
+      <li><a href="backpropagation.html">→ Backpropagation</a> — how gradients flow through a convolutional layer (spoiler: it's also a convolution).</li>
+      <li><a href="self-attention.html">→ Self-Attention</a> — the architecture that started eating CNNs' lunch.</li>
+      <li><a class="ext" href="https://cs231n.github.io/convolutional-networks/" target="_blank">Stanford CS231n: Convolutional Networks</a> — the classic online course module.</li>
+      <li><a class="ext" href="https://distill.pub/2018/feature-visualization/" target="_blank">Distill: Feature Visualization</a> — what filters in a trained CNN actually detect.</li>
+      <li><a class="ext" href="https://arxiv.org/abs/1603.07285" target="_blank">A Guide to Convolution Arithmetic for Deep Learning</a> — the definitive reference for output shape formulas.</li>
+    </ul>
+  </article>
+</div>
+
+<script>
+// ============================================================
+// 2D convolution demo
+// ============================================================
+// 5×5 input (editable), 3×3 kernel (preset), 3×3 output
+const convState = {
+  input: [
+    [0, 0, 0, 0, 0],
+    [0, 1, 1, 1, 0],
+    [0, 1, 2, 1, 0],
+    [0, 1, 1, 1, 0],
+    [0, 0, 0, 0, 0]
+  ],
+  kernel: [
+    [-1, -1, -1],
+    [-1,  8, -1],
+    [-1, -1, -1]
+  ],
+  output: [[0,0,0],[0,0,0],[0,0,0]],
+  pos: 0 // 0..8, (row*3 + col)
+};
+
+const CONV_PRESETS = {
+  'edge': [[-1,-1,-1],[-1,8,-1],[-1,-1,-1]],
+  'sobel-x': [[-1,0,1],[-2,0,2],[-1,0,1]],
+  'sobel-y': [[-1,-2,-1],[0,0,0],[1,2,1]],
+  'blur': [[1/16,2/16,1/16],[2/16,4/16,2/16],[1/16,2/16,1/16]],
+  'sharpen': [[0,-1,0],[-1,5,-1],[0,-1,0]],
+  'identity': [[0,0,0],[0,1,0],[0,0,0]]
+};
+
+const CONV_CELL = 30;
+const INPUT_X = 30, INPUT_Y = 30;
+const KERNEL_X = 170, KERNEL_Y = 60;
+const OUTPUT_X = 310, OUTPUT_Y = 60;
+
+function convFmt(n) {
+  if (Math.abs(n) < 1e-9) return '0';
+  if (Number.isInteger(n)) return n.toString();
+  return (+n).toFixed(2);
+}
+
+function convRenderInput() {
+  const g = document.getElementById('conv-input');
+  let html = '<text x="105" y="20" text-anchor="middle" fill="#8a93a6" font-family="monospace" font-size="10">input (5×5)</text>';
+  for (let r = 0; r < 5; r++) {
+    for (let c = 0; c < 5; c++) {
+      const x = INPUT_X + c * CONV_CELL;
+      const y = INPUT_Y + r * CONV_CELL;
+      const val = convState.input[r][c];
+      // color by value (0..3 range typical)
+      const intensity = Math.max(0, Math.min(1, val / 3));
+      const bg = `rgba(124, 92, 255, ${0.15 + intensity * 0.5})`;
+      html += `<rect x="${x}" y="${y}" width="${CONV_CELL}" height="${CONV_CELL}" fill="${bg}" stroke="#242a3a" stroke-width="1" style="cursor:pointer" onclick="editConvCell(${r},${c})"/>`;
+      html += `<text x="${x + CONV_CELL/2}" y="${y + CONV_CELL/2 + 4}" text-anchor="middle" fill="#dbe1ec" font-family="monospace" font-size="11" pointer-events="none">${convFmt(val)}</text>`;
+    }
+  }
+  g.innerHTML = html;
+}
+
+function convRenderKernel() {
+  const g = document.getElementById('conv-kernel');
+  let html = '<text x="215" y="20" text-anchor="middle" fill="#8a93a6" font-family="monospace" font-size="10">kernel (3×3)</text>';
+  for (let r = 0; r < 3; r++) {
+    for (let c = 0; c < 3; c++) {
+      const x = KERNEL_X + c * 30;
+      const y = KERNEL_Y + r * 30;
+      const val = convState.kernel[r][c];
+      html += `<rect x="${x}" y="${y}" width="30" height="30" fill="#242a3a" stroke="#fbbf24" stroke-width="1"/>`;
+      html += `<text x="${x + 15}" y="${y + 19}" text-anchor="middle" fill="#fbbf24" font-family="monospace" font-size="11">${convFmt(val)}</text>`;
+    }
+  }
+  g.innerHTML = html;
+}
+
+function convRenderOutput() {
+  const g = document.getElementById('conv-output');
+  let html = '<text x="355" y="20" text-anchor="middle" fill="#8a93a6" font-family="monospace" font-size="10">output (3×3)</text>';
+  for (let r = 0; r < 3; r++) {
+    for (let c = 0; c < 3; c++) {
+      const x = OUTPUT_X + c * 30;
+      const y = OUTPUT_Y + r * 30;
+      const idx = r * 3 + c;
+      const computed = idx < convState.pos;
+      const bg = computed ? '#1a2633' : '#11141c';
+      html += `<rect x="${x}" y="${y}" width="30" height="30" fill="${bg}" stroke="${computed ? '#22d3ee' : '#242a3a'}" stroke-width="1"/>`;
+      if (computed) {
+        html += `<text x="${x + 15}" y="${y + 19}" text-anchor="middle" fill="#22d3ee" font-family="monospace" font-size="11">${convFmt(convState.output[r][c])}</text>`;
+      } else {
+        html += `<text x="${x + 15}" y="${y + 19}" text-anchor="middle" fill="#343d52" font-family="monospace" font-size="11">·</text>`;
+      }
+    }
+  }
+  g.innerHTML = html;
+}
+
+function convRenderOverlay() {
+  // Position overlay on input; pos 0..8 maps to top-left corner (r,c) in output = (pos/3, pos%3)
+  // kernel top-left in input coords = same (r, c)
+  const overlay = document.getElementById('conv-overlay');
+  if (convState.pos >= 9) {
+    overlay.setAttribute('opacity', 0);
+    return;
+  }
+  overlay.setAttribute('opacity', 1);
+  const r = Math.floor(convState.pos / 3);
+  const c = convState.pos % 3;
+  overlay.setAttribute('x', INPUT_X + c * CONV_CELL - 2);
+  overlay.setAttribute('y', INPUT_Y + r * CONV_CELL - 2);
+  overlay.setAttribute('width', 3 * CONV_CELL + 4);
+  overlay.setAttribute('height', 3 * CONV_CELL + 4);
+}
+
+function computeConvAt(r, c) {
+  let sum = 0;
+  const terms = [];
+  for (let u = 0; u < 3; u++) {
+    for (let v = 0; v < 3; v++) {
+      const k = convState.kernel[u][v];
+      const x = convState.input[r+u][c+v];
+      sum += k * x;
+      terms.push(`${convFmt(k)}·${convFmt(x)}`);
+    }
+  }
+  return { sum, terms };
+}
+
+function resetConv() {
+  convState.pos = 0;
+  convState.output = [[0,0,0],[0,0,0],[0,0,0]];
+  convRenderInput();
+  convRenderKernel();
+  convRenderOutput();
+  convRenderOverlay();
+  document.getElementById('conv-progress').textContent = 'Position 0 / 9';
+  document.getElementById('conv-calc').textContent = '';
+  document.getElementById('conv-result').textContent = '';
+  document.getElementById('conv-explain').innerHTML =
+    `<h5>READY</h5><p>The yellow box shows the first kernel position (top-left of the input). Press <strong>Step →</strong> to compute the first output cell.</p>`;
+}
+
+function stepConv() {
+  if (convState.pos >= 9) {
+    document.getElementById('conv-explain').innerHTML =
+      `<h5>DONE</h5><p>All 9 output cells computed. The 3×3 output shows the kernel's response at every valid position. Press <strong>Reset</strong> to start over, or change the kernel.</p>`;
+    return;
+  }
+  const r = Math.floor(convState.pos / 3);
+  const c = convState.pos % 3;
+  const { sum, terms } = computeConvAt(r, c);
+  convState.output[r][c] = sum;
+  convState.pos++;
+  convRenderOutput();
+  convRenderOverlay();
+  document.getElementById('conv-progress').textContent = `Position ${convState.pos} / 9`;
+  document.getElementById('conv-calc').textContent = terms.slice(0,3).join(' + ') + ' + ...';
+  document.getElementById('conv-result').textContent = `output[${r},${c}] = ${convFmt(sum)}`;
+  document.getElementById('conv-explain').innerHTML =
+    `<h5>POSITION (${r}, ${c})</h5>
+     <p>Place the kernel's top-left at input[${r},${c}]. Compute sum of 9 element-wise products:</p>
+     <p style="font-family:var(--mono);font-size:11px;color:var(--accent-2)">${terms.join(' + ')}</p>
+     <p>= <strong style="color:var(--accent)">${convFmt(sum)}</strong> → output[${r}, ${c}]</p>`;
+}
+
+function prevConv() {
+  if (convState.pos <= 0) return;
+  convState.pos--;
+  const r = Math.floor(convState.pos / 3);
+  const c = convState.pos % 3;
+  convState.output[r][c] = 0;
+  convRenderOutput();
+  convRenderOverlay();
+  document.getElementById('conv-progress').textContent = `Position ${convState.pos} / 9`;
+  document.getElementById('conv-explain').innerHTML =
+    `<h5>ROLLED BACK</h5><p>Cleared the last output cell. Press <strong>Step →</strong> to recompute.</p>`;
+}
+
+function runConvAll() {
+  while (convState.pos < 9) stepConv();
+}
+
+function applyConvPreset() {
+  const name = document.getElementById('conv-preset').value;
+  convState.kernel = CONV_PRESETS[name].map(row => row.slice());
+  resetConv();
+}
+
+function editConvCell(r, c) {
+  const cur = convState.input[r][c];
+  const v = prompt(`Input[${r},${c}] value:`, cur);
+  if (v === null) return;
+  const parsed = parseFloat(v);
+  if (isNaN(parsed)) return;
+  convState.input[r][c] = parsed;
+  resetConv();
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  resetConv();
+});
+</script>
+<script defer src="../search-index.js"></script>
+<script defer src="../search.js"></script>
+</body>
+</html>

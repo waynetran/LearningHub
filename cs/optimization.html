@@ -1,0 +1,1322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mathematical Optimization — Deep Dive</title>
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError: false});"></script>
+</head>
+<body>
+<div id="tooltip"></div>
+
+<nav class="topic-nav">
+  <a class="back" href="../index.html">← Back to Hub</a>
+  <div class="crumb">Computer Science / <span class="topic-name">Optimization</span></div>
+</nav>
+
+<div class="topic-layout">
+  <aside class="topic-toc">
+    <h4>ON THIS PAGE</h4>
+    <ul>
+      <li><a href="#why">1. Why optimization</a></li>
+      <li><a href="#anatomy">2. Anatomy of a problem</a></li>
+      <li><a href="#unconstrained">3. Unconstrained optima</a></li>
+      <li><a href="#convex">4. Convexity</a></li>
+      <li><a href="#tracer">5. Gradient descent tracer</a></li>
+      <li><a href="#gd">6. Gradient descent</a></li>
+      <li><a href="#variants">7. GD variants &amp; Adam</a></li>
+      <li><a href="#sgd">8. Stochastic gradient descent</a></li>
+      <li><a href="#newton">9. Newton &amp; quasi-Newton</a></li>
+      <li><a href="#lagrange">10. Lagrange multipliers</a></li>
+      <li><a href="#kkt">11. KKT conditions</a></li>
+      <li><a href="#lp">12. Linear programming</a></li>
+      <li><a href="#ip">13. Integer programming</a></li>
+      <li><a href="#convexopt">14. Convex optimization</a></li>
+      <li><a href="#nonconvex">15. Non-convex in ML</a></li>
+      <li><a href="#duality">16. Duality</a></li>
+      <li><a href="#code">17. Source code</a></li>
+      <li><a href="#ml">18. Connection to ML</a></li>
+      <li><a href="#bib">19. Further reading</a></li>
+    </ul>
+  </aside>
+
+  <article class="topic-content">
+    <h1>Mathematical Optimization</h1>
+    <p class="subtitle">Pick variables to make a number as small as possible, subject to rules. That's the entire field — and it's the engine under every neural network, every airline schedule, every portfolio, and every routing system. By the end of this page you'll know the language, the main algorithms, and where to look when your problem doesn't fit a textbook.</p>
+    <div class="meta-tags">
+      <span>Prereq: <a href="../math/multivariable-calculus.html">multivariable calculus</a>, <a href="../math/linear-algebra.html">linear algebra</a></span>
+      <span>Read time: ~30 min</span>
+      <span>Interactive figures: 1</span>
+      <span>Code: NumPy, SciPy</span>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="why">1. Why optimization is the most important applied math topic</h2>
+
+    <p>If you only had time to learn one branch of applied math in 2026, this is the one. Look around:</p>
+
+    <ul>
+      <li><strong>Every ML training run is optimization.</strong> A neural network learns by minimizing a loss function over its weights. GPT-4, AlphaFold, Stable Diffusion — they're all the output of an optimizer that ran for weeks on a billion-dimensional landscape.</li>
+      <li><strong>Every bank runs LPs all day.</strong> Asset-liability matching, portfolio rebalancing, FX netting, credit limit allocation — almost all formulated as linear programs and solved by industrial solvers (Gurobi, CPLEX, HiGHS).</li>
+      <li><strong>Every airline schedules with integer programs.</strong> Crew rostering, gate assignment, fleet routing, fare class management. United alone solves problems with millions of variables before breakfast.</li>
+      <li><strong>Every routing app is shortest-paths plus optimization.</strong> Google Maps, Uber dispatch, Amazon last-mile delivery. The ETA you see is the answer to a constrained optimization problem updated every few seconds.</li>
+      <li><strong>Every controller is optimization.</strong> Robot arms, drone autopilots, MPC for autonomous cars, even your thermostat — all minimize a tracking error over predicted future states.</li>
+    </ul>
+
+    <p>The whole field has one shape: <em>here are some knobs, here is a number you want small, here are some rules you can't break, find the best knob settings.</em> The trick is that "best" can mean a billion different things and the rules can be linear, quadratic, smooth, discrete, stochastic, or downright nasty. Different shapes get different algorithms. This page is the map.</p>
+
+    <div class="callout">
+      <p>If you've used <a href="../topics/gradient-descent.html">gradient descent</a> before but never thought of it as a special case of a much bigger field, this page is the bridge. If you've never seen it, that's fine too — we'll build it from scratch.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="anatomy">2. Anatomy of an optimization problem</h2>
+
+    <p>Every optimization problem has three pieces. Once you can name them in any problem you see, you've already won half the battle.</p>
+
+    <ol>
+      <li><strong>Decision variables</strong> — the knobs you control. Usually written $\mathbf{x} \in \mathbb{R}^n$. They could be neural network weights, money allocated to assets, on/off switches for power plants, or angles of a robot arm.</li>
+      <li><strong>Objective function</strong> — the number you want to make small (or large). Written $f(\mathbf{x})$. Think loss, cost, negative profit, energy, residual error.</li>
+      <li><strong>Constraints</strong> — the rules. Things like "weights must sum to 1," "power output can't be negative," "this beam can't bend more than 2 cm." Written as equalities $g_i(\mathbf{x}) = 0$ or inequalities $h_j(\mathbf{x}) \leq 0$.</li>
+    </ol>
+
+    <p>The general form looks like this:</p>
+
+    <div class="math-display">$$\begin{aligned} \min_{\mathbf{x} \in \mathbb{R}^n} \quad & f(\mathbf{x}) \\ \text{subject to} \quad & g_i(\mathbf{x}) = 0, \quad i = 1, \dots, m \\ & h_j(\mathbf{x}) \leq 0, \quad j = 1, \dots, p \end{aligned}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">The general nonlinear program</p>
+      <dl>
+        <dt>$\min$</dt><dd>"Minimize." Maximization is the same problem with $-f$, so by convention we always write minimization.</dd>
+        <dt>$\mathbf{x}$</dt><dd>The decision vector — the unknowns you're solving for. Bold because it's a vector, not a single number.</dd>
+        <dt>$\mathbb{R}^n$</dt><dd>$n$-dimensional real space — the domain you're searching over. $n$ might be 2 (two knobs) or $10^{12}$ (a large language model's weights).</dd>
+        <dt>$f(\mathbf{x})$</dt><dd>The objective function. Takes a candidate vector, returns a single number you want small.</dd>
+        <dt>$g_i(\mathbf{x}) = 0$</dt><dd>An equality constraint. Forces $\mathbf{x}$ onto a surface where $g_i$ vanishes — for example "the budget is exactly $1 million."</dd>
+        <dt>$h_j(\mathbf{x}) \leq 0$</dt><dd>An inequality constraint. Forces $\mathbf{x}$ into a half-space — for example "you can't buy a negative number of shares."</dd>
+        <dt>$m, p$</dt><dd>How many equality and inequality constraints you have, respectively. Either can be zero.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Analogy.</strong> Imagine a hiker on a hilly landscape who wants to reach the lowest point. The hills are $f$. A rope tied to a tree limits where they can walk — that's an equality constraint (they have to stay on the rope). A fence on one side they can't cross — that's an inequality constraint. The lowest point on the rope, behind the fence, is the optimum.</p>
+    </div>
+
+    <p>The set of all $\mathbf{x}$ that satisfy every constraint is called the <strong>feasible region</strong>, written $\mathcal{F}$. If $\mathcal{F}$ is empty, the problem is infeasible. If $f$ goes to $-\infty$ on $\mathcal{F}$, the problem is unbounded. Both are real things that happen, and a good solver will tell you which.</p>
+
+    <h3>Vocabulary cheat-sheet</h3>
+
+    <table class="rank-table">
+      <thead>
+        <tr><th>Symbol</th><th>Name</th><th>What it is</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>$\mathbf{x}$</td><td>decision vector</td><td>The variables you optimize over</td></tr>
+        <tr><td>$f$</td><td>objective</td><td>The function you minimize</td></tr>
+        <tr><td>$\nabla f$</td><td>gradient</td><td>Vector of first partial derivatives — points uphill</td></tr>
+        <tr><td>$\nabla^2 f$ or $H$</td><td>Hessian</td><td>Matrix of second partial derivatives — measures curvature</td></tr>
+        <tr><td>$\mathbf{x}^\star$</td><td>optimum</td><td>An $\mathbf{x}$ that minimizes $f$</td></tr>
+        <tr><td>$\mathcal{F}$</td><td>feasible region</td><td>Set of $\mathbf{x}$ satisfying all constraints</td></tr>
+        <tr><td>$\eta$</td><td>step size / learning rate</td><td>How far you move per iteration</td></tr>
+        <tr><td>$\boldsymbol{\lambda}, \boldsymbol{\mu}$</td><td>multipliers</td><td>Scalar penalties on constraints (Lagrange / KKT)</td></tr>
+      </tbody>
+    </table>
+
+    <!-- ========================================================== -->
+    <h2 id="unconstrained">3. Unconstrained optimization — the calculus crash course</h2>
+
+    <p>Start with the simplest case: no constraints. The problem is just</p>
+
+    <div class="math-display">$$\min_{\mathbf{x} \in \mathbb{R}^n} \, f(\mathbf{x})$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Unconstrained minimization</p>
+      <dl>
+        <dt>$\min$</dt><dd>Find the smallest value.</dd>
+        <dt>$\mathbf{x} \in \mathbb{R}^n$</dt><dd>$\mathbf{x}$ is any vector of $n$ real numbers — no rules.</dd>
+        <dt>$f(\mathbf{x})$</dt><dd>A scalar-valued function of $\mathbf{x}$ that you want small.</dd>
+      </dl>
+      <p class="mg-why"><strong>Why this matters.</strong> Most ML training is unconstrained — you let the weights wander wherever they want. So this case is the workhorse, even though it sounds restrictive.</p>
+    </div>
+
+    <p>From <a href="../math/multivariable-calculus.html">multivariable calculus</a>, the necessary condition for a minimum is that the gradient vanishes. Intuitively, if any partial derivative were nonzero you could nudge $\mathbf{x}$ in that direction and make $f$ smaller. So a minimum must be a flat spot — a critical point.</p>
+
+    <div class="math-display">$$\nabla f(\mathbf{x}^\star) = \mathbf{0}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">First-order necessary condition</p>
+      <dl>
+        <dt>$\nabla f$</dt><dd>The gradient — a vector whose $i$-th entry is $\partial f / \partial x_i$, the partial derivative of $f$ with respect to coordinate $i$.</dd>
+        <dt>$\mathbf{x}^\star$</dt><dd>A candidate optimum. The star is just convention.</dd>
+        <dt>$\mathbf{0}$</dt><dd>The zero vector — every component is zero.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Analogy.</strong> On a smooth landscape, the bottom of a valley, the top of a hill, and the saddle of a mountain pass all have zero slope in every direction. The slope being zero is necessary for "lowest point," but not sufficient — it could be any of those three things.</p>
+    </div>
+
+    <p>To rule out hilltops and saddles you check the second derivative. The second-order condition says the Hessian — the matrix of second partials — must be positive semi-definite at a minimum:</p>
+
+    <div class="math-display">$$\nabla^2 f(\mathbf{x}^\star) \succeq 0$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Second-order necessary condition</p>
+      <dl>
+        <dt>$\nabla^2 f$</dt><dd>The Hessian — the $n \times n$ matrix whose $(i,j)$ entry is $\partial^2 f / \partial x_i \partial x_j$. It encodes how the gradient changes as you move.</dd>
+        <dt>$\succeq 0$</dt><dd>"Positive semi-definite." A symmetric matrix $H$ is PSD if $\mathbf{v}^\top H \mathbf{v} \geq 0$ for every vector $\mathbf{v}$. Equivalently, all eigenvalues are non-negative.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why PSD.</strong> If you Taylor-expand $f$ around $\mathbf{x}^\star$, the leading correction is $\tfrac{1}{2} \mathbf{v}^\top H \mathbf{v}$ for a small step $\mathbf{v}$. For $\mathbf{x}^\star$ to be a minimum, every direction has to make $f$ go up, so that quadratic term must be $\geq 0$ in every direction. That's exactly what PSD says.</p>
+    </div>
+
+    <p>If the Hessian is <em>strictly</em> positive definite (all eigenvalues $> 0$), $\mathbf{x}^\star$ is a strict local minimum. If it has a negative eigenvalue, $\mathbf{x}^\star$ is a saddle point — there's some direction in which you can decrease $f$ further. We'll come back to saddles when we discuss neural networks.</p>
+
+    <h3>Local vs global</h3>
+
+    <p>A point $\mathbf{x}^\star$ is a <strong>local minimum</strong> if $f(\mathbf{x}^\star) \leq f(\mathbf{x})$ for all $\mathbf{x}$ in some neighborhood. It's a <strong>global minimum</strong> if the inequality holds for all $\mathbf{x}$ at all. Local minima are easy — just walk downhill until the ground is flat. Global minima can be wildly hard — you might have to check infinitely many local valleys. The single most important question in optimization is: <em>does my problem only have one valley?</em> When the answer is yes, life is good. The technical name for that condition is convexity.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="convex">4. Convexity — the dividing line between easy and hard</h2>
+
+    <p>Convex problems are the ones we know how to solve. Non-convex problems are the ones we mostly pray about. The line between them is sharp, and it's the single most important taxonomy in the field.</p>
+
+    <h3>Convex sets</h3>
+
+    <p>A set $\mathcal{C} \subseteq \mathbb{R}^n$ is <strong>convex</strong> if the line segment between any two points in $\mathcal{C}$ stays inside $\mathcal{C}$. Formally:</p>
+
+    <div class="math-display">$$\mathbf{x}, \mathbf{y} \in \mathcal{C} \;\Longrightarrow\; \theta \mathbf{x} + (1 - \theta) \mathbf{y} \in \mathcal{C}, \quad \forall \theta \in [0, 1]$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Convex set</p>
+      <dl>
+        <dt>$\mathcal{C}$</dt><dd>A subset of $\mathbb{R}^n$ — a region in space.</dd>
+        <dt>$\mathbf{x}, \mathbf{y}$</dt><dd>Any two points in that region.</dd>
+        <dt>$\theta$</dt><dd>A weight between 0 and 1. As $\theta$ moves from 1 to 0, the combination $\theta \mathbf{x} + (1-\theta)\mathbf{y}$ slides from $\mathbf{x}$ to $\mathbf{y}$ along the straight line.</dd>
+        <dt>$\Longrightarrow$</dt><dd>"Implies." The condition has to hold for every choice of $\mathbf{x}, \mathbf{y}, \theta$.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Picture.</strong> A disc is convex; a donut is not (the line between two points on opposite rims passes through the hole). A triangle, a square, a half-plane, the positive orthant $\{\mathbf{x} : \mathbf{x} \geq 0\}$, and any intersection of half-spaces are all convex.</p>
+    </div>
+
+    <h3>Convex functions</h3>
+
+    <p>A function $f : \mathbb{R}^n \to \mathbb{R}$ is <strong>convex</strong> if its graph lies below every chord. Formally:</p>
+
+    <div class="math-display">$$f(\theta \mathbf{x} + (1 - \theta) \mathbf{y}) \;\leq\; \theta f(\mathbf{x}) + (1 - \theta) f(\mathbf{y}), \quad \forall \theta \in [0, 1]$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Convex function</p>
+      <dl>
+        <dt>$f$</dt><dd>A function that takes a vector and returns a scalar.</dd>
+        <dt>$\mathbf{x}, \mathbf{y}$</dt><dd>Any two points in the domain.</dd>
+        <dt>$\theta$</dt><dd>Mixing coefficient between 0 and 1.</dd>
+        <dt>LHS</dt><dd>The function evaluated at the midpoint along the line from $\mathbf{x}$ to $\mathbf{y}$.</dd>
+        <dt>RHS</dt><dd>The corresponding average of the function values — the height of the chord above that midpoint.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Picture.</strong> Draw a parabola $f(x) = x^2$. Pick any two points on it; draw the straight line between them. The parabola is below that line. That's convexity in one dimension. In higher dimensions it means: a bowl, not a saddle, not a wavy carpet.</p>
+    </div>
+
+    <p>This inequality is called <strong>Jensen's inequality</strong> in its simplest form. It generalizes to expectations: $f(\mathbb{E}[X]) \leq \mathbb{E}[f(X)]$ for any random variable $X$ and convex $f$ — a fact you'll meet again in <a href="../math/probability.html">probability</a> and information theory.</p>
+
+    <p>If $f$ is twice differentiable, an equivalent condition is that the Hessian is PSD <em>everywhere</em>:</p>
+
+    <div class="math-display">$$\nabla^2 f(\mathbf{x}) \succeq 0, \quad \forall \mathbf{x} \in \mathbb{R}^n$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Twice-differentiable convexity</p>
+      <dl>
+        <dt>$\nabla^2 f(\mathbf{x})$</dt><dd>The Hessian matrix of $f$ at $\mathbf{x}$.</dd>
+        <dt>$\succeq 0$</dt><dd>Positive semi-definite at every point in the domain — the function is curving upward (or flat) in every direction at every point.</dd>
+      </dl>
+      <p class="mg-why"><strong>Why convexity is the dividing line.</strong> For a convex problem, every local minimum is a global minimum. There are no other valleys to check. So a local solver that just walks downhill is guaranteed to find the right answer. For non-convex problems, no such guarantee exists, and we have to live with heuristics, restarts, and luck.</p>
+    </div>
+
+    <p>The fundamental theorem you should walk away with:</p>
+
+    <div class="callout good">
+      <p><strong>For a convex objective on a convex feasible set, every local minimum is a global minimum.</strong> Walk downhill from anywhere and you've solved it.</p>
+    </div>
+
+    <p>This is why people work so hard to <em>convexify</em> problems — replacing a nasty $\ell_0$ sparsity penalty with $\ell_1$ (LASSO), or relaxing integer constraints to continuous ones, or fitting an SVM by minimizing a hinge loss. Convexity is the prize, and it's worth bending the problem to get it.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="tracer">5. Interactive — gradient descent tracer</h2>
+
+    <p>Click anywhere on the surface below. A ball drops at that point and starts rolling downhill, following the negative gradient. The contours show a 2D loss function that's a mix of two Gaussian wells (one shallow, one deep) — non-convex enough to be interesting. Slide the learning rate to see GD overshoot, oscillate, or diverge. Add momentum to roll past small bumps. Try starting from different points to see if you always end up at the same place.</p>
+
+    <div class="viz-3d">
+      <div class="v3-controls">
+        <span class="v3-label">Learning rate η:</span>
+        <input id="gdLR" type="range" min="0.005" max="0.4" value="0.08" step="0.005">
+        <span id="gdLRLabel" class="v3-label">0.08</span>
+      </div>
+      <div class="v3-controls">
+        <span class="v3-label">Momentum β:</span>
+        <input id="gdMom" type="range" min="0" max="0.95" value="0.0" step="0.01">
+        <span id="gdMomLabel" class="v3-label">0.00</span>
+      </div>
+      <div class="v3-controls">
+        <span class="v3-label">Steps:</span>
+        <input id="gdSteps" type="range" min="5" max="200" value="60" step="1">
+        <span id="gdStepsLabel" class="v3-label">60</span>
+        <button id="gdReset" class="v3-label">reset</button>
+      </div>
+      <svg id="gdSvg" viewBox="0 0 720 420"></svg>
+      <p class="v3-caption" id="gdCaption">Click on the surface to drop a ball. Lower contours are darker; the two basins are not equally deep.</p>
+    </div>
+
+    <p>Things to try:</p>
+    <ul>
+      <li><strong>Crank η to 0.4 with momentum 0.</strong> The ball leaps across valleys and may bounce out. This is what too-large a learning rate looks like.</li>
+      <li><strong>Set η to 0.02, momentum to 0.9.</strong> The ball glides smoothly to the deepest minimum, even if it starts in the shallow basin. Momentum helps you escape small wells.</li>
+      <li><strong>Click in different starting points.</strong> Sometimes you converge to the deep minimum, sometimes the shallow one. That's the curse of non-convex problems — initialization matters.</li>
+    </ul>
+
+    <!-- ========================================================== -->
+    <h2 id="gd">6. Gradient descent — the world's most-used algorithm</h2>
+
+    <p>Gradient descent is what the ball is doing in the demo above. The idea is one sentence: <em>at each step, move opposite the gradient.</em> The gradient points uphill (steepest ascent), so the negative gradient points downhill (steepest descent). The update rule is:</p>
+
+    <div class="math-display">$$\mathbf{x}_{t+1} = \mathbf{x}_t - \eta \, \nabla f(\mathbf{x}_t)$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Gradient descent update</p>
+      <dl>
+        <dt>$\mathbf{x}_t$</dt><dd>The current iterate — your guess at step $t$.</dd>
+        <dt>$\mathbf{x}_{t+1}$</dt><dd>The new guess after one step.</dd>
+        <dt>$\nabla f(\mathbf{x}_t)$</dt><dd>The gradient of the objective at the current point. Points uphill.</dd>
+        <dt>$\eta$</dt><dd>The <em>learning rate</em> or <em>step size</em>. A small positive scalar that controls how far you move per step. In ML literature it's $\eta$ or $\alpha$ or $\text{lr}$; same thing.</dd>
+        <dt>$-$</dt><dd>The minus sign turns "uphill" into "downhill." That's the entire algorithm.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Analogy.</strong> You're standing in fog on a hillside and you want to get to the bottom. You can feel the slope under your feet. Take a small step in the steepest downhill direction. Repeat. If the step is too small you'll be there forever; too large and you'll trip and fall up the next hill. The right step size is the entire art.</p>
+    </div>
+
+    <h3>Convergence</h3>
+
+    <p>For a convex, $L$-smooth function (meaning the gradient doesn't change too fast — formally, $\|\nabla f(\mathbf{x}) - \nabla f(\mathbf{y})\| \leq L \|\mathbf{x} - \mathbf{y}\|$), gradient descent with constant step $\eta = 1/L$ satisfies:</p>
+
+    <div class="math-display">$$f(\mathbf{x}_t) - f(\mathbf{x}^\star) \leq \frac{L \, \|\mathbf{x}_0 - \mathbf{x}^\star\|^2}{2t}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">GD convergence rate (convex, smooth)</p>
+      <dl>
+        <dt>$f(\mathbf{x}_t) - f(\mathbf{x}^\star)$</dt><dd>The "suboptimality gap" — how far off you are from the true minimum value at iteration $t$.</dd>
+        <dt>$L$</dt><dd>The Lipschitz constant of the gradient — a measure of how curved the function can be. Larger $L$ means more curvature, which means smaller safe steps.</dd>
+        <dt>$\|\mathbf{x}_0 - \mathbf{x}^\star\|^2$</dt><dd>Squared distance from your starting point to the optimum — the $\|\cdot\|$ is the standard Euclidean norm.</dd>
+        <dt>$1/t$</dt><dd>The crucial part — error shrinks like $1/t$. To halve the error, you need twice as many steps. This is "sublinear" convergence — slow but steady.</dd>
+      </dl>
+      <p class="mg-why"><strong>Translation.</strong> GD is slow but it works. For strongly convex functions (curvature bounded below as well as above), the rate improves to $(1 - \mu/L)^t$, which is exponentially fast. The ratio $L/\mu$ is called the <em>condition number</em> and it's the single number that says how hard your problem is.</p>
+    </div>
+
+    <h3>Learning rate sensitivity</h3>
+
+    <p>Too small: GD crawls. Too large: GD overshoots and may diverge. The exact safe range depends on the curvature of $f$. For a quadratic $f(\mathbf{x}) = \tfrac{1}{2}\mathbf{x}^\top H \mathbf{x}$ with $H$ symmetric positive-definite, the largest stable step is $\eta < 2/\lambda_{\max}(H)$ where $\lambda_{\max}$ is the largest eigenvalue. In practice you try a few values logarithmically and pick the largest one that doesn't blow up. Most of the variants in the next section exist to make this less painful.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="variants">7. Variants — momentum, Adagrad, RMSProp, Adam</h2>
+
+    <p>Vanilla GD has been augmented dozens of ways since the 1960s. The four that matter most for ML today:</p>
+
+    <h3>Momentum (Polyak, 1964)</h3>
+
+    <p>Add a velocity vector that accumulates past gradients. Instead of moving in the direction of the current gradient alone, move in a smoothed direction.</p>
+
+    <div class="math-display">$$\mathbf{v}_{t+1} = \beta \, \mathbf{v}_t + \nabla f(\mathbf{x}_t), \qquad \mathbf{x}_{t+1} = \mathbf{x}_t - \eta \, \mathbf{v}_{t+1}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Heavy-ball momentum</p>
+      <dl>
+        <dt>$\mathbf{v}_t$</dt><dd>The velocity — a moving average of past gradients. Initialized to zero.</dd>
+        <dt>$\beta$</dt><dd>Momentum coefficient, typically $0.9$. Larger $\beta$ means a longer memory of the past.</dd>
+        <dt>$\nabla f(\mathbf{x}_t)$</dt><dd>The current gradient.</dd>
+        <dt>$\eta$</dt><dd>Learning rate, same as before.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Picture.</strong> A heavy ball rolling in a long narrow valley. Vanilla GD zigzags across the walls. With momentum the ball builds up speed along the valley floor and barrels straight to the bottom. Helps with ill-conditioned problems and small spurious bumps.</p>
+    </div>
+
+    <h3>Nesterov accelerated gradient (Nesterov, 1983)</h3>
+
+    <p>Look ahead before you accumulate. Evaluate the gradient at the point where momentum would carry you, not where you are now.</p>
+
+    <div class="math-display">$$\mathbf{v}_{t+1} = \beta \, \mathbf{v}_t + \nabla f(\mathbf{x}_t - \eta \beta \mathbf{v}_t), \qquad \mathbf{x}_{t+1} = \mathbf{x}_t - \eta \, \mathbf{v}_{t+1}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Nesterov accelerated gradient (NAG)</p>
+      <dl>
+        <dt>$\mathbf{x}_t - \eta \beta \mathbf{v}_t$</dt><dd>A "lookahead" point: take a momentum step, then evaluate the gradient there. The gradient at the future point is more informative than at the current point.</dd>
+        <dt>$\beta, \eta$</dt><dd>Same momentum coefficient and learning rate as plain momentum.</dd>
+      </dl>
+      <p class="mg-why"><strong>Why bother.</strong> For convex smooth problems Nesterov's method achieves $O(1/t^2)$ convergence — the optimal rate for first-order methods, proven impossible to beat. It's not always faster in practice for non-convex ML, but the theory is gorgeous.</p>
+    </div>
+
+    <h3>Adagrad (Duchi, Hazan, Singer, 2011)</h3>
+
+    <p>Different parameters need different learning rates. Adagrad gives each parameter its own step size, scaled inversely to the square root of accumulated past squared gradients. Parameters that have already moved a lot get smaller steps.</p>
+
+    <div class="math-display">$$G_t = G_{t-1} + \nabla f(\mathbf{x}_t) \odot \nabla f(\mathbf{x}_t), \qquad \mathbf{x}_{t+1} = \mathbf{x}_t - \frac{\eta}{\sqrt{G_t + \varepsilon}} \odot \nabla f(\mathbf{x}_t)$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Adagrad</p>
+      <dl>
+        <dt>$G_t$</dt><dd>An elementwise running sum of squared gradients. Accumulates forever.</dd>
+        <dt>$\odot$</dt><dd>Elementwise (Hadamard) product. Acts component by component, not as a matrix product.</dd>
+        <dt>$\sqrt{\,\cdot\,}$</dt><dd>Elementwise square root.</dd>
+        <dt>$\varepsilon$</dt><dd>A tiny constant like $10^{-8}$, just to prevent division by zero.</dd>
+      </dl>
+      <p class="mg-why"><strong>Strength.</strong> Great for sparse problems (NLP with bag-of-words) where some features fire rarely. <strong>Weakness.</strong> $G_t$ grows forever, so the effective learning rate eventually goes to zero. RMSProp and Adam fix that.</p>
+    </div>
+
+    <h3>RMSProp (Hinton, 2012)</h3>
+
+    <p>Replace Adagrad's running sum with an exponential moving average. The effective rate stops dying.</p>
+
+    <div class="math-display">$$G_t = \rho \, G_{t-1} + (1-\rho) \, \nabla f(\mathbf{x}_t) \odot \nabla f(\mathbf{x}_t), \qquad \mathbf{x}_{t+1} = \mathbf{x}_t - \frac{\eta}{\sqrt{G_t + \varepsilon}} \odot \nabla f(\mathbf{x}_t)$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">RMSProp</p>
+      <dl>
+        <dt>$\rho$</dt><dd>Decay rate, typically $0.9$ or $0.99$. Controls how quickly the moving average forgets old gradients.</dd>
+        <dt>$G_t$</dt><dd>Now an EMA of squared gradients instead of an unbounded sum.</dd>
+        <dt>others</dt><dd>Same as Adagrad.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Story.</strong> Hinton introduced RMSProp in a Coursera lecture, never wrote a paper, and it ate the world anyway. Sometimes that's how research goes.</p>
+    </div>
+
+    <h3>Adam (Kingma &amp; Ba, 2014)</h3>
+
+    <p>Combine momentum (first-moment EMA) with RMSProp (second-moment EMA). Add bias correction so the early steps aren't biased toward zero. The result is the default optimizer for almost every neural network you've used.</p>
+
+    <div class="math-display">$$\mathbf{m}_t = \beta_1 \mathbf{m}_{t-1} + (1-\beta_1) \, \nabla f(\mathbf{x}_t)$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Adam — first moment</p>
+      <dl>
+        <dt>$\mathbf{m}_t$</dt><dd>EMA of past gradients — like momentum, but using a weighted average instead of a sum.</dd>
+        <dt>$\beta_1$</dt><dd>Decay rate for first moment, default $0.9$.</dd>
+      </dl>
+    </div>
+
+    <div class="math-display">$$\mathbf{v}_t = \beta_2 \mathbf{v}_{t-1} + (1-\beta_2) \, \nabla f(\mathbf{x}_t) \odot \nabla f(\mathbf{x}_t)$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Adam — second moment</p>
+      <dl>
+        <dt>$\mathbf{v}_t$</dt><dd>EMA of squared past gradients — like RMSProp.</dd>
+        <dt>$\beta_2$</dt><dd>Decay rate for second moment, default $0.999$.</dd>
+      </dl>
+    </div>
+
+    <div class="math-display">$$\hat{\mathbf{m}}_t = \frac{\mathbf{m}_t}{1 - \beta_1^t}, \quad \hat{\mathbf{v}}_t = \frac{\mathbf{v}_t}{1 - \beta_2^t}, \quad \mathbf{x}_{t+1} = \mathbf{x}_t - \eta \, \frac{\hat{\mathbf{m}}_t}{\sqrt{\hat{\mathbf{v}}_t} + \varepsilon}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Adam — bias-corrected update</p>
+      <dl>
+        <dt>$\hat{\mathbf{m}}_t, \hat{\mathbf{v}}_t$</dt><dd>Bias-corrected moments. The $1 - \beta^t$ factor compensates for the fact that EMAs initialized at zero are biased toward zero in early steps.</dd>
+        <dt>$\beta_1^t$</dt><dd>$\beta_1$ raised to the $t$-th power. Tends to zero as $t$ grows, so the correction vanishes.</dd>
+        <dt>$\eta$</dt><dd>Learning rate, default $10^{-3}$ for most uses.</dd>
+        <dt>$\varepsilon$</dt><dd>$10^{-8}$ for numerical safety.</dd>
+      </dl>
+      <p class="mg-why"><strong>Why Adam took over.</strong> It works well out of the box on a huge range of problems with little tuning. The default $(\eta, \beta_1, \beta_2) = (10^{-3}, 0.9, 0.999)$ is the most reused hyperparameter triple in ML.</p>
+    </div>
+
+    <p>You'll meet Adam again in <a href="../topics/backpropagation.html">backpropagation</a> and <a href="../topics/foundation-models.html">foundation models</a>, where it (or its weight-decay variant AdamW) is the workhorse. There are dozens of newer competitors — Lion, Sophia, Shampoo, Muon — but Adam remains the baseline you should beat.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="sgd">8. Stochastic gradient descent — when computing the gradient is too expensive</h2>
+
+    <p>So far we've assumed you can compute the full gradient $\nabla f(\mathbf{x})$ at every step. In ML, $f$ is usually a sum over millions of training examples:</p>
+
+    <div class="math-display">$$f(\mathbf{x}) = \frac{1}{N} \sum_{i=1}^{N} f_i(\mathbf{x})$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Empirical risk</p>
+      <dl>
+        <dt>$f$</dt><dd>The training loss, averaged over the dataset.</dd>
+        <dt>$N$</dt><dd>The number of training examples — could be $10^9$.</dd>
+        <dt>$f_i$</dt><dd>The loss on the $i$-th individual example. For classification this might be a cross-entropy term, for regression a squared error.</dd>
+      </dl>
+    </div>
+
+    <p>Computing $\nabla f$ requires going through all $N$ examples — too expensive for modern datasets. Instead, you sample a small <strong>minibatch</strong> $B \subset \{1, \dots, N\}$ at each step and use:</p>
+
+    <div class="math-display">$$\mathbf{x}_{t+1} = \mathbf{x}_t - \eta \, \frac{1}{|B|} \sum_{i \in B} \nabla f_i(\mathbf{x}_t)$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Stochastic gradient descent (SGD)</p>
+      <dl>
+        <dt>$B$</dt><dd>A minibatch — a small random subset of training indices, usually 32 to 4096 in size.</dd>
+        <dt>$|B|$</dt><dd>The number of examples in the minibatch.</dd>
+        <dt>$\nabla f_i$</dt><dd>The gradient contribution from a single example. Cheap to compute.</dd>
+        <dt>$\frac{1}{|B|} \sum$</dt><dd>The average gradient on the minibatch — an unbiased noisy estimate of the true full-batch gradient.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Analogy.</strong> Instead of polling every voter to find the average opinion (full-batch GD), poll a random sample of 100 (SGD). Your estimate is noisy but you get a useful direction in $1/N$ the time. Across many steps the noise averages out.</p>
+    </div>
+
+    <p>The shocking empirical fact: SGD doesn't just work, it often works <em>better</em> than full-batch GD on neural networks. Two reasons:</p>
+
+    <ol>
+      <li><strong>Wall-clock speedup.</strong> A single SGD step is hundreds of times cheaper than a full-batch step, and the estimated gradient is good enough.</li>
+      <li><strong>Implicit regularization.</strong> The noise in SGD helps escape sharp minima and saddle points. Recent theory (Keskar 2017, Smith et al. 2020) shows SGD has a bias toward "flat" minima, which generalize better than sharp ones.</li>
+    </ol>
+
+    <p>Convergence-wise, SGD converges sublinearly — about $O(1/\sqrt{t})$ for convex problems with constant step size — slower in iterations than full-batch GD, but each iteration costs much less. With a decreasing step size you can get $O(1/t)$. In ML you usually mix SGD with momentum and an EMA, which is essentially Adam.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="newton">9. Newton's method and quasi-Newton</h2>
+
+    <p>Gradient descent uses only first-order information. If you also have the Hessian, you can do much better. Newton's method takes a Newton step:</p>
+
+    <div class="math-display">$$\mathbf{x}_{t+1} = \mathbf{x}_t - \big[\nabla^2 f(\mathbf{x}_t)\big]^{-1} \, \nabla f(\mathbf{x}_t)$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Newton's method</p>
+      <dl>
+        <dt>$\nabla^2 f(\mathbf{x}_t)$</dt><dd>The Hessian at the current iterate — an $n \times n$ symmetric matrix of second derivatives.</dd>
+        <dt>$[\,\cdot\,]^{-1}$</dt><dd>The inverse of that matrix. In practice you don't form the inverse — you solve the linear system $H \mathbf{p} = -\nabla f$ for the search direction $\mathbf{p}$.</dd>
+        <dt>$\nabla f(\mathbf{x}_t)$</dt><dd>The gradient at the current iterate.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Picture.</strong> GD uses the local slope to pick a direction. Newton uses the local <em>curvature</em> to also pick the right step length — pretending $f$ is a perfect quadratic and jumping straight to the minimum of that quadratic. If the function really is quadratic, you arrive in one step.</p>
+    </div>
+
+    <p>Convergence is dazzling: locally quadratic — the number of correct digits doubles every iteration. Globally (with safeguards like a line search), Newton beats first-order methods by orders of magnitude on smooth problems. The catch is twofold:</p>
+
+    <ol>
+      <li><strong>Forming and inverting the Hessian costs $O(n^3)$.</strong> For $n = 10^9$ ML weights, this is infeasible by a factor of $10^{18}$.</li>
+      <li><strong>The Hessian might not be PD.</strong> At a saddle point, Newton steps can move you <em>uphill</em>. Damping and trust regions are needed.</li>
+    </ol>
+
+    <h3>Quasi-Newton — BFGS and L-BFGS</h3>
+
+    <p>Quasi-Newton methods build a cheap approximation $B_t \approx \nabla^2 f(\mathbf{x}_t)$ from observed gradient differences. The most famous is BFGS (Broyden, Fletcher, Goldfarb, Shanno, 1970), which updates an $n \times n$ approximation each step. For large $n$, the limited-memory version L-BFGS keeps only the last $\sim 10$ gradient differences and reconstructs the Hessian action on the fly. L-BFGS is the go-to optimizer for deterministic, smooth problems with thousands to a million variables — not as good as Adam for noisy ML, but a beast for classical statistics, image registration, and physics inverse problems.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="lagrange">10. Constrained optimization — Lagrange multipliers</h2>
+
+    <p>What if you have constraints? Then the gradient of $f$ doesn't have to be zero at the optimum — the constraint can hold you back. Imagine pushing a ball into a wall: the wall pushes back, balancing your push. The optimum is where those two forces cancel.</p>
+
+    <p>Lagrange multipliers turn that idea into algebra. For a problem with equality constraints only:</p>
+
+    <div class="math-display">$$\min_\mathbf{x} \; f(\mathbf{x}) \quad \text{subject to} \quad g_i(\mathbf{x}) = 0, \; i = 1, \dots, m$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Equality-constrained problem</p>
+      <dl>
+        <dt>$f$</dt><dd>Objective.</dd>
+        <dt>$g_i(\mathbf{x}) = 0$</dt><dd>The $i$-th equality constraint — forces $\mathbf{x}$ onto a surface in $\mathbb{R}^n$.</dd>
+        <dt>$m$</dt><dd>Number of equality constraints. The feasible set is the intersection of $m$ surfaces, generically a $(n-m)$-dimensional manifold.</dd>
+      </dl>
+    </div>
+
+    <p>Define the <strong>Lagrangian</strong>:</p>
+
+    <div class="math-display">$$\mathcal{L}(\mathbf{x}, \boldsymbol{\lambda}) = f(\mathbf{x}) - \sum_{i=1}^m \lambda_i \, g_i(\mathbf{x})$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">The Lagrangian</p>
+      <dl>
+        <dt>$\mathcal{L}$</dt><dd>The Lagrangian — a single function of both the original variables $\mathbf{x}$ and new multiplier variables $\boldsymbol{\lambda}$.</dd>
+        <dt>$\lambda_i$</dt><dd>The Lagrange multiplier for the $i$-th constraint — a scalar that acts as a "price" on violating that constraint.</dd>
+        <dt>$\boldsymbol{\lambda}$</dt><dd>The vector $(\lambda_1, \dots, \lambda_m)$ of all multipliers.</dd>
+        <dt>$- \sum_i \lambda_i g_i(\mathbf{x})$</dt><dd>A penalty term: zero on the feasible set, but pulling $\mathbf{x}$ around when constraints are violated. (Some authors use $+$; both conventions exist, only signs of $\lambda$ change.)</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Story.</strong> Joseph-Louis Lagrange invented this in 1788 to do Newtonian mechanics under constraints. The multipliers turned out to be physical: for a ball on a string, $\lambda$ is literally the tension in the string. In economics, multipliers are "shadow prices" — the marginal value of relaxing a constraint by one unit.</p>
+    </div>
+
+    <p>The fundamental theorem of Lagrange multipliers: at a constrained optimum, there exists a $\boldsymbol{\lambda}^\star$ such that:</p>
+
+    <div class="math-display">$$\nabla_\mathbf{x} \mathcal{L}(\mathbf{x}^\star, \boldsymbol{\lambda}^\star) = \mathbf{0}, \qquad g_i(\mathbf{x}^\star) = 0 \;\; \forall i$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Lagrange stationarity</p>
+      <dl>
+        <dt>$\nabla_\mathbf{x} \mathcal{L}$</dt><dd>The gradient of the Lagrangian with respect to $\mathbf{x}$ only (treating $\boldsymbol{\lambda}$ as fixed).</dd>
+        <dt>$\nabla_\mathbf{x} \mathcal{L} = \mathbf{0}$</dt><dd>Equivalent to $\nabla f = \sum_i \lambda_i \nabla g_i$ — the gradient of $f$ is a linear combination of the constraint gradients. Geometrically: $\nabla f$ is perpendicular to the constraint surface, so there's no direction along the surface that decreases $f$.</dd>
+        <dt>$g_i(\mathbf{x}^\star) = 0$</dt><dd>Primal feasibility — the constraints actually hold.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Geometric picture.</strong> The level curves of $f$ touch the constraint surface tangentially at the optimum — they don't cross it. If they crossed, you could move along the surface and decrease $f$.</p>
+    </div>
+
+    <h3>Worked example</h3>
+
+    <p>Minimize $f(x, y) = x^2 + y^2$ subject to $x + y = 1$. The Lagrangian is</p>
+
+    <div class="math-display">$$\mathcal{L}(x, y, \lambda) = x^2 + y^2 - \lambda (x + y - 1)$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Worked-example Lagrangian</p>
+      <dl>
+        <dt>$x, y$</dt><dd>The two decision variables.</dd>
+        <dt>$\lambda$</dt><dd>One multiplier (one constraint).</dd>
+        <dt>$x + y - 1$</dt><dd>The constraint rewritten in the form $g(x,y) = 0$.</dd>
+      </dl>
+    </div>
+
+    <p>Setting partials to zero: $2x - \lambda = 0$, $2y - \lambda = 0$, $x + y = 1$. So $x = y = \tfrac{1}{2}$, and $\lambda = 1$. The minimum value of $f$ is $\tfrac{1}{2}$. The multiplier $\lambda = 1$ tells you something physical: if you relaxed the constraint to $x + y = 1 + \delta$, the optimal value would change by approximately $-\lambda \, \delta = -\delta$. Multipliers <em>are</em> the sensitivity of the optimum to the constraint.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="kkt">11. KKT conditions — Lagrange for inequalities</h2>
+
+    <p>Lagrange multipliers handle equality constraints. For inequalities, you need the generalization due to Karush, Kuhn, and Tucker (1939, 1951). For the problem</p>
+
+    <div class="math-display">$$\min_\mathbf{x} f(\mathbf{x}) \quad \text{s.t.} \quad g_i(\mathbf{x}) = 0, \; h_j(\mathbf{x}) \leq 0$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">General constrained problem</p>
+      <dl>
+        <dt>$g_i, h_j$</dt><dd>Equality and inequality constraint functions.</dd>
+        <dt>s.t.</dt><dd>"Subject to."</dd>
+      </dl>
+    </div>
+
+    <p>define a Lagrangian with two sets of multipliers:</p>
+
+    <div class="math-display">$$\mathcal{L}(\mathbf{x}, \boldsymbol{\lambda}, \boldsymbol{\mu}) = f(\mathbf{x}) + \sum_i \lambda_i g_i(\mathbf{x}) + \sum_j \mu_j h_j(\mathbf{x})$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">KKT Lagrangian</p>
+      <dl>
+        <dt>$\lambda_i$</dt><dd>Multiplier for the $i$-th equality. Sign unrestricted.</dd>
+        <dt>$\mu_j$</dt><dd>Multiplier for the $j$-th inequality. Required to be non-negative.</dd>
+        <dt>$g_i, h_j$</dt><dd>The constraint functions.</dd>
+      </dl>
+    </div>
+
+    <p>The <strong>KKT conditions</strong>: at any local optimum (under mild regularity), there exist multipliers $\boldsymbol{\lambda}^\star, \boldsymbol{\mu}^\star$ such that</p>
+
+    <div class="math-display">$$\begin{aligned} & \nabla f(\mathbf{x}^\star) + \sum_i \lambda_i^\star \nabla g_i(\mathbf{x}^\star) + \sum_j \mu_j^\star \nabla h_j(\mathbf{x}^\star) = \mathbf{0} && \text{(stationarity)} \\ & g_i(\mathbf{x}^\star) = 0, \quad h_j(\mathbf{x}^\star) \leq 0 && \text{(primal feasibility)} \\ & \mu_j^\star \geq 0 && \text{(dual feasibility)} \\ & \mu_j^\star \, h_j(\mathbf{x}^\star) = 0 && \text{(complementary slackness)} \end{aligned}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">The KKT system</p>
+      <dl>
+        <dt>Stationarity</dt><dd>The gradient of the Lagrangian in $\mathbf{x}$ vanishes — same idea as Lagrange, generalized.</dd>
+        <dt>Primal feasibility</dt><dd>The constraints actually hold at $\mathbf{x}^\star$.</dd>
+        <dt>Dual feasibility</dt><dd>Inequality multipliers are non-negative. Otherwise the multiplier would be "paying you" to violate the constraint — nonsensical.</dd>
+        <dt>Complementary slackness</dt><dd>For each inequality, either the constraint is active ($h_j = 0$, the constraint is "tight") or its multiplier is zero ($\mu_j = 0$, the constraint is irrelevant). One of the two has to be true.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Picture.</strong> Imagine boxes on a shelf. A box that's pressed against the wall has a non-zero contact force ($\mu &gt; 0$, $h = 0$). A box that's nowhere near the wall has zero contact force ($\mu = 0$, $h &lt; 0$). The complementary slackness says: contact force times distance to wall is always zero. There's no third option.</p>
+    </div>
+
+    <p>For convex problems with smooth functions and a regularity condition (called Slater's condition), KKT is both necessary and sufficient — solving the KKT system gives you the global optimum. For non-convex problems KKT is only necessary, so you can use it to <em>verify</em> a candidate but not to find one from scratch.</p>
+
+    <h3>KKT in disguise</h3>
+
+    <p>You've already seen KKT, even if you didn't recognize it. The dual formulation of a Support Vector Machine drops out of the KKT conditions. The "active set" methods used in industrial QP solvers are KKT-driven. The "shadow prices" in linear programming are KKT multipliers. Once you spot the pattern, every constrained problem looks like a KKT problem.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="lp">12. Linear programming — the workhorse of operations research</h2>
+
+    <p>A linear program (LP) is the special case where everything is linear. The standard form:</p>
+
+    <div class="math-display">$$\min_\mathbf{x} \; \mathbf{c}^\top \mathbf{x} \quad \text{s.t.} \quad A \mathbf{x} = \mathbf{b}, \quad \mathbf{x} \geq 0$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">LP standard form</p>
+      <dl>
+        <dt>$\mathbf{c}$</dt><dd>Cost vector — coefficients of the linear objective.</dd>
+        <dt>$\mathbf{c}^\top \mathbf{x}$</dt><dd>The dot product $\sum_i c_i x_i$ — a linear scalar function of $\mathbf{x}$.</dd>
+        <dt>$A$</dt><dd>An $m \times n$ matrix encoding the linear equality constraints.</dd>
+        <dt>$\mathbf{b}$</dt><dd>An $m$-vector of right-hand sides.</dd>
+        <dt>$\mathbf{x} \geq 0$</dt><dd>Componentwise non-negativity — every $x_i$ must be $\geq 0$.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why this form.</strong> Every LP can be massaged into this form by adding "slack variables" to turn inequalities into equalities and splitting unrestricted variables into a positive and negative part. Solvers expect this form, so it's the lingua franca.</p>
+    </div>
+
+    <p>The feasible region of an LP is a <strong>polytope</strong> — the intersection of finitely many half-spaces. It looks like a faceted gemstone in $n$ dimensions. The objective $\mathbf{c}^\top \mathbf{x}$ is a linear function, which means its level sets are flat hyperplanes sliding across the polytope. The minimum, if it exists, is attained at a <em>vertex</em> of the polytope (or along an edge in degenerate cases). This is the geometric foundation of LP and the reason the entire field works.</p>
+
+    <h3>The simplex method</h3>
+
+    <p>Dantzig's simplex method (1947) walks from vertex to neighboring vertex along edges of the polytope, always picking an edge that improves the objective. When no improving edge exists, you're done. In the worst case it can visit exponentially many vertices, but in practice it's fast on real problems — one of the great empirical mysteries of computational math, partly explained by smoothed analysis (Spielman &amp; Teng, 2001).</p>
+
+    <h3>Interior-point methods</h3>
+
+    <p>Karmarkar's 1984 method (and the modern primal-dual interior-point methods that descended from it) take a completely different approach: instead of walking the boundary, drift through the interior of the polytope toward the optimum, following a smooth "central path." Provably polynomial-time. Modern solvers (HiGHS, Gurobi, Mosek) use both methods and pick whichever is faster on the given problem.</p>
+
+    <h3>LP duality — a free second problem</h3>
+
+    <p>Every LP has a <strong>dual</strong> LP. For the standard form above, the dual is:</p>
+
+    <div class="math-display">$$\max_\mathbf{y} \; \mathbf{b}^\top \mathbf{y} \quad \text{s.t.} \quad A^\top \mathbf{y} \leq \mathbf{c}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">LP dual</p>
+      <dl>
+        <dt>$\mathbf{y}$</dt><dd>Dual variables — one per primal constraint. They're exactly the KKT multipliers of the primal.</dd>
+        <dt>$\mathbf{b}^\top \mathbf{y}$</dt><dd>Dual objective — coefficients are the primal RHS.</dd>
+        <dt>$A^\top \mathbf{y} \leq \mathbf{c}$</dt><dd>Dual constraints — one per primal variable.</dd>
+      </dl>
+      <p class="mg-why"><strong>Why duals matter.</strong> Strong duality for LP says the optimal primal and dual values are equal. So the dual gives you a free certificate: any feasible $\mathbf{y}$ gives a lower bound on the primal optimum. Stop the simplex method anywhere and the dual variables tell you how good your current solution is. This is the basis of branch-and-bound for integer programs.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="ip">13. Integer programming — LP gets hard</h2>
+
+    <p>Most operations problems aren't continuous: you can't run half a flight, hire 0.7 nurses, or build 2.3 warehouses. <strong>Integer programming</strong> is LP with the extra constraint that some or all variables are integers:</p>
+
+    <div class="math-display">$$\min_\mathbf{x} \; \mathbf{c}^\top \mathbf{x} \quad \text{s.t.} \quad A \mathbf{x} \leq \mathbf{b}, \quad \mathbf{x} \in \mathbb{Z}^n$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Integer linear program</p>
+      <dl>
+        <dt>$\mathbb{Z}^n$</dt><dd>The set of $n$-vectors of integers.</dd>
+        <dt>otherwise</dt><dd>Same as LP.</dd>
+      </dl>
+    </div>
+
+    <p>Adding integrality is a small notational change with a big complexity blowup: integer programming is NP-hard, even for binary variables ($x_i \in \{0, 1\}$). The boundary between LP (poly-time) and IP (NP-hard) is the cleanest example of how a "small" change can move a problem from "easy" to "the universe might end before you solve it." For more on what NP-hard means and why it matters, see the upcoming page on <a href="theoretical-cs.html">theoretical computer science</a>.</p>
+
+    <p>Modern IP solvers (Gurobi, CPLEX) routinely handle problems with millions of variables anyway, using two key techniques:</p>
+
+    <ul>
+      <li><strong>Branch and bound.</strong> Solve the LP relaxation (drop integrality). If the answer is integer, done. Otherwise pick a fractional variable, branch on $x_i \leq \lfloor x_i \rfloor$ vs $x_i \geq \lceil x_i \rceil$, and recurse. Use the LP relaxation as a lower bound to prune branches.</li>
+      <li><strong>Cutting planes.</strong> Add new linear inequalities ("cuts") that are valid for the integer program but cut off fractional LP solutions. Gomory cuts (1958) are the classical example.</li>
+    </ul>
+
+    <p>The combination is called <em>branch-and-cut</em>, and it's why a Boeing scheduling problem with 50 million variables and a billion constraints can be solved overnight.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="convexopt">14. Convex optimization — beyond LP</h2>
+
+    <p>LP is the easiest convex problem. Everything else convex is also tractable, just more expensive. The standard convex hierarchy:</p>
+
+    <table class="rank-table">
+      <thead>
+        <tr><th>Class</th><th>Form</th><th>What's added</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>LP</td><td>linear $f$ and constraints</td><td>baseline</td></tr>
+        <tr><td>QP</td><td>quadratic $f$, linear constraints</td><td>$\tfrac{1}{2}\mathbf{x}^\top Q \mathbf{x}$ in objective with $Q \succeq 0$</td></tr>
+        <tr><td>QCQP</td><td>quadratic constraints too</td><td>convex quadratic constraints</td></tr>
+        <tr><td>SOCP</td><td>second-order cone</td><td>$\|A\mathbf{x} + \mathbf{b}\|_2 \leq \mathbf{c}^\top \mathbf{x} + d$</td></tr>
+        <tr><td>SDP</td><td>semidefinite</td><td>matrix variables with $X \succeq 0$</td></tr>
+      </tbody>
+    </table>
+
+    <p>Each level subsumes the one above. SDPs solve LPs, QPs, and SOCPs as special cases — but they're slower, so use the smallest class that fits your problem.</p>
+
+    <h3>Quadratic programs</h3>
+
+    <p>A QP looks like:</p>
+
+    <div class="math-display">$$\min_\mathbf{x} \; \tfrac{1}{2} \mathbf{x}^\top Q \mathbf{x} + \mathbf{c}^\top \mathbf{x} \quad \text{s.t.} \quad A \mathbf{x} \leq \mathbf{b}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Quadratic program</p>
+      <dl>
+        <dt>$Q$</dt><dd>An $n \times n$ symmetric positive semi-definite matrix. PSD is what makes the QP convex.</dd>
+        <dt>$\tfrac{1}{2} \mathbf{x}^\top Q \mathbf{x}$</dt><dd>A quadratic form in $\mathbf{x}$ — bowl-shaped because $Q \succeq 0$.</dd>
+        <dt>$\mathbf{c}^\top \mathbf{x}$</dt><dd>A linear term — tilts the bowl.</dd>
+        <dt>$A \mathbf{x} \leq \mathbf{b}$</dt><dd>Linear inequality constraints.</dd>
+      </dl>
+      <p class="mg-why"><strong>Where you'll see it.</strong> Markowitz portfolio optimization is a QP with $Q$ = covariance matrix. Support vector machines are a QP. Model-predictive control reduces to a QP per timestep. QPs are everywhere.</p>
+    </div>
+
+    <h3>CVXPY — modeling instead of solving</h3>
+
+    <p>You shouldn't write convex optimization solvers. People have spent decades doing that better than you can in a weekend. Instead, use a <em>modeling language</em>: in Python, that's <strong>CVXPY</strong>. You write the problem in math-like syntax, CVXPY recognizes the convex structure and ships it to the right solver (ECOS, SCS, MOSEK, Clarabel). The price is a small overhead and a learning curve. The benefit is that you express problems at the level of "minimize the LASSO regression loss" rather than "implement the proximal gradient method."</p>
+
+    <!-- ========================================================== -->
+    <h2 id="nonconvex">15. Non-convex optimization in ML — the elephant</h2>
+
+    <p>Neural network training is the most important non-convex optimization problem on Earth, and on paper it shouldn't work. The loss surface of a deep network has exponentially many local minima, an explosion of saddle points, and no convexity anywhere. So why does plain SGD train GPT-4?</p>
+
+    <p>The picture that's emerged since 2014:</p>
+
+    <ol>
+      <li><strong>In high dimensions, saddle points dominate, not local minima.</strong> Dauphin et al. (2014) and Pascanu et al. argued that as $n$ grows, "bad" local minima become exponentially rare while saddle points proliferate. A random critical point in $\mathbb{R}^n$ is overwhelmingly likely to be a saddle. Saddles slow you down but don't trap you — first-order methods drift past them.</li>
+      <li><strong>Most local minima are roughly equally good.</strong> Choromanska et al. (2015) showed (for a simplified spin-glass model of neural nets) that local minima cluster near a single low band of objective values. Empirically the same thing holds for real networks — different random seeds give different weights but very similar loss. So even if you don't find the global min, you find <em>a</em> good min.</li>
+      <li><strong>Overparameterization helps.</strong> When the network has many more parameters than training examples, the loss surface flattens — most directions in parameter space are degenerate (zero curvature), and the bad local minima vanish. This is one of the central insights of modern deep learning theory.</li>
+      <li><strong>SGD has an implicit bias toward flat minima.</strong> Flat minima generalize better than sharp ones, and SGD's noise makes it preferentially settle in flat regions.</li>
+    </ol>
+
+    <p>None of this is fully proven; it's an active research area. But empirically, the cocktail of "huge model + lots of data + Adam + SGD noise" is enough to find solutions that work, even on problems that should be hopelessly non-convex. See <a href="../topics/foundation-models.html">foundation models</a> and <a href="../topics/backpropagation.html">backpropagation</a> for what to do with this fact.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="duality">16. Duality, briefly</h2>
+
+    <p>For any constrained problem, the Lagrangian gives you a <strong>dual function</strong>:</p>
+
+    <div class="math-display">$$g(\boldsymbol{\lambda}, \boldsymbol{\mu}) = \inf_\mathbf{x} \mathcal{L}(\mathbf{x}, \boldsymbol{\lambda}, \boldsymbol{\mu})$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Lagrange dual function</p>
+      <dl>
+        <dt>$g$</dt><dd>A function of the multipliers alone — the minimum of the Lagrangian over $\mathbf{x}$ for fixed $(\boldsymbol{\lambda}, \boldsymbol{\mu})$.</dd>
+        <dt>$\inf$</dt><dd>"Infimum" — the greatest lower bound, similar to min but always defined.</dd>
+        <dt>$\mathcal{L}$</dt><dd>The Lagrangian from earlier.</dd>
+      </dl>
+      <p class="mg-why"><strong>Property.</strong> $g$ is always concave in $(\boldsymbol{\lambda}, \boldsymbol{\mu})$, even if the original problem is non-convex. And $g(\boldsymbol{\lambda}, \boldsymbol{\mu}) \leq f(\mathbf{x}^\star)$ for any feasible multipliers — the dual gives a lower bound on the primal. Always.</p>
+    </div>
+
+    <p>The <strong>dual problem</strong> is to find the best (largest) lower bound:</p>
+
+    <div class="math-display">$$\max_{\boldsymbol{\lambda}, \boldsymbol{\mu} \geq 0} \; g(\boldsymbol{\lambda}, \boldsymbol{\mu})$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Dual problem</p>
+      <dl>
+        <dt>$\max$</dt><dd>Maximize over multipliers.</dd>
+        <dt>$\boldsymbol{\mu} \geq 0$</dt><dd>Inequality multipliers stay non-negative; equality multipliers are unrestricted.</dd>
+      </dl>
+    </div>
+
+    <p>The optimal dual value is always $\leq$ optimal primal value. This is <strong>weak duality</strong>. The gap between them is the <strong>duality gap</strong>. For convex problems with mild regularity (Slater), the gap is zero — this is <strong>strong duality</strong> — and the optimal dual variables are the KKT multipliers. For non-convex problems the gap can be huge, but the dual still gives a valid lower bound, which is enough to drive branch-and-bound and certify near-optimality.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="code">17. Source code</h2>
+
+    <p>Three pieces of code that map directly onto sections above: a hand-rolled gradient descent loop on a 2D function, a minimal Adam, and an LP solved with SciPy's <code>linprog</code>.</p>
+
+    <div class="code-tabs" id="ct-opt">
+      <div class="ct-header">
+        <button class="ct-tab active" data-tab="gd">Gradient descent (NumPy)</button>
+        <button class="ct-tab" data-tab="adam">Adam (NumPy)</button>
+        <button class="ct-tab" data-tab="lag">Lagrangian (NumPy)</button>
+        <button class="ct-tab" data-tab="lp">LP solver (SciPy)</button>
+        <span class="ct-label">optimization · core pieces</span>
+      </div>
+
+      <div class="ct-panel active" data-tab="gd"><pre><code><span class="kw">import</span> numpy <span class="kw">as</span> np
+
+<span class="cmt"># A nasty 2D function: Rosenbrock's banana.</span>
+<span class="cmt"># Minimum is at (1, 1) with f = 0; the valley is curved and narrow.</span>
+<span class="kw">def</span> <span class="fn">rosenbrock</span>(x):
+    <span class="kw">return</span> (<span class="num">1</span> - x[<span class="num">0</span>])**<span class="num">2</span> + <span class="num">100</span> * (x[<span class="num">1</span>] - x[<span class="num">0</span>]**<span class="num">2</span>)**<span class="num">2</span>
+
+<span class="kw">def</span> <span class="fn">grad_rosenbrock</span>(x):
+    dx0 = -<span class="num">2</span> * (<span class="num">1</span> - x[<span class="num">0</span>]) - <span class="num">400</span> * x[<span class="num">0</span>] * (x[<span class="num">1</span>] - x[<span class="num">0</span>]**<span class="num">2</span>)
+    dx1 = <span class="num">200</span> * (x[<span class="num">1</span>] - x[<span class="num">0</span>]**<span class="num">2</span>)
+    <span class="kw">return</span> np.array([dx0, dx1])
+
+<span class="kw">def</span> <span class="fn">gradient_descent</span>(f, grad, x0, lr=<span class="num">1e-3</span>, steps=<span class="num">10000</span>):
+    x = x0.copy()
+    history = [x.copy()]
+    <span class="kw">for</span> t <span class="kw">in</span> <span class="fn">range</span>(steps):
+        g = <span class="fn">grad</span>(x)
+        x = x - lr * g
+        history.append(x.copy())
+    <span class="kw">return</span> x, np.array(history)
+
+x0 = np.array([-<span class="num">1.5</span>, <span class="num">2.0</span>])
+x_star, hist = <span class="fn">gradient_descent</span>(rosenbrock, grad_rosenbrock, x0, lr=<span class="num">2e-3</span>, steps=<span class="num">20000</span>)
+<span class="fn">print</span>(<span class="str">f"Final x = {x_star}, f(x) = {rosenbrock(x_star):.6f}"</span>)
+<span class="cmt"># Should print something close to (1, 1) with f near zero.</span>
+<span class="cmt"># With lr too large (try 1e-2) it diverges; with lr too small it crawls.</span>
+</code></pre></div>
+
+      <div class="ct-panel" data-tab="adam"><pre><code><span class="kw">import</span> numpy <span class="kw">as</span> np
+
+<span class="kw">def</span> <span class="fn">adam</span>(f, grad, x0, lr=<span class="num">1e-2</span>, b1=<span class="num">0.9</span>, b2=<span class="num">0.999</span>, eps=<span class="num">1e-8</span>, steps=<span class="num">5000</span>):
+    <span class="cmt"># Minimal Adam: first/second moment EMAs with bias correction.</span>
+    x = x0.copy()
+    m = np.<span class="fn">zeros_like</span>(x)
+    v = np.<span class="fn">zeros_like</span>(x)
+    history = [x.copy()]
+    <span class="kw">for</span> t <span class="kw">in</span> <span class="fn">range</span>(<span class="num">1</span>, steps + <span class="num">1</span>):
+        g = <span class="fn">grad</span>(x)
+        m = b1 * m + (<span class="num">1</span> - b1) * g            <span class="cmt"># first moment EMA</span>
+        v = b2 * v + (<span class="num">1</span> - b2) * (g * g)      <span class="cmt"># second moment EMA</span>
+        m_hat = m / (<span class="num">1</span> - b1**t)             <span class="cmt"># bias correction</span>
+        v_hat = v / (<span class="num">1</span> - b2**t)
+        x = x - lr * m_hat / (np.<span class="fn">sqrt</span>(v_hat) + eps)
+        history.append(x.copy())
+    <span class="kw">return</span> x, np.array(history)
+
+<span class="cmt"># Reuses the rosenbrock + grad from the previous tab.</span>
+x0 = np.array([-<span class="num">1.5</span>, <span class="num">2.0</span>])
+x_star, hist = <span class="fn">adam</span>(rosenbrock, grad_rosenbrock, x0, lr=<span class="num">5e-3</span>, steps=<span class="num">5000</span>)
+<span class="fn">print</span>(<span class="str">f"Adam: x = {x_star}, f = {rosenbrock(x_star):.6f}"</span>)
+<span class="cmt"># Adam converges much faster than vanilla GD on this badly-conditioned problem.</span>
+</code></pre></div>
+
+      <div class="ct-panel" data-tab="lag"><pre><code><span class="kw">import</span> numpy <span class="kw">as</span> np
+<span class="kw">from</span> scipy.optimize <span class="kw">import</span> minimize
+
+<span class="cmt"># Minimize f(x, y) = x^2 + y^2  subject to  g(x, y) = x + y - 1 = 0</span>
+<span class="cmt"># Solve via the Lagrangian: L(x, y, lam) = f - lam * g</span>
+<span class="cmt"># KKT system:  2x - lam = 0,  2y - lam = 0,  x + y = 1  -&gt;  x = y = 1/2, lam = 1.</span>
+
+<span class="kw">def</span> <span class="fn">lagrangian_grad</span>(z):
+    x, y, lam = z
+    <span class="kw">return</span> np.array([
+        <span class="num">2</span>*x - lam,        <span class="cmt"># dL/dx</span>
+        <span class="num">2</span>*y - lam,        <span class="cmt"># dL/dy</span>
+        -(x + y - <span class="num">1</span>),    <span class="cmt"># dL/dlam (= -g)</span>
+    ])
+
+<span class="kw">from</span> scipy.optimize <span class="kw">import</span> root
+sol = <span class="fn">root</span>(lagrangian_grad, x0=[<span class="num">0.0</span>, <span class="num">0.0</span>, <span class="num">0.0</span>])
+<span class="fn">print</span>(<span class="str">"x, y, lambda ="</span>, sol.x)
+<span class="cmt"># Expected: [0.5, 0.5, 1.0]</span>
+
+<span class="cmt"># The same problem via SciPy's high-level constrained API:</span>
+res = <span class="fn">minimize</span>(
+    <span class="kw">lambda</span> v: v[<span class="num">0</span>]**<span class="num">2</span> + v[<span class="num">1</span>]**<span class="num">2</span>,
+    x0=[<span class="num">0.0</span>, <span class="num">0.0</span>],
+    constraints={<span class="str">"type"</span>: <span class="str">"eq"</span>, <span class="str">"fun"</span>: <span class="kw">lambda</span> v: v[<span class="num">0</span>] + v[<span class="num">1</span>] - <span class="num">1</span>},
+    method=<span class="str">"SLSQP"</span>,
+)
+<span class="fn">print</span>(<span class="str">"SLSQP solution:"</span>, res.x, <span class="str">"value:"</span>, res.fun)
+</code></pre></div>
+
+      <div class="ct-panel" data-tab="lp"><pre><code><span class="kw">import</span> numpy <span class="kw">as</span> np
+<span class="kw">from</span> scipy.optimize <span class="kw">import</span> linprog
+
+<span class="cmt"># Diet problem: minimize cost of a diet that meets nutritional minimums.</span>
+<span class="cmt"># Foods: bread, milk, cheese, potato, fish, yogurt</span>
+<span class="cmt"># Want at least  2000 calories,  55 g protein,  800 mg calcium per day.</span>
+
+c = np.array([<span class="num">2.0</span>, <span class="num">3.5</span>, <span class="num">8.0</span>, <span class="num">1.5</span>, <span class="num">11.0</span>, <span class="num">3.0</span>])      <span class="cmt"># cost per serving</span>
+
+<span class="cmt"># Each row: (calories, protein g, calcium mg) per serving, negated</span>
+<span class="cmt"># because linprog uses A_ub @ x &lt;= b_ub, and we want &gt;= constraints.</span>
+A_ub = -np.array([
+    [<span class="num">90</span>,  <span class="num">4</span>,   <span class="num">15</span>],   <span class="cmt"># bread</span>
+    [<span class="num">120</span>, <span class="num">8</span>,   <span class="num">300</span>],  <span class="cmt"># milk</span>
+    [<span class="num">110</span>, <span class="num">7</span>,   <span class="num">200</span>],  <span class="cmt"># cheese</span>
+    [<span class="num">160</span>, <span class="num">3</span>,   <span class="num">10</span>],   <span class="cmt"># potato</span>
+    [<span class="num">200</span>, <span class="num">22</span>,  <span class="num">10</span>],   <span class="cmt"># fish</span>
+    [<span class="num">150</span>, <span class="num">10</span>,  <span class="num">450</span>],  <span class="cmt"># yogurt</span>
+]).T
+b_ub = -np.array([<span class="num">2000</span>, <span class="num">55</span>, <span class="num">800</span>])
+
+<span class="cmt"># x_i &gt;= 0 (can't eat negative servings) — bounds default to non-negative.</span>
+res = <span class="fn">linprog</span>(c, A_ub=A_ub, b_ub=b_ub, method=<span class="str">"highs"</span>)
+<span class="fn">print</span>(<span class="str">"servings:"</span>, res.x.<span class="fn">round</span>(<span class="num">2</span>))
+<span class="fn">print</span>(<span class="str">"daily cost:"</span>, <span class="fn">round</span>(res.fun, <span class="num">2</span>))
+<span class="fn">print</span>(<span class="str">"shadow prices (KKT multipliers):"</span>, res.<span class="fn">ineqlin</span>.marginals)
+<span class="cmt"># The shadow prices tell you how much the diet cost would change</span>
+<span class="cmt"># if you relaxed each nutrient minimum by one unit. Pure LP duality.</span>
+</code></pre></div>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="ml">18. Connection to ML</h2>
+
+    <p>Once you've internalized this page, every part of modern ML reads as optimization:</p>
+
+    <ul>
+      <li><strong>Loss functions are objectives.</strong> Cross-entropy, MSE, contrastive loss, RL value functions — all $f(\mathbf{x})$ where $\mathbf{x}$ is the parameter vector.</li>
+      <li><strong>Training is gradient descent.</strong> Specifically, SGD with a momentum-and-second-moment-EMA optimizer (Adam), on the chain-rule-derived gradient (backprop). See <a href="../topics/backpropagation.html">backpropagation</a> and <a href="../topics/gradient-descent.html">gradient descent</a>.</li>
+      <li><strong>Regularization is constrained optimization.</strong> Weight decay is an $\ell_2$ penalty equivalent to a constraint on the weight norm. Dropout, batch norm, and early stopping all add implicit constraints.</li>
+      <li><strong>Hyperparameter search is meta-optimization.</strong> Each evaluation requires running an inner optimization. Bayesian optimization, Hyperband, population-based training — all algorithms for the meta problem.</li>
+      <li><strong>RL is dynamic optimization.</strong> Bellman's equation is the optimality condition for an infinite-horizon optimization problem. Policy gradient is just gradient ascent on expected return.</li>
+      <li><strong>Alignment and safety are optimization too.</strong> RLHF is a constrained optimization: maximize reward subject to a KL penalty against the base model. See <a href="../topics/ai-safety.html">AI safety</a>.</li>
+    </ul>
+
+    <p>Optimization is the lingua franca. Every paper in modern ML eventually says "we optimize..." — and now you know what that sentence smuggles in.</p>
+
+    <h3>See also</h3>
+
+    <div class="grid">
+      <div class="card">
+        <h4><a href="../math/multivariable-calculus.html">Multivariable calculus</a></h4>
+        <p>Gradients, Hessians, Taylor expansions — the calculus this page assumes you've seen.</p>
+      </div>
+      <div class="card">
+        <h4><a href="../math/linear-algebra.html">Linear algebra</a></h4>
+        <p>Matrices, eigenvalues, positive-definiteness — the language convexity is written in.</p>
+      </div>
+      <div class="card">
+        <h4><a href="../math/numerical-analysis.html">Numerical analysis</a></h4>
+        <p>How you actually solve linear systems and avoid floating-point disaster inside an inner loop.</p>
+      </div>
+      <div class="card">
+        <h4><a href="../math/probability.html">Probability</a></h4>
+        <p>Where SGD's noise comes from and why expectations show up in every loss function.</p>
+      </div>
+      <div class="card">
+        <h4><a href="theoretical-cs.html">Theoretical CS</a></h4>
+        <p>What "NP-hard" actually means and why integer programming sits on the wrong side of the line.</p>
+      </div>
+      <div class="card">
+        <h4><a href="../topics/gradient-descent.html">Gradient descent (ML focus)</a></h4>
+        <p>The same algorithm with a deep-learning emphasis — variants in production ML training.</p>
+      </div>
+    </div>
+
+    <!-- ========================================================== -->
+    <div class="bib" id="bib">
+      <h4>Further reading</h4>
+      <ul>
+        <li>Boyd &amp; Vandenberghe (2004) — <em>Convex Optimization</em>. The bible of convex methods. Free PDF at <code>web.stanford.edu/~boyd/cvxbook</code>. Read chapters 1–5 and you'll know more than 90% of practitioners.</li>
+        <li>Nocedal &amp; Wright (2006) — <em>Numerical Optimization</em>, 2nd ed. The standard reference for unconstrained and constrained nonlinear methods, including BFGS, L-BFGS, SQP, interior-point.</li>
+        <li>Bertsekas (2016) — <em>Nonlinear Programming</em>, 3rd ed. More theoretical than Nocedal &amp; Wright, with a strong emphasis on duality and Lagrangian methods.</li>
+        <li>Bertsimas &amp; Tsitsiklis (1997) — <em>Introduction to Linear Optimization</em>. The classic LP textbook. Covers simplex, duality, network flow, integer programming.</li>
+        <li>Nesterov (2018) — <em>Lectures on Convex Optimization</em>. Terse, beautiful, dense. The accelerated gradient method comes straight from the source.</li>
+        <li>Kingma &amp; Ba (2014) — <em>Adam: A Method for Stochastic Optimization</em>. The paper itself; surprisingly readable.</li>
+        <li>Dauphin et al. (2014) — <em>Identifying and attacking the saddle point problem in high-dimensional non-convex optimization</em>. Why deep nets train despite non-convexity.</li>
+        <li>Goh (2017) — <em>Why Momentum Really Works</em>. Distill.pub. The clearest visual explanation of momentum ever written.</li>
+      </ul>
+    </div>
+
+    <div class="next-card">
+      <div class="label">NEXT UP</div>
+      <a href="../topics/gradient-descent.html">→ Gradient descent in ML</a>
+      <p>You've seen optimization from the math/CS side. Next, see how the same algorithm — gradient descent — drives every neural network in production today, from the inside.</p>
+    </div>
+
+  </article>
+</div>
+
+<script>
+// =========================================================
+// Code tabs
+document.querySelectorAll('.code-tabs').forEach(root => {
+  const tabs = root.querySelectorAll('.ct-tab');
+  const panels = root.querySelectorAll('.ct-panel');
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const target = tab.getAttribute('data-tab');
+      tabs.forEach(t => t.classList.toggle('active', t === tab));
+      panels.forEach(p => p.classList.toggle('active', p.getAttribute('data-tab') === target));
+    });
+  });
+});
+
+// =========================================================
+// Gradient descent tracer on a 2D loss surface
+(function() {
+  const svg = document.getElementById('gdSvg');
+  if (!svg) return;
+  const NS = 'http://www.w3.org/2000/svg';
+
+  const lrSlider  = document.getElementById('gdLR');
+  const lrLabel   = document.getElementById('gdLRLabel');
+  const momSlider = document.getElementById('gdMom');
+  const momLabel  = document.getElementById('gdMomLabel');
+  const stepsSlider = document.getElementById('gdSteps');
+  const stepsLabel  = document.getElementById('gdStepsLabel');
+  const resetBtn  = document.getElementById('gdReset');
+  const caption   = document.getElementById('gdCaption');
+
+  const W = 720, H = 420;
+  // Plot region in pixel coordinates
+  const ml = 50, mr = 30, mt = 20, mb = 40;
+  const plotW = W - ml - mr;
+  const plotH = H - mt - mb;
+
+  // World (math) coordinates: x in [-3, 3], y in [-2, 3]
+  const xMin = -3, xMax = 3;
+  const yMin = -2, yMax = 3;
+
+  function xToPx(x) { return ml + (x - xMin) / (xMax - xMin) * plotW; }
+  function yToPx(y) { return mt + plotH - (y - yMin) / (yMax - yMin) * plotH; }
+  function pxToX(px) { return xMin + (px - ml) / plotW * (xMax - xMin); }
+  function pxToY(py) { return yMin + (mt + plotH - py) / plotH * (yMax - yMin); }
+
+  // Two-Gaussian-well loss: a deep well at (-1, 0.5) and a shallow well at (1.4, 1.2)
+  // Plus a quadratic bowl to avoid divergence at infinity.
+  function f(x, y) {
+    const a = -3.0 * Math.exp(-((x + 1.0) ** 2 + (y - 0.5) ** 2) / 0.8);
+    const b = -1.6 * Math.exp(-((x - 1.4) ** 2 + (y - 1.2) ** 2) / 0.6);
+    const c = 0.05 * (x * x + y * y);
+    return a + b + c;
+  }
+
+  function grad(x, y) {
+    // d/dx of -A * exp(-((x-x0)^2 + (y-y0)^2)/s) = -A * exp(...) * (-2(x-x0)/s) = (2 A / s)(x - x0) exp(...)
+    const e1 = Math.exp(-((x + 1.0) ** 2 + (y - 0.5) ** 2) / 0.8);
+    const e2 = Math.exp(-((x - 1.4) ** 2 + (y - 1.2) ** 2) / 0.6);
+    const dfdx = (2 * 3.0 / 0.8) * (x + 1.0) * e1
+               + (2 * 1.6 / 0.6) * (x - 1.4) * e2
+               + 0.10 * x;
+    const dfdy = (2 * 3.0 / 0.8) * (y - 0.5) * e1
+               + (2 * 1.6 / 0.6) * (y - 1.2) * e2
+               + 0.10 * y;
+    return [dfdx, dfdy];
+  }
+
+  // Sample f on a grid for contour shading
+  const NX = 90, NY = 60;
+  let zMin = Infinity, zMax = -Infinity;
+  const grid = new Float32Array(NX * NY);
+  for (let j = 0; j < NY; j++) {
+    for (let i = 0; i < NX; i++) {
+      const x = xMin + (i / (NX - 1)) * (xMax - xMin);
+      const y = yMin + (j / (NY - 1)) * (yMax - yMin);
+      const z = f(x, y);
+      grid[j * NX + i] = z;
+      if (z < zMin) zMin = z;
+      if (z > zMax) zMax = z;
+    }
+  }
+
+  function colorFor(z) {
+    // Map z to a dark teal/violet ramp. Lower = darker.
+    const t = Math.max(0, Math.min(1, (z - zMin) / (zMax - zMin)));
+    // dark navy (low) to soft pink (high)
+    const r = Math.round(15  + t * 230);
+    const g = Math.round(25  + t * 80);
+    const b = Math.round(50  + t * 100);
+    return `rgb(${r},${g},${b})`;
+  }
+
+  let startPoint = null;
+
+  function clearSvg() {
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+  }
+
+  function drawBackground() {
+    // Background frame
+    const bg = document.createElementNS(NS, 'rect');
+    bg.setAttribute('x', 0); bg.setAttribute('y', 0);
+    bg.setAttribute('width', W); bg.setAttribute('height', H);
+    bg.setAttribute('fill', '#0a0d12');
+    svg.appendChild(bg);
+
+    // Heatmap as small rectangles
+    const cellW = plotW / (NX - 1);
+    const cellH = plotH / (NY - 1);
+    for (let j = 0; j < NY - 1; j++) {
+      for (let i = 0; i < NX - 1; i++) {
+        const z = grid[j * NX + i];
+        const r = document.createElementNS(NS, 'rect');
+        r.setAttribute('x', ml + i * cellW);
+        r.setAttribute('y', mt + (NY - 2 - j) * cellH);
+        r.setAttribute('width', cellW + 1);
+        r.setAttribute('height', cellH + 1);
+        r.setAttribute('fill', colorFor(z));
+        svg.appendChild(r);
+      }
+    }
+
+    // Contour lines at fixed levels
+    const levels = [];
+    for (let k = 0; k < 10; k++) {
+      levels.push(zMin + (k + 0.5) / 10 * (zMax - zMin));
+    }
+    // Use marching squares per cell for each level
+    for (const lev of levels) {
+      for (let j = 0; j < NY - 1; j++) {
+        for (let i = 0; i < NX - 1; i++) {
+          const z00 = grid[j * NX + i];
+          const z10 = grid[j * NX + i + 1];
+          const z01 = grid[(j + 1) * NX + i];
+          const z11 = grid[(j + 1) * NX + i + 1];
+          const code = (z00 > lev ? 1 : 0)
+                     | (z10 > lev ? 2 : 0)
+                     | (z11 > lev ? 4 : 0)
+                     | (z01 > lev ? 8 : 0);
+          if (code === 0 || code === 15) continue;
+
+          const x0 = xMin + (i / (NX - 1)) * (xMax - xMin);
+          const x1 = xMin + ((i + 1) / (NX - 1)) * (xMax - xMin);
+          const y0 = yMin + (j / (NY - 1)) * (yMax - yMin);
+          const y1 = yMin + ((j + 1) / (NY - 1)) * (yMax - yMin);
+
+          // Linear interpolation to find crossing points on edges
+          function lerpX(za, zb, xa, xb) {
+            return xa + (lev - za) / (zb - za) * (xb - xa);
+          }
+          const eb = { x: lerpX(z00, z10, x0, x1), y: y0 };
+          const er = { x: x1, y: lerpX(z10, z11, y0, y1) };
+          const et = { x: lerpX(z01, z11, x0, x1), y: y1 };
+          const el = { x: x0, y: lerpX(z00, z01, y0, y1) };
+
+          let segs = [];
+          switch (code) {
+            case 1: case 14: segs = [[el, eb]]; break;
+            case 2: case 13: segs = [[eb, er]]; break;
+            case 3: case 12: segs = [[el, er]]; break;
+            case 4: case 11: segs = [[er, et]]; break;
+            case 6: case 9:  segs = [[eb, et]]; break;
+            case 7: case 8:  segs = [[el, et]]; break;
+            case 5:          segs = [[el, eb], [er, et]]; break;
+            case 10:         segs = [[el, et], [eb, er]]; break;
+          }
+          for (const [a, b] of segs) {
+            const ln = document.createElementNS(NS, 'line');
+            ln.setAttribute('x1', xToPx(a.x));
+            ln.setAttribute('y1', yToPx(a.y));
+            ln.setAttribute('x2', xToPx(b.x));
+            ln.setAttribute('y2', yToPx(b.y));
+            ln.setAttribute('stroke', 'rgba(255,255,255,0.18)');
+            ln.setAttribute('stroke-width', 0.6);
+            svg.appendChild(ln);
+          }
+        }
+      }
+    }
+
+    // Frame
+    const fr = document.createElementNS(NS, 'rect');
+    fr.setAttribute('x', ml); fr.setAttribute('y', mt);
+    fr.setAttribute('width', plotW); fr.setAttribute('height', plotH);
+    fr.setAttribute('fill', 'none');
+    fr.setAttribute('stroke', '#384050');
+    fr.setAttribute('stroke-width', 1);
+    svg.appendChild(fr);
+
+    // Axes ticks
+    for (let xt = Math.ceil(xMin); xt <= Math.floor(xMax); xt++) {
+      const px = xToPx(xt);
+      const tk = document.createElementNS(NS, 'line');
+      tk.setAttribute('x1', px); tk.setAttribute('y1', mt + plotH);
+      tk.setAttribute('x2', px); tk.setAttribute('y2', mt + plotH + 4);
+      tk.setAttribute('stroke', '#7a8a9a');
+      svg.appendChild(tk);
+      const lb = document.createElementNS(NS, 'text');
+      lb.setAttribute('x', px); lb.setAttribute('y', mt + plotH + 16);
+      lb.setAttribute('text-anchor', 'middle');
+      lb.setAttribute('fill', '#7a8a9a');
+      lb.setAttribute('font-size', 10);
+      lb.setAttribute('font-family', 'ui-monospace, monospace');
+      lb.textContent = xt;
+      svg.appendChild(lb);
+    }
+    for (let yt = Math.ceil(yMin); yt <= Math.floor(yMax); yt++) {
+      const py = yToPx(yt);
+      const tk = document.createElementNS(NS, 'line');
+      tk.setAttribute('x1', ml - 4); tk.setAttribute('y1', py);
+      tk.setAttribute('x2', ml);     tk.setAttribute('y2', py);
+      tk.setAttribute('stroke', '#7a8a9a');
+      svg.appendChild(tk);
+      const lb = document.createElementNS(NS, 'text');
+      lb.setAttribute('x', ml - 8); lb.setAttribute('y', py + 3);
+      lb.setAttribute('text-anchor', 'end');
+      lb.setAttribute('fill', '#7a8a9a');
+      lb.setAttribute('font-size', 10);
+      lb.setAttribute('font-family', 'ui-monospace, monospace');
+      lb.textContent = yt;
+      svg.appendChild(lb);
+    }
+
+    // Axis labels
+    const xlab = document.createElementNS(NS, 'text');
+    xlab.setAttribute('x', ml + plotW / 2);
+    xlab.setAttribute('y', H - 6);
+    xlab.setAttribute('text-anchor', 'middle');
+    xlab.setAttribute('fill', '#b4c4d4');
+    xlab.setAttribute('font-size', 11);
+    xlab.setAttribute('font-family', 'ui-monospace, monospace');
+    xlab.textContent = 'x₁';
+    svg.appendChild(xlab);
+    const ylab = document.createElementNS(NS, 'text');
+    ylab.setAttribute('x', 14);
+    ylab.setAttribute('y', mt + plotH / 2);
+    ylab.setAttribute('text-anchor', 'middle');
+    ylab.setAttribute('fill', '#b4c4d4');
+    ylab.setAttribute('font-size', 11);
+    ylab.setAttribute('font-family', 'ui-monospace, monospace');
+    ylab.setAttribute('transform', `rotate(-90 14 ${mt + plotH / 2})`);
+    ylab.textContent = 'x₂';
+    svg.appendChild(ylab);
+
+    // Mark the two minima
+    const m1 = document.createElementNS(NS, 'circle');
+    m1.setAttribute('cx', xToPx(-1.0)); m1.setAttribute('cy', yToPx(0.5));
+    m1.setAttribute('r', 3); m1.setAttribute('fill', '#22d3ee');
+    m1.setAttribute('stroke', '#0a0d12'); m1.setAttribute('stroke-width', 0.5);
+    svg.appendChild(m1);
+    const m2 = document.createElementNS(NS, 'circle');
+    m2.setAttribute('cx', xToPx(1.4)); m2.setAttribute('cy', yToPx(1.2));
+    m2.setAttribute('r', 3); m2.setAttribute('fill', '#f472b6');
+    m2.setAttribute('stroke', '#0a0d12'); m2.setAttribute('stroke-width', 0.5);
+    svg.appendChild(m2);
+  }
+
+  function runGD(x0, y0) {
+    const lr = parseFloat(lrSlider.value);
+    const beta = parseFloat(momSlider.value);
+    const steps = parseInt(stepsSlider.value, 10);
+
+    let x = x0, y = y0;
+    let vx = 0, vy = 0;
+    const path = [[x, y]];
+    let diverged = false;
+    for (let t = 0; t < steps; t++) {
+      const [gx, gy] = grad(x, y);
+      vx = beta * vx + gx;
+      vy = beta * vy + gy;
+      x = x - lr * vx;
+      y = y - lr * vy;
+      if (!isFinite(x) || !isFinite(y) || Math.abs(x) > 10 || Math.abs(y) > 10) {
+        diverged = true;
+        break;
+      }
+      path.push([x, y]);
+    }
+    return { path, diverged, finalF: f(x, y) };
+  }
+
+  function drawTrajectory() {
+    if (!startPoint) return;
+    const { path, diverged, finalF } = runGD(startPoint[0], startPoint[1]);
+
+    // Path polyline
+    const pl = document.createElementNS(NS, 'polyline');
+    const pts = path.map(([x, y]) => `${xToPx(x)},${yToPx(y)}`).join(' ');
+    pl.setAttribute('points', pts);
+    pl.setAttribute('fill', 'none');
+    pl.setAttribute('stroke', '#ffd680');
+    pl.setAttribute('stroke-width', 1.5);
+    pl.setAttribute('stroke-opacity', 0.85);
+    svg.appendChild(pl);
+
+    // Step dots
+    for (let i = 0; i < path.length; i += Math.max(1, Math.floor(path.length / 30))) {
+      const c = document.createElementNS(NS, 'circle');
+      c.setAttribute('cx', xToPx(path[i][0]));
+      c.setAttribute('cy', yToPx(path[i][1]));
+      c.setAttribute('r', 1.6);
+      c.setAttribute('fill', '#ffd680');
+      svg.appendChild(c);
+    }
+
+    // Start
+    const s = document.createElementNS(NS, 'circle');
+    s.setAttribute('cx', xToPx(startPoint[0]));
+    s.setAttribute('cy', yToPx(startPoint[1]));
+    s.setAttribute('r', 5);
+    s.setAttribute('fill', '#7c5cff');
+    s.setAttribute('stroke', '#ffffff');
+    s.setAttribute('stroke-width', 1.2);
+    svg.appendChild(s);
+
+    // End
+    const last = path[path.length - 1];
+    const e = document.createElementNS(NS, 'circle');
+    e.setAttribute('cx', xToPx(last[0]));
+    e.setAttribute('cy', yToPx(last[1]));
+    e.setAttribute('r', 5);
+    e.setAttribute('fill', diverged ? '#ff6680' : '#22d3ee');
+    e.setAttribute('stroke', '#ffffff');
+    e.setAttribute('stroke-width', 1.2);
+    svg.appendChild(e);
+
+    if (diverged) {
+      caption.textContent = `Started at (${startPoint[0].toFixed(2)}, ${startPoint[1].toFixed(2)}). DIVERGED — learning rate too large for the local curvature.`;
+    } else {
+      caption.textContent = `Started at (${startPoint[0].toFixed(2)}, ${startPoint[1].toFixed(2)}). Ended at (${last[0].toFixed(2)}, ${last[1].toFixed(2)}) with f ≈ ${finalF.toFixed(3)}. ${path.length - 1} steps. The deep minimum is the cyan dot; the shallow minimum is the pink dot.`;
+    }
+  }
+
+  function redraw() {
+    clearSvg();
+    drawBackground();
+    drawTrajectory();
+    lrLabel.textContent = parseFloat(lrSlider.value).toFixed(3);
+    momLabel.textContent = parseFloat(momSlider.value).toFixed(2);
+    stepsLabel.textContent = stepsSlider.value;
+  }
+
+  svg.addEventListener('click', (ev) => {
+    const rect = svg.getBoundingClientRect();
+    const sx = (ev.clientX - rect.left) / rect.width * W;
+    const sy = (ev.clientY - rect.top) / rect.height * H;
+    if (sx < ml || sx > ml + plotW || sy < mt || sy > mt + plotH) return;
+    startPoint = [pxToX(sx), pxToY(sy)];
+    redraw();
+  });
+
+  lrSlider.addEventListener('input', redraw);
+  momSlider.addEventListener('input', redraw);
+  stepsSlider.addEventListener('input', redraw);
+  resetBtn.addEventListener('click', () => { startPoint = null; redraw(); });
+
+  // Default starting point
+  startPoint = [2.0, -1.0];
+  redraw();
+})();
+</script>
+<script defer src="../search-index.js"></script>
+<script defer src="../search.js"></script>
+</body>
+</html>

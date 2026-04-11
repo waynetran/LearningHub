@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Word Embeddings — Deep Dive</title>
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError: false});"></script>
+</head>
+<body>
+<div id="tooltip"></div>
+
+<nav class="topic-nav">
+  <a class="back" href="../ai-ml.html">← Back to AI/ML</a>
+  <div class="crumb">Deep Dives / <span class="topic-name">Embeddings</span></div>
+</nav>
+
+<div class="topic-layout">
+  <aside class="topic-toc">
+    <h4>ON THIS PAGE</h4>
+    <ul>
+      <li><a href="#intro">1. From symbols to vectors</a></li>
+      <li><a href="#one-hot">2. The one-hot baseline</a></li>
+      <li><a href="#distributional">3. The distributional hypothesis</a></li>
+      <li><a href="#word2vec">4. Word2Vec</a>
+        <ul>
+          <li><a href="#sgns">Skip-gram with negative sampling</a></li>
+          <li><a href="#w2v-math">Math, unpacked</a></li>
+        </ul>
+      </li>
+      <li><a href="#geometry">5. The geometry of meaning</a>
+        <ul><li><a href="#emb-demo">Interactive: explore a tiny embedding space</a></li></ul>
+      </li>
+      <li><a href="#code">6. Source code</a></li>
+      <li><a href="#beyond">7. Beyond Word2Vec</a></li>
+      <li><a href="#summary">8. Summary</a></li>
+    </ul>
+  </aside>
+
+  <article class="topic-content">
+    <h1>Word Embeddings</h1>
+    <p class="subtitle">How a bag of strings became a cloud of vectors — and how, in that cloud, king − man + woman suddenly landed on queen.</p>
+    <div class="meta-tags">
+      <span>Prereq: dot products, softmax</span>
+      <span>Time to read: ~20 min</span>
+      <span>Interactive figures: 1</span>
+      <span>Code: Python/NumPy, PyTorch, gensim</span>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="intro">1. From symbols to vectors</h2>
+
+    <p>A neural network can't ingest the string "cat" directly. It needs a vector of numbers. The question is: <em>which</em> numbers? The answer you choose determines what the network can learn, how efficiently, and whether the resulting model generalizes. For the first few decades of NLP, the answer was "an index into a vocabulary" or equivalently "a one-hot vector." The jump to dense learned vectors — <strong>embeddings</strong> — is one of those small conceptual moves that ends up being load-bearing for an entire field.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="one-hot">2. The one-hot baseline</h2>
+
+    <p>Suppose your vocabulary has $V = 10{,}000$ words. The one-hot encoding of the $i$-th word is a vector in $\mathbb{R}^V$ with a 1 in position $i$ and zeros everywhere else:</p>
+
+    <div class="math-display">$$\text{cat} = \begin{bmatrix} 0 \\ \vdots \\ 1 \\ \vdots \\ 0 \end{bmatrix} \leftarrow \text{position 3172}$$</div>
+
+    <p>This is technically a valid feature vector. You can feed it into a linear classifier. But notice two catastrophes:</p>
+
+    <ul>
+      <li><strong>No similarity structure.</strong> The dot product of "cat" with "dog" is 0. The dot product of "cat" with "quasar" is also 0. Every word is equidistant from every other word. Nothing about the encoding says "cat and dog are similar animals."</li>
+      <li><strong>Huge and sparse.</strong> A 10,000-dim vector per word, of which 9,999 entries are zero. If you want to feed a 30-word sentence into a model, you're at 300,000 coordinates, almost all of them empty.</li>
+    </ul>
+
+    <p>A <em>dense embedding</em> replaces the 10,000-dim sparse one-hot with, say, a 300-dim real vector where every coordinate is a learned float. Related words end up close together in this space. That's the whole idea. The question is: how do you learn the vectors?</p>
+
+    <!-- ========================================================== -->
+    <h2 id="distributional">3. The distributional hypothesis</h2>
+
+    <blockquote style="border-left:3px solid var(--accent-3); padding:10px 18px; margin:22px 0; background:var(--bg-2); border-radius:0 6px 6px 0; font-style:italic; color:var(--text)">
+      "You shall know a word by the company it keeps."
+      <div style="display:block; text-align:right; font-size:12px; color:var(--text-dim); margin-top:6px; font-style:normal">— J. R. Firth, 1957</div>
+    </blockquote>
+
+    <p>This is the core insight. Words that appear in similar contexts tend to have similar meanings. "cat" and "dog" both show up near "pet," "food," "tail," "bark/meow," "vet." "cat" and "quasar" do not. If you can build a representation of a word from the contexts it shows up in, you're implicitly encoding its meaning.</p>
+
+    <p>Classical NLP implemented this with <strong>co-occurrence matrices</strong>: count how often each word appears near each other word, then decompose the resulting matrix with SVD to get dense vectors. That works, but it's expensive and doesn't scale to billion-word corpora. The modern alternative is to frame it as a small prediction task that a neural network can train on.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="word2vec">4. Word2Vec</h2>
+
+    <p>In 2013, Tomáš Mikolov and colleagues at Google published <em>Word2Vec</em> — a pair of simple shallow networks (CBOW and Skip-gram) that could learn high-quality word embeddings from billions of tokens in hours. The results were surprising enough to reshape the field: the resulting vectors weren't just "similar words are close," they had <em>linear algebraic structure</em>. You could do arithmetic on them. <code>king − man + woman ≈ queen</code>. <code>Paris − France + Italy ≈ Rome</code>. Nobody had asked for this to happen; it fell out of the training objective.</p>
+
+    <h3 id="sgns">Skip-gram with negative sampling</h3>
+
+    <p>The Skip-gram variant is the one most people run. Here's the setup:</p>
+
+    <ol>
+      <li>For each word $w_t$ in your corpus, look at its context window — say, the 5 words before and 5 after.</li>
+      <li>For each (center word, context word) pair, train a model to predict that this pairing is a real one from the corpus, not a random accident.</li>
+      <li>To give the model negative examples, sample some random "context" words that definitely weren't near $w_t$, and train it to predict those as fake.</li>
+    </ol>
+
+    <p>That's it. You don't need a language model, you don't need parse trees, you don't need supervised labels. All you need is a big text corpus.</p>
+
+    <h3 id="w2v-math">Math, unpacked</h3>
+
+    <p>Each word $w$ gets two learned vectors: a <strong>target</strong> vector $\mathbf{v}_w \in \mathbb{R}^d$ (used when $w$ is the center word) and a <strong>context</strong> vector $\mathbf{u}_w \in \mathbb{R}^d$ (used when $w$ is in the surrounding window). Typical $d$ is 100–300.</p>
+
+    <p>Given a center word $w_t$ and a context word $w_c$, the probability they were a real co-occurrence is modelled as:</p>
+
+    <div class="math-display">$$P(\text{real} \mid w_t, w_c) = \sigma(\mathbf{v}_{w_t} \cdot \mathbf{u}_{w_c}) = \frac{1}{1 + e^{-\mathbf{v}_{w_t} \cdot \mathbf{u}_{w_c}}}$$</div>
+
+    <p>The full negative-sampling loss for a single positive pair $(w_t, w_c)$ with $k$ negatives $w_n^{(1)}, \dots, w_n^{(k)}$ is:</p>
+
+    <div class="math-display">$$\mathcal{L} = -\log \sigma(\mathbf{v}_{w_t} \cdot \mathbf{u}_{w_c}) - \sum_{i=1}^{k} \log \sigma(-\mathbf{v}_{w_t} \cdot \mathbf{u}_{w_n^{(i)}})$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Skip-gram loss, piece by piece</p>
+      <dl>
+        <dt>$w_t$</dt><dd>Center (target) word — the one we're currently looking at.</dd>
+        <dt>$w_c$</dt><dd>A <em>positive</em> context word — observed within a window of $w_t$ in the corpus.</dd>
+        <dt>$w_n^{(i)}$</dt>
+        <dd>A <em>negative</em> context word — drawn at random from the vocabulary (biased slightly toward frequent words).
+          <span class="mg-why">These are assumed to <em>not</em> be near $w_t$; they serve as "wrong answers" the model must learn to reject.</span>
+        </dd>
+        <dt>$\mathbf{v}_{w_t}$</dt>
+        <dd>Target embedding of $w_t$ — a row of the "input" embedding matrix.
+          <span class="mg-why">This is the vector you'll use at inference time: it's the representation of the word when it's the thing you're asking about.</span>
+        </dd>
+        <dt>$\mathbf{u}_{w_c}$</dt>
+        <dd>Context embedding of $w_c$ — a row of the "output" embedding matrix.
+          <span class="mg-why">A separate set of vectors, used only during training. Most people throw them away after training and keep only $\mathbf{v}$.</span>
+        </dd>
+        <dt>$\sigma$</dt>
+        <dd>Logistic sigmoid: $\sigma(z) = 1/(1+e^{-z})$. Squashes the dot product into a probability in $(0, 1)$.</dd>
+        <dt>$\sigma(\mathbf{v}_{w_t} \cdot \mathbf{u}_{w_c})$</dt>
+        <dd>Model's estimated probability that $w_c$ really co-occurred with $w_t$. We want this near 1 for positive pairs.</dd>
+        <dt>$\sigma(-\mathbf{v}_{w_t} \cdot \mathbf{u}_{w_n^{(i)}})$</dt>
+        <dd>Same thing but with a sign flip — this equals $1 - \sigma(\mathbf{v}_{w_t} \cdot \mathbf{u}_{w_n^{(i)}})$, the model's estimated probability that the negative pair is fake. We want this near 1 too.</dd>
+        <dt>$k$</dt>
+        <dd>Number of negative samples per positive pair. Typically 5–20. More negatives → slower training, better embeddings.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Analogy</strong> Imagine a dating app where you're shown pairs of words and asked "did these two hang out at a party in your corpus?" For positive pairs ("cat", "purr"), the model should say yes. For negative pairs ("cat", "platypus") — assuming the random draw really missed — it should say no. After billions of rounds, the word that consistently gets "yes" when paired with "purr" is "cat," and the vector for "cat" has drifted into a neighborhood where the dot products with "purr," "meow," "fur" are all high. Words that describe similar things end up in similar neighborhoods, because they pass the same tests.</p>
+    </div>
+
+    <p>Training is straightforward stochastic gradient descent on this loss. Because there are only dot products and sigmoids, it's very fast — you can train on a 100-million-word corpus in minutes on a single CPU.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="geometry">5. The geometry of meaning</h2>
+
+    <p>Here's the surprising thing. After you've trained Word2Vec on enough text, the vector space has structure you didn't explicitly put there. Measure any two embeddings by cosine similarity and nearest neighbors are semantically related: <code>nearest(cat) ≈ [dog, kitten, feline, pet, puppy]</code>.</p>
+
+    <p>But more than that: certain <em>directions</em> in the space correspond to meaningful attributes. The vector $\mathbf{v}_{\text{king}} - \mathbf{v}_{\text{man}}$ and the vector $\mathbf{v}_{\text{queen}} - \mathbf{v}_{\text{woman}}$ are approximately parallel. That means there's a "royalty" direction in the space, learned without any explicit supervision, such that subtracting "man" and adding "woman" roughly moves you along the gender direction while preserving royalty.</p>
+
+    <div class="math-display">$$\mathbf{v}_{\text{king}} - \mathbf{v}_{\text{man}} + \mathbf{v}_{\text{woman}} \approx \mathbf{v}_{\text{queen}}$$</div>
+
+    <p>This result was the headline of the Word2Vec paper. It worked for many analogies: capital-country, verb-tense, plurals, gendered nouns, even some factual relations. It didn't work for everything — analogies involving very rare words broke down, and "bias" directions (gender stereotypes, racial bias) also emerged from the same mechanism and had to be studied and mitigated.</p>
+
+    <h3 id="emb-demo">Interactive: explore a 2-D embedding space</h3>
+    <p>Below is a hand-crafted 2-D embedding of 16 words, designed to illustrate the geometry. Click two words to see their cosine similarity, or click the analogy button to compute <code>A − B + C</code> and find the nearest word.</p>
+
+    <div class="step-figure" id="emb-figure">
+      <div class="sf-header">
+        <span class="sf-title">▸ Toy 2-D embedding space</span>
+        <span class="sf-progress" id="emb-progress">Click two words</span>
+      </div>
+      <div class="sf-body">
+        <div class="sf-visual">
+          <svg viewBox="0 0 440 360" width="100%" style="max-width:440px" id="emb-svg">
+            <defs>
+              <marker id="emb-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+                <path d="M0,0 L10,5 L0,10 z" fill="#fbbf24"/>
+              </marker>
+            </defs>
+            <!-- axes -->
+            <line x1="30" y1="180" x2="410" y2="180" stroke="#242a3a"/>
+            <line x1="220" y1="20" x2="220" y2="340" stroke="#242a3a"/>
+            <!-- points + labels drawn by JS -->
+            <g id="emb-points"></g>
+            <g id="emb-overlay"></g>
+          </svg>
+        </div>
+        <div class="sf-explain" id="emb-explain">
+          <h5>Try an analogy</h5>
+          <p>Click "king" then "man" then "woman" then press <strong>A − B + C</strong>. The yellow arrow will point at the result and you'll see how close it lands to "queen."</p>
+          <p>You can also just click any two words to see their cosine similarity.</p>
+        </div>
+      </div>
+      <div class="sf-controls">
+        <button class="btn" onclick="embAnalogy()">A − B + C →</button>
+        <div class="spacer"></div>
+        <button class="btn ghost" onclick="embReset()">Reset</button>
+      </div>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="code">6. Source code</h2>
+
+    <p>A minimal Skip-gram with negative sampling, in three versions.</p>
+
+    <div class="code-tabs" id="ct-emb">
+      <div class="ct-header">
+        <button class="ct-tab active" data-tab="np">NumPy (from scratch)</button>
+        <button class="ct-tab" data-tab="pt">PyTorch</button>
+        <button class="ct-tab" data-tab="gs">gensim</button>
+        <span class="ct-label">skip-gram · negative sampling</span>
+      </div>
+      <div class="ct-panel active" data-tab="np"><pre><code><span class="kw">import</span> numpy <span class="kw">as</span> np
+
+V, d, k, lr = <span class="num">10000</span>, <span class="num">100</span>, <span class="num">5</span>, <span class="num">0.025</span>
+V_in  = np.random.randn(V, d) * <span class="num">0.01</span>   <span class="cmt"># target ("input") matrix</span>
+V_out = np.random.randn(V, d) * <span class="num">0.01</span>   <span class="cmt"># context ("output") matrix</span>
+
+<span class="kw">def</span> <span class="fn">sigmoid</span>(z): <span class="kw">return</span> <span class="num">1</span> / (<span class="num">1</span> + np.exp(-z))
+
+<span class="kw">def</span> <span class="fn">sgns_update</span>(center, context, neg_samples):
+    v = V_in[center]                         <span class="cmt"># (d,)</span>
+    u_pos = V_out[context]                   <span class="cmt"># (d,)</span>
+    u_neg = V_out[neg_samples]               <span class="cmt"># (k, d)</span>
+
+    <span class="cmt"># positive term</span>
+    p_pos = <span class="fn">sigmoid</span>(v @ u_pos)
+    grad_pos = p_pos - <span class="num">1</span>                   <span class="cmt"># dL/d(v · u_pos)</span>
+
+    <span class="cmt"># negative terms</span>
+    scores_neg = u_neg @ v                   <span class="cmt"># (k,)</span>
+    p_neg = <span class="fn">sigmoid</span>(scores_neg)
+    grad_neg = p_neg                         <span class="cmt"># dL/d(v · u_neg_i)</span>
+
+    <span class="cmt"># update center vector (sum of all gradients flowing in)</span>
+    dv = grad_pos * u_pos + grad_neg @ u_neg
+    V_in[center] -= lr * dv
+
+    <span class="cmt"># update context vectors</span>
+    V_out[context]     -= lr * grad_pos * v
+    V_out[neg_samples] -= lr * grad_neg[:, <span class="kw">None</span>] * v
+</code></pre></div>
+
+      <div class="ct-panel" data-tab="pt"><pre><code><span class="kw">import</span> torch, torch.nn <span class="kw">as</span> nn, torch.nn.functional <span class="kw">as</span> F
+
+<span class="kw">class</span> <span class="fn">SkipGramNS</span>(nn.Module):
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, V, d):
+        <span class="fn">super</span>().__init__()
+        self.v_in  = nn.Embedding(V, d)
+        self.v_out = nn.Embedding(V, d)
+        nn.init.uniform_(self.v_in.weight,  -<span class="num">0.5</span>/d, <span class="num">0.5</span>/d)
+        nn.init.zeros_  (self.v_out.weight)
+
+    <span class="kw">def</span> <span class="fn">forward</span>(self, center, context, negatives):
+        <span class="cmt"># center: (B,), context: (B,), negatives: (B, k)</span>
+        v   = self.v_in (center)                     <span class="cmt"># (B, d)</span>
+        u_p = self.v_out(context)                    <span class="cmt"># (B, d)</span>
+        u_n = self.v_out(negatives)                  <span class="cmt"># (B, k, d)</span>
+
+        pos_score = (v * u_p).sum(dim=<span class="num">1</span>)           <span class="cmt"># (B,)</span>
+        neg_score = torch.bmm(u_n, v.unsqueeze(<span class="num">2</span>)).squeeze(<span class="num">2</span>)   <span class="cmt"># (B, k)</span>
+
+        loss  = -F.logsigmoid( pos_score).mean() \
+                -F.logsigmoid(-neg_score).mean()
+        <span class="kw">return</span> loss
+</code></pre></div>
+
+      <div class="ct-panel" data-tab="gs"><pre><code><span class="cmt"># The one everyone actually uses in practice</span>
+<span class="kw">from</span> gensim.models <span class="kw">import</span> Word2Vec
+
+sentences = [[<span class="str">"the"</span>, <span class="str">"cat"</span>, <span class="str">"sat"</span>, <span class="str">"on"</span>, <span class="str">"the"</span>, <span class="str">"mat"</span>], ...]
+model = Word2Vec(
+    sentences,
+    vector_size=<span class="num">300</span>,
+    window=<span class="num">5</span>,
+    min_count=<span class="num">5</span>,
+    sg=<span class="num">1</span>,               <span class="cmt"># skip-gram (not CBOW)</span>
+    negative=<span class="num">10</span>,        <span class="cmt"># negative samples per positive</span>
+    workers=<span class="num">8</span>,
+    epochs=<span class="num">5</span>,
+)
+
+<span class="fn">print</span>(model.wv.most_similar(<span class="str">"cat"</span>))
+<span class="fn">print</span>(model.wv.most_similar(positive=[<span class="str">"king"</span>, <span class="str">"woman"</span>], negative=[<span class="str">"man"</span>]))
+</code></pre></div>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="beyond">7. Beyond Word2Vec</h2>
+
+    <p>Word2Vec was 2013. The embedding story has moved on several times since.</p>
+
+    <ul>
+      <li><strong>GloVe (2014)</strong> — Stanford's alternative, explicitly fitting vectors to match log co-occurrence ratios. Similar quality, different math.</li>
+      <li><strong>FastText (2016)</strong> — Represents each word as a sum of character n-gram embeddings. Handles out-of-vocabulary words (subword units) and does better on morphologically rich languages.</li>
+      <li><strong>ELMo (2018)</strong> — Instead of one vector per word, a bi-LSTM language model produces a <em>contextual</em> embedding: the vector for "bank" is different in "river bank" vs. "central bank." This was the beginning of the end for static embeddings.</li>
+      <li><strong>BERT (2018)</strong> and every LLM since — every token at every position produces its own contextual embedding as a hidden state of a Transformer. "Word embedding" in the modern sense usually means "the contextualized hidden state of a particular token."</li>
+      <li><strong>Sentence / document embeddings</strong> — Sentence-BERT, OpenAI text-embedding-3, Cohere embeddings: produce a single vector per sentence or document, trained so similar meanings map to close vectors. These power semantic search, RAG, clustering, and nearest-neighbor recommendation.</li>
+    </ul>
+
+    <p>But the core idea — words are points in a learned real-valued space, where geometry encodes meaning — is unchanged from 2013. Every modern LLM still starts by converting tokens into dense vectors via an embedding matrix. That matrix is the first thing the Transformer sees and the thing it writes back to when it generates the next token. Embeddings are the bridge between discrete symbols and continuous geometry, and every neural model of language crosses that bridge first.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="summary">8. Summary</h2>
+
+    <ul>
+      <li>Embeddings replace one-hot symbol encodings with dense, learned vectors that capture similarity.</li>
+      <li>They're justified by the <strong>distributional hypothesis</strong>: words with similar contexts have similar meanings.</li>
+      <li><strong>Word2Vec</strong> (Mikolov et al. 2013) learns embeddings by training a shallow network to distinguish real (word, context) pairs from random negatives — the <em>skip-gram with negative sampling</em> loss.</li>
+      <li>The resulting vector space has surprising linear structure: analogies like $\text{king} - \text{man} + \text{woman} \approx \text{queen}$ work as vector arithmetic.</li>
+      <li>Static embeddings were superseded by <strong>contextual embeddings</strong> (ELMo, BERT), where each token's vector depends on its context. But every LLM still has an embedding matrix at the bottom of the stack.</li>
+    </ul>
+
+    <div class="bib">
+      <h4>Further reading</h4>
+      <ul>
+        <li>Mikolov et al. (2013) — <em>Efficient Estimation of Word Representations in Vector Space</em>.</li>
+        <li>Mikolov et al. (2013) — <em>Distributed Representations of Words and Phrases and their Compositionality</em> (the negative-sampling paper).</li>
+        <li>Pennington, Socher & Manning (2014) — <em>GloVe: Global Vectors for Word Representation</em>.</li>
+        <li>Bojanowski et al. (2016) — <em>Enriching Word Vectors with Subword Information</em> (FastText).</li>
+        <li>Peters et al. (2018) — <em>Deep Contextualized Word Representations</em> (ELMo).</li>
+      </ul>
+    </div>
+
+    <div class="next-card">
+      <div class="label">NEXT UP</div>
+      <a href="self-attention.html">→ Self-attention</a>
+      <p>How Transformers made every word embedding context-aware by letting each token look at every other token.</p>
+    </div>
+
+  </article>
+</div>
+
+<script>
+// =========================================================
+// Code tabs
+// =========================================================
+document.querySelectorAll('.code-tabs').forEach(root => {
+  const tabs = root.querySelectorAll('.ct-tab');
+  const panels = root.querySelectorAll('.ct-panel');
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const target = tab.getAttribute('data-tab');
+      tabs.forEach(t => t.classList.toggle('active', t === tab));
+      panels.forEach(p => p.classList.toggle('active', p.getAttribute('data-tab') === target));
+    });
+  });
+});
+
+// =========================================================
+// Toy 2-D embedding interactive
+// Axis x ≈ "gender" (male → female), y ≈ "royalty/status" (low → high)
+// =========================================================
+const EMB = {
+  words: [
+    // animals cluster
+    { w: 'cat',    x: -4,   y: -3.5 },
+    { w: 'dog',    x: -3.5, y: -3.8 },
+    { w: 'kitten', x: -3.7, y: -2.6 },
+    { w: 'puppy',  x: -3.2, y: -2.8 },
+    // gender-royalty family
+    { w: 'man',    x: -2, y: -0.5 },
+    { w: 'woman',  x:  2, y: -0.5 },
+    { w: 'boy',    x: -2, y:  0.4 },
+    { w: 'girl',   x:  2, y:  0.4 },
+    { w: 'king',   x: -2, y:  3 },
+    { w: 'queen',  x:  2, y:  3 },
+    { w: 'prince', x: -2, y:  2 },
+    { w: 'princess', x: 2, y:  2 },
+    // tech cluster
+    { w: 'computer', x:  3, y: -3 },
+    { w: 'laptop',   x:  3.6, y: -3.2 },
+    { w: 'phone',    x:  4, y: -2.7 },
+    { w: 'chip',     x:  3.3, y: -3.8 },
+  ],
+  selection: [],
+  cx: 220, cy: 180, scale: 38,
+};
+
+function embToPx(pt) {
+  return { px: EMB.cx + pt.x * EMB.scale, py: EMB.cy - pt.y * EMB.scale };
+}
+
+function embRender() {
+  const g = document.getElementById('emb-points');
+  if (!g) return;
+  g.innerHTML = '';
+  EMB.words.forEach((pt, i) => {
+    const { px, py } = embToPx(pt);
+    const selIdx = EMB.selection.indexOf(i);
+    const colors = ['#f472b6', '#22d3ee', '#fbbf24'];
+    const color = selIdx >= 0 ? colors[selIdx] : '#7c5cff';
+    g.innerHTML +=
+      `<circle cx="${px}" cy="${py}" r="${selIdx >= 0 ? 7 : 4.5}" fill="${color}" style="cursor:pointer" onclick="embClick(${i})"/>` +
+      `<text x="${px + 8}" y="${py + 3}" font-family="monospace" font-size="10" fill="${selIdx >= 0 ? color : '#dbe1ec'}" style="cursor:pointer; pointer-events:none">${pt.w}</text>`;
+  });
+}
+
+function embClick(i) {
+  if (EMB.selection.includes(i)) {
+    EMB.selection = EMB.selection.filter(x => x !== i);
+  } else {
+    EMB.selection.push(i);
+    if (EMB.selection.length > 3) EMB.selection.shift();
+  }
+  embRender();
+
+  const msgEl = document.getElementById('emb-progress');
+  const explainEl = document.getElementById('emb-explain');
+
+  if (EMB.selection.length === 2) {
+    const a = EMB.words[EMB.selection[0]];
+    const b = EMB.words[EMB.selection[1]];
+    const dot = a.x * b.x + a.y * b.y;
+    const na = Math.sqrt(a.x * a.x + a.y * a.y);
+    const nb = Math.sqrt(b.x * b.x + b.y * b.y);
+    const cos = dot / (na * nb);
+    msgEl.textContent = `${a.w} · ${b.w} — cos = ${cos.toFixed(3)}`;
+    explainEl.innerHTML = `<h5>Similarity</h5><p><code>${a.w}</code> and <code>${b.w}</code> have cosine similarity <strong>${cos.toFixed(3)}</strong>.</p><p>${cos > 0.8 ? 'Very similar — they live in the same neighborhood.' : cos > 0.3 ? 'Moderately related.' : cos > -0.1 ? 'Nearly orthogonal — basically unrelated.' : 'Opposing meanings — vectors point in opposite directions.'}</p>`;
+  } else if (EMB.selection.length === 3) {
+    const a = EMB.words[EMB.selection[0]];
+    const b = EMB.words[EMB.selection[1]];
+    const c = EMB.words[EMB.selection[2]];
+    msgEl.textContent = `A=${a.w}, B=${b.w}, C=${c.w} — press A−B+C`;
+    explainEl.innerHTML = `<h5>Analogy ready</h5><p>Press <strong>A − B + C →</strong> to compute <code>${a.w} − ${b.w} + ${c.w}</code> and find the nearest word.</p>`;
+  } else if (EMB.selection.length === 1) {
+    msgEl.textContent = `Selected: ${EMB.words[EMB.selection[0]].w} — pick one more`;
+  } else {
+    msgEl.textContent = 'Click two words';
+  }
+}
+
+function embAnalogy() {
+  if (EMB.selection.length !== 3) return;
+  const a = EMB.words[EMB.selection[0]];
+  const b = EMB.words[EMB.selection[1]];
+  const c = EMB.words[EMB.selection[2]];
+  const target = { x: a.x - b.x + c.x, y: a.y - b.y + c.y };
+  // nearest neighbor (excluding a, b, c)
+  let best = null, bestD = Infinity;
+  EMB.words.forEach((w, i) => {
+    if (EMB.selection.includes(i)) return;
+    const dx = w.x - target.x, dy = w.y - target.y;
+    const d = Math.sqrt(dx * dx + dy * dy);
+    if (d < bestD) { bestD = d; best = w; }
+  });
+
+  // overlay: target point + arrow
+  const targetPx = embToPx(target);
+  const cPx = embToPx(c);
+  const overlay = document.getElementById('emb-overlay');
+  overlay.innerHTML =
+    `<line x1="${cPx.px}" y1="${cPx.py}" x2="${targetPx.px}" y2="${targetPx.py}" stroke="#fbbf24" stroke-width="2" stroke-dasharray="4 3" marker-end="url(#emb-arr)"/>` +
+    `<circle cx="${targetPx.px}" cy="${targetPx.py}" r="6" fill="none" stroke="#fbbf24" stroke-width="2"/>` +
+    `<text x="${targetPx.px + 8}" y="${targetPx.py - 6}" font-family="monospace" font-size="10" fill="#fbbf24">A−B+C</text>`;
+
+  document.getElementById('emb-progress').textContent = `${a.w} − ${b.w} + ${c.w} ≈ ${best.w}`;
+  document.getElementById('emb-explain').innerHTML =
+    `<h5>Nearest word</h5><p><code>${a.w} − ${b.w} + ${c.w}</code> landed at (${target.x.toFixed(2)}, ${target.y.toFixed(2)}).</p>` +
+    `<p>The nearest word in the embedding space is <strong style="color:#fbbf24">${best.w}</strong>, distance <code>${bestD.toFixed(3)}</code>.</p>` +
+    `<p style="color:var(--text-dim); font-size:12px">(This is a hand-placed toy space, but the same arithmetic works on real Word2Vec embeddings trained on a billion words.)</p>`;
+}
+
+function embReset() {
+  EMB.selection = [];
+  document.getElementById('emb-overlay').innerHTML = '';
+  document.getElementById('emb-progress').textContent = 'Click two words';
+  document.getElementById('emb-explain').innerHTML =
+    `<h5>Try an analogy</h5><p>Click "king" then "man" then "woman" then press <strong>A − B + C</strong>. The yellow arrow will point at the result and you'll see how close it lands to "queen."</p><p>You can also just click any two words to see their cosine similarity.</p>`;
+  embRender();
+}
+
+window.addEventListener('DOMContentLoaded', embRender);
+</script>
+<script defer src="../search-index.js"></script>
+<script defer src="../search.js"></script>
+</body>
+</html>

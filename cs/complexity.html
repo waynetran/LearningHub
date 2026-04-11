@@ -1,0 +1,1114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Complexity & Big-O — Deep Dive</title>
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError: false});"></script>
+</head>
+<body>
+<div id="tooltip"></div>
+
+<nav class="topic-nav">
+  <a class="back" href="../index.html">← Back to Hub</a>
+  <div class="crumb">Computer Science / <span class="topic-name">Complexity</span></div>
+</nav>
+
+<div class="topic-layout">
+  <aside class="topic-toc">
+    <h4>ON THIS PAGE</h4>
+    <ul>
+      <li><a href="#why">1. Why complexity</a></li>
+      <li><a href="#rules">2. The rules of the game</a></li>
+      <li><a href="#bigo">3. Big-O, formally</a></li>
+      <li><a href="#theta">4. Big-Theta and Big-Omega</a></li>
+      <li><a href="#little">5. Little-o and little-omega</a></li>
+      <li><a href="#viz">6. Growth-rate plotter</a></li>
+      <li><a href="#classes">7. Common growth classes</a></li>
+      <li><a href="#log">8. Why log n appears</a></li>
+      <li><a href="#computing">9. Computing complexity of code</a></li>
+      <li><a href="#recurrence">10. Recurrence relations</a></li>
+      <li><a href="#amortized">11. Amortized analysis</a></li>
+      <li><a href="#space">12. Space complexity</a></li>
+      <li><a href="#cases">13. Best, average, worst</a></li>
+      <li><a href="#lower">14. Lower bounds</a></li>
+      <li><a href="#practical">15. Practical considerations</a></li>
+      <li><a href="#code">16. Empirical benchmark</a></li>
+      <li><a href="#ml">17. Connection to ML</a></li>
+      <li><a href="#summary">18. Summary</a></li>
+    </ul>
+  </aside>
+
+  <article class="topic-content">
+    <h1>Complexity &amp; Big-O</h1>
+    <p class="subtitle">Computer science is, more than anything else, the science of cost. Big-O is the language we use to talk about that cost without getting tangled in hardware, language, or compiler details. This page builds the vocabulary from scratch, runs the proofs you need, and shows you how to read the cost off real code.</p>
+    <div class="meta-tags">
+      <span>Prereq: <a href="../math/discrete-math.html">Discrete math</a>, basic programming</span>
+      <span>Read time: ~30 min</span>
+      <span>Interactive figures: 1</span>
+      <span>Code: Python</span>
+    </div>
+
+    <div class="callout">
+      <p><strong>What you'll be able to do.</strong> By the end you'll glance at a snippet, identify the dominant operation, and write down a tight bound on its running time. You'll also know when that bound matters and when it lies.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="why">1. Why complexity</h2>
+
+    <p>Two algorithms can solve the same problem and one of them can be a million times faster on a million-element input. Not 10% faster. Not 2x. <em>Six orders of magnitude.</em> That gap doesn't come from clever assembly or a faster CPU; it comes from the <em>shape</em> of the algorithm — how the work it does grows as the input grows.</p>
+
+    <p>The central question of computer science, in one sentence, is:</p>
+
+    <div class="defn">
+      <strong>How much does it cost to solve this problem, as a function of the size of the input?</strong>
+    </div>
+
+    <p>Everything else — data structures, parallelism, caching, theory of computation — is a refinement of that question. Cost can mean time, memory, energy, network bandwidth, or any other resource. But the structure of the answer is always the same: a function of input size.</p>
+
+    <p>You care about this for two reasons. First, because the difference between $O(n)$ and $O(n^2)$ is the difference between "scales to billions of users" and "fell over at ten thousand." Second, because once you have the vocabulary, you can compare algorithms <em>without running them</em>. You don't need a benchmark to know that bubble sort will lose to merge sort on large inputs. You need an analysis.</p>
+
+    <div class="callout warn">
+      <p><strong>The trap most people fall into.</strong> "My laptop is fast, I'll just measure it." Measuring works for small problems. It collapses the moment you change inputs, hardware, language, or scale. Asymptotic analysis gives you a guarantee that survives all of those.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="rules">2. The rules of the game</h2>
+
+    <p>Before we can count operations, we need to agree on what counts as one. The model of computation pins this down. The default in algorithms textbooks is the <strong>RAM model</strong> (Random Access Machine):</p>
+
+    <ul>
+      <li>Memory is an array of cells. Each cell holds an integer.</li>
+      <li>Reading a cell, writing a cell, adding two cells, comparing two cells — each costs 1.</li>
+      <li>Accessing memory by index is constant-time, no matter where in the array.</li>
+      <li>You don't pay for the size of the integers, as long as they fit in a "word."</li>
+    </ul>
+
+    <p>The refinement that bounds the integer size is the <strong>word-RAM model</strong>: assume cells hold $w$ bits, where $w \ge \log_2 n$ (so a pointer to anywhere in the input fits in one cell). On a 64-bit machine, $w = 64$ and $n$ has to be enormous before this bites.</p>
+
+    <p>Here's the key thing this model gets right: we're not measuring wall-clock time on a specific machine. We're counting <em>elementary operations</em>. An elementary operation might take one nanosecond on your laptop and ten on a Raspberry Pi, but the count is the same. If algorithm A does $3n^2$ operations and algorithm B does $100 n$ operations, B wins for all $n > 34$, on every machine, in every language. <em>That's</em> what's portable.</p>
+
+    <p>And what counts as "the input"? The size of the input, written $n$, is the number of elementary items needed to describe it:</p>
+
+    <ul>
+      <li>For an array, $n$ is the length.</li>
+      <li>For a graph, $n$ usually means the number of vertices and $m$ the number of edges (you'll see $|V|$ and $|E|$).</li>
+      <li>For a number $k$, $n$ is the number of <em>bits</em> needed to write $k$ down — so $n = \lceil \log_2 k \rceil$. This trips people up: a "small" number can have a "large" bit-length and vice versa.</li>
+      <li>For a matrix, $n$ might be the side length, with the input size being $n^2$ entries.</li>
+    </ul>
+
+    <div class="callout">
+      <p><strong>Why we ignore constants.</strong> A "constant factor" in front of the running time depends on the machine, the compiler, the language, the cache, and the phase of the moon. Asymptotic notation throws those away on purpose so the analysis stays portable. The price you pay is that asymptotic analysis is silent about small inputs — and you'll see in section 15 why that sometimes matters.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="bigo">3. Big-O, formally</h2>
+
+    <p>Now the definition. Read it slowly; it's the most important formula on the page.</p>
+
+    <div class="math-display">$$f(n) = O(g(n)) \iff \exists\, c > 0,\, n_0 \in \mathbb{N} \text{ such that } 0 \le f(n) \le c\, g(n) \text{ for all } n \ge n_0.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Big-O</p>
+      <dl>
+        <dt>$f(n)$</dt><dd>The function you actually care about — usually the number of operations your algorithm performs on an input of size $n$.</dd>
+        <dt>$g(n)$</dt><dd>The simpler "reference" function you're comparing against — like $n$, $n^2$, $n \log n$, $2^n$.</dd>
+        <dt>$O(g(n))$</dt><dd>Pronounced "big-oh of g of n." A <em>set</em> of functions: all the $f$ that are eventually bounded above by some constant times $g$.</dd>
+        <dt>$\exists$</dt><dd>"There exists." Read as "you can find at least one."</dd>
+        <dt>$c$</dt><dd>A positive real constant. The constant absorbs everything machine-specific.</dd>
+        <dt>$n_0$</dt><dd>A threshold — a natural number after which the bound has to hold. The bound is allowed to fail for small $n$; we only care about what happens eventually.</dd>
+        <dt>$\iff$</dt><dd>"If and only if." The two sides mean exactly the same thing.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>In English.</strong> "$f$ is $O(g)$" means: ignoring constant factors and small inputs, $f$ grows no faster than $g$. Big-O is an <em>upper</em> bound. It does not say $f$ is the same speed as $g$; it says $f$ is not asymptotically worse.</p>
+    </div>
+
+    <p>An immediate consequence: if $f(n) = 5n + 7$, then $f(n) = O(n)$, because once $n \ge 7$ you have $5n + 7 \le 5n + n = 6n$, so pick $c = 6$ and $n_0 = 7$. But it is <em>also</em> true that $f(n) = O(n^2)$ and $f(n) = O(2^n)$ — Big-O is an upper bound, and any sufficiently big function is an upper bound on a smaller one. People who say "my algorithm is $O(n)$" usually mean "it's tight at $n$" but that's not what the notation says.</p>
+
+    <div class="callout good">
+      <p><strong>Notation abuse alert.</strong> Everyone, including textbooks, writes $f(n) = O(g(n))$ even though Big-O is a <em>set</em>, so the honest version would be $f(n) \in O(g(n))$. The "$=$" is a one-way relation: you can write $5n + 7 = O(n)$ but not $O(n) = 5n + 7$. Live with it.</p>
+    </div>
+
+    <p>Two quick proofs to make this concrete.</p>
+
+    <p><strong>Claim 1:</strong> $7 n^2 + 100 n + 4000 = O(n^2)$.</p>
+
+    <p><em>Proof.</em> For $n \ge 1$, we have $n^2 \ge n$ and $n^2 \ge 1$, so</p>
+
+    <div class="math-display">$$7 n^2 + 100 n + 4000 \;\le\; 7 n^2 + 100 n^2 + 4000 n^2 = 4107\, n^2.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Bounding a polynomial by its leading term</p>
+      <dl>
+        <dt>$7 n^2 + 100 n + 4000$</dt><dd>The original function — a quadratic with three terms.</dd>
+        <dt>$\le$</dt><dd>"Less than or equal to." We're bounding the original function by something simpler.</dd>
+        <dt>$4107\, n^2$</dt><dd>An upper bound that holds for all $n \ge 1$. The constant 4107 is ugly but legal — Big-O doesn't care.</dd>
+      </dl>
+      <p class="mg-why"><strong>Why this matters.</strong> This is the everyday move: "the lower-order terms are dominated by the highest-order term times some constant." Once you internalize it, you can read polynomial complexity off a snippet at a glance.</p>
+    </div>
+
+    <p>So $c = 4107$ and $n_0 = 1$ work. (You could be tighter; you don't need to be.)</p>
+
+    <p><strong>Claim 2:</strong> $n^3 \ne O(n^2)$.</p>
+
+    <p><em>Proof (by contradiction).</em> Suppose there were $c, n_0$ with $n^3 \le c\, n^2$ for all $n \ge n_0$. Divide both sides by $n^2$ (positive for $n \ge 1$) to get $n \le c$ for all $n \ge n_0$. But $n$ grows without bound, so no constant $c$ works. Contradiction. This is the typical "no constant can save you" argument.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="theta">4. Big-Theta and Big-Omega</h2>
+
+    <p>Big-O alone isn't enough. It's an upper bound, so $5n = O(n^2)$ is technically correct but pedagogically gross — you've thrown away information. The richer vocabulary:</p>
+
+    <div class="math-display">$$f(n) = \Omega(g(n)) \iff \exists\, c > 0,\, n_0 \text{ such that } f(n) \ge c\, g(n) \text{ for all } n \ge n_0.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Big-Omega — lower bound</p>
+      <dl>
+        <dt>$\Omega(g(n))$</dt><dd>Pronounced "big-omega of g of n." The set of functions that grow at least as fast as $g$, up to constants.</dd>
+        <dt>$f(n) \ge c\, g(n)$</dt><dd>Lower bound: for big enough $n$, $f$ is at least a constant fraction of $g$.</dd>
+        <dt>$c$</dt><dd>Positive constant, same role as in Big-O but pulling from below.</dd>
+        <dt>$n_0$</dt><dd>Threshold past which the bound holds.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>The mirror.</strong> Big-O says "no worse than $g$." Big-Omega says "no better than $g$." Together they sandwich the function from above and below.</p>
+    </div>
+
+    <div class="math-display">$$f(n) = \Theta(g(n)) \iff f(n) = O(g(n)) \text{ and } f(n) = \Omega(g(n)).$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Big-Theta — tight bound</p>
+      <dl>
+        <dt>$\Theta(g(n))$</dt><dd>Pronounced "big-theta of g of n." The set of functions that grow at the same rate as $g$, within a constant factor.</dd>
+        <dt>$O(g(n))$</dt><dd>Upper bound from section 3.</dd>
+        <dt>$\Omega(g(n))$</dt><dd>Lower bound from above.</dd>
+      </dl>
+      <p class="mg-why"><strong>Why this is the one you usually want.</strong> When you say "merge sort is $\Theta(n \log n)$," you're saying merge sort takes $n \log n$ time up to constants — both above and below. You can't speed it up by more than a constant factor and you can't slow it down by more than a constant factor either. That's a real, falsifiable, useful claim.</p>
+    </div>
+
+    <p>An equivalent formulation that's sometimes easier to verify: $f(n) = \Theta(g(n))$ if there exist $c_1, c_2 > 0$ and $n_0$ such that</p>
+
+    <div class="math-display">$$c_1\, g(n) \le f(n) \le c_2\, g(n) \quad \text{for all } n \ge n_0.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Sandwich form of Big-Theta</p>
+      <dl>
+        <dt>$c_1, c_2$</dt><dd>Two positive constants. $c_1$ is the lower-bound constant, $c_2$ the upper-bound constant.</dd>
+        <dt>$g(n)$</dt><dd>The reference growth rate.</dd>
+        <dt>$f(n)$</dt><dd>The function you're bounding from both sides.</dd>
+        <dt>$n_0$</dt><dd>Same threshold past which both inequalities hold.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Picture.</strong> Plot $c_1 g(n)$ and $c_2 g(n)$ as two curves. From $n_0$ onward, $f(n)$ stays trapped between them. That's "the same shape, give or take a scaling factor."</p>
+    </div>
+
+    <p>Two examples that should feel obvious by the end of the page.</p>
+
+    <ul>
+      <li>$3 n^2 + 7 n - 5 = \Theta(n^2)$. Pick $c_1 = 1, c_2 = 4$, $n_0 = 10$.</li>
+      <li>$\log_2 n + \log_2 \log_2 n = \Theta(\log n)$. The doubly-log term is dwarfed by the single log.</li>
+    </ul>
+
+    <!-- ========================================================== -->
+    <h2 id="little">5. Little-o and little-omega</h2>
+
+    <p>Two more pieces of vocabulary that show up less often but matter when you read the theory papers. They're <em>strict</em> versions of $O$ and $\Omega$.</p>
+
+    <div class="math-display">$$f(n) = o(g(n)) \iff \lim_{n \to \infty} \frac{f(n)}{g(n)} = 0.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Little-o — strict upper bound</p>
+      <dl>
+        <dt>$o(g(n))$</dt><dd>Pronounced "little-oh of g of n." A function $f$ is $o(g)$ if $g$ <em>strictly dominates</em> $f$ as $n$ grows — not just up to constants.</dd>
+        <dt>$\lim_{n \to \infty}$</dt><dd>"Limit as $n$ goes to infinity." See <a href="../math/calculus.html">calculus</a> for the formal definition.</dd>
+        <dt>$f(n) / g(n)$</dt><dd>The ratio. If it eventually becomes negligible, $f$ is little-o of $g$.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>The difference from Big-O.</strong> $5n = O(n)$ but $5n \ne o(n)$, because the ratio is the constant $5$, which doesn't go to zero. By contrast $n = o(n^2)$, because $n / n^2 = 1/n \to 0$.</p>
+    </div>
+
+    <div class="math-display">$$f(n) = \omega(g(n)) \iff \lim_{n \to \infty} \frac{f(n)}{g(n)} = \infty.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Little-omega — strict lower bound</p>
+      <dl>
+        <dt>$\omega(g(n))$</dt><dd>Pronounced "little-omega of g of n." $f$ grows strictly faster than $g$.</dd>
+        <dt>$f(n) / g(n) \to \infty$</dt><dd>The ratio blows up. $f$ outruns $g$ by more than any constant factor.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Example.</strong> $n^2 = \omega(n \log n)$, because $n^2 / (n \log n) = n / \log n \to \infty$. So $n^2$ is strictly worse than $n \log n$.</p>
+    </div>
+
+    <p>The full hierarchy, in one line of mental shorthand:</p>
+
+    <div class="defn">
+      $o \subset O$, $\omega \subset \Omega$, $\Theta = O \cap \Omega$, and $f = \Theta(g) \iff f = O(g) \text{ and } g = O(f)$.
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="viz">6. Growth-rate plotter</h2>
+
+    <p>The fastest way to internalize the hierarchy of growth rates is to <em>see</em> them plotted on the same axes. Toggle the curves below and slide $n$ to find out where each function takes over.</p>
+
+    <div class="viz-3d">
+      <div class="v3-controls">
+        <span class="v3-label">n max:</span>
+        <input id="growthN" type="range" min="10" max="100" value="30" step="1">
+        <span id="growthNLabel" class="v3-label">30</span>
+      </div>
+      <div class="v3-controls">
+        <span class="v3-label">show:</span>
+        <button class="ct-tab active" data-fn="1">O(1)</button>
+        <button class="ct-tab active" data-fn="logn">O(log n)</button>
+        <button class="ct-tab active" data-fn="n">O(n)</button>
+        <button class="ct-tab active" data-fn="nlogn">O(n log n)</button>
+        <button class="ct-tab active" data-fn="n2">O(n²)</button>
+        <button class="ct-tab active" data-fn="2n">O(2ⁿ)</button>
+        <button class="ct-tab active" data-fn="nfact">O(n!)</button>
+      </div>
+      <svg id="growthSvg" viewBox="0 0 720 380"></svg>
+      <p class="v3-caption" id="growthCaption">Curves are clipped at the top of the plot. Slide n to see how quickly the worse classes leave the chart entirely.</p>
+    </div>
+
+    <p>Here's the lesson buried in that plot: the order of the curves doesn't change. $O(\log n)$ stays below $O(n)$ stays below $O(n \log n)$ stays below $O(n^2)$. <em>Always.</em> Once you cross the crossover point, the higher-order term dominates forever and the gap only widens. That's why we say "$n^2$ is asymptotically worse than $n \log n$" without needing to specify how big $n$ is.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="classes">7. Common growth classes</h2>
+
+    <p>Here are the classes you'll meet over and over, with examples of algorithms that hit them.</p>
+
+    <table class="rank-table">
+      <thead>
+        <tr><th>Class</th><th>Name</th><th>Real-world example</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>$O(1)$</td><td>constant</td><td>Hash table lookup (amortized). Array index. Pushing to a stack.</td></tr>
+        <tr><td>$O(\log n)$</td><td>logarithmic</td><td>Binary search. Insert into a balanced BST. Find an element in a heap of fixed-rank ancestors.</td></tr>
+        <tr><td>$O(\sqrt{n})$</td><td>root</td><td>Trial division primality. Block decomposition (sqrt-decomposition).</td></tr>
+        <tr><td>$O(n)$</td><td>linear</td><td>Linear scan. Sum of an array. Reading a file once. KMP string match.</td></tr>
+        <tr><td>$O(n \log n)$</td><td>linearithmic</td><td>Merge sort, heap sort, quicksort (average). FFT.</td></tr>
+        <tr><td>$O(n^2)$</td><td>quadratic</td><td>Bubble sort. Insertion sort (worst case). All-pairs shortest path on a small graph. Naïve attention.</td></tr>
+        <tr><td>$O(n^3)$</td><td>cubic</td><td>Naïve matrix multiplication. Floyd–Warshall.</td></tr>
+        <tr><td>$O(n^k)$</td><td>polynomial</td><td>Generally "tractable" — the class P. The exponent matters, but it's a bounded constant.</td></tr>
+        <tr><td>$O(2^n)$</td><td>exponential</td><td>Brute-force SAT. Subset sum by enumeration. Traveling salesman by exhaustive search.</td></tr>
+        <tr><td>$O(n!)$</td><td>factorial</td><td>All permutations. Brute-force TSP that tries every order. Ranking $n$ items by checking all rankings.</td></tr>
+      </tbody>
+    </table>
+
+    <p>Some intuition for why factorial blows up so fast: $10! = 3{,}628{,}800$ but $20! \approx 2.4 \times 10^{18}$. Going from $n = 10$ to $n = 20$ multiplied the work by a factor of $670$ <em>billion</em>. That's why "just enumerate all the permutations" is almost never the answer past $n \approx 12$.</p>
+
+    <div class="callout warn">
+      <p><strong>The cliff between polynomial and exponential.</strong> P versus EXP is the most important boundary in the table. Polynomial-time algorithms scale; exponential-time ones don't, full stop. A $1.0001^n$ algorithm is asymptotically <em>worse</em> than $n^{100}$, but in practice both are intractable past tiny inputs. The boundary you actually live near is "polynomial with small exponent" vs everything else.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="log">8. Why log n appears</h2>
+
+    <p>$\log n$ shows up in complexity analysis with strange regularity. Why? Because every time you can throw away a constant fraction of your input in one step, you get a log.</p>
+
+    <p><strong>Binary search.</strong> You have a sorted array of $n$ elements. Compare to the middle. Either you found it, or you recurse on a half — half is $n/2$ elements. After $k$ steps you have $n / 2^k$ left. Stop when that's 1: $n / 2^k = 1 \Rightarrow k = \log_2 n$. Total comparisons: $\log_2 n$.</p>
+
+    <p><strong>Balanced BST.</strong> Same trick. The tree has depth $\log n$ because each level holds twice as many nodes as the one above. Walk from root to leaf and you've done $\log n$ comparisons.</p>
+
+    <p><strong>Heap.</strong> Sift up or sift down — same depth, same logic.</p>
+
+    <p>And here's the formal reason base doesn't matter:</p>
+
+    <div class="math-display">$$\log_a n = \frac{\log_b n}{\log_b a}.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Change of logarithm base</p>
+      <dl>
+        <dt>$\log_a n$</dt><dd>Logarithm of $n$ with base $a$.</dd>
+        <dt>$\log_b n$</dt><dd>Logarithm of $n$ with base $b$.</dd>
+        <dt>$\log_b a$</dt><dd>A constant (depending on $a$ and $b$, not on $n$).</dd>
+      </dl>
+      <p class="mg-why"><strong>Why this matters for Big-O.</strong> Changing the log base only multiplies by a constant. Big-O eats constants. So $O(\log_2 n) = O(\log_{10} n) = O(\ln n) = O(\log n)$ — they're all the same set. Most authors drop the base entirely.</p>
+    </div>
+
+    <p>The pattern: <em>divide and conquer</em>. Anytime you cut the work by a constant fraction at each step, the depth of the recursion is logarithmic. We'll see this again in the master theorem.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="computing">9. Computing complexity of code</h2>
+
+    <p>Now the practical part. Given some code, what's its complexity? The recipe is short:</p>
+
+    <ol>
+      <li>Identify the dominant operation — the one that runs the most.</li>
+      <li>Count how many times it runs as a function of $n$.</li>
+      <li>Drop constants and lower-order terms.</li>
+    </ol>
+
+    <p><strong>Example 1: a single loop.</strong></p>
+
+    <div class="code-tabs">
+      <div class="ct-header">
+        <button class="ct-tab active" data-tab="ex1">Linear scan</button>
+        <span class="ct-label">O(n)</span>
+      </div>
+      <div class="ct-panel active" data-tab="ex1"><pre><code><span class="kw">def</span> <span class="fn">total</span>(xs):
+    s = <span class="num">0</span>
+    <span class="kw">for</span> x <span class="kw">in</span> xs:
+        s += x
+    <span class="kw">return</span> s
+</code></pre></div>
+    </div>
+
+    <p>The body of the loop runs once per element. $n$ additions, each constant time. Total: $\Theta(n)$.</p>
+
+    <p><strong>Example 2: nested loops.</strong></p>
+
+    <div class="code-tabs">
+      <div class="ct-header">
+        <button class="ct-tab active" data-tab="ex2">All pairs</button>
+        <span class="ct-label">O(n²)</span>
+      </div>
+      <div class="ct-panel active" data-tab="ex2"><pre><code><span class="kw">def</span> <span class="fn">all_pairs</span>(xs):
+    <span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(<span class="fn">len</span>(xs)):
+        <span class="kw">for</span> j <span class="kw">in</span> <span class="fn">range</span>(<span class="fn">len</span>(xs)):
+            <span class="fn">do_something</span>(xs[i], xs[j])
+</code></pre></div>
+    </div>
+
+    <p>Outer loop: $n$ iterations. Inner loop: $n$ iterations per outer iteration. Body: constant. Total: $n \cdot n = \Theta(n^2)$.</p>
+
+    <p><strong>Example 3: triangular nested loops.</strong></p>
+
+    <div class="code-tabs">
+      <div class="ct-header">
+        <button class="ct-tab active" data-tab="ex3">Upper-triangular pairs</button>
+        <span class="ct-label">O(n²)</span>
+      </div>
+      <div class="ct-panel active" data-tab="ex3"><pre><code><span class="kw">def</span> <span class="fn">upper_pairs</span>(xs):
+    n = <span class="fn">len</span>(xs)
+    <span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(n):
+        <span class="kw">for</span> j <span class="kw">in</span> <span class="fn">range</span>(i + <span class="num">1</span>, n):
+            <span class="fn">do_something</span>(xs[i], xs[j])
+</code></pre></div>
+    </div>
+
+    <p>The inner loop runs $n - i - 1$ times. Total iterations: $\sum_{i=0}^{n-1} (n - i - 1) = \binom{n}{2} = \frac{n(n-1)}{2}$. That's still $\Theta(n^2)$, just with a constant of $1/2$ instead of $1$. Big-O eats the constant; the answer is the same.</p>
+
+    <p><strong>Example 4: a loop that doubles.</strong></p>
+
+    <div class="code-tabs">
+      <div class="ct-header">
+        <button class="ct-tab active" data-tab="ex4">Doubling pointer</button>
+        <span class="ct-label">O(log n)</span>
+      </div>
+      <div class="ct-panel active" data-tab="ex4"><pre><code><span class="kw">def</span> <span class="fn">log_loop</span>(n):
+    i = <span class="num">1</span>
+    <span class="kw">while</span> i &lt; n:
+        <span class="fn">do_something</span>(i)
+        i *= <span class="num">2</span>
+</code></pre></div>
+    </div>
+
+    <p>$i$ takes the values $1, 2, 4, 8, \dots, 2^k$ where $2^k \ge n$. So $k = \lceil \log_2 n \rceil$ iterations. Total: $\Theta(\log n)$.</p>
+
+    <p><strong>Example 5: nested log and linear.</strong></p>
+
+    <div class="code-tabs">
+      <div class="ct-header">
+        <button class="ct-tab active" data-tab="ex5">n log n by composition</button>
+        <span class="ct-label">O(n log n)</span>
+      </div>
+      <div class="ct-panel active" data-tab="ex5"><pre><code><span class="kw">def</span> <span class="fn">n_log_n</span>(xs):
+    <span class="kw">for</span> x <span class="kw">in</span> xs:
+        i = <span class="num">1</span>
+        <span class="kw">while</span> i &lt; <span class="fn">len</span>(xs):
+            <span class="fn">do_something</span>(x, i)
+            i *= <span class="num">2</span>
+</code></pre></div>
+    </div>
+
+    <p>Outer: $n$ iterations. Inner: $\log n$ iterations. Total: $n \cdot \log n = \Theta(n \log n)$.</p>
+
+    <div class="callout">
+      <p><strong>The general rule.</strong> When loops are nested independently, multiply their bounds. When code blocks run in sequence, sum their bounds (and the sum collapses to the largest term). When you call a function, substitute its complexity in. Recursion is the only place where this gets tricky — see the next section.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="recurrence">10. Recurrence relations</h2>
+
+    <p>Recursive algorithms get analyzed via <em>recurrences</em> — equations that express $T(n)$, the time to solve a problem of size $n$, in terms of the time to solve smaller problems. Three tools to crack them.</p>
+
+    <h3>10.1 Iteration / unrolling</h3>
+
+    <p>Take merge sort. It splits the input in half, recurses on each half, then merges in linear time:</p>
+
+    <div class="math-display">$$T(n) = 2\, T(n/2) + n.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Merge sort recurrence</p>
+      <dl>
+        <dt>$T(n)$</dt><dd>The number of operations merge sort takes on an input of size $n$.</dd>
+        <dt>$2\, T(n/2)$</dt><dd>Two recursive calls, each on a half-sized input.</dd>
+        <dt>$n$</dt><dd>The merge step — linear in the input size.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>How to unroll.</strong> Substitute the recurrence into itself. $T(n) = 2 T(n/2) + n = 2(2 T(n/4) + n/2) + n = 4 T(n/4) + 2n$. Keep going. After $k$ steps you have $T(n) = 2^k T(n/2^k) + k n$. Stop when $n / 2^k = 1$, so $k = \log_2 n$. Then $T(n) = n T(1) + n \log_2 n = \Theta(n \log n)$.</p>
+    </div>
+
+    <h3>10.2 Recursion tree</h3>
+
+    <p>Same idea, drawn as a picture. Draw a tree with the root labeled $n$ (the work at the top level), two children each labeled $n/2$, four grandchildren each labeled $n/4$, etc. At depth $k$ there are $2^k$ nodes each doing $n/2^k$ work, so each level does total work $n$. The depth is $\log_2 n$. Sum over all levels: $n \log_2 n = \Theta(n \log n)$. Same answer.</p>
+
+    <p>Recursion trees are especially useful when the work per level <em>isn't</em> constant — like $T(n) = T(n/2) + T(n/3) + n$, where the per-level work is geometrically decreasing.</p>
+
+    <h3>10.3 Master theorem</h3>
+
+    <p>For recurrences of a specific common shape, there's a recipe. Here's the formal statement.</p>
+
+    <div class="math-display">$$T(n) = a\, T(n/b) + f(n), \quad a \ge 1,\, b > 1.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Master theorem setup</p>
+      <dl>
+        <dt>$T(n)$</dt><dd>The running time of the algorithm on input of size $n$.</dd>
+        <dt>$a$</dt><dd>The branching factor — how many subproblems each call creates.</dd>
+        <dt>$b$</dt><dd>The shrinkage factor — each subproblem has size $n/b$.</dd>
+        <dt>$f(n)$</dt><dd>The "combine" cost at this level — the work done outside the recursive calls (e.g. merging).</dd>
+        <dt>$n^{\log_b a}$</dt><dd>The "balancing exponent." It's the work the leaves of the recursion tree contribute. Compare $f(n)$ to this.</dd>
+      </dl>
+      <p class="mg-why"><strong>The intuition.</strong> The recursion tree has depth $\log_b n$, and at the bottom there are $a^{\log_b n} = n^{\log_b a}$ leaves, each doing constant work. So leaves contribute $\Theta(n^{\log_b a})$. The total is dominated by either the leaves or the per-level combine cost — whichever wins is the answer.</p>
+    </div>
+
+    <p>The three cases:</p>
+
+    <div class="math-display">$$T(n) = \begin{cases} \Theta(n^{\log_b a}) & \text{if } f(n) = O(n^{\log_b a - \varepsilon}) \text{ for some } \varepsilon > 0, \\[4pt] \Theta(n^{\log_b a} \log n) & \text{if } f(n) = \Theta(n^{\log_b a}), \\[4pt] \Theta(f(n)) & \text{if } f(n) = \Omega(n^{\log_b a + \varepsilon}) \text{ and the regularity condition holds.} \end{cases}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Master theorem cases</p>
+      <dl>
+        <dt>Case 1</dt><dd>The leaves dominate. $f(n)$ is polynomially smaller than $n^{\log_b a}$, so the answer is $\Theta(n^{\log_b a})$.</dd>
+        <dt>Case 2</dt><dd>Each level does the same amount of work, total. The depth $\log n$ gets multiplied in.</dd>
+        <dt>Case 3</dt><dd>The top of the tree dominates. $f(n)$ is polynomially larger than $n^{\log_b a}$, so the cost of combining at the top dwarfs the leaves.</dd>
+        <dt>$\varepsilon$</dt><dd>Any positive constant. "Polynomially smaller" means smaller by at least an $n^\varepsilon$ factor.</dd>
+        <dt>Regularity condition</dt><dd>$a\, f(n/b) \le c\, f(n)$ for some $c < 1$ and all sufficiently large $n$. It's almost always satisfied for the $f(n)$ you'll meet in practice.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>How to use it.</strong> Compute $\log_b a$. Compare $f(n)$ to $n^{\log_b a}$. The bigger one (with a polynomial gap) wins. If they're tied, multiply by $\log n$.</p>
+    </div>
+
+    <p><strong>Example A.</strong> Merge sort: $T(n) = 2 T(n/2) + n$. So $a = 2$, $b = 2$, $f(n) = n$. $\log_b a = \log_2 2 = 1$, so $n^{\log_b a} = n$. We have $f(n) = n = \Theta(n^1)$ — case 2. Answer: $\Theta(n \log n)$. Matches the unrolling.</p>
+
+    <p><strong>Example B.</strong> Binary search: $T(n) = T(n/2) + 1$. So $a = 1$, $b = 2$, $f(n) = 1$. $\log_b a = 0$, so $n^{\log_b a} = 1$. $f(n) = 1 = \Theta(1)$ — case 2. Answer: $\Theta(\log n)$.</p>
+
+    <p><strong>Example C.</strong> Strassen's matrix multiplication: $T(n) = 7 T(n/2) + n^2$. So $a = 7$, $b = 2$, $f(n) = n^2$. $\log_2 7 \approx 2.807$, so $n^{\log_b a} \approx n^{2.807}$. $f(n) = n^2 = O(n^{2.807 - 0.5})$ — case 1. Answer: $\Theta(n^{\log_2 7}) \approx \Theta(n^{2.81})$. That's the famous beat-cubic result.</p>
+
+    <p><strong>Example D.</strong> A "shrink and combine a lot" recurrence: $T(n) = 2 T(n/2) + n^2$. $a = 2, b = 2$, $\log_b a = 1$, $n^{\log_b a} = n$. $f(n) = n^2 = \Omega(n^{1 + 0.5})$ — case 3. Answer: $\Theta(n^2)$.</p>
+
+    <div class="callout warn">
+      <p><strong>What the master theorem can't do.</strong> It needs $f(n)$ to be polynomially bounded relative to $n^{\log_b a}$. If $f(n) = n \log n$ and $n^{\log_b a} = n$, you're in the gap and the basic master theorem fails — you need an extended version (Akra–Bazzi). Also, the recurrence has to have the form $a T(n/b) + f(n)$ — uneven splits like $T(n) = T(n/3) + T(2n/3) + n$ need other tools.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="amortized">11. Amortized analysis</h2>
+
+    <p>Sometimes the worst-case cost of a single operation is misleading. A dynamic array's <code>append</code> is $O(1)$ <em>most</em> of the time, but every so often it has to copy the whole array to a bigger buffer, which is $O(n)$. If you only look at the worst case, you'd think append is $O(n)$ — and you'd massively overestimate the cost of, say, building a list of a million items.</p>
+
+    <p>Amortized analysis is the trick of <em>averaging over a sequence of operations</em>. Not the average over random inputs (that's average-case analysis, see section 13). Averaging over a deterministic sequence of operations on a single data structure.</p>
+
+    <h3>11.1 The dynamic array — the canonical example</h3>
+
+    <p>You start with an array of capacity 1. Every time you append and the array is full, you allocate a new array of double the size, copy everything over, and free the old one. What's the total cost of $n$ appends?</p>
+
+    <p>Worst-case-per-op says: an append might trigger a copy, copy is $O(n)$, so $n$ appends is $O(n^2)$. <em>Wrong.</em> Most appends don't copy. Only the appends at sizes $1, 2, 4, 8, \dots, 2^k$ do, and each such copy costs that capacity. So the total copy work is</p>
+
+    <div class="math-display">$$1 + 2 + 4 + \dots + n \;\le\; 2 n.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Geometric sum for dynamic array doubling</p>
+      <dl>
+        <dt>$1 + 2 + 4 + \dots + n$</dt><dd>The sizes at which a resize fires. Each term is the cost of one resize.</dd>
+        <dt>$2n$</dt><dd>The closed-form upper bound. A geometric series with ratio 2 sums to $2 \cdot$(its largest term) minus 1.</dd>
+      </dl>
+      <p class="mg-why"><strong>The result.</strong> Total work for $n$ appends is at most $2n + n = 3n$ — the resizing plus the actual appends. So <em>amortized</em> cost per append is $\Theta(1)$, even though one specific append might cost $\Theta(n)$. The doublings are rare enough that they don't accumulate.</p>
+    </div>
+
+    <h3>11.2 Three methods</h3>
+
+    <ul>
+      <li><strong>Aggregate method.</strong> Compute total cost over a sequence of $n$ operations, divide by $n$. What we just did.</li>
+      <li><strong>Accounting method.</strong> Charge each operation a "fee" higher than its true cost. Save the surplus as "credit" stored on data items. When an expensive operation fires, pay for it with the saved credit. As long as credit never goes negative, the fee is a valid amortized bound.</li>
+      <li><strong>Potential method.</strong> Define a potential function $\Phi$ over states of the data structure. The amortized cost of an operation is its real cost plus the change in potential: $\hat{c}_i = c_i + \Phi_i - \Phi_{i-1}$. Choose $\Phi$ so the amortized costs are easy to bound.</li>
+    </ul>
+
+    <p>All three give the same answer when applied to dynamic array doubling: amortized $O(1)$ per append. The accounting method is most intuitive: charge each append a constant fee of, say, 3. The first unit pays for the actual append; the second unit gets stashed on the new element; the third unit gets stashed on a previously-existing element. When a doubling fires, every old element has a stashed credit that pays for its move. The math works out.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="space">12. Space complexity</h2>
+
+    <p>Time isn't the only resource. Space — how much memory the algorithm uses — also grows with the input, and the bounds work the same way. You write $S(n) = O(g(n))$ and so on.</p>
+
+    <p>Two flavors:</p>
+
+    <ul>
+      <li><strong>Auxiliary space.</strong> The extra memory the algorithm uses, on top of the input. This is what most analyses report.</li>
+      <li><strong>Total space.</strong> Auxiliary space plus the input. If you have to count the input (e.g. on a Turing machine model), use this.</li>
+    </ul>
+
+    <p>Some examples:</p>
+
+    <ul>
+      <li>Insertion sort sorts in place — auxiliary space $O(1)$.</li>
+      <li>Merge sort needs an extra buffer for the merge — auxiliary space $O(n)$.</li>
+      <li>Iterative binary search uses $O(1)$ extra space.</li>
+      <li>Recursive binary search uses $O(\log n)$ stack space because the recursion depth is $\log n$. <em>Recursion has a memory cost.</em> Every call frame is bytes on the stack.</li>
+      <li>Recursive depth-first search on a tree of $n$ nodes uses $O(h)$ stack space where $h$ is the height. Worst case (a degenerate "stick" tree) that's $O(n)$.</li>
+    </ul>
+
+    <div class="callout">
+      <p><strong>Time-space tradeoff.</strong> Many algorithms let you trade one for the other. Memoization spends memory to save time. Streaming algorithms throw away inputs to save memory. Knowing both bounds tells you which trade you can make.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="cases">13. Best, average, worst</h2>
+
+    <p>Big-O so far has been cagey about <em>which</em> input we're talking about. For a given $n$, your algorithm might be fast on some inputs and slow on others. Three standard ways to summarize:</p>
+
+    <ul>
+      <li><strong>Worst case.</strong> The maximum time over all inputs of size $n$. This is the default when nothing is specified.</li>
+      <li><strong>Best case.</strong> The minimum time over all inputs of size $n$. Usually optimistic to the point of useless, but it can illustrate a point.</li>
+      <li><strong>Average case.</strong> The expected time over a probability distribution of inputs of size $n$. Requires you to specify the distribution — usually "uniform random."</li>
+    </ul>
+
+    <p>Quicksort is the classic illustration.</p>
+
+    <ul>
+      <li><strong>Worst case:</strong> $\Theta(n^2)$. Happens when every pivot is the smallest or largest element, so the partition is maximally unbalanced. On a sorted array with the naive "pick first element" pivot, that's exactly what you get.</li>
+      <li><strong>Average case:</strong> $\Theta(n \log n)$. With a random pivot, the expected partition is balanced "enough" that the recursion depth is $O(\log n)$ on average.</li>
+      <li><strong>Best case:</strong> $\Theta(n \log n)$. Even the best case still has to look at every element at every level.</li>
+    </ul>
+
+    <p>Why is quicksort competitive in practice when its worst case is so bad? Because (a) the average case is $n \log n$ with small constants — much smaller than merge sort's, (b) you can randomize to get expected $n \log n$ on adversarial inputs, and (c) it sorts in place. Worst-case-per-op pessimism would tell you to never use it; reality says "it's the fastest comparison sort on most inputs." This is one of the cleanest examples of why "average case" matters as its own concept.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="lower">14. Lower bounds</h2>
+
+    <p>Big-O bounds the running time of one specific algorithm. <em>Lower bounds</em> are different and more powerful: they bound the running time of <em>any possible</em> algorithm for a problem. They tell you "no one will ever do better than this, no matter how clever they are."</p>
+
+    <p>The most famous lower bound in CS is the comparison-sort bound: any sorting algorithm that only inspects elements via comparisons must, in the worst case, do $\Omega(n \log n)$ comparisons. Here's the argument.</p>
+
+    <h3>14.1 Decision trees</h3>
+
+    <p>Model a comparison-based sorting algorithm as a binary tree. Each internal node is a comparison "is $a_i &lt; a_j$?" with two outgoing edges, "yes" and "no." Each leaf is a final permutation of the input. Running the algorithm is following a path from root to leaf.</p>
+
+    <p>For the algorithm to be correct, it must produce a different output for every distinct input ordering. There are $n!$ orderings, so the tree must have at least $n!$ leaves.</p>
+
+    <p>A binary tree with $L$ leaves has depth at least $\log_2 L$. So the depth — which is the worst-case number of comparisons — is at least:</p>
+
+    <div class="math-display">$$\log_2 (n!) \;=\; \sum_{k=1}^n \log_2 k \;\ge\; \int_1^n \log_2 x \, dx \;=\; n \log_2 n - n \log_2 e + 1.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Stirling-style bound on $\log(n!)$</p>
+      <dl>
+        <dt>$\log_2 (n!)$</dt><dd>The depth lower bound — at least this many comparisons in the worst case.</dd>
+        <dt>$\sum_{k=1}^n \log_2 k$</dt><dd>$\log(n!)$ written out as a sum: $\log 1 + \log 2 + \dots + \log n$.</dd>
+        <dt>$\int_1^n \log_2 x \, dx$</dt><dd>An integral approximation. The sum of $\log k$ is at least the integral of $\log x$ from 1 to $n$. See <a href="../math/calculus.html">calculus</a>.</dd>
+        <dt>$n \log_2 n - n \log_2 e + 1$</dt><dd>The closed form of the integral. The leading term is $n \log_2 n$.</dd>
+      </dl>
+      <p class="mg-why"><strong>Punchline.</strong> $\log_2(n!) = \Theta(n \log n)$ by Stirling's approximation. So any comparison-based sort does at least $\Omega(n \log n)$ comparisons. Merge sort, heap sort, randomized quicksort all hit this bound up to constants — they're <em>asymptotically optimal</em>.</p>
+    </div>
+
+    <p>You can sort faster than $n \log n$ if you cheat the model: counting sort, radix sort, and bucket sort all run in $O(n)$ when the keys come from a small or structured universe. They aren't comparison sorts — they peek at the actual values, not just their relative order. The lower bound is for comparison sorts only.</p>
+
+    <p>The decision-tree argument is your introduction to information-theoretic lower bounds. The general pattern: every "decision" your algorithm makes carries a bounded amount of information (1 bit for a comparison). To distinguish among $K$ possible answers, you need $\log_2 K$ bits. So at least $\log_2 K$ comparisons. Powerful and reusable.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="practical">15. Practical considerations</h2>
+
+    <p>Big-O is a beautiful tool and it lies to you in three predictable ways. Knowing the lies is part of growing up as a programmer.</p>
+
+    <p><strong>Lie 1: constants don't matter.</strong> They do, just not asymptotically. Insertion sort is $\Theta(n^2)$ and merge sort is $\Theta(n \log n)$, but for $n &lt; 30$ or so, insertion sort is faster — its constants are tiny and its loops are cache-friendly. Real merge sort implementations switch to insertion sort on small subarrays. The $n \log n$ "wins" only past the crossover.</p>
+
+    <p><strong>Lie 2: all operations are equally cheap.</strong> The RAM model says memory access is constant time. On real hardware, an L1 cache hit is ~4 cycles and a main-memory miss is ~300. The same algorithm with the same Big-O can be 10× faster if it's cache-friendly. Linked lists are $O(1)$ insert and $O(n)$ traversal — the same as arrays — but the constant is much worse because of pointer chasing. This is why <code>std::vector</code> is often faster than <code>std::list</code> even when the list "should" win on paper.</p>
+
+    <p><strong>Lie 3: $n$ goes to infinity.</strong> Asymptotic analysis is a statement about the limit. Your $n$ is 10,000, not infinity. An $O(\log n)$ algorithm with a constant of 1000 might lose to an $O(n)$ algorithm with a constant of 1 for any $n$ you're likely to see. People <em>love</em> using fancy data structures because they're $O(\log n)$. Sometimes a flat array and a linear scan crushes them on small $n$.</p>
+
+    <div class="callout good">
+      <p><strong>The pragmatic stance.</strong> Use Big-O to rule out algorithms that obviously won't scale. Use a profiler and a benchmark to choose between algorithms in the same complexity class. The two are complementary; either alone is dangerous.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="code">16. Empirical benchmark</h2>
+
+    <p>Here's a Python script you can run on your laptop. It times three algorithms — linear search, sorting, and a quadratic all-pairs comparison — at increasing sizes and prints the ratio of consecutive runs. You should see the ratios converge to the predicted growth factors: $\sim$2 for linear, $\sim$2 for $n \log n$ (the log term is small), and $\sim$4 for quadratic when $n$ doubles.</p>
+
+    <div class="code-tabs" id="ct-bench">
+      <div class="ct-header">
+        <button class="ct-tab active" data-tab="bench">Benchmark</button>
+        <button class="ct-tab" data-tab="quick">Quicksort vs merge sort</button>
+        <button class="ct-tab" data-tab="amort">Amortized append</button>
+        <span class="ct-label">empirical complexity</span>
+      </div>
+      <div class="ct-panel active" data-tab="bench"><pre><code><span class="kw">import</span> time, random
+
+<span class="kw">def</span> <span class="fn">linear_sum</span>(xs):
+    s = <span class="num">0</span>
+    <span class="kw">for</span> x <span class="kw">in</span> xs:
+        s += x
+    <span class="kw">return</span> s
+
+<span class="kw">def</span> <span class="fn">sort_copy</span>(xs):
+    <span class="kw">return</span> <span class="fn">sorted</span>(xs)
+
+<span class="kw">def</span> <span class="fn">all_pairs_count</span>(xs):
+    <span class="cmt"># count pairs (i, j) with xs[i] &lt; xs[j], i &lt; j  → O(n²)</span>
+    n = <span class="fn">len</span>(xs)
+    c = <span class="num">0</span>
+    <span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(n):
+        <span class="kw">for</span> j <span class="kw">in</span> <span class="fn">range</span>(i + <span class="num">1</span>, n):
+            <span class="kw">if</span> xs[i] &lt; xs[j]:
+                c += <span class="num">1</span>
+    <span class="kw">return</span> c
+
+<span class="kw">def</span> <span class="fn">timed</span>(fn, xs, repeat=<span class="num">3</span>):
+    best = <span class="fn">float</span>(<span class="str">"inf"</span>)
+    <span class="kw">for</span> _ <span class="kw">in</span> <span class="fn">range</span>(repeat):
+        t0 = time.perf_counter()
+        <span class="fn">fn</span>(xs)
+        best = <span class="fn">min</span>(best, time.perf_counter() - t0)
+    <span class="kw">return</span> best
+
+<span class="kw">if</span> __name__ == <span class="str">"__main__"</span>:
+    sizes = [<span class="num">1000</span>, <span class="num">2000</span>, <span class="num">4000</span>, <span class="num">8000</span>, <span class="num">16000</span>]
+    fns = [(<span class="str">"O(n)     linear_sum"</span>,    linear_sum),
+           (<span class="str">"O(nlogn) sort_copy"</span>,     sort_copy),
+           (<span class="str">"O(n^2)   all_pairs"</span>,     all_pairs_count)]
+
+    <span class="kw">for</span> name, fn <span class="kw">in</span> fns:
+        <span class="fn">print</span>(<span class="str">f"\n{name}"</span>)
+        prev = <span class="kw">None</span>
+        <span class="kw">for</span> n <span class="kw">in</span> sizes:
+            xs = [random.random() <span class="kw">for</span> _ <span class="kw">in</span> <span class="fn">range</span>(n)]
+            t = <span class="fn">timed</span>(fn, xs)
+            ratio = <span class="str">f"x{t/prev:5.2f}"</span> <span class="kw">if</span> prev <span class="kw">else</span> <span class="str">"     "</span>
+            <span class="fn">print</span>(<span class="str">f"  n={n:6d}  t={t*1e3:8.2f} ms  {ratio}"</span>)
+            prev = t
+
+    <span class="cmt"># Expected ratios when n doubles:</span>
+    <span class="cmt">#   O(n)     ~2.0</span>
+    <span class="cmt">#   O(nlogn) ~2.1   (the log term grows slowly)</span>
+    <span class="cmt">#   O(n^2)   ~4.0</span>
+</code></pre></div>
+
+      <div class="ct-panel" data-tab="quick"><pre><code><span class="kw">import</span> sys, time, random
+sys.setrecursionlimit(<span class="num">100000</span>)
+
+<span class="kw">def</span> <span class="fn">quicksort</span>(xs):
+    <span class="kw">if</span> <span class="fn">len</span>(xs) &lt;= <span class="num">1</span>:
+        <span class="kw">return</span> xs
+    pivot = xs[<span class="fn">len</span>(xs) // <span class="num">2</span>]
+    lo  = [x <span class="kw">for</span> x <span class="kw">in</span> xs <span class="kw">if</span> x &lt; pivot]
+    eq  = [x <span class="kw">for</span> x <span class="kw">in</span> xs <span class="kw">if</span> x == pivot]
+    hi  = [x <span class="kw">for</span> x <span class="kw">in</span> xs <span class="kw">if</span> x &gt; pivot]
+    <span class="kw">return</span> <span class="fn">quicksort</span>(lo) + eq + <span class="fn">quicksort</span>(hi)
+
+<span class="kw">def</span> <span class="fn">mergesort</span>(xs):
+    <span class="kw">if</span> <span class="fn">len</span>(xs) &lt;= <span class="num">1</span>:
+        <span class="kw">return</span> xs
+    m = <span class="fn">len</span>(xs) // <span class="num">2</span>
+    a = <span class="fn">mergesort</span>(xs[:m])
+    b = <span class="fn">mergesort</span>(xs[m:])
+    <span class="kw">return</span> <span class="fn">merge</span>(a, b)
+
+<span class="kw">def</span> <span class="fn">merge</span>(a, b):
+    out = []
+    i = j = <span class="num">0</span>
+    <span class="kw">while</span> i &lt; <span class="fn">len</span>(a) <span class="kw">and</span> j &lt; <span class="fn">len</span>(b):
+        <span class="kw">if</span> a[i] &lt;= b[j]:
+            out.append(a[i]); i += <span class="num">1</span>
+        <span class="kw">else</span>:
+            out.append(b[j]); j += <span class="num">1</span>
+    out.extend(a[i:]); out.extend(b[j:])
+    <span class="kw">return</span> out
+
+<span class="cmt"># Try both on random data and on already-sorted data.</span>
+<span class="cmt"># quicksort with first/middle pivot is O(n log n) average</span>
+<span class="cmt"># but O(n^2) on adversarial inputs.</span>
+<span class="kw">for</span> n <span class="kw">in</span> [<span class="num">2000</span>, <span class="num">4000</span>, <span class="num">8000</span>]:
+    rnd = [random.random() <span class="kw">for</span> _ <span class="kw">in</span> <span class="fn">range</span>(n)]
+    srt = <span class="fn">sorted</span>(rnd)
+    <span class="kw">for</span> name, data <span class="kw">in</span> [(<span class="str">"random"</span>, rnd), (<span class="str">"sorted"</span>, srt)]:
+        t0 = time.perf_counter(); <span class="fn">quicksort</span>(<span class="fn">list</span>(data)); qs = time.perf_counter() - t0
+        t0 = time.perf_counter(); <span class="fn">mergesort</span>(<span class="fn">list</span>(data)); ms = time.perf_counter() - t0
+        <span class="fn">print</span>(<span class="str">f"n={n} {name:7s}  qs={qs*1e3:7.2f}ms  ms={ms*1e3:7.2f}ms"</span>)
+</code></pre></div>
+
+      <div class="ct-panel" data-tab="amort"><pre><code><span class="kw">import</span> time
+
+<span class="kw">class</span> <span class="fn">DoublingArray</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(self):
+        self.cap = <span class="num">1</span>
+        self.size = <span class="num">0</span>
+        self.buf = [<span class="kw">None</span>] * self.cap
+        self.copies = <span class="num">0</span>          <span class="cmt"># total elements copied so far</span>
+
+    <span class="kw">def</span> <span class="fn">append</span>(self, x):
+        <span class="kw">if</span> self.size == self.cap:
+            self.cap *= <span class="num">2</span>
+            new_buf = [<span class="kw">None</span>] * self.cap
+            <span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(self.size):
+                new_buf[i] = self.buf[i]
+                self.copies += <span class="num">1</span>
+            self.buf = new_buf
+        self.buf[self.size] = x
+        self.size += <span class="num">1</span>
+
+<span class="cmt"># Build up to N elements and measure work per append.</span>
+N = <span class="num">200_000</span>
+arr = <span class="fn">DoublingArray</span>()
+<span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(N):
+    arr.append(i)
+
+<span class="fn">print</span>(<span class="str">f"N appends:        {N}"</span>)
+<span class="fn">print</span>(<span class="str">f"total copies:     {arr.copies}"</span>)
+<span class="fn">print</span>(<span class="str">f"copies per append: {arr.copies / N:.3f}"</span>)
+<span class="cmt"># You should see "copies per append" ≈ 1.0 — proof of O(1) amortized.</span>
+<span class="cmt"># Total copies ≈ N − 1, because the geometric sum 1+2+4+...+N/2 ≈ N.</span>
+</code></pre></div>
+    </div>
+
+    <p>The first script shows you that <em>asymptotic predictions are real and measurable</em>. The doubling ratio is the experiment that turns Big-O from a hand-wave into a quantitative claim.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="ml">17. Connection to ML</h2>
+
+    <p>If you came here from the AI/ML track, here's why complexity analysis matters in modern machine learning. It's the same math, just at terrifying scale.</p>
+
+    <p><strong>Training cost is a complexity question.</strong> The Chinchilla compute formula from <a href="../topics/foundation-models.html">foundation models</a> is</p>
+
+    <div class="math-display">$$C \;\approx\; 6 \cdot N \cdot D.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Training compute</p>
+      <dl>
+        <dt>$C$</dt><dd>Total floating-point operations needed to train a transformer.</dd>
+        <dt>$N$</dt><dd>Parameter count.</dd>
+        <dt>$D$</dt><dd>Number of training tokens.</dd>
+        <dt>$6$</dt><dd>The constant comes from 2 multiply-adds per parameter in the forward pass plus 4 in the backward.</dd>
+      </dl>
+      <p class="mg-why"><strong>Read this as Big-O.</strong> Training is $\Theta(N D)$ — linear in parameters and linear in data. That's the tractable, well-behaved direction. When you double $D$ or double $N$, you double cost. There's nothing exponential here, which is why scaling worked.</p>
+    </div>
+
+    <p><strong>Attention is the wall.</strong> Self-attention compares every token in the context to every other token. For a sequence of length $L$, that's $\Theta(L^2)$ pairs. Inside a single transformer layer, attention is $\Theta(L^2 \cdot d)$ for embedding dimension $d$. The forward pass through all $\ell$ layers is</p>
+
+    <div class="math-display">$$\Theta(\ell \cdot L^2 \cdot d).$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Attention cost</p>
+      <dl>
+        <dt>$\ell$</dt><dd>Number of transformer layers (e.g. 32, 80).</dd>
+        <dt>$L$</dt><dd>Sequence length — the number of tokens in the context.</dd>
+        <dt>$d$</dt><dd>Embedding dimension — the width of the model.</dd>
+        <dt>$L^2$</dt><dd>The number of attention pairs. <em>This is the term that bites.</em></dd>
+      </dl>
+      <p class="mg-why"><strong>Why this is "the wall."</strong> Doubling the context window quadruples the compute and quadruples the memory. Going from 4k to 32k tokens is an $8 \times 8 = 64$-fold cost increase. The entire long-context research agenda — Flash Attention, sparse attention, linear attention, ring attention, Mamba — exists to fight this $L^2$. None of them have fully won.</p>
+    </div>
+
+    <p>The general rule: anywhere you see "$L^2$" in machine learning, someone is trying to make it $L \log L$ or even $L$. The history of every long-context paper is the history of attacking a quadratic bound.</p>
+
+    <p>And it's not just attention. KV cache size is $O(L)$ per layer, total inference memory is $O(\ell L d)$, training memory is dominated by activations at $O(\ell L d)$. The complexity story is everywhere.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="summary">18. Summary</h2>
+
+    <ul>
+      <li>Complexity is the science of how cost scales with input size. Big-O is its language.</li>
+      <li>$f(n) = O(g(n))$ means there exist $c$ and $n_0$ with $f(n) \le c\, g(n)$ for all $n \ge n_0$. Big-O is an upper bound.</li>
+      <li>$\Omega$ is a lower bound, $\Theta$ is a tight bound, and little-$o$ / little-$\omega$ are strict versions.</li>
+      <li>The growth-rate hierarchy — $1 \prec \log n \prec n \prec n \log n \prec n^2 \prec 2^n \prec n!$ — is invariant; the order doesn't change as $n$ grows.</li>
+      <li>$\log n$ shows up whenever you can throw away a constant fraction of your input per step. The base doesn't matter in Big-O.</li>
+      <li>To analyze code: identify the dominant operation, count it as a function of $n$, drop constants and lower-order terms.</li>
+      <li>Recurrence relations describe recursive algorithms; the master theorem cracks the common $T(n) = a T(n/b) + f(n)$ form.</li>
+      <li>Amortized analysis averages cost over a sequence of operations. Dynamic array doubling gives $O(1)$ amortized append.</li>
+      <li>Worst case is the default, average case requires a distribution, best case is usually useless. Quicksort is the canonical reminder that all three exist.</li>
+      <li>Lower bounds (like the comparison-sort $\Omega(n \log n)$ via decision trees) tell you what no algorithm can beat.</li>
+      <li>In practice, constants and cache effects matter a lot. Use Big-O to rule out the obviously bad and a profiler to choose among the rest.</li>
+      <li>In ML, training is $\Theta(N D)$ — well-behaved. Attention is $\Theta(L^2)$ in sequence length — the current wall.</li>
+    </ul>
+
+    <div class="bib">
+      <h4>Further reading</h4>
+      <ul>
+        <li>Cormen, Leiserson, Rivest, Stein — <em>Introduction to Algorithms</em> (CLRS), 3rd or 4th ed. The standard reference. Chapters 3, 4, and 17 cover everything on this page in much more depth.</li>
+        <li>Sipser — <em>Introduction to the Theory of Computation</em>. For the formal models of computation (Turing machines, complexity classes, P vs NP).</li>
+        <li>Knuth — <em>The Art of Computer Programming</em>, especially Volume 1. The original — and still the most thorough — treatment of algorithm analysis.</li>
+        <li>Sedgewick &amp; Flajolet — <em>An Introduction to the Analysis of Algorithms</em>. Beautiful book on the precise (not asymptotic) analysis side of things.</li>
+        <li>Tarjan (1985) — <em>Amortized computational complexity</em>. The paper that introduced the potential method.</li>
+      </ul>
+    </div>
+
+    <h3>See also</h3>
+    <div class="grid">
+      <div class="card">
+        <h4><a href="../math/discrete-math.html">Discrete math</a></h4>
+        <p class="meta">prereq</p>
+        <p>Sums, induction, recurrences, and the proof techniques you used to verify Big-O claims.</p>
+      </div>
+      <div class="card">
+        <h4><a href="../math/calculus.html">Calculus</a></h4>
+        <p class="meta">limits</p>
+        <p>Little-o and little-omega are defined in terms of limits. The integral bound on $\log(n!)$ in section 14 is calculus.</p>
+      </div>
+      <div class="card">
+        <h4><a href="algorithms.html">Algorithms</a></h4>
+        <p class="meta">next</p>
+        <p>Now that you can analyze them, learn the actual algorithms. Sorting, searching, graphs, dynamic programming.</p>
+      </div>
+      <div class="card">
+        <h4><a href="theoretical-cs.html">Theoretical CS</a></h4>
+        <p class="meta">deeper</p>
+        <p>Complexity classes (P, NP, PSPACE), Turing machines, undecidability. The formal foundation under everything here.</p>
+      </div>
+      <div class="card">
+        <h4><a href="../topics/foundation-models.html">Foundation models</a></h4>
+        <p class="meta">applied</p>
+        <p>Training FLOPs, attention's $L^2$ wall, Chinchilla's compute formula — modern ML is complexity at scale.</p>
+      </div>
+    </div>
+
+    <div class="next-card">
+      <div class="label">NEXT UP</div>
+      <a href="theoretical-cs.html">→ Theoretical Computer Science</a>
+      <p>Big-O is the practical end of complexity. The theoretical end asks: what's actually <em>computable</em>? What problems are we sure no fast algorithm exists for? Decision problems, P vs NP, and the Halting Problem are next.</p>
+    </div>
+
+  </article>
+</div>
+
+<script>
+// =========================================================
+// Code tabs
+document.querySelectorAll('.code-tabs').forEach(root => {
+  const tabs = root.querySelectorAll('.ct-tab[data-tab]');
+  const panels = root.querySelectorAll('.ct-panel');
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const target = tab.getAttribute('data-tab');
+      tabs.forEach(t => t.classList.toggle('active', t === tab));
+      panels.forEach(p => p.classList.toggle('active', p.getAttribute('data-tab') === target));
+    });
+  });
+});
+
+// =========================================================
+// Growth-rate plotter
+(function() {
+  const svg = document.getElementById('growthSvg');
+  if (!svg) return;
+  const NS = 'http://www.w3.org/2000/svg';
+  const slider = document.getElementById('growthN');
+  const sliderLabel = document.getElementById('growthNLabel');
+  const caption = document.getElementById('growthCaption');
+
+  // Each curve: id, label, color, function n -> value
+  const curves = [
+    { id: '1',     label: 'O(1)',       color: '#9ca3af', fn: n => 1 },
+    { id: 'logn',  label: 'O(log n)',   color: '#22d3ee', fn: n => Math.log2(Math.max(n, 1)) },
+    { id: 'n',     label: 'O(n)',       color: '#7c5cff', fn: n => n },
+    { id: 'nlogn', label: 'O(n log n)', color: '#f472b6', fn: n => n * Math.log2(Math.max(n, 1)) },
+    { id: 'n2',    label: 'O(n²)',      color: '#facc15', fn: n => n * n },
+    { id: '2n',    label: 'O(2ⁿ)',      color: '#fb923c', fn: n => Math.pow(2, n) },
+    { id: 'nfact', label: 'O(n!)',      color: '#ef4444', fn: n => { let r = 1; for (let i = 2; i <= n; i++) r *= i; return r; } },
+  ];
+
+  // toggle buttons
+  const toggles = svg.parentElement.querySelectorAll('.ct-tab[data-fn]');
+  const visible = new Set(curves.map(c => c.id));
+  toggles.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.getAttribute('data-fn');
+      if (visible.has(id)) {
+        visible.delete(id);
+        btn.classList.remove('active');
+      } else {
+        visible.add(id);
+        btn.classList.add('active');
+      }
+      draw();
+    });
+  });
+
+  function draw() {
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+
+    const nMax = parseInt(slider.value, 10);
+    sliderLabel.textContent = nMax;
+
+    const W = 720, H = 380;
+    const ml = 60, mr = 130, mt = 24, mb = 50;
+    const plotW = W - ml - mr;
+    const plotH = H - mt - mb;
+
+    // y axis is log-scale because the curves span many orders of magnitude
+    // pick a fixed cap that lets the small curves still be visible
+    const yMax = 1e10;
+    const yMin = 1;
+    const logYMin = Math.log10(yMin);
+    const logYMax = Math.log10(yMax);
+
+    function xOf(n) { return ml + (n / nMax) * plotW; }
+    function yOf(v) {
+      const lv = Math.log10(Math.max(v, yMin));
+      const clamped = Math.max(logYMin, Math.min(logYMax, lv));
+      return mt + plotH - (clamped - logYMin) / (logYMax - logYMin) * plotH;
+    }
+
+    // axis frame
+    const fr = document.createElementNS(NS, 'rect');
+    fr.setAttribute('x', ml); fr.setAttribute('y', mt);
+    fr.setAttribute('width', plotW); fr.setAttribute('height', plotH);
+    fr.setAttribute('fill', '#0a0d12');
+    fr.setAttribute('stroke', '#384050');
+    fr.setAttribute('stroke-width', 1);
+    svg.appendChild(fr);
+
+    // y gridlines (powers of 10)
+    for (let p = 0; p <= 10; p += 2) {
+      const y = yOf(Math.pow(10, p));
+      const ln = document.createElementNS(NS, 'line');
+      ln.setAttribute('x1', ml); ln.setAttribute('y1', y);
+      ln.setAttribute('x2', ml + plotW); ln.setAttribute('y2', y);
+      ln.setAttribute('stroke', '#1a2030');
+      ln.setAttribute('stroke-width', 1);
+      svg.appendChild(ln);
+      const lab = document.createElementNS(NS, 'text');
+      lab.setAttribute('x', ml - 8); lab.setAttribute('y', y + 4);
+      lab.setAttribute('text-anchor', 'end');
+      lab.setAttribute('fill', '#7a8a9a');
+      lab.setAttribute('font-size', 11);
+      lab.setAttribute('font-family', 'ui-monospace, monospace');
+      lab.textContent = p === 0 ? '1' : '1e' + p;
+      svg.appendChild(lab);
+    }
+
+    // x gridlines
+    const xStep = nMax <= 20 ? 2 : nMax <= 50 ? 5 : 10;
+    for (let n = 0; n <= nMax; n += xStep) {
+      const x = xOf(n);
+      const ln = document.createElementNS(NS, 'line');
+      ln.setAttribute('x1', x); ln.setAttribute('y1', mt);
+      ln.setAttribute('x2', x); ln.setAttribute('y2', mt + plotH);
+      ln.setAttribute('stroke', '#1a2030');
+      ln.setAttribute('stroke-width', 1);
+      svg.appendChild(ln);
+      const lab = document.createElementNS(NS, 'text');
+      lab.setAttribute('x', x); lab.setAttribute('y', mt + plotH + 16);
+      lab.setAttribute('text-anchor', 'middle');
+      lab.setAttribute('fill', '#7a8a9a');
+      lab.setAttribute('font-size', 11);
+      lab.setAttribute('font-family', 'ui-monospace, monospace');
+      lab.textContent = n;
+      svg.appendChild(lab);
+    }
+
+    // axis titles
+    const xtitle = document.createElementNS(NS, 'text');
+    xtitle.setAttribute('x', ml + plotW / 2);
+    xtitle.setAttribute('y', H - 10);
+    xtitle.setAttribute('text-anchor', 'middle');
+    xtitle.setAttribute('fill', '#b4c4d4');
+    xtitle.setAttribute('font-size', 12);
+    xtitle.setAttribute('font-family', 'ui-monospace, monospace');
+    xtitle.textContent = 'n (input size)';
+    svg.appendChild(xtitle);
+
+    const ytitle = document.createElementNS(NS, 'text');
+    ytitle.setAttribute('x', 16); ytitle.setAttribute('y', mt + plotH / 2);
+    ytitle.setAttribute('text-anchor', 'middle');
+    ytitle.setAttribute('fill', '#b4c4d4');
+    ytitle.setAttribute('font-size', 12);
+    ytitle.setAttribute('font-family', 'ui-monospace, monospace');
+    ytitle.setAttribute('transform', `rotate(-90 16 ${mt + plotH / 2})`);
+    ytitle.textContent = 'operations (log scale)';
+    svg.appendChild(ytitle);
+
+    // draw curves
+    let legendY = mt + 6;
+    curves.forEach(c => {
+      if (!visible.has(c.id)) return;
+      // build polyline
+      const pts = [];
+      const samples = 200;
+      for (let i = 0; i <= samples; i++) {
+        const n = (i / samples) * nMax;
+        let v;
+        if (c.id === 'nfact') {
+          // factorial only at integer points; interpolate via gamma-ish step
+          const k = Math.floor(n);
+          let r = 1;
+          for (let j = 2; j <= k; j++) r *= j;
+          v = r;
+        } else {
+          v = c.fn(n);
+        }
+        if (!isFinite(v) || v <= 0) v = yMin;
+        pts.push([xOf(n), yOf(v)]);
+      }
+      const path = document.createElementNS(NS, 'polyline');
+      path.setAttribute('points', pts.map(p => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' '));
+      path.setAttribute('fill', 'none');
+      path.setAttribute('stroke', c.color);
+      path.setAttribute('stroke-width', 2);
+      path.setAttribute('stroke-linejoin', 'round');
+      svg.appendChild(path);
+
+      // legend
+      const sw = document.createElementNS(NS, 'rect');
+      sw.setAttribute('x', ml + plotW + 12);
+      sw.setAttribute('y', legendY);
+      sw.setAttribute('width', 14);
+      sw.setAttribute('height', 3);
+      sw.setAttribute('fill', c.color);
+      svg.appendChild(sw);
+      const lab = document.createElementNS(NS, 'text');
+      lab.setAttribute('x', ml + plotW + 30);
+      lab.setAttribute('y', legendY + 5);
+      lab.setAttribute('fill', c.color);
+      lab.setAttribute('font-size', 11);
+      lab.setAttribute('font-family', 'ui-monospace, monospace');
+      lab.textContent = c.label;
+      svg.appendChild(lab);
+      legendY += 18;
+    });
+
+    // crossover annotation: where each visible curve crosses 1e6
+    const annotations = [];
+    curves.forEach(c => {
+      if (!visible.has(c.id) || c.id === '1') return;
+      // binary search for n such that c.fn(n) >= 1e6
+      let lo = 0, hi = nMax;
+      for (let it = 0; it < 40; it++) {
+        const mid = (lo + hi) / 2;
+        let v;
+        if (c.id === 'nfact') {
+          let r = 1;
+          for (let j = 2; j <= Math.floor(mid); j++) r *= j;
+          v = r;
+        } else {
+          v = c.fn(mid);
+        }
+        if (v < 1e6) lo = mid; else hi = mid;
+      }
+      if (hi < nMax * 0.99 && hi > 0.01) {
+        annotations.push({ id: c.id, label: c.label, n: hi });
+      }
+    });
+
+    let cap = `n max = ${nMax}.  `;
+    if (annotations.length > 0) {
+      cap += 'Each curve hits 10⁶ ops at n ≈ ';
+      cap += annotations.map(a => `${a.label}: ${a.n.toFixed(1)}`).join(', ');
+      cap += '.';
+    } else {
+      cap += 'Slide to see how the worst classes blow past 10¹⁰ before n even reaches 50.';
+    }
+    caption.textContent = cap;
+  }
+
+  slider.addEventListener('input', draw);
+  draw();
+})();
+</script>
+<script defer src="../search-index.js"></script>
+<script defer src="../search.js"></script>
+</body>
+</html>

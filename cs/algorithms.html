@@ -1,0 +1,1403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Algorithms &amp; Data Structures — Deep Dive</title>
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError: false});"></script>
+</head>
+<body>
+<div id="tooltip"></div>
+
+<nav class="topic-nav">
+  <a class="back" href="../index.html">← Back to Hub</a>
+  <div class="crumb">Computer Science / <span class="topic-name">Algorithms &amp; Data Structures</span></div>
+</nav>
+
+<div class="topic-layout">
+  <aside class="topic-toc">
+    <h4>ON THIS PAGE</h4>
+    <ul>
+      <li><a href="#s1">1. Why algorithms</a></li>
+      <li><a href="#s2">2. Big-O preview</a></li>
+      <li><a href="#s3">3. Arrays &amp; dynamic arrays</a></li>
+      <li><a href="#s4">4. Linked lists</a></li>
+      <li><a href="#s5">5. Stacks &amp; queues</a></li>
+      <li><a href="#s6">6. Hash tables</a></li>
+      <li><a href="#s7">7. Trees &amp; BSTs</a></li>
+      <li><a href="#s8">8. Balanced trees &amp; B-trees</a></li>
+      <li><a href="#s9">9. Heaps &amp; priority queues</a></li>
+      <li><a href="#s10">10. Tries</a></li>
+      <li><a href="#s11">11. Graphs</a></li>
+      <li><a href="#s12">12. Interactive: sort animator</a></li>
+      <li><a href="#s13">13. Sorting</a></li>
+      <li><a href="#s14">14. Searching</a></li>
+      <li><a href="#s15">15. BFS &amp; DFS</a></li>
+      <li><a href="#s16">16. Dijkstra</a></li>
+      <li><a href="#s17">17. Dynamic programming</a></li>
+      <li><a href="#s18">18. Greedy</a></li>
+      <li><a href="#s19">19. Divide &amp; conquer</a></li>
+      <li><a href="#s20">20. Source code</a></li>
+      <li><a href="#s21">21. Picking the right tool</a></li>
+      <li><a href="#s22">22. Further reading</a></li>
+    </ul>
+  </aside>
+
+  <article class="topic-content">
+    <h1>Algorithms &amp; Data Structures</h1>
+    <p class="subtitle">The working toolkit every engineer reaches for. A tour of the containers, traversals, and recipes that turn "I could solve this in a week of loops" into "I solved it in ten lines and it runs on a billion inputs."</p>
+    <div class="meta-tags">
+      <span>Prereq: <a href="../math/discrete-math.html">discrete math</a>, basic Python</span>
+      <span>Read time: ~45 min</span>
+      <span>Interactive figures: 1 (sort animator)</span>
+      <span>Code: Python</span>
+    </div>
+
+    <div class="callout">
+      <strong>How to read this page.</strong> The sections are ordered so each one only uses things you've seen above it. If you're rusty, read top to bottom. If you're here for a specific topic, jump — every section is self-contained. The interactive sort animator in §12 is worth a few minutes on its own: watching mergesort and quicksort side by side is the fastest way to internalize how they differ.
+    </div>
+
+    <h3>Vocabulary cheat-sheet</h3>
+    <p>Ten symbols you'll meet over and over. Bookmark this block; the rest of the page assumes them without re-defining.</p>
+    <table class="rank-table">
+      <thead><tr><th>Symbol</th><th>Means</th><th>Where it shows up</th></tr></thead>
+      <tbody>
+        <tr><td>$n$</td><td>Input size — the thing that grows</td><td>Everywhere</td></tr>
+        <tr><td>$O(f(n))$</td><td>Upper bound on running time</td><td>Every complexity claim</td></tr>
+        <tr><td>$\Theta(f(n))$</td><td>Tight bound — both upper and lower</td><td>§13 lower bound</td></tr>
+        <tr><td>$\Omega(f(n))$</td><td>Lower bound</td><td>§13 sorting limit</td></tr>
+        <tr><td>$\log n$</td><td>Base-2 logarithm unless noted</td><td>Binary search, tree depth</td></tr>
+        <tr><td>$V, E$</td><td>Vertices and edges of a graph</td><td>§11, §15, §16</td></tr>
+        <tr><td>$\alpha$ (load factor)</td><td>$n / m$ in a hash table</td><td>§6</td></tr>
+        <tr><td>$h$ (height)</td><td>Longest root-to-leaf path in a tree</td><td>§7, §8, §9</td></tr>
+        <tr><td>$w(u, v)$</td><td>Weight of edge from $u$ to $v$</td><td>§16 Dijkstra</td></tr>
+        <tr><td>$T(n)$</td><td>Running time as a function of $n$</td><td>Recurrences in §7, §13</td></tr>
+      </tbody>
+    </table>
+
+    <!-- ========================================================== -->
+    <h2 id="s1">1. Why algorithms — the working toolkit</h2>
+
+    <p>There's a meme that algorithms are what you cram for interviews and then forget. That's half true. You will forget the implementation details of red-black tree rotations. Nobody remembers those. What you won't forget, if you learn it once properly, is <em>which tool fits which problem</em> — and that is what separates a great engineer from a merely productive one.</p>
+
+    <p>Here's the distinction in one line. A productive engineer solves the problem in front of them with whatever's at hand. A great engineer recognizes that the problem in front of them is an instance of a class they've seen before, reaches for the right data structure, and ends up with code that is shorter, faster, and easier to reason about. The recognition is the whole game.</p>
+
+    <p>Consider three realistic examples:</p>
+
+    <ul>
+      <li><strong>"Find the top 100 users by score in a stream of a billion events."</strong> The naive answer is "sort them." The right answer is a size-100 min-heap — you keep only the top 100 seen so far, costing $O(n \log 100)$ instead of $O(n \log n)$. Knowing the heap exists is the entire difference.</li>
+      <li><strong>"Deduplicate this list of 50 million strings."</strong> The naive answer is a nested loop, $O(n^2)$, which runs for a year. The right answer is a hash set, $O(n)$, which runs in seconds. Same code length, different universe.</li>
+      <li><strong>"Find the shortest route between two subway stations."</strong> The naive answer is "try every path." The right answer is Dijkstra's algorithm on the adjacency list of the subway graph. Ten lines of code, always correct, always fast.</li>
+    </ul>
+
+    <p>In every case, the win comes from <em>recognizing the problem type</em> and <em>picking the matching data structure</em>. This page is about building that recognition. We'll walk through the core containers (arrays, lists, hash tables, trees, heaps, graphs), the standard algorithms that operate on them (sorting, searching, traversal, shortest path, dynamic programming), and — most importantly — the conditions under which each one is the right tool.</p>
+
+    <div class="callout good">
+      <strong>Related tracks.</strong> You'll lean on <a href="../math/discrete-math.html">discrete math</a> for graph terminology and proof by induction, and on <a href="../math/linear-algebra.html">linear algebra</a> when algorithms bump into matrix problems (PageRank, spectral clustering, Strassen's multiplication). The companion pages <a href="complexity.html">complexity</a> and <a href="theoretical-cs.html">theoretical CS</a> make the formal case for why some of these bounds are tight.
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="s2">2. Big-O preview — just enough to talk about cost</h2>
+
+    <p>We'll use Big-O notation throughout, so here's the one-minute version. The formal treatment (including $\Omega$, $\Theta$, amortized analysis, and the master theorem) lives in <a href="complexity.html">complexity.html</a>.</p>
+
+    <p>When we say an algorithm takes $O(n)$ time, we mean its running time grows <em>at most linearly</em> in the input size $n$, ignoring constant factors and lower-order terms. Formally:</p>
+
+    <div class="math-display">$$f(n) = O(g(n)) \iff \exists\, c>0,\, n_0 \ge 0 : \forall n \ge n_0,\; f(n) \le c \cdot g(n)$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Big-O — upper bound on growth</p>
+      <dl>
+        <dt>$f(n)$</dt><dd>The actual running time (or space, or number of comparisons) of the algorithm as a function of input size $n$.</dd>
+        <dt>$g(n)$</dt><dd>A simpler "yardstick" function — typically $1$, $\log n$, $n$, $n \log n$, $n^2$, $2^n$.</dd>
+        <dt>$n$</dt><dd>The size of the input. For a list, the number of elements. For a graph, vertices and/or edges.</dd>
+        <dt>$c$</dt><dd>Any positive constant. Big-O deliberately hides constants so the notation survives being ported to a different machine.</dd>
+        <dt>$n_0$</dt><dd>The point past which the bound holds. Big-O is about behavior as $n$ grows large; small-$n$ shenanigans are ignored.</dd>
+        <dt>$\exists, \forall, \iff$</dt><dd>"There exists", "for all", "if and only if" — standard logic shorthand.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Intuition.</strong> If your algorithm is $O(n)$ and you double the input, you roughly double the running time. If it's $O(n^2)$, doubling makes it 4x slower. If it's $O(\log n)$, doubling costs you one extra step. That's the whole game — you can eyeball algorithmic cost without ever computing a constant.</p>
+    </div>
+
+    <p>The common growth classes, from cheapest to most expensive, are:</p>
+
+    <ul>
+      <li>$O(1)$ — constant. Array index, hash lookup. Doesn't depend on $n$ at all.</li>
+      <li>$O(\log n)$ — logarithmic. Binary search, balanced-tree lookup. Halving the remaining problem each step.</li>
+      <li>$O(n)$ — linear. One pass through the input. The best you can do when you must look at every element.</li>
+      <li>$O(n \log n)$ — linearithmic. Good sorting algorithms. The best any comparison sort can do.</li>
+      <li>$O(n^2)$ — quadratic. Nested loops. Bubble sort. Often the "naive" first attempt.</li>
+      <li>$O(2^n), O(n!)$ — exponential / factorial. Brute-force subset or permutation enumeration. Unusable past $n \approx 30$.</li>
+    </ul>
+
+    <p>When you see a running time like "amortized $O(1)$", that means the average cost per operation is constant, even if individual operations occasionally take longer. Dynamic arrays and hash tables are the canonical examples — we'll see both below.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="s3">3. Arrays and dynamic arrays</h2>
+
+    <p>An <strong>array</strong> is a contiguous block of memory holding $n$ elements of the same type. Each element has the same size, so the address of element $i$ is just <em>start + i × element_size</em>. That's why array indexing is $O(1)$: you do one multiplication and one memory load. Nothing to search, nothing to follow.</p>
+
+    <p>Contiguity isn't just a convenience. It's also what makes arrays <em>cache-friendly</em>: when you read element $i$, your CPU pulls the neighboring elements into cache "for free", so the next access is nearly instant. On a modern machine the difference between cache-hit and cache-miss access is roughly 100x. This is why, in practice, a simple array often beats a fancier structure even when Big-O says otherwise.</p>
+
+    <div class="defn">
+      <strong>Fixed vs. dynamic array.</strong> A <em>fixed</em> array has a size chosen at creation time and cannot grow — this is what C's <code>int arr[100]</code> gives you. A <em>dynamic</em> array hides a fixed array behind a wrapper that automatically reallocates to a larger buffer when it fills up. Python's <code>list</code>, C++'s <code>std::vector</code>, Java's <code>ArrayList</code>, and Go's slice are all dynamic arrays.
+    </div>
+
+    <p>The trick behind dynamic arrays is <em>geometric resizing</em>. When the buffer is full and you try to append, the array allocates a new buffer of size $2n$ (or $1.5n$), copies the old elements over, and frees the old one. The copy is $O(n)$, but it only happens every $n$ appends, so the <em>amortized</em> cost per append is still $O(1)$.</p>
+
+    <p>Concretely: starting empty, to get to $n$ elements, you do copies of size $1, 2, 4, 8, \dots, n$. The total work is</p>
+
+    <div class="math-display">$$1 + 2 + 4 + \cdots + n = 2n - 1 = O(n)$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Amortized append</p>
+      <dl>
+        <dt>$n$</dt><dd>The final number of elements in the dynamic array after a sequence of appends.</dd>
+        <dt>$1 + 2 + 4 + \cdots + n$</dt><dd>A geometric sum — the cost of each doubling-copy. The $k$-th copy is of size $2^k$.</dd>
+        <dt>$2n - 1$</dt><dd>The closed form of the geometric sum $\sum_{k=0}^{\log_2 n} 2^k$. It's linear in $n$, not $n \log n$ as you might fear.</dd>
+        <dt>$O(n)$ total, $O(1)$ amortized</dt><dd>Total work to do $n$ appends is linear, so the average cost <em>per</em> append is constant.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why 2x and not 1.1x?</strong> The doubling factor is a tradeoff. Bigger factor = fewer copies but more wasted space. Smaller factor = less waste but more copies. Python uses roughly 1.125x with a small offset; C++ and Java use 2x. Both give amortized $O(1)$; the constants differ.</p>
+    </div>
+
+    <p><strong>Array trade-offs:</strong></p>
+
+    <table class="rank-table">
+      <thead><tr><th>Operation</th><th>Fixed array</th><th>Dynamic array</th></tr></thead>
+      <tbody>
+        <tr><td>Index $a[i]$</td><td>$O(1)$</td><td>$O(1)$</td></tr>
+        <tr><td>Append at end</td><td>n/a</td><td>$O(1)$ amortized</td></tr>
+        <tr><td>Insert at front</td><td>n/a</td><td>$O(n)$ — shifts everything</td></tr>
+        <tr><td>Insert in middle</td><td>n/a</td><td>$O(n)$</td></tr>
+        <tr><td>Delete from middle</td><td>n/a</td><td>$O(n)$</td></tr>
+        <tr><td>Search (unsorted)</td><td>$O(n)$</td><td>$O(n)$</td></tr>
+        <tr><td>Search (sorted)</td><td>$O(\log n)$</td><td>$O(\log n)$</td></tr>
+      </tbody>
+    </table>
+
+    <p>Rule of thumb: <em>if you're going to read a lot and append at the end, use a dynamic array</em>. If you need frequent inserts in the middle, reach for a linked list or a balanced tree instead.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="s4">4. Linked lists</h2>
+
+    <p>A <strong>linked list</strong> is a chain of nodes, where each node holds a value and a pointer to the next node. There's no contiguous memory, no index-to-address math. To find the $i$-th element, you start at the head and walk $i$ steps. That's $O(i)$, which in the worst case is $O(n)$.</p>
+
+    <p>That sounds bad. Why does this structure exist at all? Because it trades indexing speed for <em>cheap insertion and deletion anywhere</em>. Given a pointer to a node, you can splice in a new node or remove it in $O(1)$ — just rewrite two pointers. An array can't do that; it has to shift every element after the insertion point.</p>
+
+    <div class="defn">
+      <strong>Singly vs. doubly linked.</strong> A <em>singly</em> linked node has one pointer, to the next node. A <em>doubly</em> linked node has two — to next <em>and</em> previous. Doubly linked lists can be traversed in both directions and can delete a node in $O(1)$ given only a pointer to it (you need the prev pointer to rewire). Singly linked lists are smaller (one pointer per node) but less flexible.
+    </div>
+
+    <p>In 2025 you will almost never write a linked list by hand. The reason is <strong>cache locality</strong>: walking a linked list means chasing pointers to unpredictable addresses, and each pointer chase is likely to miss cache. A sorted array with binary search — despite its $O(n)$ inserts — often beats a linked list at in-order traversal by a factor of 10.</p>
+
+    <p>You will still see linked lists in a few places:</p>
+
+    <ul>
+      <li><strong>Hash-table chaining</strong> (§6) — a short linked list inside each bucket to handle collisions.</li>
+      <li><strong>LRU caches</strong> — a doubly linked list, where you promote-to-front on each access, is the standard implementation.</li>
+      <li><strong>Concurrent / lock-free structures</strong> — some non-blocking queues use singly linked lists because a single pointer update is atomic.</li>
+      <li><strong>Functional / persistent data structures</strong> — the Lisp <code>cons</code> cell is a singly linked list, and immutability makes sharing safe.</li>
+    </ul>
+
+    <div class="callout warn">
+      <strong>The rule.</strong> Start with an array. Switch to a linked list only when you've profiled and found that insert/delete in the middle is dominating. Most of the time you won't.
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="s5">5. Stacks and queues</h2>
+
+    <p>A <strong>stack</strong> is a container with two operations: <em>push</em> (add to the top) and <em>pop</em> (remove from the top). Last in, first out — LIFO. Think of a stack of plates.</p>
+
+    <p>A <strong>queue</strong> is a container with two operations: <em>enqueue</em> (add to the back) and <em>dequeue</em> (remove from the front). First in, first out — FIFO. Think of a line at a coffee shop.</p>
+
+    <p>These aren't really separate data structures; they're <em>interfaces</em> that can be implemented on top of an array, a linked list, or both:</p>
+
+    <ul>
+      <li><strong>Stack on array.</strong> Push = append; pop = remove from end. Both $O(1)$ amortized. This is what you actually want.</li>
+      <li><strong>Queue on array.</strong> Enqueue = append; dequeue = remove from front. But removing from the front of an array is $O(n)$! The fix is a <em>circular buffer</em> (ring buffer) — two indices, head and tail, that wrap around. Both operations are then $O(1)$.</li>
+      <li><strong>Queue on linked list.</strong> Keep pointers to both ends. Enqueue at tail, dequeue at head. Both $O(1)$. This is also what Python's <code>collections.deque</code> does internally (as a linked list of fixed-size blocks).</li>
+    </ul>
+
+    <p><strong>Where you'll meet them:</strong></p>
+
+    <ul>
+      <li><strong>Function call stack.</strong> Every time you call a function, a stack frame is pushed; every return pops one. Recursion is stack-based — and the reason "stack overflow" is a real error is that the stack is a fixed-size array in most runtimes.</li>
+      <li><strong>Expression evaluation.</strong> Converting infix (<code>2 + 3 * 4</code>) to postfix (<code>2 3 4 * +</code>) and evaluating is the classical stack application.</li>
+      <li><strong>Undo history.</strong> Editors keep a stack of recent operations; undo pops the most recent.</li>
+      <li><strong>Breadth-first search (BFS).</strong> The frontier of "nodes to visit next" is a queue. We'll see this in §15.</li>
+      <li><strong>Job scheduling.</strong> Work queues in distributed systems, message brokers (Kafka, SQS, RabbitMQ) — all variants of the queue interface.</li>
+    </ul>
+
+    <p>If you only remember one thing: <em>DFS uses a stack, BFS uses a queue</em>. That single fact lets you convert one traversal into the other by swapping one container.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="s6">6. Hash tables — the most important data structure in practice</h2>
+
+    <p>If you had to pick one data structure to take to a desert island, it would be the <strong>hash table</strong>. It gives you a map from arbitrary keys (strings, tuples, objects) to values with <em>expected $O(1)$ insert, lookup, and delete</em>. No ordering, no tree rotations, no comparisons — just a function and an array.</p>
+
+    <p>Here's the core idea. You have an array of size $m$ ("buckets"). You have a hash function $h$ that turns a key $k$ into an integer, and you use $h(k) \bmod m$ as the bucket index:</p>
+
+    <div class="math-display">$$\text{bucket}(k) = h(k) \bmod m$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Hashing to a bucket</p>
+      <dl>
+        <dt>$k$</dt><dd>The key — what you're looking up by. Can be any type that has a defined hash.</dd>
+        <dt>$h(k)$</dt><dd>The hash function applied to $k$. Returns a fixed-width integer, typically 32 or 64 bits.</dd>
+        <dt>$m$</dt><dd>The size of the bucket array. Usually a power of 2 or a prime.</dd>
+        <dt>$\bmod$</dt><dd>Modulo — the remainder after dividing. $h(k) \bmod m$ maps the integer hash into $\{0, 1, \dots, m-1\}$.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why is this $O(1)$?</strong> Because the steps — compute the hash, modulo, array lookup — don't depend on $n$. They depend only on how fast you can hash a <em>single</em> key. If the hash function is uniformly distributing keys and the array is big enough, each bucket has about one element, so the lookup is genuinely constant-time.</p>
+    </div>
+
+    <p>Two keys will occasionally land in the same bucket. That's a <strong>collision</strong>. Birthday paradox says it happens surprisingly often — with $\sqrt{m}$ random keys you already expect one. So every hash table needs a story for collisions. There are two standard stories.</p>
+
+    <h3>6.1 Chaining</h3>
+
+    <p>Each bucket holds a linked list (or a small dynamic array) of all the key–value pairs that hashed there. To look up $k$, you compute <code>bucket(k)</code>, then walk the list comparing keys. As long as the list stays short, this is fast.</p>
+
+    <p>The expected list length is the <em>load factor</em>:</p>
+
+    <div class="math-display">$$\alpha = \frac{n}{m}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Load factor</p>
+      <dl>
+        <dt>$\alpha$</dt><dd>Load factor — the average number of entries per bucket.</dd>
+        <dt>$n$</dt><dd>Total number of key–value pairs currently in the table.</dd>
+        <dt>$m$</dt><dd>Number of buckets in the underlying array.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Rule of thumb.</strong> Most chaining hash tables keep $\alpha < 1$, typically around $0.7$. When $\alpha$ gets too large, the table <em>rehashes</em> — doubles $m$ and reinserts every element. Like dynamic array resizing, rehashing is $O(n)$ but only happens every $\Theta(n)$ inserts, so the amortized cost per insert stays $O(1)$.</p>
+    </div>
+
+    <h3>6.2 Open addressing</h3>
+
+    <p>No linked lists. Everything lives directly in the array. If your bucket is taken, you probe the next one, then the next, until you find an empty slot. The simplest probe is <em>linear probing</em>: try $(h(k)+1) \bmod m$, $(h(k)+2) \bmod m$, and so on. More sophisticated schemes: <em>quadratic probing</em> (step $i^2$) and <em>double hashing</em> (step = a second hash of $k$).</p>
+
+    <p>Open addressing uses memory more densely and avoids pointer chasing, so it's cache-friendly. The tradeoff is that it needs a smaller load factor ($\alpha \le 0.7$ or so) to stay fast, because probes start clustering badly as the table fills up. Python's <code>dict</code>, Rust's <code>HashMap</code>, and most modern hash tables use open addressing.</p>
+
+    <h3>6.3 What can go wrong</h3>
+
+    <ul>
+      <li><strong>Bad hash function.</strong> If $h$ puts everything in one bucket, you degrade to $O(n)$ per operation. This is the classic <em>hash flooding</em> denial-of-service attack — the attacker finds keys that collide and sends you millions of them. Modern languages defend against this with randomized hash seeds.</li>
+      <li><strong>Mutable keys.</strong> If you insert a key and then mutate it so its hash changes, you can never find it again — it's in the wrong bucket. Python forbids dict keys from being mutable for exactly this reason.</li>
+      <li><strong>Ordering.</strong> Hash tables have no inherent order. If you need "next key in sorted order", use a balanced tree (§8) instead.</li>
+    </ul>
+
+    <div class="callout good">
+      <strong>Why it matters for you.</strong> Every time you write <code>d = {}</code> in Python, or <code>map&lt;string, int&gt;</code> in C++, you're using a hash table. It's the single most used data structure in real software after the array. If you ever have to implement one from scratch — which you shouldn't, but it's educational — try chaining first, then open addressing, and profile both on realistic data.
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="s7">7. Trees and binary search trees</h2>
+
+    <p>A <strong>tree</strong> is a collection of nodes where each node has a value and zero or more <em>children</em>, with exactly one node designated as the <em>root</em> and no cycles. Every node except the root has exactly one <em>parent</em>. This is the structure of file systems, HTML documents, expression parse trees, and the recursion call stack.</p>
+
+    <p>A <strong>binary tree</strong> restricts each node to at most two children, conventionally called <em>left</em> and <em>right</em>. A binary tree's <em>height</em> is the length of the longest root-to-leaf path. A tree of $n$ nodes has height between $\log_2 n$ (perfectly balanced) and $n-1$ (a straight line, worst case).</p>
+
+    <h3>7.1 Traversals</h3>
+
+    <p>There are three canonical ways to visit every node in a binary tree. All are $O(n)$:</p>
+
+    <ul>
+      <li><strong>Pre-order.</strong> Visit the node, then recurse left, then recurse right. Used for serializing a tree (e.g., printing an expression tree as prefix).</li>
+      <li><strong>In-order.</strong> Recurse left, visit the node, recurse right. For a binary search tree, this visits values in sorted order.</li>
+      <li><strong>Post-order.</strong> Recurse left, recurse right, visit the node. Used when you need to process children before the parent — e.g., computing sizes or deleting a tree.</li>
+    </ul>
+
+    <p>A fourth traversal is <strong>level order</strong>, which visits nodes level by level — this is just BFS on the tree.</p>
+
+    <h3>7.2 Binary search trees</h3>
+
+    <p>A <strong>binary search tree (BST)</strong> is a binary tree that maintains the <em>BST property</em>: for every node $v$, all values in the left subtree are less than $v$'s value, and all values in the right subtree are greater. That invariant turns lookup into a recursive halving:</p>
+
+    <div class="math-display">$$T(n) = T(n/2) + O(1) \implies T(n) = O(\log n)$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">BST lookup recurrence</p>
+      <dl>
+        <dt>$T(n)$</dt><dd>The number of comparisons needed to find a value in a BST of $n$ nodes.</dd>
+        <dt>$T(n/2)$</dt><dd>Looking up in the relevant half of the tree — we recursed into one subtree.</dd>
+        <dt>$O(1)$</dt><dd>The single comparison at the current node before descending.</dd>
+        <dt>$\implies$</dt><dd>"Implies". Solving the recurrence gives the logarithmic bound.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>But only when balanced.</strong> The $O(\log n)$ only holds if the tree is <em>balanced</em>. If you insert $1, 2, 3, 4, 5$ into a vanilla BST in order, you get a single right-leaning chain of length $n$ — a linked list in disguise. Lookup is now $O(n)$. This is the reason nobody uses plain BSTs in production.</p>
+    </div>
+
+    <p>So vanilla BSTs are pedagogical. They teach the invariant and the in-order traversal trick. Real code uses <em>balanced</em> BSTs, which we'll meet next.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="s8">8. Balanced trees and B-trees</h2>
+
+    <p>A <strong>self-balancing BST</strong> is a BST that does extra bookkeeping on every insert and delete to guarantee the tree stays roughly balanced — height $O(\log n)$ no matter what. The bookkeeping happens via local operations called <strong>rotations</strong>.</p>
+
+    <p>A rotation is a structural move that rebalances two adjacent nodes without breaking the BST property. A right rotation, for example:</p>
+
+    <pre><code>     Y              X
+    / \            / \
+   X   C    →     A   Y
+  / \                / \
+ A   B              B   C</code></pre>
+
+    <p>Before the rotation, $X$ was $Y$'s left child and $B$ was $X$'s right child. After, $X$ is on top with $A$ and $Y$ below; $B$ has moved over to be $Y$'s left child. The in-order sequence $A, X, B, Y, C$ is preserved. Rotations are $O(1)$ — a handful of pointer updates.</p>
+
+    <h3>8.1 Red-black trees</h3>
+
+    <p>A <strong>red-black tree</strong> stores a color (red or black) on every node and enforces four invariants — "no two red nodes in a row", "every root-to-leaf path has the same number of black nodes", and so on. These invariants together guarantee the tree's height is at most $2 \log_2(n+1)$. Inserts and deletes fix violations by recoloring and rotating, which takes $O(\log n)$.</p>
+
+    <p>Red-black trees are what power Java's <code>TreeMap</code>, C++'s <code>std::map</code>, and the Linux kernel's memory management. The implementation is famously finicky — there are about a dozen cases — but you almost never have to write one yourself.</p>
+
+    <h3>8.2 AVL trees</h3>
+
+    <p>An <strong>AVL tree</strong> (Adelson-Velsky and Landis, 1962 — the first self-balancing BST) keeps each node's left and right subtree heights differing by at most 1. This is a stricter invariant than red-black, so AVL trees are more tightly balanced and have faster lookups — but insertions do more rotations on average. You see AVL in some language runtimes (older GCC's <code>std::set</code>, for example) but red-black has mostly won.</p>
+
+    <h3>8.3 Treaps and skip lists</h3>
+
+    <p>Two other balanced-ish structures you'll sometimes meet. A <strong>treap</strong> is a BST where each node also gets a random priority, and the tree is kept heap-ordered on the priorities as well as BST-ordered on the keys. The randomness gives expected $O(\log n)$ height without explicit rotations in the classical sense. A <strong>skip list</strong> (Pugh, 1990) isn't a tree at all — it's a sorted linked list with extra "express lanes" at decreasing levels of granularity. Redis uses skip lists for its sorted-set type because they're simple to implement concurrently. Both give the same $O(\log n)$ bounds with much less code than red-black.</p>
+
+    <h3>8.4 B-trees</h3>
+
+    <p>A <strong>B-tree</strong> is a generalization of a BST to higher fanout — each node holds multiple keys and has multiple children. A B-tree of order $t$ has between $t$ and $2t$ children per internal node, so a B-tree of $n$ elements has height $O(\log_t n)$.</p>
+
+    <p>Why would you want higher fanout? Because the cost model changes when your data lives on disk, not in RAM. Reading one block from an SSD takes microseconds; reading one block from spinning disk takes milliseconds. That's millions of times slower than a cache hit. So if you can pack, say, 100 keys into one disk block and do one disk read per level of the tree, a B-tree of 100-way fanout can index a billion keys in $\log_{100}(10^9) \approx 4.5$ disk reads. A red-black tree would do about 30.</p>
+
+    <p>This is why every production database — PostgreSQL, SQLite, MySQL (InnoDB), Oracle, LMDB, BoltDB — stores its indexes as B-trees or B+ trees. The logarithm with a huge base is exactly the shape you want when every "step" is expensive.</p>
+
+    <div class="callout">
+      <strong>Taxonomy cheat sheet.</strong> In-memory ordered map: red-black or AVL tree. On-disk ordered index: B-tree or B+ tree. In-memory unordered map: hash table. On-disk unordered map: LSM tree (the write-optimized cousin, used by RocksDB and Cassandra). You rarely pick wrong if you match the structure to the storage medium.
+    </div>
+
+    <p>One more note on B+ trees specifically: the variant actually used by databases. In a B+ tree, internal nodes only hold keys (for routing), and <em>all</em> the real data lives in the leaves, which are linked together in a doubly linked list. This makes range scans — "give me every row with <code>id</code> between 100 and 200" — blazingly fast: you binary-search down to the first leaf, then walk the leaf list. If you've ever wondered why a database index makes <code>WHERE id BETWEEN ...</code> queries fast, that's the mechanism.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="s9">9. Heaps and priority queues</h2>
+
+    <p>A <strong>priority queue</strong> is a container where the operation you care about is "give me the smallest (or largest) element". Insert any element, peek at the minimum, remove the minimum. You don't need everything sorted — just the top one, fast.</p>
+
+    <p>A <strong>binary heap</strong> is the standard implementation. It's a binary tree with two properties:</p>
+
+    <ol>
+      <li><strong>Shape.</strong> The tree is complete — filled level by level, left to right. This lets it be stored in a flat array with no pointers: the children of node $i$ live at $2i+1$ and $2i+2$, and the parent of $i$ is $\lfloor (i-1)/2 \rfloor$.</li>
+      <li><strong>Heap property.</strong> Every parent is $\le$ both of its children (for a <em>min-heap</em>). The minimum is always at index 0.</li>
+    </ol>
+
+    <p>Insert and extract-min both take $O(\log n)$:</p>
+
+    <ul>
+      <li><strong>Insert.</strong> Append at the end (position $n$), then <em>sift up</em> — while you're smaller than your parent, swap with the parent. Takes $O(\log n)$ because the tree has height $\log n$.</li>
+      <li><strong>Extract-min.</strong> Swap index 0 with the last element, shrink the heap by 1, then <em>sift down</em> — swap the new root with its smaller child until it's in place. Also $O(\log n)$.</li>
+      <li><strong>Peek-min.</strong> Just return index 0. $O(1)$.</li>
+    </ul>
+
+    <p>There's also a clever operation called <strong>heapify</strong>: given an arbitrary array, turn it into a heap in $O(n)$ — not $O(n \log n)$. You do it by sifting down starting from the last non-leaf and working backward. The trick is that most nodes are near the bottom and don't sift very far, so the total work is bounded by a geometric sum that collapses to $O(n)$:</p>
+
+    <div class="math-display">$$\sum_{h=0}^{\log n} \frac{n}{2^{h+1}} \cdot h = O(n)$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Heapify cost</p>
+      <dl>
+        <dt>$h$</dt><dd>The height of a node in the heap — leaves are at height 0, root at height $\log n$.</dd>
+        <dt>$\frac{n}{2^{h+1}}$</dt><dd>The approximate number of nodes at height $h$. Half the tree is at height 0, a quarter at height 1, and so on.</dd>
+        <dt>$h$ (multiplied)</dt><dd>The worst-case sift-down cost for a node at height $h$.</dd>
+        <dt>$\sum_{h=0}^{\log n}$</dt><dd>Summing over all heights from 0 to the root.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>The surprise.</strong> You'd expect $O(n \log n)$ because you're processing $n$ nodes and each could sift $\log n$ levels. The saving comes from the exponential distribution of nodes: most of them are leaves and do zero work, so the total collapses to $O(n)$. This is why heapsort's build phase is linear.</p>
+    </div>
+
+    <h3>9.1 Heap vs. sorted array</h3>
+
+    <p>When does a heap beat a sorted array? When you need the minimum fast but don't care about the <em>rest</em> of the order. Example: "top 100 out of a billion". With a sorted array you'd have to sort everything ($O(n \log n)$) and look at the first 100. With a heap of size 100 you scan the billion and keep only the best-so-far — $O(n \log k)$ where $k = 100$. That's about 23 million times faster on a billion elements.</p>
+
+    <h3>9.2 Decrease-key and the indexed heap</h3>
+
+    <p>Dijkstra's algorithm, as textbooks state it, wants a heap that supports <em>decrease-key</em>: "here's a vertex already in the heap; its priority just got lower; please move it up". A plain binary heap can't do this in $O(\log n)$ without an auxiliary index from vertex to heap position. The workaround used in real code is different: just push the updated $(\text{new distance}, v)$ onto the heap and ignore the old entry when it later pops out with a stale distance. The heap grows by a factor of at most $\log V$, so the asymptotic cost is unchanged and the code is much simpler.</p>
+
+    <h3>9.3 Use cases</h3>
+
+    <ul>
+      <li><strong>Dijkstra's shortest-path algorithm.</strong> The frontier is a min-heap keyed by distance. §16.</li>
+      <li><strong>Huffman coding.</strong> Repeatedly combine the two smallest-frequency nodes. §18.</li>
+      <li><strong>Event simulation.</strong> A time-indexed priority queue of future events.</li>
+      <li><strong>Operating system schedulers.</strong> Kernel priority queues of runnable threads.</li>
+      <li><strong>Top-k queries in data pipelines.</strong> Finding the $k$ largest values in a stream.</li>
+    </ul>
+
+    <!-- ========================================================== -->
+    <h2 id="s10">10. Tries — prefix trees</h2>
+
+    <p>A <strong>trie</strong> (pronounced "try", from re<em>trie</em>val) is a tree where each edge is labeled with one character and each root-to-node path spells a string. To check if a word is in the trie, you walk the tree one character at a time. Lookup costs $O(L)$ where $L$ is the length of the word — <em>not</em> the number of words. That's the magic.</p>
+
+    <p>Even better, all words sharing a prefix share a path. That's why tries are the right structure for <strong>autocomplete</strong>: once you've walked to the node for "alg", every word in that subtree starts with "alg". You just do a DFS from there.</p>
+
+    <p>Trie use cases in 2025:</p>
+
+    <ul>
+      <li><strong>Autocomplete and spellcheck.</strong> Still the standard structure, often with priorities for ranking.</li>
+      <li><strong>IP routing tables.</strong> A trie over binary IP bits — longest-prefix match is a trie walk.</li>
+      <li><strong>Tokenizers in <a href="../topics/foundation-models.html">foundation models</a>.</strong> BPE and Unigram tokenizers use tries (or their compact cousins) to find the longest matching token for each substring. This is how "playground" gets split into "play" + "ground" or left whole.</li>
+      <li><strong>Full-text search indexes.</strong> Inverted indexes are built on top of term dictionaries that are typically stored as compressed tries (FSTs — finite-state transducers — in Lucene, for example).</li>
+    </ul>
+
+    <p>The big downside of a plain trie is memory: one node per character per word. In practice you use a <em>compressed trie</em> (Patricia trie, radix tree) that merges chains of single-child nodes into a single labeled edge. Linux's <code>fib_trie</code> for routing and Go's net package both do this.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="s11">11. Graphs</h2>
+
+    <p>A <strong>graph</strong> is a set of vertices (also called nodes) connected by edges. If edges have a direction ($u \to v$ is different from $v \to u$), the graph is <em>directed</em>. If they don't, it's <em>undirected</em>. Edges can also carry weights (distance, cost, capacity).</p>
+
+    <p>Every non-trivial system in computing is a graph. The web is a graph (pages linked to pages). Your code is a graph (functions calling functions). Your dependencies are a graph. Your subway is a graph. Social networks are graphs. Your neural network is a graph. Graph algorithms are what you reach for when the problem has relationships, not just values.</p>
+
+    <div class="defn">
+      <strong>Basic terminology.</strong> Vertex $v$ has <em>degree</em> equal to the number of edges incident to it. A <em>path</em> is a sequence of vertices connected by edges. A <em>cycle</em> is a path that starts and ends at the same vertex. A graph is <em>connected</em> (undirected) if there's a path between every pair of vertices. A connected graph with no cycles is a <em>tree</em>. See <a href="../math/discrete-math.html">discrete math</a> for the formal development.
+    </div>
+
+    <h3>11.1 Two representations</h3>
+
+    <p>You have two standard ways to store a graph with $V$ vertices and $E$ edges:</p>
+
+    <ul>
+      <li><strong>Adjacency matrix.</strong> A $V \times V$ matrix $A$ where $A[u][v] = 1$ if edge $u \to v$ exists (or the weight, for weighted graphs). Space: $O(V^2)$. Checking "is there an edge?" is $O(1)$.</li>
+      <li><strong>Adjacency list.</strong> A map from each vertex $v$ to a list of its neighbors. Space: $O(V + E)$. Checking "is there an edge?" is $O(\deg(v))$.</li>
+    </ul>
+
+    <p>For a graph that's <em>sparse</em> — $E \ll V^2$, which describes nearly every real-world graph — you use an adjacency list. The subway graph has a few hundred stations and a few hundred edges; an adjacency matrix would waste 99.9% of its memory on zeros.</p>
+
+    <p>For a graph that's <em>dense</em> — $E \approx V^2$ — the matrix is competitive, and matrix operations (spectral methods, transitive closure) become natural. The quantitative crossover depends on your constant factors, but a rough rule: if you have more than $V^2 / 32$ edges, the matrix pays off.</p>
+
+    <h3>11.2 A third representation — edge list</h3>
+
+    <p>Sometimes you just want a flat list of $(u, v, w)$ tuples. An <strong>edge list</strong> is the simplest possible graph representation and it's what Kruskal's minimum-spanning-tree algorithm wants (sort edges by weight, walk them, add if they don't form a cycle). It's useless for "what are the neighbors of $v$?" queries but fine for algorithms that only want to iterate every edge once. Most graph-processing file formats (<code>.mtx</code>, <code>.edges</code>, SNAP datasets) are edge lists on disk, then loaded into an adjacency list in memory.</p>
+
+    <h3>11.3 Compressed sparse row (CSR)</h3>
+
+    <p>For static graphs with billions of edges — think the web graph — the adjacency list is still too cache-unfriendly. The <strong>CSR</strong> format packs all neighbor arrays into one big flat array and uses a separate offset array to say "vertex $v$'s neighbors live at positions $\text{off}[v]$ through $\text{off}[v+1]$". Two arrays, zero pointer chasing, perfect cache locality. This is how production graph libraries (NetworkX's internals, igraph, SNAP, GraphBLAS) store immutable graphs, and it's identical to how sparse matrices are stored in SciPy and Eigen — a graph <em>is</em> a sparse matrix.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="s12">12. Interactive figure — the sort animator</h2>
+
+    <p>Pick an algorithm, hit <em>Play</em>, and watch the array being sorted one comparison at a time. Bars are color-coded: blue is being compared, green is the pivot (quicksort only), orange is "already placed". The <em>step counter</em> shows how many comparisons have happened so far, and the <em>length slider</em> changes the number of elements.</p>
+
+    <div class="viz-3d">
+      <div class="v3-controls">
+        <span class="v3-label">Algorithm:</span>
+        <select id="sortAlg" style="background:#0f131a;color:#e1e6ed;border:1px solid #2a3446;border-radius:4px;padding:4px 8px;font-family:ui-monospace,monospace;">
+          <option value="insertion">Insertion sort</option>
+          <option value="bubble">Bubble sort</option>
+          <option value="selection">Selection sort</option>
+          <option value="merge">Merge sort</option>
+          <option value="quick" selected>Quick sort</option>
+          <option value="heap">Heap sort</option>
+        </select>
+        <button id="sortPlay" style="background:#7c5cff;color:#fff;border:none;border-radius:4px;padding:4px 12px;cursor:pointer;font-family:inherit;">Play</button>
+        <button id="sortReset" style="background:#2a3446;color:#e1e6ed;border:none;border-radius:4px;padding:4px 12px;cursor:pointer;font-family:inherit;">Shuffle</button>
+        <span class="v3-label">Size:</span>
+        <input id="sortSize" type="range" min="8" max="48" value="24" step="1" style="flex:1;max-width:180px;">
+        <span id="sortSizeLabel" style="min-width:30px;color:#63b3ff;font-family:ui-monospace,monospace;">24</span>
+        <span class="v3-label">Speed:</span>
+        <input id="sortSpeed" type="range" min="1" max="60" value="30" step="1" style="flex:1;max-width:120px;">
+      </div>
+      <svg id="sortSvg" viewBox="0 0 720 340" style="width:100%;height:auto;background:#0a0d12;border-radius:6px;"></svg>
+      <p class="v3-caption" id="sortCaption">Pick an algorithm, press Play. Step counter shows comparisons so far — compare insertion's $O(n^2)$ to quicksort's $O(n \log n)$ on the same array.</p>
+    </div>
+
+    <p>A few things worth doing with this:</p>
+
+    <ul>
+      <li>Run <em>insertion sort</em> on size 48. Count comparisons. Now run <em>merge sort</em> on the same size. The ratio should be close to $n / \log_2 n$, i.e., around 9x.</li>
+      <li>Watch <em>selection sort</em>: it makes the same number of comparisons regardless of input, which is why it's usually worse than insertion sort in practice.</li>
+      <li>Watch <em>quicksort</em> with a random pivot: you'll see the array split into chunks around each pivot, then chunks of chunks, and so on.</li>
+      <li>Watch <em>heap sort</em>: it first builds a max-heap (you'll see the big elements bubble up), then repeatedly swaps the root to the end.</li>
+    </ul>
+
+    <!-- ========================================================== -->
+    <h2 id="s13">13. Sorting</h2>
+
+    <p>Sorting is the most studied problem in computing. Forty-plus algorithms, each with a subculture. For practical purposes you need to know three:</p>
+
+    <h3>13.1 Mergesort</h3>
+
+    <p>Divide the array in half, recursively sort each half, then merge the two sorted halves into one. The merge step is a linear walk with two indices. The whole thing is $O(n \log n)$ in every case — worst, average, and best. It's <em>stable</em> (equal elements keep their relative order) and uses $O(n)$ extra space for the merge buffer.</p>
+
+    <p>The recurrence:</p>
+
+    <div class="math-display">$$T(n) = 2 T(n/2) + O(n)$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Mergesort recurrence</p>
+      <dl>
+        <dt>$T(n)$</dt><dd>Running time on an input of size $n$.</dd>
+        <dt>$2 T(n/2)$</dt><dd>Two recursive calls, each on half the input.</dd>
+        <dt>$O(n)$</dt><dd>The merge step — a linear pass over the two sorted halves.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Master theorem.</strong> Recurrences of the form $T(n) = aT(n/b) + f(n)$ have standard solutions. For mergesort, $a = b = 2$ and $f(n) = n$, which puts it in the case where $T(n) = O(n \log n)$. You'll meet the master theorem properly in <a href="complexity.html">complexity.html</a>.</p>
+    </div>
+
+    <h3>13.2 Quicksort</h3>
+
+    <p>Pick a <em>pivot</em> element. Partition the array so everything less than the pivot is on the left, everything greater on the right. Recursively sort each side. That's it — the sort is "in place" (no merge buffer) and in practice faster than mergesort by a constant factor because of cache locality.</p>
+
+    <p>The catch: if your pivots are terrible (e.g., always the smallest element, which happens if you always pick the first element of an already-sorted array), each partition is completely lopsided and the recursion becomes $n \to n-1 \to n-2 \to \dots$. Running time degenerates to $O(n^2)$.</p>
+
+    <p>The fix: pick the pivot randomly, or use <em>median-of-three</em> (the median of first, middle, last). With a random pivot, the expected running time is $O(n \log n)$ and the probability of hitting worst-case behavior is vanishingly small. Production quicksort implementations (like C's <code>qsort</code> and LLVM's <code>std::sort</code>) use introspective sort: quicksort that falls back to heapsort if the recursion gets too deep, guaranteeing $O(n \log n)$ worst-case.</p>
+
+    <h3>13.3 Heapsort</h3>
+
+    <p>Build a max-heap from the array in $O(n)$. Then repeatedly extract the maximum and place it at the end of the array. After $n$ extractions, the array is sorted. $O(n \log n)$ in the worst case, no extra space beyond the array itself. Not stable.</p>
+
+    <p>Heapsort is cache-unfriendly (the sift-down jumps around), so in practice it's slower than quicksort and mergesort. Its main role is as the <em>worst-case backstop</em> for introspective sort: when you need a hard $O(n \log n)$ guarantee in-place, heapsort is it.</p>
+
+    <h3>13.4 The $\Omega(n \log n)$ lower bound</h3>
+
+    <p>You might wonder if you can do better than $n \log n$. For comparison-based sorting (where the only operation on elements is "compare two of them"), the answer is no. The proof is a beautiful one-line argument:</p>
+
+    <div class="math-display">$$n! \le 2^d \implies d \ge \log_2(n!) = \Theta(n \log n)$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Comparison-sort lower bound</p>
+      <dl>
+        <dt>$n!$</dt><dd>The number of possible orderings (permutations) of $n$ distinct items. Any sorting algorithm must be able to distinguish all of them.</dd>
+        <dt>$d$</dt><dd>The depth of the decision tree — the worst-case number of comparisons the algorithm makes.</dd>
+        <dt>$2^d$</dt><dd>The maximum number of leaves in a binary decision tree of depth $d$. Each leaf corresponds to one identified permutation.</dd>
+        <dt>$\log_2(n!) = \Theta(n \log n)$</dt><dd>Stirling's approximation: $\log_2(n!) = n \log_2 n - n \log_2 e + O(\log n) = \Theta(n \log n)$.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>The argument.</strong> A sorting algorithm is a binary decision tree: at each internal node you ask "is $a_i &lt; a_j$?" and branch. The leaves are the possible sorted outputs — there are $n!$ of them. A binary tree with $n!$ leaves has depth at least $\log_2(n!)$. So some input will require at least $\log_2(n!) \approx n \log_2 n$ comparisons. You cannot do better, period — as long as you only compare.</p>
+    </div>
+
+    <h3>13.5 Non-comparison sorts</h3>
+
+    <p>If you're allowed to look at the bits or digits of the keys directly, you can beat $n \log n$:</p>
+
+    <ul>
+      <li><strong>Counting sort.</strong> If your keys are integers in a small range $[0, k)$, allocate an array of size $k$, count the occurrences of each value, and reconstruct. $O(n + k)$ — linear when $k = O(n)$.</li>
+      <li><strong>Radix sort.</strong> Sort numbers by processing their digits one at a time, using a stable sort (usually counting sort) as a subroutine. $O(n \cdot w)$ where $w$ is the number of digits. When $w$ is small (e.g., 32-bit integers), this beats comparison sorts.</li>
+      <li><strong>Bucket sort.</strong> Split keys into $k$ buckets by range, sort each bucket, concatenate. Works well when the distribution is approximately uniform.</li>
+    </ul>
+
+    <h3>13.6 Timsort — what Python and Java actually use</h3>
+
+    <p>The sort in your standard library is almost certainly not textbook mergesort or quicksort. It's <strong>Timsort</strong> (Tim Peters, 2002) — a hybrid that scans the input for already-sorted "runs", then merges runs together. On input that's already mostly sorted (which is a lot of real data), Timsort finishes in $O(n)$. On random input it degrades gracefully to $O(n \log n)$. It's stable, adaptive, and was designed by careful benchmarking on realistic data rather than on adversarial worst cases. Python, Java (for objects), Android, V8, and Swift all use some variant. If you ever wonder "why is Python's sort so fast on real workloads?" — that's why.</p>
+
+    <h3>13.7 Stability</h3>
+
+    <p>A sort is <strong>stable</strong> if elements that compare equal keep their relative order from the input. Mergesort is stable. Quicksort and heapsort are not (without extra bookkeeping). Stability matters when you sort by a secondary key and want the primary-key order preserved — e.g., "sort employees by department, keeping alphabetical order within each department". Python's <code>sorted()</code> is stable by default, which is one of the reasons it's so pleasant to use.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="s14">14. Searching</h2>
+
+    <h3>14.1 Linear search</h3>
+
+    <p>Walk the array, return the first match. $O(n)$. Works on unsorted data and is what you want for small $n$ (under 20 or so, constant-factor wins dominate).</p>
+
+    <h3>14.2 Binary search</h3>
+
+    <p>On a <em>sorted</em> array, you can find any element in $O(\log n)$. Keep two pointers, $\text{lo}$ and $\text{hi}$, initially spanning the array. Look at the middle. If the target equals the middle, done. If less, recurse on the left half; if greater, on the right. Each step halves the remaining range.</p>
+
+    <p>Binary search looks trivial on the blackboard and is famously hard to get exactly right. The classic traps:</p>
+
+    <ul>
+      <li><strong>Integer overflow in the midpoint.</strong> Writing <code>mid = (lo + hi) / 2</code> overflows when <code>lo + hi</code> exceeds <code>INT_MAX</code>. The fix: <code>mid = lo + (hi - lo) / 2</code>. This bug was in Java's standard library for nine years.</li>
+      <li><strong>Off-by-one on the bounds.</strong> Is <code>hi</code> inclusive or exclusive? Are you looking for an exact match or the insertion point? Pick a convention (half-open: $[\text{lo}, \text{hi})$) and stick to it religiously.</li>
+      <li><strong>Termination.</strong> The loop must make progress every iteration or you'll spin forever on duplicates.</li>
+    </ul>
+
+    <p>The good news is that you don't write binary search from scratch — Python has <code>bisect</code>, C++ has <code>std::lower_bound</code>, Go has <code>sort.Search</code>. Use them.</p>
+
+    <p>Binary search isn't just for arrays. Any time you have a <em>monotone predicate</em> on a range — "the answer goes from false to true at some point as I increase $x$" — you can binary-search the transition. This is the key to problems like "find the smallest capacity such that all packages ship within $d$ days": you binary-search on capacity.</p>
+
+    <h3>14.3 Interpolation search</h3>
+
+    <p>If your array is sorted <em>and</em> the keys are roughly uniformly distributed, you can do better than binary search. Instead of always checking the middle, <strong>interpolation search</strong> guesses where the target should be based on its value: if you're looking for 90 in a sorted array from 0 to 100, start your probe near the end, not at the middle. The expected running time on uniform data drops to $O(\log \log n)$ — which is staggeringly fast (for $n = 10^9$, that's about 5 comparisons). On worst-case or skewed distributions it degenerates to $O(n)$, which is why you don't see it much.</p>
+
+    <h3>14.4 Hash lookup</h3>
+
+    <p>The third way to find things is to not search at all — hash the key and go directly to its bucket. We already covered that in §6. When you don't need ordering, this is almost always the winner.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="s15">15. BFS and DFS — the two core graph traversals</h2>
+
+    <p>Breadth-first and depth-first search are the two ways to systematically visit every vertex in a graph. They differ only in the container they use for the frontier: BFS uses a queue, DFS uses a stack (or equivalently, recursion). Both are $O(V + E)$.</p>
+
+    <h3>15.1 BFS — breadth-first search</h3>
+
+    <p>Start with the source vertex in a queue. Repeatedly: pop the front of the queue, mark it visited, enqueue all its unvisited neighbors. This visits vertices in <em>increasing distance from the source</em>, layer by layer. That's why BFS on an unweighted graph gives you shortest paths "for free" — the first time you reach a vertex is along a shortest path.</p>
+
+    <p>BFS use cases:</p>
+
+    <ul>
+      <li><strong>Shortest path in an unweighted graph.</strong> Number of edges from $s$ to every other vertex.</li>
+      <li><strong>Web crawling.</strong> Start with a seed URL, crawl breadth-first to build an index.</li>
+      <li><strong>Level-order traversal</strong> of a tree.</li>
+      <li><strong>Peer-to-peer distance.</strong> "Six degrees of Kevin Bacon" is BFS on the actor graph.</li>
+      <li><strong>Puzzle solving.</strong> BFS on the state space of a puzzle (Rubik's cube, 15-puzzle, word ladders) finds the shortest solution.</li>
+    </ul>
+
+    <h3>15.2 DFS — depth-first search</h3>
+
+    <p>Start with the source, recurse into the first unvisited neighbor, recurse into <em>its</em> first unvisited neighbor, and so on — you plunge as deep as possible before backtracking. Implemented with recursion (or an explicit stack).</p>
+
+    <p>DFS use cases:</p>
+
+    <ul>
+      <li><strong>Cycle detection.</strong> A back-edge during DFS means a cycle.</li>
+      <li><strong>Topological sort.</strong> On a DAG, emit each vertex after its descendants — you get a valid dependency order. Used by build systems, package managers, spreadsheet evaluators.</li>
+      <li><strong>Strongly connected components.</strong> Tarjan's and Kosaraju's algorithms are two DFS passes.</li>
+      <li><strong>Maze solving.</strong> DFS explores one path all the way before trying another.</li>
+      <li><strong>Tree traversal.</strong> Pre/in/post order are all DFS variants.</li>
+    </ul>
+
+    <div class="callout">
+      <strong>When to pick which.</strong> Use BFS when you need shortest paths, layers, or when the graph is very deep (DFS might blow the stack). Use DFS when you need to reason about subtrees, when memory is tight (BFS's queue can get huge), or when the problem has a recursive structure that matches.
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="s16">16. Dijkstra — single-source shortest path</h2>
+
+    <p>BFS gives you shortest paths when every edge has weight 1. When edges have different weights — think road networks, network latency, fare maps — you need <strong>Dijkstra's algorithm</strong>. Dijkstra computes the shortest distance from a source $s$ to every other vertex in a graph with <em>non-negative</em> edge weights.</p>
+
+    <p>The recipe:</p>
+
+    <ol>
+      <li>Initialize $\text{dist}[s] = 0$ and $\text{dist}[v] = \infty$ for every other vertex. Put $(0, s)$ in a min-heap.</li>
+      <li>Extract the vertex $u$ with smallest current distance from the heap. If $u$ was already finalized, skip it (see §9.2 on stale entries).</li>
+      <li>For each neighbor $v$ of $u$ with edge weight $w(u, v)$, check if $\text{dist}[u] + w(u, v) &lt; \text{dist}[v]$. If so, update $\text{dist}[v]$ and push $(\text{dist}[v], v)$ onto the heap. This step is called <em>relaxation</em>.</li>
+      <li>Mark $u$ as finalized — its distance is now settled forever.</li>
+      <li>Repeat until the heap is empty (or until the target vertex has been finalized, if you only want one).</li>
+    </ol>
+
+    <p>The update rule in one formula:</p>
+
+    <div class="math-display">$$\text{dist}[v] \leftarrow \min\big(\text{dist}[v],\; \text{dist}[u] + w(u, v)\big)$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Edge relaxation</p>
+      <dl>
+        <dt>$\text{dist}[v]$</dt><dd>The current best-known distance from the source $s$ to vertex $v$. Starts at $\infty$; shrinks as we find shorter paths.</dd>
+        <dt>$\text{dist}[u]$</dt><dd>The final distance to $u$ at the moment we extract it from the heap — Dijkstra's invariant says this is already correct.</dd>
+        <dt>$w(u, v)$</dt><dd>The weight of the edge from $u$ to $v$. Must be non-negative.</dd>
+        <dt>$\leftarrow$</dt><dd>Assignment. Set the left side to the new value.</dd>
+        <dt>$\min$</dt><dd>Take the smaller of the two — we only update if the new path is shorter.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why it works (sketch).</strong> The invariant is: when you extract a vertex $u$ from the min-heap, $\text{dist}[u]$ is already its true shortest distance. Suppose not — then there's a shorter path that goes through some other unextracted vertex $w$ with $\text{dist}[w] &lt; \text{dist}[u]$. But then $w$ would have been extracted before $u$, contradiction. The non-negative edge weights are essential: they ensure that distances never go down once a vertex is extracted.</p>
+    </div>
+
+    <p>With a binary heap, Dijkstra runs in $O((V + E) \log V)$. With a Fibonacci heap you can get $O(E + V \log V)$, which is asymptotically better but the constants are bad — nobody uses it. In practice, a binary heap is the right choice.</p>
+
+    <p><strong>Negative weights?</strong> Dijkstra fails on graphs with negative-weight edges — you can't assume extracted distances are final. Use the Bellman-Ford algorithm instead. It's slower ($O(VE)$) but handles negative weights and even detects negative cycles.</p>
+
+    <p>Dijkstra is the core of every routing system you use: GPS driving directions, network routers (OSPF is Dijkstra under the hood), flight search, game AI pathfinding. The variant <em>A*</em> adds a heuristic estimate of remaining distance to guide the search toward the target faster — same skeleton, different priority key. You can think of it this way: Dijkstra expands vertices in order of $\text{dist}[u]$; A* expands them in order of $\text{dist}[u] + h(u, t)$, where $h$ is a lower bound on the remaining distance to the target $t$. As long as $h$ never overestimates (an <em>admissible</em> heuristic), A* still returns the true shortest path but usually explores far fewer vertices.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="s17">17. Dynamic programming</h2>
+
+    <p><strong>Dynamic programming (DP)</strong> is the technique that cracks problems where a naive recursion would repeat work exponentially. The trick is to <em>memoize</em>: store the answer to each subproblem the first time you see it, and on subsequent encounters just look it up. When every subproblem is solved exactly once, the total work is (number of subproblems) × (cost per subproblem).</p>
+
+    <p>Two conditions make a problem a DP problem:</p>
+
+    <ol>
+      <li><strong>Optimal substructure.</strong> The optimal solution to the full problem can be expressed in terms of optimal solutions to smaller subproblems.</li>
+      <li><strong>Overlapping subproblems.</strong> The same subproblem shows up many times in the naive recursion — otherwise memoization doesn't help.</li>
+    </ol>
+
+    <h3>17.1 The canonical example — Fibonacci</h3>
+
+    <p>The naive recursion is:</p>
+
+    <div class="math-display">$$F(n) = F(n-1) + F(n-2), \quad F(0) = 0, F(1) = 1$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Fibonacci recurrence</p>
+      <dl>
+        <dt>$F(n)$</dt><dd>The $n$-th Fibonacci number. $F(0) = 0$, $F(1) = 1$, $F(2) = 1$, $F(3) = 2$, $F(4) = 3$, $F(5) = 5$, ...</dd>
+        <dt>$F(n-1), F(n-2)$</dt><dd>The previous two Fibonacci numbers — each is a subproblem.</dd>
+        <dt>$F(0) = 0, F(1) = 1$</dt><dd>Base cases. Every recursive definition needs them or it doesn't terminate.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>The naive cost.</strong> Implemented as plain recursion, $F(n)$ makes $\Theta(\varphi^n)$ calls where $\varphi = (1+\sqrt{5})/2 \approx 1.618$ is the golden ratio. $F(40)$ takes seconds; $F(60)$ takes hours. The problem is that $F(n-2)$ is computed, thrown away, and then computed again as a subtree of $F(n-1)$ — overlapping subproblems in action.</p>
+    </div>
+
+    <p>Memoize it (store $F(k)$ for each $k$ as you go), and the running time drops from $O(\varphi^n)$ to $O(n)$ — you compute each of $n$ values exactly once. This is DP in its simplest form.</p>
+
+    <h3>17.2 Longest common subsequence (LCS)</h3>
+
+    <p>Given two strings $X$ and $Y$, find the longest sequence of characters that appears in both (in the same order, not necessarily contiguous). Used by <code>diff</code>, spell-checkers, and DNA alignment.</p>
+
+    <p>Let $L(i, j)$ be the length of the LCS of the first $i$ characters of $X$ and the first $j$ characters of $Y$. The recurrence:</p>
+
+    <div class="math-display">$$L(i, j) = \begin{cases} 0 &amp; i = 0 \text{ or } j = 0 \\ L(i-1, j-1) + 1 &amp; X_i = Y_j \\ \max\big(L(i-1, j),\, L(i, j-1)\big) &amp; X_i \ne Y_j \end{cases}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">LCS recurrence</p>
+      <dl>
+        <dt>$L(i, j)$</dt><dd>Length of the LCS of $X[1..i]$ and $Y[1..j]$.</dd>
+        <dt>$X_i, Y_j$</dt><dd>The $i$-th character of $X$ and $j$-th of $Y$.</dd>
+        <dt>Case 1 ($i=0$ or $j=0$)</dt><dd>An empty prefix has LCS of length 0 with anything.</dd>
+        <dt>Case 2 ($X_i = Y_j$)</dt><dd>We can extend an LCS of the shorter prefixes by one character.</dd>
+        <dt>Case 3 ($X_i \ne Y_j$)</dt><dd>The last characters don't match, so the LCS must drop one of them. We try both options and keep the longer.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Filling the table.</strong> You build an $(|X|+1) \times (|Y|+1)$ table and fill it in, either top-down with memoization or bottom-up with nested loops. Time and space are both $O(|X| \cdot |Y|)$. Space can be reduced to $O(\min(|X|, |Y|))$ by keeping only two rows at a time if you only need the length, not the actual subsequence.</p>
+    </div>
+
+    <h3>17.3 0/1 Knapsack</h3>
+
+    <p>You have $n$ items, each with a weight $w_i$ and value $v_i$. You have a knapsack with capacity $W$. Pick a subset of items to put in the knapsack (each item either in or out — the "0/1") to maximize total value, subject to total weight $\le W$.</p>
+
+    <p>Let $K(i, c)$ be the max value achievable using the first $i$ items with remaining capacity $c$. Then:</p>
+
+    <div class="math-display">$$K(i, c) = \max\big(K(i-1, c),\; v_i + K(i-1, c - w_i)\big)$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Knapsack recurrence</p>
+      <dl>
+        <dt>$K(i, c)$</dt><dd>Max total value using only the first $i$ items, with capacity budget $c$.</dd>
+        <dt>$K(i-1, c)$</dt><dd>Skip item $i$. Value is whatever the first $i-1$ items can achieve with the same capacity.</dd>
+        <dt>$v_i + K(i-1, c - w_i)$</dt><dd>Take item $i$. We get value $v_i$ plus whatever the first $i-1$ items can achieve with the reduced capacity. Only valid if $w_i \le c$.</dd>
+        <dt>$\max$</dt><dd>Pick whichever choice gives more value.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Pseudo-polynomial.</strong> This runs in $O(nW)$, which <em>looks</em> polynomial but isn't — $W$ can be exponentially large in the number of bits used to write it. Knapsack is NP-hard, and the DP only wins when $W$ is small. See <a href="complexity.html">complexity.html</a> for the distinction between "polynomial in input size" and "polynomial in input magnitude".</p>
+    </div>
+
+    <h3>17.4 Edit distance (Levenshtein)</h3>
+
+    <p>How many single-character insertions, deletions, or substitutions does it take to turn $X$ into $Y$? This is the measure your spell-checker uses. Let $E(i, j)$ be the edit distance between $X[1..i]$ and $Y[1..j]$. Then:</p>
+
+    <div class="math-display">$$E(i, j) = \begin{cases} j &amp; i = 0 \\ i &amp; j = 0 \\ E(i-1, j-1) &amp; X_i = Y_j \\ 1 + \min\big(E(i-1, j),\, E(i, j-1),\, E(i-1, j-1)\big) &amp; X_i \ne Y_j \end{cases}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Edit distance</p>
+      <dl>
+        <dt>$E(i, j)$</dt><dd>Minimum edits to turn $X[1..i]$ into $Y[1..j]$.</dd>
+        <dt>$E(i-1, j) + 1$</dt><dd>Delete $X_i$.</dd>
+        <dt>$E(i, j-1) + 1$</dt><dd>Insert $Y_j$.</dd>
+        <dt>$E(i-1, j-1) + 1$</dt><dd>Substitute $X_i$ for $Y_j$.</dd>
+        <dt>$X_i = Y_j$</dt><dd>Free match — no edit needed.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Used everywhere.</strong> Spell check ("did you mean"), approximate string matching, bioinformatics alignment (Needleman-Wunsch is this DP), and the "diff" between two files. $O(|X| \cdot |Y|)$ time, same space (reducible).</p>
+    </div>
+
+    <h3>17.5 Top-down vs. bottom-up</h3>
+
+    <p>There are two ways to actually implement any DP. <strong>Top-down</strong> is the straight translation of the recurrence into a recursive function plus a cache:</p>
+
+    <pre><code>cache = {}
+def F(state):
+    if state in cache: return cache[state]
+    ...compute from smaller states...
+    cache[state] = answer
+    return answer</code></pre>
+
+    <p><strong>Bottom-up</strong> is the iterative version: figure out the order in which states depend on each other, make a table, and fill it in that order. Both compute the same thing in the same Big-O time. Top-down is easier to write (the code looks like the math) but pays function-call overhead and can overflow the recursion stack. Bottom-up is usually faster in practice and easier to optimize for space — you can often keep only the last row or two of the table instead of the whole thing, dropping space from $O(n^2)$ to $O(n)$.</p>
+
+    <p>Python's <code>functools.lru_cache</code> turns any pure recursive function into a top-down DP for free. For quick prototyping it's unbeatable.</p>
+
+    <h3>17.6 The DP recipe</h3>
+
+    <p>To solve a new DP problem:</p>
+
+    <ol>
+      <li><strong>Define the state.</strong> What variables describe a subproblem? This is the hardest step. Getting it wrong makes the recurrence impossible.</li>
+      <li><strong>Write the recurrence.</strong> Express $\text{answer}(\text{state})$ in terms of smaller states. Include base cases.</li>
+      <li><strong>Order the computation.</strong> Either top-down with memoization (natural but uses recursion stack) or bottom-up with a table (iterative, often faster).</li>
+      <li><strong>Reconstruct the solution.</strong> If you need the actual choices, not just the objective value, store back-pointers as you fill the table.</li>
+    </ol>
+
+    <!-- ========================================================== -->
+    <h2 id="s18">18. Greedy algorithms</h2>
+
+    <p>A <strong>greedy algorithm</strong> is one that, at each step, makes the locally best choice and never looks back. Sometimes this works perfectly. Sometimes it's catastrophically wrong. The hard part is knowing which.</p>
+
+    <p>When it works, the proof usually goes through a <em>matroid</em> or <em>exchange argument</em>: "if there's a better solution than the greedy one, then I can swap the greedy choice in without making things worse, contradiction." You'll see the formal version in <a href="theoretical-cs.html">theoretical CS</a>.</p>
+
+    <h3>18.1 Activity selection — a worked example</h3>
+
+    <p>You have $n$ activities, each with a start and end time $(s_i, e_i)$. You can only do one activity at a time (no overlap). Maximize the number of activities you do.</p>
+
+    <p><strong>Greedy rule:</strong> sort by <em>end time</em>, then greedily pick each activity whose start time is $\ge$ the end time of the last activity you picked.</p>
+
+    <p><strong>Why it works.</strong> Suppose $G$ is the greedy solution and $O$ is some optimal solution with $|O| &gt; |G|$. Consider the first activity in each, sorted by end time. The greedy picked the activity with the earliest end time, so it ended no later than $O$'s first choice. That means $G$'s remaining time budget is $\ge$ $O$'s. We can swap $G$'s first choice into $O$ without hurting $O$ and recurse. Eventually $O$ must equal $G$ in size, contradicting $|O| &gt; |G|$.</p>
+
+    <p><strong>Counter-intuition:</strong> sorting by <em>start</em> time or <em>duration</em> seems reasonable but both give wrong answers. A short activity in the middle can block two longer back-to-back ones. Try it on the set $\{(0, 10), (1, 2), (3, 11)\}$ — duration-first picks $(1, 2)$ and then can't fit anything else, while end-time first picks $(1, 2)$ and $(3, 11)$ for a total of 2. (Small example; the point is the heuristic, not this case.)</p>
+
+    <h3>18.2 Huffman coding</h3>
+
+    <p>Given character frequencies, build a binary code (prefix code) that minimizes total encoded length. Huffman's algorithm: repeatedly take the two least-frequent nodes from a min-heap, combine them into a parent whose frequency is their sum, push the parent back. After $n-1$ merges, you have the optimal prefix tree. $O(n \log n)$ via the heap. This is literally inside zip and gzip.</p>
+
+    <h3>18.3 When greedy fails</h3>
+
+    <ul>
+      <li><strong>Coin change.</strong> Given arbitrary coin denominations, the greedy "take the biggest coin that fits" can fail. With coins $\{1, 3, 4\}$ and target $6$, greedy takes $4 + 1 + 1 = 3$ coins, but the optimum is $3 + 3 = 2$. For "canonical" coin systems like US currency, greedy happens to be optimal — but you need a proof for each system.</li>
+      <li><strong>Shortest path with negative edges.</strong> Greedy (Dijkstra) can commit to a suboptimal path when negative edges exist downstream.</li>
+      <li><strong>0/1 knapsack.</strong> "Take the highest value-per-weight first" can be far from optimal. (It's optimal for <em>fractional</em> knapsack, where you can take a fraction of an item — that's the matroid giving itself away.)</li>
+    </ul>
+
+    <div class="callout warn">
+      <strong>Rule of thumb.</strong> If you can't articulate why the greedy choice is <em>safe</em> (i.e., can't be undone later without loss), don't trust it. When in doubt, reach for DP.
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="s19">19. Divide and conquer</h2>
+
+    <p><strong>Divide and conquer</strong> is a design pattern: split the problem into smaller subproblems, solve each recursively, combine the results. Mergesort is the textbook example. You've also seen it in binary search (divide in half, recurse into one half — a degenerate case with a single subproblem).</p>
+
+    <p>Other divide-and-conquer classics:</p>
+
+    <ul>
+      <li><strong>Quicksort.</strong> Partition around a pivot, recurse on each side.</li>
+      <li><strong>Karatsuba multiplication.</strong> Multiply two $n$-digit numbers in $O(n^{1.585})$ by a three-way split, instead of the schoolbook $O(n^2)$.</li>
+      <li><strong>Strassen's matrix multiplication.</strong> Multiply two $n \times n$ matrices in $O(n^{2.807})$ with seven recursive sub-multiplications instead of eight. Not usually faster in practice until $n$ is enormous, but it shows the theoretical exponent of matrix multiplication is $&lt; 3$. The current world record is around $O(n^{2.37})$. See <a href="../math/linear-algebra.html">linear algebra</a> for why this matters.</li>
+      <li><strong>Closest pair of points.</strong> Given $n$ points in the plane, find the pair with smallest distance in $O(n \log n)$ via a divide-and-conquer sweep.</li>
+      <li><strong>FFT.</strong> The Fast Fourier Transform computes a discrete Fourier transform in $O(n \log n)$ instead of $O(n^2)$ by recursive splitting. Foundation of all of signal processing.</li>
+    </ul>
+
+    <p>The recurrence for balanced divide-and-conquer is the one we saw for mergesort: $T(n) = aT(n/b) + f(n)$, solved by the master theorem. You plug in $a$ (number of subproblems), $b$ (shrinkage factor), and $f(n)$ (combine cost), and read off the answer. Again, see <a href="complexity.html">complexity.html</a> for the full statement.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="s20">20. Source code</h2>
+
+    <p>Three canonical algorithms in plain Python. Quicksort (divide and conquer, random pivot), BFS on a graph (adjacency list), and edit distance (dynamic programming). Read them side by side to see how different the shapes are.</p>
+
+    <div class="code-tabs" id="ct-algos">
+      <div class="ct-header">
+        <button class="ct-tab active" data-tab="qs">Quicksort</button>
+        <button class="ct-tab" data-tab="bfs">BFS</button>
+        <button class="ct-tab" data-tab="dp">Edit distance (DP)</button>
+        <span class="ct-label">three canonical algorithms</span>
+      </div>
+
+      <div class="ct-panel active" data-tab="qs"><pre><code><span class="kw">import</span> random
+
+<span class="kw">def</span> <span class="fn">quicksort</span>(a):
+    <span class="cmt"># Sort list `a` in place using a random-pivot Lomuto partition.</span>
+    <span class="cmt"># Expected time O(n log n); worst case O(n^2), negligibly unlikely.</span>
+    <span class="fn">_qs</span>(a, <span class="num">0</span>, <span class="fn">len</span>(a) - <span class="num">1</span>)
+
+<span class="kw">def</span> <span class="fn">_qs</span>(a, lo, hi):
+    <span class="kw">if</span> lo &gt;= hi:
+        <span class="kw">return</span>                                 <span class="cmt"># 0 or 1 element, already sorted</span>
+    p = <span class="fn">_partition</span>(a, lo, hi)              <span class="cmt"># p is the final index of the pivot</span>
+    <span class="fn">_qs</span>(a, lo, p - <span class="num">1</span>)
+    <span class="fn">_qs</span>(a, p + <span class="num">1</span>, hi)
+
+<span class="kw">def</span> <span class="fn">_partition</span>(a, lo, hi):
+    <span class="cmt"># Pick a random pivot to avoid worst-case on sorted input.</span>
+    k = random.<span class="fn">randint</span>(lo, hi)
+    a[k], a[hi] = a[hi], a[k]                 <span class="cmt"># move pivot to the end</span>
+    pivot = a[hi]
+    i = lo - <span class="num">1</span>                               <span class="cmt"># i+1 is the next slot for &quot;&lt; pivot&quot;</span>
+    <span class="kw">for</span> j <span class="kw">in</span> <span class="fn">range</span>(lo, hi):
+        <span class="kw">if</span> a[j] &lt; pivot:
+            i += <span class="num">1</span>
+            a[i], a[j] = a[j], a[i]
+    a[i + <span class="num">1</span>], a[hi] = a[hi], a[i + <span class="num">1</span>]    <span class="cmt"># put pivot in its final place</span>
+    <span class="kw">return</span> i + <span class="num">1</span>
+
+<span class="cmt"># Try it:</span>
+arr = [<span class="num">9</span>, <span class="num">4</span>, <span class="num">7</span>, <span class="num">1</span>, <span class="num">2</span>, <span class="num">8</span>, <span class="num">3</span>, <span class="num">6</span>, <span class="num">5</span>]
+<span class="fn">quicksort</span>(arr)
+<span class="fn">print</span>(arr)                                   <span class="cmt"># [1, 2, 3, 4, 5, 6, 7, 8, 9]</span>
+</code></pre></div>
+
+      <div class="ct-panel" data-tab="bfs"><pre><code><span class="kw">from</span> collections <span class="kw">import</span> deque
+
+<span class="kw">def</span> <span class="fn">bfs</span>(graph, start):
+    <span class="cmt"># graph is a dict: vertex -&gt; list of neighbor vertices.</span>
+    <span class="cmt"># Returns a dict: vertex -&gt; shortest-path distance from `start`.</span>
+    dist = {start: <span class="num">0</span>}
+    q = <span class="fn">deque</span>([start])
+    <span class="kw">while</span> q:
+        u = q.<span class="fn">popleft</span>()                          <span class="cmt"># dequeue the front</span>
+        <span class="kw">for</span> v <span class="kw">in</span> graph[u]:
+            <span class="kw">if</span> v <span class="kw">not</span> <span class="kw">in</span> dist:                   <span class="cmt"># first time seen = shortest</span>
+                dist[v] = dist[u] + <span class="num">1</span>
+                q.<span class="fn">append</span>(v)                       <span class="cmt"># enqueue at the back</span>
+    <span class="kw">return</span> dist
+
+<span class="cmt"># Tiny example graph:</span>
+<span class="cmt">#    A --- B --- C</span>
+<span class="cmt">#    |     |</span>
+<span class="cmt">#    D --- E --- F</span>
+graph = {
+    <span class="str">&quot;A&quot;</span>: [<span class="str">&quot;B&quot;</span>, <span class="str">&quot;D&quot;</span>],
+    <span class="str">&quot;B&quot;</span>: [<span class="str">&quot;A&quot;</span>, <span class="str">&quot;C&quot;</span>, <span class="str">&quot;E&quot;</span>],
+    <span class="str">&quot;C&quot;</span>: [<span class="str">&quot;B&quot;</span>],
+    <span class="str">&quot;D&quot;</span>: [<span class="str">&quot;A&quot;</span>, <span class="str">&quot;E&quot;</span>],
+    <span class="str">&quot;E&quot;</span>: [<span class="str">&quot;B&quot;</span>, <span class="str">&quot;D&quot;</span>, <span class="str">&quot;F&quot;</span>],
+    <span class="str">&quot;F&quot;</span>: [<span class="str">&quot;E&quot;</span>],
+}
+<span class="fn">print</span>(<span class="fn">bfs</span>(graph, <span class="str">&quot;A&quot;</span>))
+<span class="cmt"># {'A': 0, 'B': 1, 'D': 1, 'C': 2, 'E': 2, 'F': 3}</span>
+</code></pre></div>
+
+      <div class="ct-panel" data-tab="dp"><pre><code><span class="kw">def</span> <span class="fn">edit_distance</span>(x, y):
+    <span class="cmt"># Levenshtein distance: min single-char edits to turn x into y.</span>
+    <span class="cmt"># Classic bottom-up DP. Table size (len(x)+1) x (len(y)+1).</span>
+    n, m = <span class="fn">len</span>(x), <span class="fn">len</span>(y)
+    <span class="cmt"># E[i][j] = edit distance between x[:i] and y[:j]</span>
+    E = [[<span class="num">0</span>] * (m + <span class="num">1</span>) <span class="kw">for</span> _ <span class="kw">in</span> <span class="fn">range</span>(n + <span class="num">1</span>)]
+    <span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(n + <span class="num">1</span>):
+        E[i][<span class="num">0</span>] = i                               <span class="cmt"># delete all i characters of x</span>
+    <span class="kw">for</span> j <span class="kw">in</span> <span class="fn">range</span>(m + <span class="num">1</span>):
+        E[<span class="num">0</span>][j] = j                               <span class="cmt"># insert all j characters of y</span>
+    <span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(<span class="num">1</span>, n + <span class="num">1</span>):
+        <span class="kw">for</span> j <span class="kw">in</span> <span class="fn">range</span>(<span class="num">1</span>, m + <span class="num">1</span>):
+            <span class="kw">if</span> x[i - <span class="num">1</span>] == y[j - <span class="num">1</span>]:
+                E[i][j] = E[i - <span class="num">1</span>][j - <span class="num">1</span>]       <span class="cmt"># free match</span>
+            <span class="kw">else</span>:
+                E[i][j] = <span class="num">1</span> + <span class="fn">min</span>(
+                    E[i - <span class="num">1</span>][j],                   <span class="cmt"># delete x[i-1]</span>
+                    E[i][j - <span class="num">1</span>],                   <span class="cmt"># insert y[j-1]</span>
+                    E[i - <span class="num">1</span>][j - <span class="num">1</span>],               <span class="cmt"># substitute</span>
+                )
+    <span class="kw">return</span> E[n][m]
+
+<span class="fn">print</span>(<span class="fn">edit_distance</span>(<span class="str">&quot;kitten&quot;</span>, <span class="str">&quot;sitting&quot;</span>))   <span class="cmt"># 3</span>
+<span class="fn">print</span>(<span class="fn">edit_distance</span>(<span class="str">&quot;sunday&quot;</span>, <span class="str">&quot;saturday&quot;</span>))  <span class="cmt"># 3</span>
+<span class="fn">print</span>(<span class="fn">edit_distance</span>(<span class="str">&quot;abc&quot;</span>, <span class="str">&quot;abc&quot;</span>))            <span class="cmt"># 0</span>
+</code></pre></div>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="s21">21. A practical guide — how to pick the right tool</h2>
+
+    <p>The single best question to ask when facing a new problem is: <em>"What operations do I need, and how often?"</em> The answer narrows the data structure instantly.</p>
+
+    <table class="rank-table">
+      <thead><tr><th>If you need...</th><th>Use...</th><th>Because</th></tr></thead>
+      <tbody>
+        <tr><td>Index by position, mostly read</td><td>Array / dynamic array</td><td>$O(1)$ index, cache-friendly</td></tr>
+        <tr><td>Membership check, any key type</td><td>Hash set</td><td>$O(1)$ expected</td></tr>
+        <tr><td>Key → value lookup</td><td>Hash table</td><td>$O(1)$ expected</td></tr>
+        <tr><td>Key → value with sorted iteration</td><td>Balanced BST</td><td>$O(\log n)$ ops + in-order traversal</td></tr>
+        <tr><td>Key → value on disk</td><td>B-tree</td><td>High fanout → few disk reads</td></tr>
+        <tr><td>"Give me the smallest/largest"</td><td>Heap / priority queue</td><td>$O(\log n)$ insert / extract-min</td></tr>
+        <tr><td>Top-$k$ in a stream</td><td>Size-$k$ min-heap</td><td>$O(n \log k)$ total</td></tr>
+        <tr><td>Prefix matching, autocomplete</td><td>Trie</td><td>$O(L)$ in word length, shares prefixes</td></tr>
+        <tr><td>LIFO (undo, recursion, DFS)</td><td>Stack</td><td>$O(1)$ push / pop</td></tr>
+        <tr><td>FIFO (work queue, BFS)</td><td>Queue (ring buffer)</td><td>$O(1)$ enqueue / dequeue</td></tr>
+        <tr><td>Shortest path, unweighted</td><td>BFS</td><td>$O(V+E)$, queue-based</td></tr>
+        <tr><td>Shortest path, weighted, non-negative</td><td>Dijkstra with heap</td><td>$O((V+E) \log V)$</td></tr>
+        <tr><td>Shortest path with negative edges</td><td>Bellman-Ford</td><td>$O(VE)$, detects neg cycles</td></tr>
+        <tr><td>Optimal subproblem + overlap</td><td>Dynamic programming</td><td>Memoize each subproblem once</td></tr>
+        <tr><td>Local greedy choice safe</td><td>Greedy</td><td>One-pass, no backtracking</td></tr>
+        <tr><td>Problem splits cleanly in two</td><td>Divide and conquer</td><td>Recursive halving, master theorem</td></tr>
+      </tbody>
+    </table>
+
+    <p>A few meta-heuristics:</p>
+
+    <ul>
+      <li><strong>Prototype with the simple tool first.</strong> A list and a linear scan will work for $n &lt; 10{,}000$ and you'll find bugs faster. Swap in the clever structure when you know you need it.</li>
+      <li><strong>Profile before you optimize.</strong> The bottleneck is almost never where you think it is. A slow hash function, a cache-unfriendly access pattern, or a bad allocation strategy can make Big-O lie.</li>
+      <li><strong>Read the standard library.</strong> Python's <code>collections</code>, <code>heapq</code>, <code>bisect</code>. Java's <code>TreeMap</code>, <code>PriorityQueue</code>, <code>HashMap</code>. C++'s <code>&lt;algorithm&gt;</code> and <code>&lt;container&gt;</code>. These are written by people who thought hard about the constants.</li>
+      <li><strong>Know one well, the rest will follow.</strong> If you really understand hash tables — chaining, probing, load factors, amortization — everything else gets easier by analogy.</li>
+    </ul>
+
+    <h3>21.1 Cross-links to other tracks</h3>
+
+    <ul>
+      <li><strong><a href="../math/discrete-math.html">Discrete math</a></strong> for the graph vocabulary (vertex, edge, path, cycle), proof by induction (which is how you prove recurrences), and counting arguments (which is how you prove the $n \log n$ sorting lower bound).</li>
+      <li><strong><a href="../math/linear-algebra.html">Linear algebra</a></strong> when algorithms hit matrix problems: PageRank (eigenvector), spectral clustering (eigendecomposition), Strassen multiplication (linear combinations of sub-matrices).</li>
+      <li><strong><a href="complexity.html">Complexity</a></strong> for the formal Big-O, $\Omega$, $\Theta$ definitions, the master theorem, NP-completeness, and why we believe some problems can't be solved quickly.</li>
+      <li><strong><a href="optimization.html">Optimization</a></strong> for linear programming and gradient descent — what you reach for when "try every subset" is too expensive and greedy is wrong.</li>
+      <li><strong><a href="../topics/rag.html">Retrieval-augmented generation</a></strong> for vector search (FAISS, HNSW, IVF) — the data structures that make "find the 100 nearest vectors in 500 million" fast.</li>
+      <li><strong><a href="../topics/foundation-models.html">Foundation models</a></strong> for how tokenizers use tries (BPE, SentencePiece) to cut strings into pieces the model understands.</li>
+    </ul>
+
+    <!-- ========================================================== -->
+    <h2 id="s22">22. Further reading</h2>
+
+    <div class="bib">
+      <h4>The canon</h4>
+      <ul>
+        <li>Cormen, Leiserson, Rivest, Stein — <em>Introduction to Algorithms</em> (CLRS), 4th ed., 2022. The reference. Every major data structure and algorithm with proofs. Long but unambiguous.</li>
+        <li>Sedgewick &amp; Wayne — <em>Algorithms</em>, 4th ed., 2011. Friendlier than CLRS, with Java code. Excellent visualizations of sorting and graph algorithms. The companion <a href="https://algs4.cs.princeton.edu/">algs4.cs.princeton.edu</a> site is gold.</li>
+        <li>Kleinberg &amp; Tardos — <em>Algorithm Design</em>, 2005. The best book on <em>designing</em> algorithms (as opposed to reciting them). The dynamic programming and network flow chapters are especially strong.</li>
+        <li>Skiena — <em>The Algorithm Design Manual</em>, 3rd ed., 2020. The second half is a catalog of named problems with known algorithms — invaluable as a lookup.</li>
+        <li>Knuth — <em>The Art of Computer Programming</em>, volumes 1–4A. The definitive deep dive. Not a first book. Read when you want to know <em>exactly</em> why something is as fast as it is.</li>
+        <li>Demaine — MIT 6.006 / 6.046 lecture videos (MIT OCW). The best free course for this material; Erik Demaine is a remarkable teacher.</li>
+      </ul>
+      <h4>Practice and reference</h4>
+      <ul>
+        <li>Bentley — <em>Programming Pearls</em>, 2nd ed., 2000. Short, funny essays on the craft of picking the right algorithm. The binary-search essay is a classic.</li>
+        <li>LeetCode, Codeforces, Kattis — if you learn best by solving problems. LeetCode's top-150 is a reasonable working set for most of this page's content.</li>
+      </ul>
+    </div>
+
+    <div class="next-card">
+      <div class="label">NEXT UP</div>
+      <a href="complexity.html">→ Complexity</a>
+      <p>We skipped the formal Big-O theorems and the master theorem to keep this page moving. Next up is the rigorous treatment: asymptotic notation, amortized analysis, P vs. NP, and why some problems genuinely cannot be solved fast.</p>
+    </div>
+
+  </article>
+</div>
+
+<script>
+// =========================================================
+// Code tabs
+document.querySelectorAll('.code-tabs').forEach(root => {
+  const tabs = root.querySelectorAll('.ct-tab');
+  const panels = root.querySelectorAll('.ct-panel');
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const target = tab.getAttribute('data-tab');
+      tabs.forEach(t => t.classList.toggle('active', t === tab));
+      panels.forEach(p => p.classList.toggle('active', p.getAttribute('data-tab') === target));
+    });
+  });
+});
+
+// =========================================================
+// Sort animator
+(function() {
+  const svg = document.getElementById('sortSvg');
+  if (!svg) return;
+  const NS = 'http://www.w3.org/2000/svg';
+
+  const algSelect = document.getElementById('sortAlg');
+  const playBtn = document.getElementById('sortPlay');
+  const resetBtn = document.getElementById('sortReset');
+  const sizeSlider = document.getElementById('sortSize');
+  const sizeLabel = document.getElementById('sortSizeLabel');
+  const speedSlider = document.getElementById('sortSpeed');
+  const caption = document.getElementById('sortCaption');
+
+  let arr = [];
+  let steps = [];         // list of {type, i, j, ...}
+  let stepIdx = 0;
+  let playing = false;
+  let timer = null;
+  let compCount = 0;
+
+  function shuffleArr(n) {
+    arr = [];
+    for (let i = 1; i <= n; i++) arr.push(i);
+    // Fisher-Yates
+    for (let i = n - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+  }
+
+  // ----- Step recorders for each algorithm -----
+  // Each returns a list of step descriptors that we replay visually.
+
+  function recordInsertion(a) {
+    const S = [];
+    a = a.slice();
+    for (let i = 1; i < a.length; i++) {
+      let j = i;
+      while (j > 0) {
+        S.push({ type: 'compare', i: j - 1, j: j });
+        if (a[j] < a[j - 1]) {
+          [a[j], a[j - 1]] = [a[j - 1], a[j]];
+          S.push({ type: 'swap', i: j - 1, j: j, snapshot: a.slice() });
+          j--;
+        } else {
+          break;
+        }
+      }
+    }
+    S.push({ type: 'done', snapshot: a.slice() });
+    return S;
+  }
+
+  function recordBubble(a) {
+    const S = [];
+    a = a.slice();
+    const n = a.length;
+    for (let i = 0; i < n; i++) {
+      let swapped = false;
+      for (let j = 0; j < n - 1 - i; j++) {
+        S.push({ type: 'compare', i: j, j: j + 1 });
+        if (a[j] > a[j + 1]) {
+          [a[j], a[j + 1]] = [a[j + 1], a[j]];
+          swapped = true;
+          S.push({ type: 'swap', i: j, j: j + 1, snapshot: a.slice() });
+        }
+      }
+      if (!swapped) break;
+    }
+    S.push({ type: 'done', snapshot: a.slice() });
+    return S;
+  }
+
+  function recordSelection(a) {
+    const S = [];
+    a = a.slice();
+    const n = a.length;
+    for (let i = 0; i < n; i++) {
+      let minIdx = i;
+      for (let j = i + 1; j < n; j++) {
+        S.push({ type: 'compare', i: minIdx, j: j });
+        if (a[j] < a[minIdx]) minIdx = j;
+      }
+      if (minIdx !== i) {
+        [a[i], a[minIdx]] = [a[minIdx], a[i]];
+        S.push({ type: 'swap', i: i, j: minIdx, snapshot: a.slice() });
+      }
+    }
+    S.push({ type: 'done', snapshot: a.slice() });
+    return S;
+  }
+
+  function recordMerge(a) {
+    const S = [];
+    a = a.slice();
+    function ms(lo, hi) {
+      if (hi - lo <= 1) return;
+      const mid = Math.floor((lo + hi) / 2);
+      ms(lo, mid);
+      ms(mid, hi);
+      // Merge
+      const left = a.slice(lo, mid), right = a.slice(mid, hi);
+      let i = 0, j = 0, k = lo;
+      while (i < left.length && j < right.length) {
+        S.push({ type: 'compare', i: lo + i, j: mid + j });
+        if (left[i] <= right[j]) {
+          a[k++] = left[i++];
+        } else {
+          a[k++] = right[j++];
+        }
+        S.push({ type: 'set', snapshot: a.slice() });
+      }
+      while (i < left.length) { a[k++] = left[i++]; S.push({ type: 'set', snapshot: a.slice() }); }
+      while (j < right.length) { a[k++] = right[j++]; S.push({ type: 'set', snapshot: a.slice() }); }
+    }
+    ms(0, a.length);
+    S.push({ type: 'done', snapshot: a.slice() });
+    return S;
+  }
+
+  function recordQuick(a) {
+    const S = [];
+    a = a.slice();
+    function qs(lo, hi) {
+      if (lo >= hi) return;
+      const pivot = a[hi];
+      S.push({ type: 'pivot', k: hi, snapshot: a.slice() });
+      let i = lo - 1;
+      for (let j = lo; j < hi; j++) {
+        S.push({ type: 'compare', i: j, j: hi });
+        if (a[j] < pivot) {
+          i++;
+          [a[i], a[j]] = [a[j], a[i]];
+          S.push({ type: 'swap', i: i, j: j, snapshot: a.slice() });
+        }
+      }
+      [a[i + 1], a[hi]] = [a[hi], a[i + 1]];
+      S.push({ type: 'swap', i: i + 1, j: hi, snapshot: a.slice() });
+      qs(lo, i);
+      qs(i + 2, hi);
+    }
+    qs(0, a.length - 1);
+    S.push({ type: 'done', snapshot: a.slice() });
+    return S;
+  }
+
+  function recordHeap(a) {
+    const S = [];
+    a = a.slice();
+    const n = a.length;
+
+    function siftDown(start, end) {
+      let root = start;
+      while (2 * root + 1 <= end) {
+        let child = 2 * root + 1;
+        if (child + 1 <= end) {
+          S.push({ type: 'compare', i: child, j: child + 1 });
+          if (a[child] < a[child + 1]) child++;
+        }
+        S.push({ type: 'compare', i: root, j: child });
+        if (a[root] < a[child]) {
+          [a[root], a[child]] = [a[child], a[root]];
+          S.push({ type: 'swap', i: root, j: child, snapshot: a.slice() });
+          root = child;
+        } else {
+          return;
+        }
+      }
+    }
+
+    // Build max-heap
+    for (let i = Math.floor(n / 2) - 1; i >= 0; i--) siftDown(i, n - 1);
+    // Repeatedly extract max
+    for (let end = n - 1; end > 0; end--) {
+      [a[0], a[end]] = [a[end], a[0]];
+      S.push({ type: 'swap', i: 0, j: end, snapshot: a.slice() });
+      siftDown(0, end - 1);
+    }
+    S.push({ type: 'done', snapshot: a.slice() });
+    return S;
+  }
+
+  const recorders = {
+    insertion: recordInsertion,
+    bubble: recordBubble,
+    selection: recordSelection,
+    merge: recordMerge,
+    quick: recordQuick,
+    heap: recordHeap,
+  };
+
+  // ----- Drawing -----
+  function draw(highlights = {}) {
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+    const W = 720, H = 340;
+    const padL = 20, padR = 20, padT = 20, padB = 40;
+    const plotW = W - padL - padR;
+    const plotH = H - padT - padB;
+    const n = arr.length;
+    const barW = plotW / n;
+    const maxVal = n;
+
+    for (let k = 0; k < n; k++) {
+      const h = (arr[k] / maxVal) * plotH;
+      const x = padL + k * barW;
+      const y = padT + plotH - h;
+      let fill = '#4a5668';
+      if (highlights.compare && (highlights.compare.i === k || highlights.compare.j === k)) fill = '#22d3ee';
+      if (highlights.swap && (highlights.swap.i === k || highlights.swap.j === k)) fill = '#7c5cff';
+      if (highlights.pivot && highlights.pivot.k === k) fill = '#4ade80';
+      if (highlights.done) fill = '#f59e0b';
+      const r = document.createElementNS(NS, 'rect');
+      r.setAttribute('x', x + 1);
+      r.setAttribute('y', y);
+      r.setAttribute('width', Math.max(1, barW - 2));
+      r.setAttribute('height', h);
+      r.setAttribute('fill', fill);
+      svg.appendChild(r);
+    }
+
+    // Counter overlay
+    const txt = document.createElementNS(NS, 'text');
+    txt.setAttribute('x', padL + 4);
+    txt.setAttribute('y', padT + 14);
+    txt.setAttribute('fill', '#b4c4d4');
+    txt.setAttribute('font-size', 12);
+    txt.setAttribute('font-family', 'ui-monospace, monospace');
+    txt.textContent = 'comparisons: ' + compCount + '  |  step: ' + stepIdx + '/' + steps.length;
+    svg.appendChild(txt);
+
+    // Legend
+    const legend = [
+      { c: '#22d3ee', t: 'compare' },
+      { c: '#7c5cff', t: 'swap' },
+      { c: '#4ade80', t: 'pivot' },
+      { c: '#f59e0b', t: 'sorted' },
+    ];
+    let lx = padL + 4;
+    const ly = H - 12;
+    legend.forEach(item => {
+      const sq = document.createElementNS(NS, 'rect');
+      sq.setAttribute('x', lx);
+      sq.setAttribute('y', ly - 9);
+      sq.setAttribute('width', 10);
+      sq.setAttribute('height', 10);
+      sq.setAttribute('fill', item.c);
+      svg.appendChild(sq);
+      const lt = document.createElementNS(NS, 'text');
+      lt.setAttribute('x', lx + 14);
+      lt.setAttribute('y', ly);
+      lt.setAttribute('fill', '#b4c4d4');
+      lt.setAttribute('font-size', 11);
+      lt.setAttribute('font-family', 'ui-monospace, monospace');
+      lt.textContent = item.t;
+      svg.appendChild(lt);
+      lx += 80;
+    });
+  }
+
+  function reset() {
+    const n = parseInt(sizeSlider.value);
+    sizeLabel.textContent = n;
+    shuffleArr(n);
+    const algo = algSelect.value;
+    steps = recorders[algo](arr);
+    stepIdx = 0;
+    compCount = 0;
+    playing = false;
+    playBtn.textContent = 'Play';
+    if (timer) { clearInterval(timer); timer = null; }
+    draw({});
+    updateCaption();
+  }
+
+  function updateCaption() {
+    const algo = algSelect.value;
+    const names = {
+      insertion: 'Insertion sort — O(n²) worst, O(n) on nearly-sorted input.',
+      bubble: 'Bubble sort — O(n²). Pedagogical only; never used in practice.',
+      selection: 'Selection sort — O(n²), always. Minimum number of swaps, though.',
+      merge: 'Merge sort — O(n log n) always. Stable. Uses O(n) extra space.',
+      quick: 'Quick sort — O(n log n) expected, O(n²) worst. In place, fast in practice.',
+      heap: 'Heap sort — O(n log n) worst case. In place, not stable.',
+    };
+    caption.textContent = names[algo] + ' Comparisons so far: ' + compCount + '.';
+  }
+
+  function stepOnce() {
+    if (stepIdx >= steps.length) {
+      playing = false;
+      playBtn.textContent = 'Play';
+      if (timer) { clearInterval(timer); timer = null; }
+      draw({ done: true });
+      return;
+    }
+    const s = steps[stepIdx++];
+    if (s.snapshot) arr = s.snapshot;
+    if (s.type === 'compare') {
+      compCount++;
+      draw({ compare: { i: s.i, j: s.j } });
+    } else if (s.type === 'swap') {
+      draw({ swap: { i: s.i, j: s.j } });
+    } else if (s.type === 'pivot') {
+      draw({ pivot: { k: s.k } });
+    } else if (s.type === 'set') {
+      draw({});
+    } else if (s.type === 'done') {
+      draw({ done: true });
+    }
+    updateCaption();
+  }
+
+  function play() {
+    if (stepIdx >= steps.length) {
+      // restart
+      reset();
+    }
+    playing = !playing;
+    playBtn.textContent = playing ? 'Pause' : 'Play';
+    if (playing) {
+      const speed = parseInt(speedSlider.value);
+      const interval = Math.max(8, 500 / speed);
+      timer = setInterval(() => {
+        if (!playing) return;
+        stepOnce();
+      }, interval);
+    } else {
+      if (timer) { clearInterval(timer); timer = null; }
+    }
+  }
+
+  playBtn.addEventListener('click', play);
+  resetBtn.addEventListener('click', reset);
+  algSelect.addEventListener('change', reset);
+  sizeSlider.addEventListener('input', reset);
+  speedSlider.addEventListener('input', () => {
+    if (playing) {
+      if (timer) clearInterval(timer);
+      const speed = parseInt(speedSlider.value);
+      const interval = Math.max(8, 500 / speed);
+      timer = setInterval(stepOnce, interval);
+    }
+  });
+
+  reset();
+})();
+</script>
+<script defer src="../search-index.js"></script>
+<script defer src="../search.js"></script>
+</body>
+</html>

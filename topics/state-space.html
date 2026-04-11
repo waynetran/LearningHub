@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>State Space Models & Mamba — Deep Dive</title>
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError: false});"></script>
+</head>
+<body>
+<div id="tooltip"></div>
+
+<nav class="topic-nav">
+  <a class="back" href="../ai-ml.html">← Back to AI/ML</a>
+  <div class="crumb">Deep Dives / <span class="topic-name">State Space Models &amp; Mamba</span></div>
+</nav>
+
+<div class="topic-layout">
+  <aside class="topic-toc">
+    <h4>ON THIS PAGE</h4>
+    <ul>
+      <li><a href="#intro">1. Why not just Transformers?</a></li>
+      <li><a href="#classical">2. The classical state space</a></li>
+      <li><a href="#discretize">3. Discretization</a></li>
+      <li><a href="#s4">4. S4 — HIPPO and structured</a></li>
+      <li><a href="#mamba">5. Mamba's selectivity</a></li>
+      <li><a href="#demo">6. Interactive SSM demo</a></li>
+      <li><a href="#code">7. Source code</a></li>
+      <li><a href="#summary">8. Summary</a></li>
+    </ul>
+  </aside>
+
+  <article class="topic-content">
+    <h1>State Space Models &amp; Mamba</h1>
+    <p class="subtitle">Attention is O(n²) in the sequence length. For long contexts — genomes, audio, hour-long documents — that's a wall. State Space Models are a family of <em>linear-time</em> sequence mixers that, as of 2024, finally match or beat Transformers on language while scaling gracefully to million-token contexts.</p>
+    <div class="meta-tags">
+      <span>Prereq: RNNs, linear algebra</span>
+      <span>Time to read: ~24 min</span>
+      <span>Interactive figures: 1</span>
+      <span>Code: NumPy, PyTorch</span>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="intro">1. Why not just Transformers?</h2>
+
+    <p>Self-attention is the most important architecture of the last decade, but it has a brutal scaling problem. Attention cost is $O(L^2)$ in sequence length $L$: every token attends to every other token. At $L = 2{,}000$ this is fine. At $L = 100{,}000$ it eats all your memory. At $L = 1{,}000{,}000$ (a DNA strand, a long video, a codebase) it's completely impossible.</p>
+
+    <p>A lot of approaches tried to patch this — sparse attention, linear attention, Longformer, Performer, RWKV. Most worked on small tasks but lost to full attention on language. Then in 2023, <strong>Mamba</strong> (Gu &amp; Dao) landed. It's a state space model with a trick called <em>selectivity</em>, and it was the first sub-quadratic architecture to seriously compete with Transformers on language modeling loss, all while running in $O(L)$ time and $O(1)$ memory per step at inference.</p>
+
+    <p>Mamba is the end of a longer story that runs through S4, HIPPO, and classical control theory. Let's walk through it.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="classical">2. The classical state space</h2>
+
+    <p>A continuous-time linear state space model represents a system with a hidden state $\mathbf{h}(t)$ that evolves according to a simple linear ODE:</p>
+
+    <div class="math-display">$$\frac{d\mathbf{h}(t)}{dt} = \mathbf{A} \, \mathbf{h}(t) + \mathbf{B} \, u(t)$$</div>
+    <div class="math-display">$$y(t) = \mathbf{C} \, \mathbf{h}(t) + \mathbf{D} \, u(t)$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">The continuous state space</p>
+      <dl>
+        <dt>$u(t)$</dt><dd>The input signal at time $t$. Scalar for 1-D, vector for multi-channel (e.g., a token embedding).</dd>
+        <dt>$\mathbf{h}(t) \in \mathbb{R}^N$</dt><dd>The hidden state — an $N$-dimensional memory that summarizes everything the system has seen so far. $N$ is typically 16 or 64.</dd>
+        <dt>$\mathbf{A} \in \mathbb{R}^{N \times N}$</dt><dd>The <em>state transition matrix</em>: how the state evolves on its own, without new input. If $\mathbf{A}$ has negative eigenvalues, the system forgets; if positive, it explodes; if imaginary, it oscillates.</dd>
+        <dt>$\mathbf{B} \in \mathbb{R}^{N \times 1}$</dt><dd>The <em>input-to-state matrix</em>: how much new input pushes into each state dimension.</dd>
+        <dt>$\mathbf{C} \in \mathbb{R}^{1 \times N}$</dt><dd>The <em>state-to-output matrix</em>: a linear projection from state to observable output.</dd>
+        <dt>$\mathbf{D} \in \mathbb{R}$</dt><dd>A direct feedthrough (skip connection) from input to output. Often set to 0 in deep learning contexts.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Analogy</strong> Picture a spring-mass-damper system. The "state" is [position, velocity]. The ODE says: velocity changes based on position and the external force; position changes based on velocity. $\mathbf{A}$ encodes the spring constant and damping; $\mathbf{B}$ encodes how much an external push accelerates the mass. Any linear dynamical system — a circuit, a thermostat, a cruise-control loop — looks like this. SSMs bring this century-old formalism into deep learning.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="discretize">3. Discretization</h2>
+
+    <p>Neural networks work in discrete steps, not continuous time. To use an SSM in a network, you discretize the ODE with a step size $\Delta$. Using the zero-order hold rule:</p>
+
+    <div class="math-display">$$\bar{\mathbf{A}} = \exp(\Delta \mathbf{A}), \quad \bar{\mathbf{B}} = (\Delta \mathbf{A})^{-1}(\exp(\Delta \mathbf{A}) - \mathbf{I}) \cdot \Delta \mathbf{B}$$</div>
+
+    <p>The discrete SSM is then a linear recurrence:</p>
+
+    <div class="math-display">$$\mathbf{h}_t = \bar{\mathbf{A}} \, \mathbf{h}_{t-1} + \bar{\mathbf{B}} \, u_t, \qquad y_t = \mathbf{C} \, \mathbf{h}_t$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Discrete SSM</p>
+      <dl>
+        <dt>$\Delta$</dt><dd>The time step — how much "real time" each discrete step represents. In a language SSM this is a learned, data-dependent parameter.</dd>
+        <dt>$\bar{\mathbf{A}}, \bar{\mathbf{B}}$</dt><dd>The discretized versions of $\mathbf{A}$ and $\mathbf{B}$. The bar distinguishes them from their continuous-time originals.</dd>
+        <dt>$\mathbf{h}_t$</dt><dd>The discrete hidden state at step $t$. Now the formula reads exactly like an RNN.</dd>
+        <dt>$y_t$</dt><dd>The output at step $t$ — a linear readout of the state.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>The dual view</strong> This recurrence is algebraically identical to a <em>very specific</em> linear RNN — no nonlinearity between steps, and with structured transition matrices. That sounds like a weakness, but it unlocks two superpowers: (1) you can unroll the recurrence into a global convolution and compute all outputs in parallel in $O(L \log L)$ via FFT; (2) at inference time you can switch back to the recurrence and decode one step at a time in $O(1)$ memory.</p>
+    </div>
+
+    <p>This dual view — "same model, two compute modes" — is the whole point of SSMs. During training you train as a convolution on the whole sequence (fast, parallel). During autoregressive inference you run as a recurrence (tiny state, no KV cache). Transformers can't do this: their attention is fundamentally non-recurrent and forces you to keep an ever-growing KV cache at inference.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="s4">4. S4 — HIPPO and structured state spaces</h2>
+
+    <p>Before Mamba there was <strong>S4</strong> (Gu, Goel, Ré 2021). S4's contribution was two-fold:</p>
+
+    <ol>
+      <li>It chose $\mathbf{A}$ to be a specific structured matrix — the <em>HIPPO matrix</em>, derived from a theory of optimal polynomial basis projection. HIPPO-LegS guarantees that the state summarizes past inputs as Legendre polynomial coefficients, giving provably good long-range memory.</li>
+      <li>It factored $\mathbf{A}$ into a low-rank plus normal form so that the convolution kernel can be computed efficiently without ever materializing $\bar{\mathbf{A}}^L$ directly.</li>
+    </ol>
+
+    <p>With a HIPPO-initialized S4 layer, a model could recall information from tens of thousands of steps ago — something vanilla RNNs and even Transformers with full attention struggled with on the Long Range Arena benchmark.</p>
+
+    <p>S4's limitation: $\mathbf{A}$, $\mathbf{B}$, $\mathbf{C}$, $\Delta$ were all <em>input-independent</em>. The model applied the same dynamics to every token. For language, where different tokens need the model to remember or forget different things, that's too rigid.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="mamba">5. Mamba's selectivity</h2>
+
+    <p>Mamba's move (Gu &amp; Dao, 2023) is deceptively small: make $\mathbf{B}$, $\mathbf{C}$, and $\Delta$ <em>functions of the input</em>. The $\mathbf{A}$ matrix stays structured and shared, but at each time step:</p>
+
+    <div class="math-display">$$\mathbf{B}_t = \text{Linear}_B(u_t), \quad \mathbf{C}_t = \text{Linear}_C(u_t), \quad \Delta_t = \text{softplus}(\text{Linear}_\Delta(u_t))$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Selective SSM</p>
+      <dl>
+        <dt>$\mathbf{B}_t, \mathbf{C}_t$</dt><dd>Now depend on the current input $u_t$ through learned linear projections. Different tokens push different information into the hidden state and read different information out.</dd>
+        <dt>$\Delta_t$</dt><dd>A per-token, learned step size. Large $\Delta_t$ means "this token matters — update the state a lot"; small $\Delta_t$ means "this token is filler — barely update." This is how selection happens.</dd>
+        <dt>$\text{softplus}$</dt><dd>A smooth positive function that keeps $\Delta_t > 0$ (step size must be positive for the ODE interpretation).</dd>
+        <dt>$\mathbf{A}$</dt><dd>Still structured and input-independent. Selectivity runs through $\mathbf{B}, \mathbf{C}, \Delta$, not $\mathbf{A}$.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why it's a big deal</strong> With input-dependent $\Delta_t$, the model can effectively "pay attention" — it learns to take big steps on important tokens and small steps on irrelevant ones, compressing or expanding time. Structurally, the resulting layer is still a recurrence, so inference is $O(L)$ and the KV cache is gone. But because $\mathbf{B}, \mathbf{C}$ now vary per step, the layer can copy/delete specific pieces of the state — recovering much of the flexibility that pure SSMs lacked.</p>
+    </div>
+
+    <p>The cost of selectivity: the recurrence is no longer a pure convolution, so the nice FFT trick doesn't apply directly. Mamba solves this with a <em>hardware-aware parallel scan</em> implemented as a custom CUDA kernel. The scan computes the recurrence in $O(L)$ work and $O(\log L)$ depth, streaming state through GPU SRAM so it never touches slow HBM. This implementation detail is what made Mamba actually fast in practice, not just fast on paper.</p>
+
+    <p>By 2024 Mamba-2 tightened the connection between SSMs and linear attention (showing they're two views of the same object) and landed hybrids like <em>Jamba</em> (AI21) and <em>Zamba</em>, which interleave Mamba blocks with a few attention layers to get Transformer-quality recall plus SSM-quality speed.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="demo">6. Interactive SSM demo</h2>
+
+    <p>A 1-D linear SSM running on an input pulse train. The hidden state is 2-dimensional. Adjust $\mathbf{A}$'s eigenvalue and the step $\Delta$ to see the state response change: stable decay vs. oscillation vs. blow-up. Small $\Delta$ = slow integration; large $\Delta$ = fast response.</p>
+
+    <div class="viz-3d">
+      <div class="v3-controls">
+        <span class="v3-label">A (decay rate):</span>
+        <input id="ssmA" type="range" min="-3" max="0" value="-1" step="0.05" style="flex:1;max-width:220px;">
+        <span id="ssmALabel" style="min-width:44px;color:#63b3ff;font-family:ui-monospace,monospace;">-1.00</span>
+        <span class="v3-label">Δ:</span>
+        <input id="ssmDelta" type="range" min="0.05" max="1.5" value="0.5" step="0.05" style="flex:1;max-width:220px;">
+        <span id="ssmDLabel" style="min-width:44px;color:#63b3ff;font-family:ui-monospace,monospace;">0.50</span>
+      </div>
+      <svg id="ssmSvg" viewBox="0 0 720 340" style="width:100%;height:auto;background:#0a0d12;border-radius:6px;"></svg>
+      <p class="v3-caption" id="ssmCaption">Drag the sliders to see how A and Δ shape the state response to an input pulse train.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="code">7. Source code</h2>
+
+    <p>A minimal selective SSM, scaled down. Not Mamba — just the core recurrence with per-step B, C, Δ.</p>
+
+    <div class="code-tabs" id="ct-ssm">
+      <div class="ct-header">
+        <button class="ct-tab active" data-tab="np">NumPy (recurrent)</button>
+        <button class="ct-tab" data-tab="conv">NumPy (convolutional)</button>
+        <button class="ct-tab" data-tab="pt">PyTorch (selective)</button>
+        <span class="ct-label">state space model · two views</span>
+      </div>
+      <div class="ct-panel active" data-tab="np"><pre><code><span class="kw">import</span> numpy <span class="kw">as</span> np
+
+<span class="kw">def</span> <span class="fn">ssm_recurrent</span>(u, A, B, C, delta):
+    <span class="cmt"># Discrete SSM: h_t = A_bar h_{t-1} + B_bar u_t</span>
+    <span class="cmt"># u: (T,) input sequence; A, B: state dyn; C: readout</span>
+    A_bar = np.exp(delta * A)                        <span class="cmt"># (N, N) diagonal case: elementwise</span>
+    B_bar = ((A_bar - <span class="num">1</span>) / A) * B                   <span class="cmt"># (N,) for 1-D input</span>
+
+    N = A.shape[<span class="num">0</span>]
+    h = np.zeros(N)
+    y = np.zeros_like(u)
+    <span class="kw">for</span> t <span class="kw">in</span> <span class="fn">range</span>(<span class="fn">len</span>(u)):
+        h = A_bar @ h + B_bar * u[t]
+        y[t] = C @ h
+    <span class="kw">return</span> y                                        <span class="cmt"># O(T * N) — inference-friendly</span>
+</code></pre></div>
+
+      <div class="ct-panel" data-tab="conv"><pre><code><span class="kw">import</span> numpy <span class="kw">as</span> np
+
+<span class="kw">def</span> <span class="fn">ssm_convolutional</span>(u, A, B, C, delta, L):
+    <span class="cmt"># Unroll the recurrence into a single global convolution kernel K.</span>
+    <span class="cmt"># K[t] = C · A_bar^t · B_bar, for t = 0..L-1</span>
+    A_bar = np.exp(delta * A)
+    B_bar = ((A_bar - <span class="num">1</span>) / A) * B
+
+    K = np.zeros(L)
+    Ak = np.eye(A.shape[<span class="num">0</span>])
+    <span class="kw">for</span> t <span class="kw">in</span> <span class="fn">range</span>(L):
+        K[t] = C @ (Ak @ B_bar)
+        Ak = A_bar @ Ak
+    <span class="cmt"># y = causal conv(u, K). In practice use FFT for O(L log L).</span>
+    <span class="kw">return</span> np.convolve(u, K)[:L]                    <span class="cmt"># training-friendly, parallel</span>
+</code></pre></div>
+
+      <div class="ct-panel" data-tab="pt"><pre><code><span class="kw">import</span> torch, torch.nn <span class="kw">as</span> nn
+
+<span class="kw">class</span> <span class="fn">SelectiveSSM</span>(nn.Module):
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, d_model, d_state=<span class="num">16</span>):
+        <span class="fn">super</span>().__init__()
+        self.d, self.N = d_model, d_state
+        <span class="cmt"># Structured diagonal A — log-parameterized so eigenvalues stay negative.</span>
+        self.A_log = nn.Parameter(torch.log(torch.arange(<span class="num">1</span>, d_state + <span class="num">1</span>).<span class="fn">float</span>()))
+        <span class="cmt"># Input-dependent B, C, Δ come from linear projections of u:</span>
+        self.to_B    = nn.Linear(d_model, d_state, bias=<span class="kw">False</span>)
+        self.to_C    = nn.Linear(d_model, d_state, bias=<span class="kw">False</span>)
+        self.to_dt   = nn.Linear(d_model, <span class="num">1</span>, bias=<span class="kw">True</span>)
+
+    <span class="kw">def</span> <span class="fn">forward</span>(self, u):                             <span class="cmt"># u: (B, T, d)</span>
+        B, T, d = u.shape
+        A = -torch.exp(self.A_log)                   <span class="cmt"># (N,) negative eigenvalues</span>
+        Bp = self.to_B(u)                            <span class="cmt"># (B, T, N)</span>
+        Cp = self.to_C(u)                            <span class="cmt"># (B, T, N)</span>
+        dt = torch.softplus(self.to_dt(u))           <span class="cmt"># (B, T, 1) — the selective Δ</span>
+
+        <span class="cmt"># Discretize per timestep (diagonal A makes this elementwise)</span>
+        A_bar = torch.exp(dt * A)                    <span class="cmt"># (B, T, N)</span>
+        B_bar = dt * Bp                              <span class="cmt"># (B, T, N) — approximate</span>
+
+        <span class="cmt"># Sequential scan. Real Mamba uses a parallel associative scan in CUDA.</span>
+        h = torch.zeros(B, self.N, device=u.device)
+        outs = []
+        <span class="kw">for</span> t <span class="kw">in</span> <span class="fn">range</span>(T):
+            h = A_bar[:, t] * h + B_bar[:, t] * u[:, t].mean(-<span class="num">1</span>, keepdim=<span class="kw">True</span>)
+            outs.append((Cp[:, t] * h).sum(-<span class="num">1</span>))
+        <span class="kw">return</span> torch.stack(outs, dim=<span class="num">1</span>)                <span class="cmt"># (B, T)</span>
+</code></pre></div>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="summary">8. Summary</h2>
+
+    <ul>
+      <li>State Space Models represent sequences through a continuous-time linear ODE discretized into a linear recurrence. Old control theory, new wrapping paper.</li>
+      <li>The <strong>dual view</strong> — recurrence for inference, convolution for training — is the defining advantage: $O(L)$ generation without a growing KV cache.</li>
+      <li><strong>S4</strong> (2021) made SSMs practical with the HIPPO initialization and a structured $\mathbf{A}$ that captures long-range dependencies.</li>
+      <li><strong>Mamba</strong> (2023) added <em>selectivity</em>: $\mathbf{B}$, $\mathbf{C}$, and the step $\Delta$ become input-dependent, letting the model "pay attention" without attention.</li>
+      <li>Mamba-2, Jamba, Samba, and similar hybrids mix a small number of attention layers with many SSM layers to combine recall quality with long-context efficiency.</li>
+      <li>The main reason to care: sub-quadratic scaling. If you want million-token context (DNA, video, codebase), SSM-based models are the current practical answer.</li>
+    </ul>
+
+    <div class="bib">
+      <h4>Further reading</h4>
+      <ul>
+        <li>Gu, Goel &amp; Ré (2021) — <em>Efficiently Modeling Long Sequences with Structured State Spaces</em> (S4).</li>
+        <li>Gu, Johnson et al. (2020) — <em>HiPPO: Recurrent Memory with Optimal Polynomial Projections</em>.</li>
+        <li>Gu &amp; Dao (2023) — <em>Mamba: Linear-Time Sequence Modeling with Selective State Spaces</em>.</li>
+        <li>Dao &amp; Gu (2024) — <em>Transformers are SSMs: Generalized Models and Efficient Algorithms Through Structured State Space Duality</em> (Mamba-2).</li>
+        <li>Lieber et al. (2024) — <em>Jamba: A Hybrid Transformer-Mamba Language Model</em>.</li>
+      </ul>
+    </div>
+
+    <div class="next-card">
+      <div class="label">NEXT UP</div>
+      <a href="foundation-models.html">→ Foundation Models</a>
+      <p>SSMs are an architecture. Foundation models are the paradigm that turns any architecture into an ecosystem. Read on for scaling laws and the economics of pretraining.</p>
+    </div>
+
+  </article>
+</div>
+
+<script>
+// =========================================================
+// Code tabs
+document.querySelectorAll('.code-tabs').forEach(root => {
+  const tabs = root.querySelectorAll('.ct-tab');
+  const panels = root.querySelectorAll('.ct-panel');
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const target = tab.getAttribute('data-tab');
+      tabs.forEach(t => t.classList.toggle('active', t === tab));
+      panels.forEach(p => p.classList.toggle('active', p.getAttribute('data-tab') === target));
+    });
+  });
+});
+
+// =========================================================
+// SSM demo: 1-D SSM with input pulse train
+(function() {
+  const svg = document.getElementById('ssmSvg');
+  if (!svg) return;
+  const NS = 'http://www.w3.org/2000/svg';
+  const aSlider = document.getElementById('ssmA');
+  const dSlider = document.getElementById('ssmDelta');
+  const aLabel = document.getElementById('ssmALabel');
+  const dLabel = document.getElementById('ssmDLabel');
+  const caption = document.getElementById('ssmCaption');
+
+  function draw() {
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+    const a = parseFloat(aSlider.value);
+    const dt = parseFloat(dSlider.value);
+    aLabel.textContent = a.toFixed(2);
+    dLabel.textContent = dt.toFixed(2);
+
+    const T = 120;
+    const u = new Float64Array(T);
+    // Input: pulses at t = 10, 35, 60, 85
+    [10, 35, 60, 85].forEach(k => { u[k] = 1.0; });
+
+    const Abar = Math.exp(dt * a);
+    const Bbar = a !== 0 ? (Abar - 1) / a : dt;
+    const C = 1.0;
+    const h = new Float64Array(T);
+    const y = new Float64Array(T);
+    let state = 0;
+    for (let t = 0; t < T; t++) {
+      state = Abar * state + Bbar * u[t];
+      h[t] = state;
+      y[t] = C * state;
+    }
+
+    const W = 720, H = 340;
+    const ml = 50, mr = 20, mt = 20, mb = 40;
+    const plotW = W - ml - mr;
+    const plotH = (H - mt - mb) / 2 - 8;
+
+    function drawSignal(data, yTop, label, color) {
+      // frame
+      const fr = document.createElementNS(NS, 'rect');
+      fr.setAttribute('x', ml); fr.setAttribute('y', yTop);
+      fr.setAttribute('width', plotW); fr.setAttribute('height', plotH);
+      fr.setAttribute('fill', '#0f131a');
+      fr.setAttribute('stroke', '#2a3446');
+      fr.setAttribute('stroke-width', 1);
+      svg.appendChild(fr);
+      // zero line
+      const z = document.createElementNS(NS, 'line');
+      z.setAttribute('x1', ml); z.setAttribute('y1', yTop + plotH / 2);
+      z.setAttribute('x2', ml + plotW); z.setAttribute('y2', yTop + plotH / 2);
+      z.setAttribute('stroke', '#2a3446');
+      z.setAttribute('stroke-width', 1);
+      z.setAttribute('stroke-dasharray', '3,3');
+      svg.appendChild(z);
+      // curve — normalize to [-1.5, 1.5]
+      const maxAbs = Math.max(1, ...data.map(v => Math.abs(v)));
+      const scale = Math.min(1, 1 / maxAbs);
+      let d = '';
+      for (let t = 0; t < T; t++) {
+        const x = ml + (t / (T - 1)) * plotW;
+        const y = yTop + plotH / 2 - data[t] * scale * (plotH * 0.42);
+        d += (t === 0 ? 'M' : 'L') + x.toFixed(1) + ',' + y.toFixed(1);
+      }
+      const path = document.createElementNS(NS, 'path');
+      path.setAttribute('d', d);
+      path.setAttribute('fill', 'none');
+      path.setAttribute('stroke', color);
+      path.setAttribute('stroke-width', 1.8);
+      svg.appendChild(path);
+      // label
+      const tl = document.createElementNS(NS, 'text');
+      tl.setAttribute('x', ml + 8); tl.setAttribute('y', yTop + 16);
+      tl.setAttribute('fill', color);
+      tl.setAttribute('font-size', 12);
+      tl.setAttribute('font-family', 'ui-monospace, monospace');
+      tl.textContent = label;
+      svg.appendChild(tl);
+    }
+
+    drawSignal(Array.from(u), mt, 'input u(t)  —  pulses', '#63b3ff');
+    drawSignal(Array.from(y), mt + plotH + 16, `output y(t)  —  A_bar=${Abar.toFixed(3)}`, '#ff8a5b');
+
+    // x axis label
+    const xl = document.createElementNS(NS, 'text');
+    xl.setAttribute('x', ml + plotW / 2); xl.setAttribute('y', H - 10);
+    xl.setAttribute('text-anchor', 'middle');
+    xl.setAttribute('fill', '#b4c4d4');
+    xl.setAttribute('font-size', 12);
+    xl.setAttribute('font-family', 'ui-monospace, monospace');
+    xl.textContent = 'time step t';
+    svg.appendChild(xl);
+
+    let msg;
+    if (a < -1.5 && dt < 0.3) msg = 'Fast decay and small step: state forgets each pulse almost immediately.';
+    else if (a > -0.3) msg = 'Weak decay: state accumulates across pulses — long memory.';
+    else if (Abar > 1) msg = 'Unstable! A_bar > 1 — state is blowing up.';
+    else msg = 'Stable decay: each pulse excites the state, which then relaxes back to zero.';
+    caption.textContent = msg;
+  }
+
+  aSlider.addEventListener('input', draw);
+  dSlider.addEventListener('input', draw);
+  draw();
+})();
+</script>
+<script defer src="../search-index.js"></script>
+<script defer src="../search.js"></script>
+</body>
+</html>

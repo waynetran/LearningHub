@@ -1,0 +1,1198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Discrete Mathematics — Deep Dive</title>
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError: false});"></script>
+</head>
+<body>
+<div id="tooltip"></div>
+
+<nav class="topic-nav">
+  <a class="back" href="../index.html">← Learning Hub</a>
+  <div class="crumb">Mathematics / <span class="topic-name">Discrete Mathematics</span></div>
+</nav>
+
+<div class="topic-layout">
+  <aside class="topic-toc">
+    <h4>ON THIS PAGE</h4>
+    <ul>
+      <li><a href="#why">1. Why discrete math</a></li>
+      <li><a href="#vocab">2. Vocabulary cheat-sheet</a></li>
+      <li><a href="#sets">3. Sets</a></li>
+      <li><a href="#logic">4. Propositional logic</a></li>
+      <li><a href="#predicate">5. Predicate logic</a></li>
+      <li><a href="#proofs">6. Proof techniques</a></li>
+      <li><a href="#relations">7. Relations and functions</a></li>
+      <li><a href="#counting">8. Counting &amp; combinatorics</a></li>
+      <li><a href="#demo">9. Interactive combinatorics lab</a></li>
+      <li><a href="#graphs">10. Graph theory</a></li>
+      <li><a href="#graph-facts">11. Important graph facts</a></li>
+      <li><a href="#recurrence">12. Recurrences</a></li>
+      <li><a href="#numtheory">13. Number theory</a></li>
+      <li><a href="#boolean">14. Boolean algebra</a></li>
+      <li><a href="#code">15. Code</a></li>
+      <li><a href="#connections">16. Connections</a></li>
+      <li><a href="#bib">17. Further reading</a></li>
+    </ul>
+  </aside>
+
+  <article class="topic-content">
+    <h1>Discrete Mathematics</h1>
+    <p class="subtitle">Sets, logic, graphs, counting, and proofs — the grammar that every CS algorithm, database query, network protocol, and correctness proof is written in. If calculus is the math of continuous change, discrete math is the math of things you can point at one by one.</p>
+    <div class="meta-tags">
+      <span>Prereq: high-school algebra</span>
+      <span>Read time: ~35 min</span>
+      <span>Interactive figures: 1</span>
+      <span>Code: Python</span>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="why">1. Why discrete math</h2>
+
+    <p>Computers can't really deal with continuous things. A float that looks like $0.1$ is actually one of a finite set of representable patterns. A pixel sits on an integer grid. A database row either exists or it doesn't. Every object a computer touches is <em>discrete</em> — finite, countable, separable from its neighbors by a nonzero gap.</p>
+
+    <p>Discrete math is the body of math designed for that world. It's where you learn to:</p>
+
+    <ul>
+      <li>Count things precisely — "how many ways can a load balancer assign 100 requests to 5 servers?"</li>
+      <li>Reason with truth and falsity — "if the user is logged in <em>and</em> is an admin, then show the button."</li>
+      <li>Describe structures made of connections — "who follows whom, what depends on what, which page links to which."</li>
+      <li>Prove a program is correct, not just test it on three inputs and hope.</li>
+    </ul>
+
+    <p>If you've ever felt that programming is unreasonable because everything runs on vibes and test cases, discrete math is the subject that teaches you the alternative. Nothing on this page requires calculus. Nothing requires you to remember trigonometry. You need to know what a variable is and what it means to add and multiply. That's it.</p>
+
+    <p>The five movements you'll work through:</p>
+
+    <ul>
+      <li><strong>Sets.</strong> Collections of things.</li>
+      <li><strong>Logic.</strong> Rules for combining true/false statements.</li>
+      <li><strong>Relations and functions.</strong> Ways of pairing things up.</li>
+      <li><strong>Counting.</strong> How many ways can something happen.</li>
+      <li><strong>Graphs.</strong> Things connected by lines.</li>
+    </ul>
+
+    <p>Everything else — recurrences, number theory, Boolean algebra — is built on top of those five.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="vocab">2. Vocabulary cheat-sheet</h2>
+
+    <p>Scan this once. Come back to it whenever you see a symbol you don't recognise.</p>
+
+    <div class="callout">
+      <ul>
+        <li>$\in$ — "is an element of." $3 \in \{1,2,3\}$.</li>
+        <li>$\subseteq$ — "is a subset of." $\{1,2\} \subseteq \{1,2,3\}$.</li>
+        <li>$\cup$ — union. $A \cup B$ is everything in either $A$ or $B$.</li>
+        <li>$\cap$ — intersection. $A \cap B$ is everything in both.</li>
+        <li>$\emptyset$ — the empty set, the set with no elements.</li>
+        <li>$\wedge, \vee, \neg$ — logical AND, OR, NOT.</li>
+        <li>$\Rightarrow, \Leftrightarrow$ — "implies," "if and only if."</li>
+        <li>$\forall, \exists$ — "for all," "there exists."</li>
+        <li>$\binom{n}{k}$ — "n choose k," the number of $k$-element subsets of an $n$-element set.</li>
+        <li>$n!$ — factorial, $n \cdot (n-1) \cdot (n-2) \cdots 1$.</li>
+        <li>$\bmod$ — remainder after division. $7 \bmod 3 = 1$.</li>
+        <li>$|A|$ — size (cardinality) of a set. $|\{a,b,c\}| = 3$.</li>
+      </ul>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="sets">3. Sets</h2>
+
+    <p>A <strong>set</strong> is an unordered collection of distinct things. Those things are called its <strong>elements</strong>. There are two ways to specify a set. By listing:</p>
+
+    <div class="math-display">$$A = \{1, 2, 3, 4\}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">A set by listing</p>
+      <dl>
+        <dt>$A$</dt><dd>The name we're giving this set. Sets are usually named with capital letters.</dd>
+        <dt>$\{\ldots\}$</dt><dd>Curly braces enclose the list of elements. Order doesn't matter — $\{1,2,3,4\} = \{4,3,2,1\}$ — and duplicates don't count — $\{1,2,2,3\} = \{1,2,3\}$.</dd>
+        <dt>$1, 2, 3, 4$</dt><dd>The four elements of $A$. Each is a separate "thing" in the set.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Analogy.</strong> Think of a set like a bag of marbles: you care about which marbles are in it, not the order they were dropped in, and having the same marble twice is meaningless — it's still the same marble.</p>
+    </div>
+
+    <p>Or by description (set-builder notation), which you read as "the set of all $x$ such that ...":</p>
+
+    <div class="math-display">$$B = \{\, x \in \mathbb{Z} \ \mid\ x > 0 \text{ and } x < 10 \,\}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Set-builder notation</p>
+      <dl>
+        <dt>$B$</dt><dd>The set we're defining. It ends up being $\{1,2,3,4,5,6,7,8,9\}$.</dd>
+        <dt>$x$</dt><dd>A placeholder for "a typical element." We're saying: "$x$ is in $B$ exactly when the condition on the right holds."</dd>
+        <dt>$\mathbb{Z}$</dt><dd>The set of all integers: $\ldots, -2, -1, 0, 1, 2, \ldots$ The blackboard-bold Z stands for German <em>Zahlen</em>, "numbers."</dd>
+        <dt>$\mid$</dt><dd>Read as "such that." Separates the variable being defined (left) from the conditions it must meet (right).</dd>
+        <dt>$x &gt; 0 \text{ and } x &lt; 10$</dt><dd>The conditions $x$ must satisfy to belong to $B$. Any integer strictly between 0 and 10.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why you care.</strong> Set-builder notation is the math cousin of a database <code>WHERE</code> clause. "<em>All users such that their signup date is after 2024 and their plan is pro.</em>" Same idea.</p>
+    </div>
+
+    <h3>Standard number sets</h3>
+
+    <p>These names recur everywhere. Memorise them once:</p>
+
+    <ul>
+      <li>$\mathbb{N}$ — natural numbers. Depending on the author, either $\{0, 1, 2, \ldots\}$ or $\{1, 2, 3, \ldots\}$. In CS we usually include 0.</li>
+      <li>$\mathbb{Z}$ — integers. All of $\mathbb{N}$ plus the negatives.</li>
+      <li>$\mathbb{Q}$ — rationals. Fractions $p/q$ with $p, q \in \mathbb{Z}$ and $q \neq 0$.</li>
+      <li>$\mathbb{R}$ — real numbers. The full number line.</li>
+      <li>$\mathbb{C}$ — complex numbers. Of the form $a + bi$ where $i^2 = -1$.</li>
+    </ul>
+
+    <h3>Operations on sets</h3>
+
+    <div class="math-display">$$A \cup B = \{\, x \mid x \in A \text{ or } x \in B \,\}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Union</p>
+      <dl>
+        <dt>$\cup$</dt><dd>Union. The set of elements in either $A$, or $B$, or both.</dd>
+        <dt>$x \in A$</dt><dd>"$x$ is an element of $A$."</dd>
+        <dt>or</dt><dd>Inclusive "or" — not exclusive. If $x$ is in both, it's still in the union (exactly once, because sets don't have duplicates).</dd>
+      </dl>
+      <p class="mg-why"><strong>Example.</strong> If $A = \{1,2,3\}$ and $B = \{3,4,5\}$, then $A \cup B = \{1,2,3,4,5\}$.</p>
+    </div>
+
+    <div class="math-display">$$A \cap B = \{\, x \mid x \in A \text{ and } x \in B \,\}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Intersection</p>
+      <dl>
+        <dt>$\cap$</dt><dd>Intersection. The elements in both $A$ and $B$ at once.</dd>
+        <dt>and</dt><dd>Logical AND — both conditions must hold.</dd>
+      </dl>
+      <p class="mg-why"><strong>Example.</strong> With $A$ and $B$ as above, $A \cap B = \{3\}$. If two sets share no elements, $A \cap B = \emptyset$, and we call them <em>disjoint</em>.</p>
+    </div>
+
+    <div class="math-display">$$A \setminus B = \{\, x \mid x \in A \text{ and } x \notin B \,\}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Set difference</p>
+      <dl>
+        <dt>$\setminus$</dt><dd>Set difference. Elements in $A$ but not in $B$. Some authors write $A - B$.</dd>
+        <dt>$x \notin B$</dt><dd>"$x$ is not an element of $B$."</dd>
+      </dl>
+      <p class="mg-why"><strong>Example.</strong> $\{1,2,3\} \setminus \{3,4,5\} = \{1,2\}$. Used constantly when writing "new users this month" or "unprocessed items."</p>
+    </div>
+
+    <p>If there's a fixed <em>universe</em> $U$ that we're working inside of, the <strong>complement</strong> of $A$ is everything in the universe but not in $A$: $A^c = U \setminus A$.</p>
+
+    <h3>Subsets and power sets</h3>
+
+    <p>$A$ is a <strong>subset</strong> of $B$, written $A \subseteq B$, if every element of $A$ is also in $B$. The empty set $\emptyset$ is a subset of every set, including itself, and every set is a subset of itself. If $A \subseteq B$ but $A \neq B$, we write $A \subsetneq B$ and call $A$ a proper subset.</p>
+
+    <p>The <strong>power set</strong> $\mathcal{P}(A)$ is the set of all subsets of $A$:</p>
+
+    <div class="math-display">$$\mathcal{P}(A) = \{\, S \mid S \subseteq A \,\}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Power set</p>
+      <dl>
+        <dt>$\mathcal{P}(A)$</dt><dd>The power set of $A$. A set whose <em>elements are themselves sets</em>.</dd>
+        <dt>$S$</dt><dd>A typical element of $\mathcal{P}(A)$ — that is, any subset of $A$.</dd>
+        <dt>$S \subseteq A$</dt><dd>The condition: $S$ is a subset of $A$.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Size fact.</strong> If $A$ has $n$ elements, $\mathcal{P}(A)$ has $2^n$ elements — one subset per "yes/no" choice per element. If $A = \{a,b,c\}$ then $\mathcal{P}(A) = \{\emptyset, \{a\}, \{b\}, \{c\}, \{a,b\}, \{a,c\}, \{b,c\}, \{a,b,c\}\}$ — that's $2^3 = 8$.</p>
+    </div>
+
+    <h3>Cartesian product</h3>
+
+    <div class="math-display">$$A \times B = \{\, (a, b) \mid a \in A \text{ and } b \in B \,\}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Cartesian product</p>
+      <dl>
+        <dt>$A \times B$</dt><dd>The Cartesian product. A set of ordered <em>pairs</em>.</dd>
+        <dt>$(a, b)$</dt><dd>An ordered pair. Unlike sets, order matters: $(a,b) \neq (b,a)$ in general.</dd>
+        <dt>$a \in A, b \in B$</dt><dd>The first coordinate comes from $A$, the second from $B$.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Where you've seen this.</strong> $\mathbb{R} \times \mathbb{R} = \mathbb{R}^2$ is the 2D plane. A database <code>JOIN</code> is literally a filtered Cartesian product. If $|A| = m$ and $|B| = n$, then $|A \times B| = mn$.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="logic">4. Propositional logic</h2>
+
+    <p>A <strong>proposition</strong> is a statement that's either true or false — no in-between. "It's raining." "$2 + 2 = 5$." "The user is logged in." Not propositions: questions, commands, opinions, or anything whose truth isn't well-defined.</p>
+
+    <p>We write propositions with lowercase letters: $p$, $q$, $r$. And we combine them with <strong>connectives</strong>.</p>
+
+    <h3>The connectives</h3>
+
+    <ul>
+      <li><strong>Negation:</strong> $\neg p$ ("not $p$"). True when $p$ is false.</li>
+      <li><strong>Conjunction:</strong> $p \wedge q$ ("$p$ and $q$"). True only when both are true.</li>
+      <li><strong>Disjunction:</strong> $p \vee q$ ("$p$ or $q$"). True when at least one is true. This is <em>inclusive</em> or — if both are true, the result is still true.</li>
+      <li><strong>Implication:</strong> $p \Rightarrow q$ ("if $p$ then $q$"). False only when $p$ is true and $q$ is false. We'll explain the weird case below.</li>
+      <li><strong>Biconditional:</strong> $p \Leftrightarrow q$ ("$p$ if and only if $q$," often "$p$ iff $q$"). True when $p$ and $q$ have the same truth value.</li>
+    </ul>
+
+    <h3>Truth tables</h3>
+
+    <p>The only tool you need to evaluate any logical expression. A truth table lists every combination of truth values for the input propositions, then fills in the output column by column. Here's the full table for the binary connectives:</p>
+
+    <table class="rank-table">
+      <thead>
+        <tr><th>$p$</th><th>$q$</th><th>$p \wedge q$</th><th>$p \vee q$</th><th>$p \Rightarrow q$</th><th>$p \Leftrightarrow q$</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>T</td><td>T</td><td>T</td><td>T</td><td>T</td><td>T</td></tr>
+        <tr><td>T</td><td>F</td><td>F</td><td>T</td><td>F</td><td>F</td></tr>
+        <tr><td>F</td><td>T</td><td>F</td><td>T</td><td>T</td><td>F</td></tr>
+        <tr><td>F</td><td>F</td><td>F</td><td>F</td><td>T</td><td>T</td></tr>
+      </tbody>
+    </table>
+
+    <p>Most people get tripped up by two rows:</p>
+
+    <div class="callout">
+      <p><strong>Row 4: $F \vee F = F$.</strong> Obvious, but remember: <em>inclusive</em> or still needs at least one input to be true.</p>
+      <p><strong>Rows 3 and 4: $F \Rightarrow q$ is always T.</strong> This one always trips up beginners. The implication $p \Rightarrow q$ is only false when you <em>promised</em> $q$ would follow from $p$ and then $p$ happened but $q$ didn't. If $p$ never happened in the first place, you never broke a promise. "If it rains, I'll bring an umbrella" is not falsified by a sunny day.</p>
+    </div>
+
+    <h3>Logical equivalence</h3>
+
+    <p>Two formulas are <strong>logically equivalent</strong>, written $\equiv$, if they have the same truth value for every assignment of their variables. You check this by building a truth table for each and comparing columns.</p>
+
+    <p>The most useful equivalences — worth memorising — are <strong>De Morgan's laws</strong>:</p>
+
+    <div class="math-display">$$\neg(p \wedge q) \equiv \neg p \vee \neg q, \qquad \neg(p \vee q) \equiv \neg p \wedge \neg q$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">De Morgan's laws</p>
+      <dl>
+        <dt>$\neg$</dt><dd>Logical NOT.</dd>
+        <dt>$\wedge$</dt><dd>Logical AND.</dd>
+        <dt>$\vee$</dt><dd>Logical OR.</dd>
+        <dt>$\equiv$</dt><dd>Logical equivalence — both sides are true under exactly the same assignments.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>In plain English.</strong> "It's not the case that it's both raining and cold" means "it's not raining or it's not cold." And "it's not the case that it's either raining or cold" means "it's not raining and not cold." The NOT <em>distributes</em> over the connective, and the connective flips along the way.</p>
+      <p class="mg-why"><strong>Why you care.</strong> Every time you refactor an <code>if</code> condition by pushing a <code>!</code> inside, you're applying De Morgan. These laws are also the foundation of simplifying circuits in hardware design — a chip designer who flipped the equivalence can save a transistor.</p>
+    </div>
+
+    <p>Other important equivalences:</p>
+
+    <ul>
+      <li><strong>Distributivity:</strong> $p \wedge (q \vee r) \equiv (p \wedge q) \vee (p \wedge r)$, and symmetrically for $\vee$ over $\wedge$.</li>
+      <li><strong>Implication as disjunction:</strong> $p \Rightarrow q \equiv \neg p \vee q$. Check it against the truth table — it matches.</li>
+      <li><strong>Contrapositive:</strong> $p \Rightarrow q \equiv \neg q \Rightarrow \neg p$. This is the single most useful rewriting in proofs.</li>
+      <li><strong>Double negation:</strong> $\neg \neg p \equiv p$.</li>
+    </ul>
+
+    <h3>Tautologies and contradictions</h3>
+
+    <p>A formula that's true for every assignment of its variables is a <strong>tautology</strong>. For example, $p \vee \neg p$ — "either it's raining or it isn't." A formula that's false for every assignment is a <strong>contradiction</strong>. For example, $p \wedge \neg p$.</p>
+
+    <p>A formula that's true under at least one assignment is <strong>satisfiable</strong>. The problem of "given this formula, is it satisfiable?" is SAT — the original <a href="../cs/complexity.html">NP-complete problem</a>, and the thing every modern hardware verifier ends up solving internally.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="predicate">5. Predicate logic</h2>
+
+    <p>Propositional logic can only talk about whole statements. It can't say "everyone in this room has a laptop" without inventing one proposition per person. That's where <strong>predicates</strong> and <strong>quantifiers</strong> come in.</p>
+
+    <p>A <strong>predicate</strong> is a statement with one or more blanks. "$x$ is even" is a predicate, written $E(x)$. Plug in a value and you get a proposition. $E(4)$ is true, $E(5)$ is false.</p>
+
+    <h3>Quantifiers</h3>
+
+    <p>A quantifier says how a predicate should be evaluated over a whole set. There are two:</p>
+
+    <div class="math-display">$$\forall x \in S,\ P(x) \qquad \exists x \in S,\ P(x)$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Quantifiers</p>
+      <dl>
+        <dt>$\forall$</dt><dd>The universal quantifier, "for all." The statement $\forall x \in S,\ P(x)$ says <em>every</em> element of $S$ satisfies $P$.</dd>
+        <dt>$\exists$</dt><dd>The existential quantifier, "there exists." The statement $\exists x \in S,\ P(x)$ says <em>at least one</em> element of $S$ satisfies $P$.</dd>
+        <dt>$x$</dt><dd>The variable being quantified — a placeholder ranging over $S$.</dd>
+        <dt>$S$</dt><dd>The <em>domain of discourse</em>. The set we're ranging over. Without this, the statement is meaningless: "for all $x$" over what?</dd>
+        <dt>$P(x)$</dt><dd>The predicate — the condition that may or may not hold for each $x$.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Read them aloud.</strong> $\forall$ is "for every." $\exists$ is "there is some." If you can rephrase a specification in English with "for every" and "there is some," you can translate it directly into predicate logic. Database ORMs, type systems, and formal verification all live on this vocabulary.</p>
+    </div>
+
+    <h3>Negation rules</h3>
+
+    <p>Negating a quantified statement flips the quantifier and negates the predicate:</p>
+
+    <div class="math-display">$$\neg(\forall x,\ P(x)) \equiv \exists x,\ \neg P(x) \qquad \neg(\exists x,\ P(x)) \equiv \forall x,\ \neg P(x)$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Negation of quantifiers</p>
+      <dl>
+        <dt>$\forall$ flips to $\exists$</dt><dd>The negation of "all swans are white" is "there's at least one non-white swan" — not "no swans are white."</dd>
+        <dt>$\exists$ flips to $\forall$</dt><dd>The negation of "there's some bug" is "every piece of code is bug-free."</dd>
+        <dt>$\neg P(x)$</dt><dd>The condition itself also gets negated, because once you've flipped the outer quantifier, you need the inner statement to be the opposite.</dd>
+      </dl>
+      <p class="mg-why"><strong>Why you care.</strong> Every "not all" and "not exists" sentence your coworker writes in a spec is a quantifier negation. If you can't do these flips automatically, you'll argue about bugs that don't exist.</p>
+    </div>
+
+    <h3>Worked example</h3>
+
+    <p>Take the statement "every student passed every exam." With $S$ the set of students and $E$ the set of exams, we'd write:</p>
+
+    <div class="math-display">$$\forall s \in S,\ \forall e \in E,\ \text{Passed}(s, e)$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Double universal</p>
+      <dl>
+        <dt>$\forall s \in S$</dt><dd>For every student $s$ in the set of students.</dd>
+        <dt>$\forall e \in E$</dt><dd>...and for every exam $e$ in the set of exams...</dd>
+        <dt>$\text{Passed}(s, e)$</dt><dd>...the predicate "student $s$ passed exam $e$" holds.</dd>
+      </dl>
+      <p class="mg-why"><strong>Negation.</strong> "Not everyone passed everything" becomes $\exists s \in S,\ \exists e \in E,\ \neg\text{Passed}(s,e)$ — "there's some student $s$ and some exam $e$ such that $s$ did not pass $e$." Notice how each $\forall$ flipped to $\exists$ and the predicate picked up a $\neg$.</p>
+    </div>
+
+    <p>Order matters with nested quantifiers of different types. "$\forall x,\ \exists y,\ y &gt; x$" says every number has something bigger than it — true in $\mathbb{N}$. "$\exists y,\ \forall x,\ y &gt; x$" says there's a single number bigger than everything — false in $\mathbb{N}$. The words look similar; the meanings are not.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="proofs">6. Proof techniques</h2>
+
+    <p>A <strong>proof</strong> is a chain of logical steps leading from stuff you're given (or stuff you've already proved) to the thing you want. Four patterns do 95% of the work.</p>
+
+    <h3>Direct proof</h3>
+
+    <p>Assume the hypothesis, march forward, arrive at the conclusion. "If $n$ is even, then $n^2$ is even." Assume $n$ is even, so $n = 2k$ for some integer $k$. Then $n^2 = (2k)^2 = 4k^2 = 2(2k^2)$, which is twice an integer, hence even. Done.</p>
+
+    <h3>Contrapositive</h3>
+
+    <p>To prove $p \Rightarrow q$, prove $\neg q \Rightarrow \neg p$ instead. These are logically equivalent (we saw this earlier), but sometimes the contrapositive is much easier to attack.</p>
+
+    <p>"If $n^2$ is even, then $n$ is even." Going direct is awkward. The contrapositive — "if $n$ is odd, then $n^2$ is odd" — is immediate: $n = 2k+1$, so $n^2 = 4k^2 + 4k + 1 = 2(2k^2 + 2k) + 1$, odd. Done.</p>
+
+    <h3>Proof by contradiction</h3>
+
+    <p>Assume the opposite of what you want to prove. Derive a contradiction (something both true and false, or something that contradicts a known fact). Conclude that your assumption must have been wrong.</p>
+
+    <p><strong>Classic example.</strong> $\sqrt{2}$ is irrational. Assume for contradiction that $\sqrt{2} = p/q$ for integers $p$ and $q$ with no common factor. Squaring: $2 = p^2/q^2$, so $p^2 = 2q^2$. That means $p^2$ is even, so $p$ is even (by the previous proof), so $p = 2m$, so $p^2 = 4m^2 = 2q^2$, so $q^2 = 2m^2$, so $q$ is even too. But we said $p$ and $q$ had no common factor, and now they both have 2 as a factor. Contradiction. So $\sqrt{2}$ is not rational.</p>
+
+    <h3>Proof by induction</h3>
+
+    <p>The workhorse for any statement about "all natural numbers $n$." Three parts:</p>
+
+    <ol>
+      <li><strong>Base case.</strong> Show the statement holds for $n = 0$ (or $n = 1$, whichever is your starting value).</li>
+      <li><strong>Inductive step.</strong> Assume it holds for some arbitrary $n = k$. Show it then holds for $n = k+1$.</li>
+      <li><strong>Conclude.</strong> Since it holds for the base case, it holds for the next one, and the next one, and so on — it holds for every $n$.</li>
+    </ol>
+
+    <p><strong>The classic.</strong> Prove that $1 + 2 + 3 + \cdots + n = \dfrac{n(n+1)}{2}$ for every positive integer $n$.</p>
+
+    <div class="math-display">$$\sum_{i=1}^{n} i = \frac{n(n+1)}{2}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Gauss's sum</p>
+      <dl>
+        <dt>$\sum_{i=1}^{n} i$</dt><dd>"Sum of $i$ from $i=1$ to $i=n$" — that is, $1 + 2 + 3 + \cdots + n$. The big sigma is just compact notation for "add these things up."</dd>
+        <dt>$n$</dt><dd>The upper bound. A natural number we'll induct on.</dd>
+        <dt>$\dfrac{n(n+1)}{2}$</dt><dd>The closed-form value. No sum, no loop — just multiply and divide.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Legend.</strong> Gauss supposedly found this aged 8 when a teacher asked the class to add $1$ through $100$ as busywork. Gauss noticed that pairing $1 + 100$, $2 + 99$, $3 + 98$, all give 101, and there are 50 pairs — so the answer is $50 \cdot 101 = 5050$. The formula generalises that trick.</p>
+    </div>
+
+    <p><strong>Base case ($n=1$).</strong> Left side: $1$. Right side: $\dfrac{1 \cdot 2}{2} = 1$. Match.</p>
+
+    <p><strong>Inductive step.</strong> Assume the formula holds for $n = k$:</p>
+
+    <div class="math-display">$$1 + 2 + \cdots + k = \frac{k(k+1)}{2}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Inductive hypothesis</p>
+      <dl>
+        <dt>$k$</dt><dd>An arbitrary positive integer for which we're <em>assuming</em> the formula is already true. This assumption is called the <em>inductive hypothesis</em>.</dd>
+      </dl>
+      <p class="mg-why">You don't have to prove this line. You get to assume it — that's the whole point of induction.</p>
+    </div>
+
+    <p>We want to show the formula holds for $n = k+1$, i.e., that $1 + 2 + \cdots + k + (k+1) = \dfrac{(k+1)(k+2)}{2}$. Starting from the left:</p>
+
+    <div class="math-display">$$\underbrace{(1 + 2 + \cdots + k)}_{= k(k+1)/2} + (k+1) = \frac{k(k+1)}{2} + (k+1) = \frac{k(k+1) + 2(k+1)}{2} = \frac{(k+1)(k+2)}{2}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Inductive step</p>
+      <dl>
+        <dt>$\underbrace{(1+\cdots+k)}_{=k(k+1)/2}$</dt><dd>Applying the inductive hypothesis: we replace the sum $1 + \cdots + k$ with the closed form that we're assuming works.</dd>
+        <dt>$(k+1)$</dt><dd>The new term we're adding — the one we need to account for to go from $n=k$ to $n=k+1$.</dd>
+        <dt>$\dfrac{k(k+1) + 2(k+1)}{2}$</dt><dd>Common denominator — we multiplied $(k+1)$ top and bottom by 2 to match.</dd>
+        <dt>$\dfrac{(k+1)(k+2)}{2}$</dt><dd>Factor out $(k+1)$. This is exactly the formula at $n = k+1$. Done.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>The induction metaphor.</strong> Imagine an infinite row of dominoes. The base case is "I've knocked over the first one." The inductive step is "whenever domino $k$ falls, it hits domino $k+1$." Together, every domino falls.</p>
+    </div>
+
+    <p>Combined with the base case, by induction the formula holds for all $n \geq 1$. $\blacksquare$</p>
+
+    <!-- ========================================================== -->
+    <h2 id="relations">7. Relations and functions</h2>
+
+    <p>A <strong>relation</strong> between two sets $A$ and $B$ is just a subset of $A \times B$ — a set of pairs. The pair $(a,b)$ being in the relation means "$a$ is related to $b$." Written $a \sim b$ or $a R b$.</p>
+
+    <p>"$x$ is less than $y$" is a relation on $\mathbb{Z} \times \mathbb{Z}$. "$u$ follows $v$" is a relation on users. "$x$ divides $y$" is a relation on the integers. A database table with two foreign keys is a relation.</p>
+
+    <h3>Properties of relations on a single set</h3>
+
+    <p>When $A = B$, we can ask whether a relation has the following properties:</p>
+
+    <ul>
+      <li><strong>Reflexive:</strong> $a \sim a$ for every $a$. ("Everybody is equal to themselves.")</li>
+      <li><strong>Symmetric:</strong> if $a \sim b$ then $b \sim a$. ("Friendship on a platform without directed follows.")</li>
+      <li><strong>Antisymmetric:</strong> if $a \sim b$ and $b \sim a$ then $a = b$. ("Less-than-or-equal: two things only cross each other if they're equal.")</li>
+      <li><strong>Transitive:</strong> if $a \sim b$ and $b \sim c$ then $a \sim c$. ("Ancestor of" is transitive; "parent of" is not.)</li>
+    </ul>
+
+    <h3>Equivalence relations</h3>
+
+    <p>A relation that's reflexive, symmetric, <em>and</em> transitive is called an <strong>equivalence relation</strong>. These are the ones that partition a set into disjoint blocks — each element belongs to exactly one block of things that are equivalent to it.</p>
+
+    <p>"Has the same remainder when divided by 5" is an equivalence relation on the integers. It partitions $\mathbb{Z}$ into 5 blocks, one for each possible remainder: $\{\ldots, -10, -5, 0, 5, 10, \ldots\}$, $\{\ldots, -9, -4, 1, 6, 11, \ldots\}$, and so on. This is the basis of modular arithmetic, which we'll get to in §13.</p>
+
+    <h3>Partial orders</h3>
+
+    <p>A relation that's reflexive, antisymmetric, and transitive is a <strong>partial order</strong>. "$\leq$" on $\mathbb{Z}$ is one. "$\subseteq$" on sets is another. It's called <em>partial</em> because two elements might not be comparable at all — for example, $\{1,2\}$ and $\{2,3\}$ can't be put in an order under $\subseteq$, neither is a subset of the other. When every pair <em>is</em> comparable, we call it a <strong>total order</strong>.</p>
+
+    <h3>Functions</h3>
+
+    <p>A <strong>function</strong> $f: A \to B$ is a special kind of relation: each element of $A$ is related to <em>exactly one</em> element of $B$. We write $f(a) = b$ to mean "the unique $b$ that $a$ maps to."</p>
+
+    <ul>
+      <li>$A$ is the <strong>domain</strong>. Every element of the domain has to map somewhere.</li>
+      <li>$B$ is the <strong>codomain</strong>. Candidates to be mapped to.</li>
+      <li>The <strong>image</strong> (or range) is $\{f(a) \mid a \in A\}$ — the actual outputs that appear. Not always all of $B$.</li>
+    </ul>
+
+    <p>Three special kinds:</p>
+
+    <ul>
+      <li><strong>Injective</strong> (one-to-one). Different inputs go to different outputs. $f(a_1) = f(a_2) \Rightarrow a_1 = a_2$. Nothing in $B$ gets hit twice.</li>
+      <li><strong>Surjective</strong> (onto). Every element of $B$ is hit by something. The image <em>is</em> $B$.</li>
+      <li><strong>Bijective</strong>. Both injective and surjective. A perfect pairing between $A$ and $B$. This is the rigorous notion of "the two sets have the same size," and it's how we make sense of comparing infinite sets — if there's a bijection from $\mathbb{N}$ to $\mathbb{Q}$ (there is), then $\mathbb{N}$ and $\mathbb{Q}$ have the "same" infinity.</li>
+    </ul>
+
+    <div class="callout good">
+      <p><strong>Programmer's note.</strong> A Python <code>dict</code> is a function from its keys to its values. An injective function is a hash where no two keys map to the same value. A surjective function "covers" its codomain. A bijection is invertible — you can run it backwards to recover the input from the output.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="counting">8. Counting &amp; combinatorics</h2>
+
+    <p><strong>Combinatorics</strong> is the subfield of discrete math that asks "how many ways?" It's the foundation of <a href="./probability.html">probability</a>, where "how many ways" turns into "what fraction of the possible worlds," and of algorithm analysis, where "how many steps" turns into big-$O$.</p>
+
+    <h3>Two fundamental rules</h3>
+
+    <p><strong>Rule of sum.</strong> If there are $m$ ways to do thing A and $n$ ways to do thing B, and you must do exactly one of them, there are $m + n$ ways total (assuming the options don't overlap).</p>
+
+    <p><strong>Rule of product.</strong> If there are $m$ ways to do A and $n$ ways to do B, and you do both independently, there are $m \cdot n$ ways in sequence.</p>
+
+    <p>Example: picking a password with one letter (26 options) followed by one digit (10 options) gives $26 \cdot 10 = 260$ possibilities. Picking <em>either</em> a letter <em>or</em> a digit gives $26 + 10 = 36$.</p>
+
+    <h3>Permutations</h3>
+
+    <p>A <strong>permutation</strong> of a set is an ordering of its elements. The number of ways to arrange all $n$ elements in a line is $n$ factorial:</p>
+
+    <div class="math-display">$$n! = n \cdot (n-1) \cdot (n-2) \cdots 2 \cdot 1$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Factorial</p>
+      <dl>
+        <dt>$n!$</dt><dd>"$n$ factorial" — the product of all positive integers up to $n$. By convention $0! = 1$, an empty product (there's exactly one way to arrange zero things).</dd>
+        <dt>$n$</dt><dd>A non-negative integer, the number of things you're arranging.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why multiply.</strong> There are $n$ choices for the first slot, then $n-1$ for the second (you can't reuse the one you picked), then $n-2$, etc. Rule of product gives $n!$. For 10 items, that's already $10! = 3{,}628{,}800$. Factorials explode fast.</p>
+    </div>
+
+    <p>If you only want to pick and arrange $k$ out of $n$, you get the partial permutation count:</p>
+
+    <div class="math-display">$$P(n, k) = \frac{n!}{(n-k)!} = n \cdot (n-1) \cdots (n-k+1)$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Permutations of $n$ taken $k$ at a time</p>
+      <dl>
+        <dt>$P(n, k)$</dt><dd>The number of ordered arrangements of $k$ distinct items chosen from a pool of $n$. Sometimes written $_{n}P_k$ or $n^{\underline{k}}$ (the "falling factorial").</dd>
+        <dt>$n$</dt><dd>Size of the pool.</dd>
+        <dt>$k$</dt><dd>How many you're picking (and arranging), with $0 \leq k \leq n$.</dd>
+        <dt>$(n-k)!$</dt><dd>The tail we're cutting off — it cancels all the factors from $(n-k)$ down to $1$ that we don't use.</dd>
+      </dl>
+      <p class="mg-why"><strong>Example.</strong> How many ways to award gold, silver, and bronze from 8 runners? $P(8, 3) = 8 \cdot 7 \cdot 6 = 336$.</p>
+    </div>
+
+    <h3>Combinations</h3>
+
+    <p>When order does <em>not</em> matter — you just want to pick $k$ items out of $n$ as an unordered set — you get <strong>combinations</strong>:</p>
+
+    <div class="math-display">$$C(n, k) = \binom{n}{k} = \frac{n!}{k!\,(n-k)!}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">$n$ choose $k$</p>
+      <dl>
+        <dt>$\binom{n}{k}$</dt><dd>"$n$ choose $k$." The number of $k$-element subsets of an $n$-element set. This is the single most common object in combinatorics.</dd>
+        <dt>$n!$</dt><dd>All orderings of the $n$ items.</dd>
+        <dt>$k!$</dt><dd>Internal orderings of the chosen $k$ that we're <em>not</em> distinguishing.</dd>
+        <dt>$(n-k)!$</dt><dd>Internal orderings of the unchosen $n - k$ that we're also not distinguishing.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Where it comes from.</strong> We divide $P(n,k)$ by $k!$ because picking $\{A, B, C\}$ in any of 3! = 6 orders should count as one combination, not six. Concrete: $\binom{5}{2} = 10$ ways to pick 2 out of 5. Check: $\{AB, AC, AD, AE, BC, BD, BE, CD, CE, DE\}$.</p>
+    </div>
+
+    <p>Combinations satisfy a simple symmetry: $\binom{n}{k} = \binom{n}{n-k}$ — picking what to include is the same as picking what to exclude. And they obey Pascal's identity:</p>
+
+    <div class="math-display">$$\binom{n}{k} = \binom{n-1}{k-1} + \binom{n-1}{k}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Pascal's identity</p>
+      <dl>
+        <dt>$\binom{n}{k}$</dt><dd>Number of $k$-subsets of $\{1, 2, \ldots, n\}$.</dd>
+        <dt>$\binom{n-1}{k-1}$</dt><dd>Number of those subsets that <em>include</em> element $n$ — pick $k-1$ more from the remaining $n-1$.</dd>
+        <dt>$\binom{n-1}{k}$</dt><dd>Number of those subsets that <em>exclude</em> element $n$ — pick all $k$ from the remaining $n-1$.</dd>
+      </dl>
+      <p class="mg-why"><strong>Why you care.</strong> This is how Pascal's triangle is built — each entry is the sum of the two above it. It's also the classic example of a recurrence you'd solve with dynamic programming.</p>
+    </div>
+
+    <h3>The binomial theorem</h3>
+
+    <p>Combinations show up as the coefficients when you expand $(x+y)^n$:</p>
+
+    <div class="math-display">$$(x + y)^n = \sum_{k=0}^{n} \binom{n}{k} x^{n-k} y^{k}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Binomial theorem</p>
+      <dl>
+        <dt>$(x+y)^n$</dt><dd>An algebraic expression raised to the $n$-th power.</dd>
+        <dt>$\sum_{k=0}^{n}$</dt><dd>Sum from $k = 0$ to $k = n$ — $n+1$ terms total.</dd>
+        <dt>$\binom{n}{k}$</dt><dd>The <em>binomial coefficient</em> — how many ways to choose $k$ copies of $y$ (and the remaining $n-k$ copies of $x$) when expanding the product $(x+y)(x+y)\cdots(x+y)$ with $n$ factors.</dd>
+        <dt>$x^{n-k} y^{k}$</dt><dd>The term you get when you've chosen $k$ factors to contribute $y$ and the other $n-k$ to contribute $x$.</dd>
+      </dl>
+      <p class="mg-why"><strong>Intuition.</strong> Every term in the expansion is one way of picking $y$ or $x$ from each of the $n$ factors. The number of ways to get exactly $k$ $y$'s is $\binom{n}{k}$. That's where the coefficients come from — it's a counting fact, not algebra magic. Setting $x = y = 1$ gives $2^n = \sum_k \binom{n}{k}$, which is another proof that $|\mathcal{P}(A)| = 2^{|A|}$.</p>
+    </div>
+
+    <h3>Pigeonhole principle</h3>
+
+    <p>The silliest-looking theorem in math, and one of the most useful:</p>
+
+    <div class="defn">
+      <strong>Pigeonhole principle.</strong> If you put $n+1$ pigeons into $n$ holes, some hole contains at least 2 pigeons.
+    </div>
+
+    <p>It sounds like a tautology. It is. But it's shocking how often it's the argument you need. Examples: in any group of 367 people, at least two share a birthday (366 possible birthdays). Any list of $n+1$ distinct integers from $\{1, 2, \ldots, 2n\}$ contains two that sum to $2n+1$. Any sequence of $n^2 + 1$ distinct numbers has a monotonic subsequence of length $n+1$ (harder — Erdős-Szekeres).</p>
+
+    <h3>Inclusion-exclusion</h3>
+
+    <p>To count the size of a union, you add the parts and subtract the double-counted overlaps:</p>
+
+    <div class="math-display">$$|A \cup B| = |A| + |B| - |A \cap B|$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Inclusion-exclusion (two sets)</p>
+      <dl>
+        <dt>$|A \cup B|$</dt><dd>The number of elements in $A$ or $B$ (or both).</dd>
+        <dt>$|A| + |B|$</dt><dd>Naive sum. Double-counts anything in $A \cap B$ once extra.</dd>
+        <dt>$|A \cap B|$</dt><dd>The overlap — the thing we over-counted. Subtract it.</dd>
+      </dl>
+      <p class="mg-why"><strong>Three sets.</strong> It generalises: $|A \cup B \cup C| = |A|+|B|+|C| - |A \cap B| - |A \cap C| - |B \cap C| + |A \cap B \cap C|$. Alternating signs. This is the machine you use when counting "things with at least one of these properties."</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="demo">9. Interactive combinatorics lab</h2>
+
+    <p>Drag the sliders to vary $n$ and $k$. The figure draws a tiny Pascal's triangle with the current entry highlighted, and reports $P(n,k)$, $C(n,k)$, and $n!$. Use it to see how fast these numbers grow.</p>
+
+    <div class="viz-3d">
+      <div class="v3-controls">
+        <span class="v3-label">n:</span>
+        <input id="combN" type="range" min="0" max="12" value="5" step="1" style="flex:1;max-width:260px;">
+        <span id="combNLabel" class="v3-label">5</span>
+        <span class="v3-label">k:</span>
+        <input id="combK" type="range" min="0" max="12" value="2" step="1" style="flex:1;max-width:260px;">
+        <span id="combKLabel" class="v3-label">2</span>
+      </div>
+      <svg id="combSvg" viewBox="0 0 720 360"></svg>
+      <p class="v3-caption" id="combCaption">Choose n and k to see the binomial coefficient highlighted in Pascal's triangle.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="graphs">10. Graph theory</h2>
+
+    <p>A <strong>graph</strong> is a set of things with lines between some of them. Formally:</p>
+
+    <div class="math-display">$$G = (V, E)$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">A graph</p>
+      <dl>
+        <dt>$G$</dt><dd>The graph itself.</dd>
+        <dt>$V$</dt><dd>The set of <em>vertices</em> (or <em>nodes</em>). The "things."</dd>
+        <dt>$E$</dt><dd>The set of <em>edges</em>. Each edge is a pair of vertices. In an <em>undirected</em> graph, edges are unordered pairs $\{u, v\}$. In a <em>directed</em> graph (digraph), they're ordered pairs $(u, v)$ — there's a source and a target.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Examples you already know.</strong> A social network (people + friendships). A road map (intersections + streets). A web (pages + links). A codebase dependency graph (modules + imports). Git history (commits + parent pointers). Every time you've said "which is connected to which," you've been talking about a graph.</p>
+    </div>
+
+    <h3>Variants</h3>
+
+    <ul>
+      <li><strong>Undirected.</strong> Edges are symmetric. Friendship.</li>
+      <li><strong>Directed.</strong> Edges have a direction. Who follows whom. Web links.</li>
+      <li><strong>Weighted.</strong> Each edge has a number attached — a distance, cost, or capacity. Road distance. Network latency.</li>
+      <li><strong>Simple.</strong> No self-loops (edges from a vertex to itself) and no duplicate edges.</li>
+      <li><strong>Multigraph.</strong> Loops and duplicates allowed.</li>
+    </ul>
+
+    <h3>Representations</h3>
+
+    <p>Two standard ways to store a graph in memory:</p>
+
+    <p><strong>Adjacency matrix.</strong> An $n \times n$ matrix $M$ with $M_{ij} = 1$ if there's an edge from vertex $i$ to vertex $j$, and $0$ otherwise (or the edge weight instead of 1). Cost: $O(n^2)$ memory, even for sparse graphs. Lookup of a single edge is $O(1)$. Great when $n$ is small and the graph is dense.</p>
+
+    <p><strong>Adjacency list.</strong> For each vertex $v$, a list of its neighbours. Cost: $O(|V| + |E|)$ memory. Iterating the neighbours of $v$ is $O(\deg(v))$. Great when $n$ is big and the graph is sparse — almost always the right choice in practice.</p>
+
+    <h3>Basic vocabulary</h3>
+
+    <ul>
+      <li><strong>Degree</strong> of vertex $v$, written $\deg(v)$: the number of edges touching $v$. In a directed graph you split into $\deg^-(v)$ (in-degree) and $\deg^+(v)$ (out-degree).</li>
+      <li><strong>Path</strong>: a sequence of vertices where consecutive ones are connected by edges. A <em>simple</em> path has no repeated vertices.</li>
+      <li><strong>Cycle</strong>: a path that starts and ends at the same vertex.</li>
+      <li><strong>Connected</strong>: there's a path between every pair of vertices (in the undirected case). A disconnected graph splits into <em>connected components</em>.</li>
+      <li><strong>Tree</strong>: a connected, acyclic undirected graph.</li>
+      <li><strong>Bipartite</strong>: vertices split into two groups $U$ and $W$, with all edges going between $U$ and $W$ (never within). Models two-sided matching — students and schools, jobs and machines.</li>
+    </ul>
+
+    <h3>Trees</h3>
+
+    <p>Trees are a special case of graphs so important that we give them their own name and theorems. A <strong>rooted tree</strong> picks one vertex as the root; the rest hang down in parent-child relationships. Every file system you've ever used is a rooted tree. Every DOM tree. Every AST in a compiler. Every HuffMan code.</p>
+
+    <p>A tree on $n$ vertices has exactly $n-1$ edges. Add one more edge and you must create a cycle. Remove one edge and the tree disconnects. That's the "just barely connected" characterisation.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="graph-facts">11. Important graph facts</h2>
+
+    <h3>Handshake lemma</h3>
+
+    <div class="math-display">$$\sum_{v \in V} \deg(v) = 2|E|$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Handshake lemma</p>
+      <dl>
+        <dt>$\sum_{v \in V}$</dt><dd>Sum over every vertex in the graph.</dd>
+        <dt>$\deg(v)$</dt><dd>The degree of vertex $v$ — how many edges are incident to it.</dd>
+        <dt>$|E|$</dt><dd>The number of edges in the graph.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why?</strong> Each edge has two endpoints. When you sum degrees, every edge gets counted twice — once for each end. So the sum of all degrees is exactly $2|E|$. Named for the party trick: in any room, the total number of "hands shaken so far" counts each handshake twice. A quick corollary — the number of odd-degree vertices in any graph is <em>even</em>.</p>
+    </div>
+
+    <h3>Trees have $n-1$ edges</h3>
+
+    <p>Any tree on $n$ vertices has $n - 1$ edges. The proof is a one-liner by induction on $n$: the base case is trivial, and removing a leaf (a degree-1 vertex) of a tree on $n$ vertices leaves a tree on $n - 1$ vertices. By the inductive hypothesis that smaller tree has $n - 2$ edges; we removed 1, so the original had $n - 1$.</p>
+
+    <h3>Euler's formula for planar graphs</h3>
+
+    <p>A graph is <strong>planar</strong> if you can draw it on paper without any edges crossing. For a connected planar graph:</p>
+
+    <div class="math-display">$$V - E + F = 2$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Euler's formula</p>
+      <dl>
+        <dt>$V$</dt><dd>Number of vertices.</dd>
+        <dt>$E$</dt><dd>Number of edges.</dd>
+        <dt>$F$</dt><dd>Number of <em>faces</em> — the regions the drawing carves the plane into, including the infinite "outside" region.</dd>
+        <dt>$2$</dt><dd>The constant. Always $2$, for any connected planar graph, no matter how complicated.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Try it.</strong> A triangle has $V = 3$, $E = 3$, $F = 2$ (inside and outside): $3 - 3 + 2 = 2$. A cube, drawn flat, has $V = 8$, $E = 12$, $F = 6$: $8 - 12 + 6 = 2$. Euler noticed this in 1758 and it's still the easiest way to prove facts like "you can't draw $K_5$ (the complete graph on 5 vertices) without edge crossings."</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="recurrence">12. Recurrence relations</h2>
+
+    <p>A <strong>recurrence relation</strong> defines a sequence by saying what each term is in terms of earlier ones. You've seen this every time you've written a recursive function.</p>
+
+    <p>The most famous recurrence:</p>
+
+    <div class="math-display">$$F_0 = 0, \quad F_1 = 1, \quad F_n = F_{n-1} + F_{n-2} \text{ for } n \geq 2$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Fibonacci</p>
+      <dl>
+        <dt>$F_n$</dt><dd>The $n$-th Fibonacci number. $F_0 = 0, F_1 = 1, F_2 = 1, F_3 = 2, F_4 = 3, F_5 = 5, F_6 = 8, \ldots$</dd>
+        <dt>$F_{n-1} + F_{n-2}$</dt><dd>The <em>recurrence</em> — each term is the sum of the two before it.</dd>
+        <dt>$F_0 = 0, F_1 = 1$</dt><dd>The <em>initial conditions</em>. Without them, the recurrence has infinitely many solutions.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Closed form.</strong> Recurrences can often be "solved" to a closed-form expression that computes $F_n$ directly. For Fibonacci the answer is $F_n = \frac{1}{\sqrt{5}} \left[ \left(\frac{1+\sqrt{5}}{2}\right)^n - \left(\frac{1-\sqrt{5}}{2}\right)^n \right]$ — yes, the golden ratio, which appears here for reasons having nothing to do with art.</p>
+    </div>
+
+    <h3>Linear homogeneous recurrences</h3>
+
+    <p>Fibonacci is a special case of a general pattern. A <strong>linear homogeneous recurrence with constant coefficients</strong> of order $k$ looks like:</p>
+
+    <div class="math-display">$$a_n = c_1\, a_{n-1} + c_2\, a_{n-2} + \cdots + c_k\, a_{n-k}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Linear recurrence</p>
+      <dl>
+        <dt>$a_n$</dt><dd>The $n$-th term of the sequence you're defining.</dd>
+        <dt>$c_1, c_2, \ldots, c_k$</dt><dd>Constants (don't depend on $n$). "Coefficients."</dd>
+        <dt>$a_{n-1}, \ldots, a_{n-k}$</dt><dd>The previous $k$ terms. <em>Linear</em> means each appears to the first power; <em>homogeneous</em> means there's no extra constant or function of $n$ stuck on.</dd>
+      </dl>
+      <p class="mg-why"><strong>How you solve it.</strong> Guess $a_n = r^n$ for some $r$. Plug in, divide through by $r^{n-k}$, and you get a polynomial in $r$ — the <em>characteristic equation</em>. Its roots give the general form of the closed-form solution. This is the discrete-math analogue of solving a linear differential equation, and if you've seen that, the two procedures are basically identical.</p>
+    </div>
+
+    <h3>Divide-and-conquer recurrences</h3>
+
+    <p>Recurrences also show up in algorithm analysis, where they describe the running time of divide-and-conquer algorithms. A classic form:</p>
+
+    <div class="math-display">$$T(n) = a\, T(n/b) + f(n)$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Master-theorem form</p>
+      <dl>
+        <dt>$T(n)$</dt><dd>The time it takes to solve a problem of size $n$.</dd>
+        <dt>$a$</dt><dd>Number of subproblems we recurse into.</dd>
+        <dt>$b$</dt><dd>Factor by which each subproblem's size shrinks.</dd>
+        <dt>$f(n)$</dt><dd>The "splitting and combining" work we do outside of the recursive calls.</dd>
+      </dl>
+      <p class="mg-why"><strong>Example.</strong> Mergesort splits an array into two halves ($a=2, b=2$), sorts each recursively, and merges in $f(n) = O(n)$ time: $T(n) = 2 T(n/2) + O(n)$. The <em>master theorem</em> gives a closed-form for the solution (here: $O(n \log n)$). We leave the statement and proof to the <a href="../cs/complexity.html">complexity page</a>.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="numtheory">13. Number theory basics</h2>
+
+    <p>Number theory is the study of the integers — their divisibility, factorizations, primes, and modular behaviour. It looks very "pure" until you realise it's the mathematical foundation of every cryptosystem your browser uses to talk to banks.</p>
+
+    <h3>Divisibility</h3>
+
+    <p>We say $a$ <strong>divides</strong> $b$, written $a \mid b$, if $b = ak$ for some integer $k$. So $3 \mid 12$ (because $12 = 3 \cdot 4$), but $5 \nmid 12$. "Divides" is a relation on $\mathbb{Z}$, and on the positive integers it's a partial order.</p>
+
+    <h3>GCD and the Euclidean algorithm</h3>
+
+    <p>The <strong>greatest common divisor</strong> $\gcd(a, b)$ is the largest positive integer that divides both $a$ and $b$. Every first-year student is taught to find it by factoring both numbers — which doesn't scale past small numbers. The algorithm that <em>does</em> scale is over 2000 years old:</p>
+
+    <div class="math-display">$$\gcd(a, b) = \gcd(b, a \bmod b), \quad \gcd(a, 0) = a$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Euclidean algorithm</p>
+      <dl>
+        <dt>$\gcd(a, b)$</dt><dd>Greatest common divisor of $a$ and $b$.</dd>
+        <dt>$a \bmod b$</dt><dd>The remainder when $a$ is divided by $b$. E.g. $17 \bmod 5 = 2$.</dd>
+        <dt>$\gcd(a, 0) = a$</dt><dd>Base case. Every non-zero $a$ divides itself, and 0 is divisible by anything, so their gcd is $a$.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why it works.</strong> Any common divisor of $a$ and $b$ is also a common divisor of $b$ and $a - kb$ for any integer $k$. Taking $k = \lfloor a/b \rfloor$ gives the remainder. So you replace the pair with a smaller pair and repeat. It converges in $O(\log(\min(a,b)))$ steps — shockingly fast.</p>
+      <p class="mg-why"><strong>Example.</strong> $\gcd(48, 18) = \gcd(18, 12) = \gcd(12, 6) = \gcd(6, 0) = 6$.</p>
+    </div>
+
+    <h3>Primes</h3>
+
+    <p>A <strong>prime</strong> is a positive integer $p &gt; 1$ whose only positive divisors are $1$ and $p$ itself. Primes are the multiplicative atoms of the integers — the Fundamental Theorem of Arithmetic says every integer $n &gt; 1$ has a <em>unique</em> factorisation into primes (up to order). There are infinitely many primes (Euclid's proof: if only finitely many, multiply them all together and add 1 — the result has no prime factor on your list).</p>
+
+    <h3>Modular arithmetic</h3>
+
+    <p>Arithmetic "mod $n$" throws away multiples of $n$:</p>
+
+    <div class="math-display">$$a \equiv b \pmod{n} \iff n \mid (a - b)$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Modular congruence</p>
+      <dl>
+        <dt>$a \equiv b \pmod n$</dt><dd>"$a$ is congruent to $b$ modulo $n$." They leave the same remainder when divided by $n$.</dd>
+        <dt>$n \mid (a - b)$</dt><dd>The definition: $n$ divides their difference. E.g. $17 \equiv 2 \pmod 5$ because $5 \mid 15$.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Clock arithmetic.</strong> The clock on your wall is $\mathbb{Z} / 12\mathbb{Z}$ — addition modulo 12. "5 hours after 9 o'clock" is $9 + 5 \equiv 2 \pmod{12}$, which is 2 o'clock. Every programming language's <code>%</code> operator is computing this.</p>
+    </div>
+
+    <p>The integers modulo $n$ form a finite set $\{0, 1, 2, \ldots, n-1\}$. You can add, subtract, and multiply within this set. When $n$ is prime, you can also divide — every non-zero element has a multiplicative inverse. This is the core fact that makes modular arithmetic into a <em>field</em>, and fields are where cryptography lives.</p>
+
+    <h3>Tiny intro to RSA</h3>
+
+    <p>RSA, the public-key cryptosystem at the heart of HTTPS, TLS, and PGP, works like this (very simplified):</p>
+
+    <ol>
+      <li>Pick two huge primes $p$ and $q$ — say, 1024 bits each. Let $n = pq$.</li>
+      <li>Pick a small exponent $e$ (often 65537). Compute $d$ such that $ed \equiv 1 \pmod{(p-1)(q-1)}$ using the extended Euclidean algorithm.</li>
+      <li>Publish $(n, e)$. Keep $d$ secret.</li>
+      <li>To encrypt a message $m$: send $c = m^e \bmod n$. To decrypt: compute $c^d \bmod n = m$.</li>
+    </ol>
+
+    <p>The security rests on one conjecture: <em>factoring $n$ back into $p$ and $q$ is hard</em> for numbers that big. Every theorem used in RSA — Fermat's little theorem, Euler's totient — is elementary discrete math you could prove in a weekend. The whole internet's secure channels are secured by theorems that were pure curiosities in 1640.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="boolean">14. Boolean algebra</h2>
+
+    <p>Propositional logic, rewritten in the language of algebra — with $0$ for false, $1$ for true, $+$ for OR, $\cdot$ for AND, and overline for NOT. George Boole introduced this in 1854. Claude Shannon noticed in his 1937 master's thesis that switches in an electrical circuit obeyed exactly these rules, and the entire field of digital logic design was born.</p>
+
+    <p>The laws you already know, in the new notation:</p>
+
+    <ul>
+      <li><strong>Commutative:</strong> $a + b = b + a$, $\ a \cdot b = b \cdot a$.</li>
+      <li><strong>Associative:</strong> $(a + b) + c = a + (b + c)$, and the same for $\cdot$.</li>
+      <li><strong>Distributive:</strong> $a \cdot (b + c) = a \cdot b + a \cdot c$, and — this one is new if you're coming from regular algebra — $a + (b \cdot c) = (a+b) \cdot (a+c)$.</li>
+      <li><strong>Identity:</strong> $a + 0 = a$, $\ a \cdot 1 = a$.</li>
+      <li><strong>Complement:</strong> $a + \bar a = 1$, $\ a \cdot \bar a = 0$.</li>
+      <li><strong>De Morgan:</strong> $\overline{a + b} = \bar a \cdot \bar b$, $\ \overline{a \cdot b} = \bar a + \bar b$.</li>
+    </ul>
+
+    <p>Every digital circuit you've ever touched — the ALU in your CPU, the address decoder in your RAM, the carry logic in your adder — is a Boolean expression rendered in silicon. Simplifying that expression using the laws above literally saves transistors, which saves area, heat, and cost. Tools like <em>Karnaugh maps</em> and <em>Quine-McCluskey minimisation</em> automate this, but they're mechanical rewrites using the identities above.</p>
+
+    <div class="callout math">
+      <div class="label">CONNECTION</div>
+      <p>Propositional logic, Boolean algebra, and digital circuits are the same structure under three different notations. A truth table is a specification; a Boolean formula is a compact description; a circuit is a physical implementation. Going between them is the job description of every hardware designer.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="code">15. Code</h2>
+
+    <p>A tour of the standard discrete-math building blocks in Python: a graph class, breadth-first and depth-first traversal, the Euclidean GCD, and a few combinatorial helpers. Everything here is stdlib-only.</p>
+
+    <div class="code-tabs" id="ct-dm">
+      <div class="ct-header">
+        <button class="ct-tab active" data-tab="graph">Graph + BFS/DFS</button>
+        <button class="ct-tab" data-tab="numtheory">Number theory</button>
+        <button class="ct-tab" data-tab="combo">Combinatorics</button>
+        <span class="ct-label">discrete math · core pieces</span>
+      </div>
+
+      <div class="ct-panel active" data-tab="graph"><pre><code><span class="kw">from</span> collections <span class="kw">import</span> defaultdict, deque
+
+<span class="kw">class</span> <span class="fn">Graph</span>:
+    <span class="cmt"># Adjacency-list representation — cheap for sparse graphs.</span>
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, directed=<span class="kw">False</span>):
+        self.adj = defaultdict(<span class="fn">set</span>)
+        self.directed = directed
+
+    <span class="kw">def</span> <span class="fn">add_edge</span>(self, u, v):
+        self.adj[u].add(v)
+        <span class="kw">if</span> <span class="kw">not</span> self.directed:
+            self.adj[v].add(u)
+
+    <span class="kw">def</span> <span class="fn">neighbors</span>(self, u):
+        <span class="kw">return</span> <span class="fn">sorted</span>(self.adj[u])
+
+    <span class="kw">def</span> <span class="fn">bfs</span>(self, start):
+        <span class="cmt"># Breadth-first: visits by distance from start. O(V + E).</span>
+        seen = {start}
+        order = []
+        q = deque([start])
+        <span class="kw">while</span> q:
+            u = q.popleft()
+            order.append(u)
+            <span class="kw">for</span> v <span class="kw">in</span> self.<span class="fn">neighbors</span>(u):
+                <span class="kw">if</span> v <span class="kw">not</span> <span class="kw">in</span> seen:
+                    seen.add(v)
+                    q.append(v)
+        <span class="kw">return</span> order
+
+    <span class="kw">def</span> <span class="fn">dfs</span>(self, start):
+        <span class="cmt"># Depth-first: dives as deep as it can before backtracking. O(V + E).</span>
+        seen, order = <span class="fn">set</span>(), []
+        <span class="kw">def</span> <span class="fn">visit</span>(u):
+            <span class="kw">if</span> u <span class="kw">in</span> seen: <span class="kw">return</span>
+            seen.add(u)
+            order.append(u)
+            <span class="kw">for</span> v <span class="kw">in</span> self.<span class="fn">neighbors</span>(u):
+                <span class="fn">visit</span>(v)
+        <span class="fn">visit</span>(start)
+        <span class="kw">return</span> order
+
+<span class="cmt"># Example: a small social graph</span>
+g = <span class="fn">Graph</span>()
+<span class="kw">for</span> u, v <span class="kw">in</span> [(<span class="str">"a"</span>,<span class="str">"b"</span>), (<span class="str">"a"</span>,<span class="str">"c"</span>), (<span class="str">"b"</span>,<span class="str">"d"</span>),
+               (<span class="str">"c"</span>,<span class="str">"d"</span>), (<span class="str">"d"</span>,<span class="str">"e"</span>), (<span class="str">"e"</span>,<span class="str">"f"</span>)]:
+    g.<span class="fn">add_edge</span>(u, v)
+
+<span class="fn">print</span>(g.<span class="fn">bfs</span>(<span class="str">"a"</span>))  <span class="cmt"># → ['a', 'b', 'c', 'd', 'e', 'f']</span>
+<span class="fn">print</span>(g.<span class="fn">dfs</span>(<span class="str">"a"</span>))  <span class="cmt"># → ['a', 'b', 'd', 'c', 'e', 'f']</span>
+</code></pre></div>
+
+      <div class="ct-panel" data-tab="numtheory"><pre><code><span class="kw">def</span> <span class="fn">gcd</span>(a, b):
+    <span class="cmt"># Euclidean algorithm — the original asymptotically fast algorithm, ~300 BCE.</span>
+    <span class="kw">while</span> b:
+        a, b = b, a % b
+    <span class="kw">return</span> a
+
+<span class="kw">def</span> <span class="fn">extended_gcd</span>(a, b):
+    <span class="cmt"># Returns (g, x, y) where g = gcd(a,b) and a*x + b*y = g.</span>
+    <span class="cmt"># The x is what you need to invert a modulo b — the RSA key-generation step.</span>
+    <span class="kw">if</span> b == <span class="num">0</span>:
+        <span class="kw">return</span> a, <span class="num">1</span>, <span class="num">0</span>
+    g, x1, y1 = <span class="fn">extended_gcd</span>(b, a % b)
+    <span class="kw">return</span> g, y1, x1 - (a // b) * y1
+
+<span class="kw">def</span> <span class="fn">modinv</span>(a, n):
+    <span class="cmt"># Modular inverse: the x such that a*x ≡ 1 (mod n). Exists iff gcd(a,n) = 1.</span>
+    g, x, _ = <span class="fn">extended_gcd</span>(a, n)
+    <span class="kw">if</span> g != <span class="num">1</span>:
+        <span class="kw">raise</span> <span class="fn">ValueError</span>(<span class="str">f"{a} has no inverse mod {n}"</span>)
+    <span class="kw">return</span> x % n
+
+<span class="kw">def</span> <span class="fn">is_prime</span>(n):
+    <span class="cmt"># Trial division — fine up to ~10^12. For real crypto, use Miller-Rabin.</span>
+    <span class="kw">if</span> n &lt; <span class="num">2</span>: <span class="kw">return</span> <span class="kw">False</span>
+    <span class="kw">if</span> n % <span class="num">2</span> == <span class="num">0</span>: <span class="kw">return</span> n == <span class="num">2</span>
+    i = <span class="num">3</span>
+    <span class="kw">while</span> i * i &lt;= n:
+        <span class="kw">if</span> n % i == <span class="num">0</span>: <span class="kw">return</span> <span class="kw">False</span>
+        i += <span class="num">2</span>
+    <span class="kw">return</span> <span class="kw">True</span>
+
+<span class="fn">print</span>(<span class="fn">gcd</span>(<span class="num">48</span>, <span class="num">18</span>))              <span class="cmt"># 6</span>
+<span class="fn">print</span>(<span class="fn">modinv</span>(<span class="num">3</span>, <span class="num">11</span>))            <span class="cmt"># 4  (because 3*4 = 12 ≡ 1 mod 11)</span>
+<span class="fn">print</span>([p <span class="kw">for</span> p <span class="kw">in</span> <span class="fn">range</span>(<span class="num">2</span>, <span class="num">30</span>) <span class="kw">if</span> <span class="fn">is_prime</span>(p)])
+<span class="cmt"># [2, 3, 5, 7, 11, 13, 17, 19, 23, 29]</span>
+</code></pre></div>
+
+      <div class="ct-panel" data-tab="combo"><pre><code><span class="kw">from</span> math <span class="kw">import</span> factorial
+
+<span class="kw">def</span> <span class="fn">perm</span>(n, k):
+    <span class="cmt"># Ordered arrangements: P(n, k) = n! / (n-k)!</span>
+    <span class="kw">return</span> <span class="fn">factorial</span>(n) // <span class="fn">factorial</span>(n - k)
+
+<span class="kw">def</span> <span class="fn">comb</span>(n, k):
+    <span class="cmt"># Unordered choices: C(n, k) = n! / (k! (n-k)!)</span>
+    <span class="kw">return</span> <span class="fn">factorial</span>(n) // (<span class="fn">factorial</span>(k) * <span class="fn">factorial</span>(n - k))
+
+<span class="kw">def</span> <span class="fn">pascal_row</span>(n):
+    <span class="cmt"># nth row of Pascal's triangle via Pascal's identity — no factorials needed.</span>
+    row = [<span class="num">1</span>]
+    <span class="kw">for</span> k <span class="kw">in</span> <span class="fn">range</span>(n):
+        row.append(row[-<span class="num">1</span>] * (n - k) // (k + <span class="num">1</span>))
+    <span class="kw">return</span> row
+
+<span class="kw">def</span> <span class="fn">subsets</span>(xs):
+    <span class="cmt"># Yield every subset of xs — there are 2^|xs| of them.</span>
+    <span class="kw">if</span> <span class="kw">not</span> xs:
+        <span class="kw">yield</span> []
+        <span class="kw">return</span>
+    head, *tail = xs
+    <span class="kw">for</span> s <span class="kw">in</span> <span class="fn">subsets</span>(tail):
+        <span class="kw">yield</span> s
+        <span class="kw">yield</span> [head] + s
+
+<span class="fn">print</span>(<span class="fn">perm</span>(<span class="num">8</span>, <span class="num">3</span>))            <span class="cmt"># 336</span>
+<span class="fn">print</span>(<span class="fn">comb</span>(<span class="num">5</span>, <span class="num">2</span>))            <span class="cmt"># 10</span>
+<span class="fn">print</span>(<span class="fn">pascal_row</span>(<span class="num">6</span>))        <span class="cmt"># [1, 6, 15, 20, 15, 6, 1]</span>
+<span class="fn">print</span>(<span class="fn">list</span>(<span class="fn">subsets</span>([<span class="str">"a"</span>,<span class="str">"b"</span>,<span class="str">"c"</span>])))
+<span class="cmt"># every subset of {a,b,c}</span>
+</code></pre></div>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="connections">16. Connections to everything else</h2>
+
+    <p>Discrete math isn't a subject you learn and put down. It's the language that every CS and ML page on this site is written in. The bridges worth walking:</p>
+
+    <div class="grid">
+      <div class="card">
+        <h4><a href="./probability.html">Probability</a></h4>
+        <p class="meta">math track</p>
+        <p>Probability starts with counting. The probability of an event is (favourable outcomes) divided by (total outcomes), and both those are combinatorial questions. Every permutation and combination formula shows up again there, usually with a $1/n!$ in front.</p>
+      </div>
+      <div class="card">
+        <h4><a href="../cs/complexity.html">Complexity</a></h4>
+        <p class="meta">cs track</p>
+        <p>Every "how many operations does this algorithm do?" question is a counting problem. Recurrences, sums of geometric series, and big-$O$ analysis all live at the boundary between discrete math and CS.</p>
+      </div>
+      <div class="card">
+        <h4><a href="../cs/algorithms.html">Algorithms</a></h4>
+        <p class="meta">cs track</p>
+        <p>Graph algorithms — BFS, DFS, Dijkstra, minimum spanning trees, topological sort — are a direct application of the graph vocabulary on this page. You can't read the algorithms chapter without knowing what a degree, a path, or a cycle is.</p>
+      </div>
+      <div class="card">
+        <h4><a href="../cs/theoretical-cs.html">Theoretical CS</a></h4>
+        <p class="meta">cs track</p>
+        <p>Proofs are how theoretical CS works. Every theorem about Turing machines, automata, and decidability is proved using the techniques in §6. If you skipped the proof section, you'll bounce off theoretical CS fast.</p>
+      </div>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="bib">17. Further reading</h2>
+
+    <div class="bib">
+      <h4>Textbooks</h4>
+      <ul>
+        <li>Kenneth H. Rosen — <em>Discrete Mathematics and Its Applications</em>. The standard undergraduate textbook. Encyclopedic, boringly reliable, covers everything on this page and more. If you want one book on your shelf, this is it.</li>
+        <li>Ralph P. Grimaldi — <em>Discrete and Combinatorial Mathematics: An Applied Introduction</em>. A little friendlier than Rosen, strong on the combinatorics chapters.</li>
+        <li>Ronald Graham, Donald Knuth, Oren Patashnik — <em>Concrete Mathematics</em>. The delightful, sometimes terrifying textbook that came out of Knuth's "Mathematics for Computer Science" course at Stanford. Heavy on summations, generating functions, and asymptotics. This is the book you read <em>after</em> Rosen if you want to actually become dangerous.</li>
+        <li>Eric Lehman, F. Thomson Leighton, Albert R. Meyer — <em>Mathematics for Computer Science</em>. Free online from MIT OCW. Written for the MIT 6.042 course, emphasising proofs, probability, and graphs. Excellent if you prefer a CS-first framing.</li>
+        <li>Oscar Levin — <em>Discrete Mathematics: An Open Introduction</em>. Free, under an open license. Shorter than Rosen, with interactive online exercises.</li>
+      </ul>
+      <h4>Papers and originals</h4>
+      <ul>
+        <li>Euler (1736) — <em>Solutio problematis ad geometriam situs pertinentis</em>. The paper that started graph theory — the Seven Bridges of Königsberg.</li>
+        <li>Boole (1854) — <em>An Investigation of the Laws of Thought</em>. Where Boolean algebra came from.</li>
+        <li>Shannon (1937) — <em>A Symbolic Analysis of Relay and Switching Circuits</em>. Shannon's master's thesis — arguably the most influential master's thesis ever written. Boolean algebra meets hardware.</li>
+        <li>Rivest, Shamir, Adleman (1978) — <em>A Method for Obtaining Digital Signatures and Public-Key Cryptosystems</em>. The original RSA paper. Short, readable, and the math on this page is enough to follow it.</li>
+      </ul>
+    </div>
+
+    <div class="next-card">
+      <div class="label">NEXT UP</div>
+      <a href="../cs/algorithms.html">→ Algorithms</a>
+      <p>You now have the vocabulary — sets, graphs, recurrences, big-$O$-shaped questions. The algorithms page is where you learn the standard tricks for solving them: sorting, searching, graph traversal, dynamic programming, and the divide-and-conquer recipe that powers half of computer science.</p>
+    </div>
+
+  </article>
+</div>
+
+<script>
+// =========================================================
+// Code tabs
+document.querySelectorAll('.code-tabs').forEach(root => {
+  const tabs = root.querySelectorAll('.ct-tab');
+  const panels = root.querySelectorAll('.ct-panel');
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const target = tab.getAttribute('data-tab');
+      tabs.forEach(t => t.classList.toggle('active', t === tab));
+      panels.forEach(p => p.classList.toggle('active', p.getAttribute('data-tab') === target));
+    });
+  });
+});
+
+// =========================================================
+// Combinatorics lab: Pascal's triangle + perm/comb/factorial readouts
+(function() {
+  const svg = document.getElementById('combSvg');
+  if (!svg) return;
+  const NS = 'http://www.w3.org/2000/svg';
+  const nSlider = document.getElementById('combN');
+  const kSlider = document.getElementById('combK');
+  const nLabel = document.getElementById('combNLabel');
+  const kLabel = document.getElementById('combKLabel');
+  const caption = document.getElementById('combCaption');
+
+  // Integer factorials up to 20 are exact in JS doubles.
+  function fact(n) {
+    let f = 1;
+    for (let i = 2; i <= n; i++) f *= i;
+    return f;
+  }
+  function C(n, k) {
+    if (k < 0 || k > n) return 0;
+    // Use iterative form to avoid intermediate overflow for modest n.
+    if (k > n - k) k = n - k;
+    let num = 1;
+    for (let i = 0; i < k; i++) num = num * (n - i) / (i + 1);
+    return Math.round(num);
+  }
+  function P(n, k) {
+    if (k < 0 || k > n) return 0;
+    let p = 1;
+    for (let i = 0; i < k; i++) p *= (n - i);
+    return p;
+  }
+  function fmt(x) {
+    if (x >= 1e12) return x.toExponential(2);
+    if (x >= 1e9)  return (x / 1e9).toFixed(2) + 'B';
+    if (x >= 1e6)  return (x / 1e6).toFixed(2) + 'M';
+    if (x >= 1e3)  return x.toLocaleString();
+    return String(x);
+  }
+
+  function draw() {
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+
+    let n = parseInt(nSlider.value, 10);
+    let k = parseInt(kSlider.value, 10);
+    if (k > n) { k = n; kSlider.value = k; }
+    nLabel.textContent = n;
+    kLabel.textContent = k;
+
+    const W = 720, H = 360;
+
+    // Background
+    const bg = document.createElementNS(NS, 'rect');
+    bg.setAttribute('x', 0); bg.setAttribute('y', 0);
+    bg.setAttribute('width', W); bg.setAttribute('height', H);
+    bg.setAttribute('fill', '#0a0d12');
+    svg.appendChild(bg);
+
+    // Pascal's triangle layout.
+    // Rows 0..maxRow, centred horizontally.
+    const maxRow = 12;
+    const topY = 24;
+    const rowH = 24;
+    const colW = 46;
+    const cxBase = W / 2;
+
+    for (let row = 0; row <= maxRow; row++) {
+      for (let col = 0; col <= row; col++) {
+        const cx = cxBase + (col - row / 2) * colW;
+        const cy = topY + row * rowH;
+        const val = C(row, col);
+
+        const isCurrent = (row === n && col === k);
+        const isRow = (row === n);
+
+        const r = document.createElementNS(NS, 'circle');
+        r.setAttribute('cx', cx);
+        r.setAttribute('cy', cy);
+        r.setAttribute('r', 14);
+        if (isCurrent) {
+          r.setAttribute('fill', '#7c5cff');
+          r.setAttribute('stroke', '#ffffff');
+          r.setAttribute('stroke-width', 2);
+        } else if (isRow) {
+          r.setAttribute('fill', '#1a2030');
+          r.setAttribute('stroke', '#22d3ee');
+          r.setAttribute('stroke-width', 1.2);
+        } else {
+          r.setAttribute('fill', '#121722');
+          r.setAttribute('stroke', '#2a3446');
+          r.setAttribute('stroke-width', 1);
+        }
+        svg.appendChild(r);
+
+        const t = document.createElementNS(NS, 'text');
+        t.setAttribute('x', cx);
+        t.setAttribute('y', cy + 4);
+        t.setAttribute('text-anchor', 'middle');
+        t.setAttribute('font-size', 10);
+        t.setAttribute('font-family', 'ui-monospace, monospace');
+        t.setAttribute('fill', isCurrent ? '#ffffff'
+                         : isRow ? '#cfe6ff'
+                         : '#7a8a9a');
+        t.textContent = val >= 1000 ? (val >= 1e6 ? val.toExponential(1) : val) : val;
+        svg.appendChild(t);
+      }
+    }
+
+    // Side readout box
+    const rx = 20, ry = 260;
+    const readout = document.createElementNS(NS, 'rect');
+    readout.setAttribute('x', rx); readout.setAttribute('y', ry);
+    readout.setAttribute('width', 680); readout.setAttribute('height', 80);
+    readout.setAttribute('rx', 6);
+    readout.setAttribute('fill', '#0f131a');
+    readout.setAttribute('stroke', '#2a3446');
+    svg.appendChild(readout);
+
+    const lines = [
+      `n = ${n}, k = ${k}`,
+      `C(n,k) = (${n} choose ${k}) = ${fmt(C(n,k))}`,
+      `P(n,k) = ${n}! / (${n}-${k})! = ${fmt(P(n,k))}`,
+      `n! = ${fmt(fact(n))}`,
+    ];
+    lines.forEach((ln, i) => {
+      const t = document.createElementNS(NS, 'text');
+      t.setAttribute('x', rx + 16);
+      t.setAttribute('y', ry + 20 + i * 16);
+      t.setAttribute('font-size', 12);
+      t.setAttribute('font-family', 'ui-monospace, monospace');
+      t.setAttribute('fill', i === 1 ? '#22d3ee' : '#b4c4d4');
+      t.textContent = ln;
+      svg.appendChild(t);
+    });
+
+    caption.textContent =
+      `Row n = ${n} is highlighted in cyan; the selected C(${n},${k}) = ${fmt(C(n,k))} cell is in violet. ` +
+      `Permutations P(${n},${k}) = ${fmt(P(n,k))} — always ≥ C(${n},${k}) because order matters.`;
+  }
+
+  nSlider.addEventListener('input', draw);
+  kSlider.addEventListener('input', draw);
+  draw();
+})();
+</script>
+<script defer src="../search-index.js"></script>
+<script defer src="../search.js"></script>
+</body>
+</html>

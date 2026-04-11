@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Diffusion Models — Deep Dive</title>
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError: false});"></script>
+</head>
+<body>
+<div id="tooltip"></div>
+
+<nav class="topic-nav">
+  <a class="back" href="../ai-ml.html">← Back to AI/ML</a>
+  <div class="crumb">Deep Dives / <span class="topic-name">Diffusion Models</span></div>
+</nav>
+
+<div class="topic-layout">
+  <aside class="topic-toc">
+    <h4>ON THIS PAGE</h4>
+    <ul>
+      <li><a href="#intro">1. Noise ↔ data</a></li>
+      <li><a href="#forward">2. The forward process</a>
+        <ul><li><a href="#forward-demo">Interactive forward noising</a></li></ul>
+      </li>
+      <li><a href="#closed-form">3. Closed-form at any step</a></li>
+      <li><a href="#reverse">4. The reverse process</a></li>
+      <li><a href="#training">5. Training objective</a></li>
+      <li><a href="#sampling">6. Sampling (DDPM)</a>
+        <ul><li><a href="#sampling-demo">Interactive denoising</a></li></ul>
+      </li>
+      <li><a href="#scheduler">7. Noise schedules</a></li>
+      <li><a href="#ddim">8. DDIM and faster samplers</a></li>
+      <li><a href="#conditional">9. Conditional generation &amp; CFG</a></li>
+      <li><a href="#latent">10. Latent diffusion</a></li>
+      <li><a href="#summary">11. Summary</a></li>
+    </ul>
+  </aside>
+
+  <article class="topic-content">
+    <h1>Diffusion Models</h1>
+    <p class="subtitle">Start with pure noise. Repeatedly ask a neural network "what did this look like one step ago, before I added a little noise?" Do that a few hundred times and you have Stable Diffusion, DALL-E, Sora, Imagen.</p>
+    <div class="meta-tags">
+      <span>Prereq: Gaussian distributions, basic probability</span>
+      <span>Time to read: ~30 min</span>
+      <span>Interactive figures: 2</span>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="intro">1. Noise ↔ data</h2>
+
+    <p>Imagine a clean image $x_0$ — say, a photograph of a cat. Now corrupt it with a tiny bit of Gaussian noise: $x_1 = x_0 + \epsilon_1$, where $\epsilon_1 \sim \mathcal{N}(0, \sigma^2 I)$. The result is still recognizable but slightly grainy. Do it again to get $x_2$. And again. After a few hundred steps of adding noise, all structure has been destroyed and $x_T$ is indistinguishable from pure Gaussian noise.</p>
+
+    <p>Now imagine a magical function $f_\theta$ that can reverse this one step: given $x_t$, it predicts $x_{t-1}$. Starting from pure noise $x_T \sim \mathcal{N}(0, I)$, we could apply $f_\theta$ $T$ times and arrive at a clean image $x_0$ — a brand new sample from the data distribution. That's the entire idea of diffusion models.</p>
+
+    <p>The trick is that you cannot learn $f_\theta$ by directly predicting $x_{t-1}$ from $x_t$ — at any single step the mapping is ambiguous, because the forward noise was stochastic. Instead, you train the network to predict the <em>noise</em> that was added. Given that, $x_{t-1}$ can be recovered analytically.</p>
+
+    <div class="callout">
+      <div class="label">WHY IT'S MIRACULOUS</div>
+      <p style="margin:6px 0">You only have to learn a single, fixed task: "given a noisy image and how noisy it is, estimate the noise." The same network handles all noise levels. At sampling time you apply it hundreds of times in a carefully designed sequence, and out comes a photorealistic image. There's no GAN-style adversarial training, no mode collapse, no complex balancing of losses — just denoising.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="forward">2. The forward process</h2>
+
+    <p>The forward process is a Markov chain that adds a small amount of Gaussian noise at each step. It is <em>fixed</em> — no learned parameters. It's just a schedule.</p>
+
+    <div class="defn">
+      <span class="label">Forward process</span>
+      <p>Fix a noise schedule $\beta_1, \beta_2, \dots, \beta_T \in (0, 1)$ with $\beta_t$ small. Define the transition:</p>
+      <div class="math-display">$$q(x_t \mid x_{t-1}) = \mathcal{N}\!\left(x_t;\ \sqrt{1 - \beta_t}\, x_{t-1},\ \beta_t I\right)$$</div>
+      <p>In sampling form:</p>
+      <div class="math-display">$$x_t = \sqrt{1 - \beta_t}\, x_{t-1} + \sqrt{\beta_t}\, \epsilon, \qquad \epsilon \sim \mathcal{N}(0, I)$$</div>
+    </div>
+
+    <p>The factor $\sqrt{1 - \beta_t}$ in front of $x_{t-1}$ is a careful choice. It ensures that if $x_{t-1}$ has unit variance then $x_t$ also has unit variance — the scale is preserved as noise accumulates. Without it, the variance would grow unboundedly and $x_T$ would be an unbounded Gaussian instead of a standard one.</p>
+
+    <h3 id="forward-demo">Interactive: watch noise accumulate</h3>
+    <p>A tiny 10×10 "smiley" image gets corrupted one step at a time. Adjust the schedule and starting timestep to see how quickly structure is destroyed. Press <strong>Step →</strong> to add one step of noise.</p>
+
+    <div class="step-figure" id="df-fwd-figure">
+      <div class="sf-header">
+        <span class="sf-title">▸ Forward noising · 10×10 image</span>
+        <span class="sf-progress" id="df-fwd-progress">t = 0 / 20</span>
+      </div>
+      <div class="sf-body">
+        <div class="sf-visual">
+          <svg viewBox="0 0 400 260" width="100%" style="max-width:400px" id="df-fwd-svg">
+            <text x="100" y="20" text-anchor="middle" fill="#8a93a6" font-family="monospace" font-size="10">x_t (current)</text>
+            <g id="df-fwd-grid" transform="translate(50, 30)"></g>
+
+            <text x="280" y="20" text-anchor="middle" fill="#8a93a6" font-family="monospace" font-size="10">stats</text>
+            <text x="220" y="50" fill="#dbe1ec" font-family="monospace" font-size="11">t = <tspan id="df-fwd-tval">0</tspan></text>
+            <text x="220" y="80" fill="#dbe1ec" font-family="monospace" font-size="11">β_t = <tspan id="df-fwd-bval">—</tspan></text>
+            <text x="220" y="110" fill="#dbe1ec" font-family="monospace" font-size="11">ᾱ_t = <tspan id="df-fwd-aval">1.000</tspan></text>
+            <text x="220" y="140" fill="#8a93a6" font-family="monospace" font-size="10">(signal retention)</text>
+
+            <text x="220" y="180" fill="#22d3ee" font-family="monospace" font-size="11">noise std: <tspan id="df-fwd-nval">0.000</tspan></text>
+            <text x="220" y="210" fill="#22d3ee" font-family="monospace" font-size="11">signal std: <tspan id="df-fwd-sval">1.000</tspan></text>
+          </svg>
+        </div>
+        <div class="sf-explain" id="df-fwd-explain">
+          <h5>READY</h5>
+          <p>Step 0 is the original image. Each step multiplies the current state by $\sqrt{1-\beta_t}$ and adds Gaussian noise of scale $\sqrt{\beta_t}$.</p>
+          <p>Press <strong>Step →</strong> to begin.</p>
+        </div>
+      </div>
+      <div class="sf-params">
+        <label>β start <input type="number" id="df-fwd-b-start" value="0.02" step="0.01" min="0.001"></label>
+        <label>β end <input type="number" id="df-fwd-b-end" value="0.2" step="0.01" min="0.01"></label>
+        <label>T <input type="number" id="df-fwd-T" value="20" step="1" min="5" max="60"></label>
+      </div>
+      <div class="sf-controls">
+        <button class="btn" onclick="resetDFF()">↺ Reset</button>
+        <div class="spacer"></div>
+        <button class="btn primary" onclick="stepDFF()">Step →</button>
+        <button class="btn" onclick="runDFF()">Run to end</button>
+      </div>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="closed-form">3. Closed form: jumping to any step</h2>
+
+    <p>Applying the forward chain step-by-step works, but for training we need something faster. Here's the miracle: the noise accumulated over $t$ steps is itself Gaussian, and we can write $x_t$ directly in terms of $x_0$ without iterating.</p>
+
+    <p>Let $\alpha_t = 1 - \beta_t$ and $\bar{\alpha}_t = \prod_{s=1}^{t} \alpha_s$. Then:</p>
+
+    <div class="theorem">
+      <span class="label">Closed-form forward</span>
+      <div class="math-display">$$q(x_t \mid x_0) = \mathcal{N}\!\left(x_t;\ \sqrt{\bar{\alpha}_t}\, x_0,\ (1 - \bar{\alpha}_t) I\right)$$</div>
+      <p>Or in sampling form:</p>
+      <div class="math-display">$$x_t = \sqrt{\bar{\alpha}_t}\, x_0 + \sqrt{1 - \bar{\alpha}_t}\, \epsilon, \qquad \epsilon \sim \mathcal{N}(0, I)$$</div>
+    </div>
+
+    <div class="proof">
+      <span class="label">Quick derivation (telescoping)</span>
+      <p>$x_t = \sqrt{\alpha_t}\, x_{t-1} + \sqrt{1 - \alpha_t}\, \epsilon_{t}$</p>
+      <p>Substitute $x_{t-1} = \sqrt{\alpha_{t-1}}\, x_{t-2} + \sqrt{1 - \alpha_{t-1}}\, \epsilon_{t-1}$:</p>
+      <p>$x_t = \sqrt{\alpha_t \alpha_{t-1}}\, x_{t-2} + \sqrt{\alpha_t(1 - \alpha_{t-1})}\, \epsilon_{t-1} + \sqrt{1-\alpha_t}\, \epsilon_t$</p>
+      <p>The sum of independent Gaussians is Gaussian, and the variance is the sum of squared coefficients: $\alpha_t(1 - \alpha_{t-1}) + (1 - \alpha_t) = 1 - \alpha_t \alpha_{t-1}$.</p>
+      <p>Continuing telescopically, after $t$ substitutions we arrive at $x_t = \sqrt{\bar{\alpha}_t}\, x_0 + \sqrt{1 - \bar{\alpha}_t}\, \bar{\epsilon}$ with $\bar{\epsilon} \sim \mathcal{N}(0, I)$. $\blacksquare$</p>
+    </div>
+
+    <p>This means at training time we can sample a random $t \in \{1, \dots, T\}$ and compute $x_t$ directly in one line. No iteration. This single fact is what makes diffusion models trainable at scale.</p>
+
+    <div class="example">
+      <span class="label">Signal vs. noise at different $t$</span>
+      <p>With a linear schedule $\beta_t$ from 0.0001 to 0.02 over $T = 1000$ steps: $\bar{\alpha}_{100} \approx 0.985$, $\bar{\alpha}_{500} \approx 0.21$, $\bar{\alpha}_{999} \approx 4 \times 10^{-5}$.</p>
+      <p>At $t = 500$, the image is roughly $\sqrt{0.21} \approx 46\%$ signal and $\sqrt{0.79} \approx 89\%$ noise (by standard deviation). By $t = 999$ the signal has essentially vanished.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="reverse">4. The reverse process</h2>
+
+    <p>We want to learn $p_\theta(x_{t-1} \mid x_t)$ — a model that, given a noisy image, tells us how to denoise it by one step. If $\beta_t$ is small, the true reverse process is also approximately Gaussian, and we parameterize it as:</p>
+
+    <div class="math-display">$$p_\theta(x_{t-1} \mid x_t) = \mathcal{N}(x_{t-1};\ \mu_\theta(x_t, t),\ \Sigma_\theta(x_t, t))$$</div>
+
+    <p>In the simplest formulation (DDPM, Ho et al., 2020), we fix the variance $\Sigma_\theta$ to a known schedule and only learn the mean $\mu_\theta$. But instead of directly predicting the mean, we predict the <em>noise</em>.</p>
+
+    <div class="theorem">
+      <span class="label">Mean from predicted noise</span>
+      <p>Let $\epsilon_\theta(x_t, t)$ be a neural network that predicts the noise component of $x_t$. Then the reverse mean is:</p>
+      <div class="math-display">$$\mu_\theta(x_t, t) = \frac{1}{\sqrt{\alpha_t}} \left( x_t - \frac{1 - \alpha_t}{\sqrt{1 - \bar{\alpha}_t}}\, \epsilon_\theta(x_t, t) \right)$$</div>
+    </div>
+
+    <p>This formula comes out of doing Bayes' theorem on the forward and reverse distributions and substituting the closed-form forward. If you want to work it out — start from $q(x_{t-1} \mid x_t, x_0)$ which is Gaussian (computable exactly using Bayes), express $x_0$ in terms of $x_t$ and $\epsilon$ using the forward closed form, and simplify. You arrive at the formula above.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="training">5. The training objective</h2>
+
+    <p>Diffusion models were originally motivated as variational autoencoders with a very long chain of latents, and the original derivation minimizes an ELBO (evidence lower bound). The algebra is gnarly but the final result is shockingly clean:</p>
+
+    <div class="theorem">
+      <span class="label">Simplified DDPM loss</span>
+      <div class="math-display">$$\mathcal{L} = \mathbb{E}_{t,\, x_0,\, \epsilon} \left[ \left\| \epsilon - \epsilon_\theta\!\left(\sqrt{\bar{\alpha}_t}\, x_0 + \sqrt{1 - \bar{\alpha}_t}\, \epsilon,\ t\right) \right\|^2 \right]$$</div>
+    </div>
+
+    <p>Decoded:</p>
+    <ol>
+      <li>Sample a training image $x_0$.</li>
+      <li>Sample a random timestep $t \in \{1, \dots, T\}$.</li>
+      <li>Sample Gaussian noise $\epsilon \sim \mathcal{N}(0, I)$.</li>
+      <li>Form the noisy image $x_t = \sqrt{\bar{\alpha}_t}\, x_0 + \sqrt{1 - \bar{\alpha}_t}\, \epsilon$.</li>
+      <li>Feed $(x_t, t)$ into the network $\epsilon_\theta$, which outputs a noise prediction.</li>
+      <li>Loss: squared error between predicted and actual noise.</li>
+    </ol>
+
+    <p>That's it. It is a supervised regression task — the targets are the noise we just added ourselves. The network learns to estimate the noise content of an image for every noise level in the schedule.</p>
+
+    <div class="callout math">
+      <div class="label">THE SIMPLICITY TRICK</div>
+      <p style="margin:6px 0">The full ELBO objective includes weighting terms that depend on $t$. Ho et al. noticed that dropping these weights (uniform weighting) yields <em>better</em> samples empirically. So the real loss is just MSE of noise prediction. No fancy divergences, no adversarial games.</p>
+    </div>
+
+    <h3>The network architecture</h3>
+    <p>In practice $\epsilon_\theta$ is a U-Net: an encoder-decoder CNN with skip connections between corresponding encoder and decoder blocks. The encoder downsamples the image through several resolutions, building up feature maps; the decoder upsamples back to the original size, using the skip connections to recover fine detail. The timestep $t$ is embedded (typically with sinusoidal encoding + MLP) and added to every layer's activations so the network knows how much noise to look for.</p>
+
+    <p>Modern large-scale diffusion models often use transformer-based backbones instead of U-Nets (DiT, MMDiT, etc.) — but the training procedure is the same.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="sampling">6. Sampling (DDPM)</h2>
+
+    <p>Training over. Now we want to generate new images. Start from pure noise $x_T \sim \mathcal{N}(0, I)$ and iterate the reverse step:</p>
+
+    <div class="callout math">
+      <div class="label">DDPM SAMPLING (pseudocode)</div>
+<pre style="margin:8px 0;font-family:var(--mono);font-size:13px;line-height:1.6;color:var(--text)">
+x = sample from N(0, I)             # start from noise
+for t in T, T-1, ..., 1:
+    z = sample from N(0, I) if t > 1 else 0
+    pred_eps = eps_theta(x, t)       # network's noise prediction
+    x = (1 / sqrt(alpha_t)) *
+        (x - ((1 - alpha_t) / sqrt(1 - alpha_bar_t)) * pred_eps) +
+        sigma_t * z
+return x                             # x_0: the generated image
+</pre>
+    </div>
+
+    <p>The extra $\sigma_t z$ term is the <em>added stochasticity</em>: the reverse process is itself a noisy Markov chain. Each reverse step denoises by a little and reintroduces a tiny bit of fresh noise. Without it, the chain would collapse to something deterministic and the samples would all look similar. With it, each sampling run produces a different image.</p>
+
+    <h3 id="sampling-demo">Interactive: watch an image emerge from noise</h3>
+    <p>For educational purposes, this demo does a <em>simulated</em> denoising: it starts from pure noise and reveals a hidden image in proportion to $\sqrt{\bar{\alpha}_t}$. The actual DDPM sampling equations look like this when the model's noise predictions are perfect — what you see is the trajectory a well-trained diffusion model would produce.</p>
+
+    <div class="step-figure" id="df-rev-figure">
+      <div class="sf-header">
+        <span class="sf-title">▸ Reverse denoising · noise → image</span>
+        <span class="sf-progress" id="df-rev-progress">t = T</span>
+      </div>
+      <div class="sf-body">
+        <div class="sf-visual">
+          <svg viewBox="0 0 400 260" width="100%" style="max-width:400px" id="df-rev-svg">
+            <text x="100" y="20" text-anchor="middle" fill="#8a93a6" font-family="monospace" font-size="10">current x_t</text>
+            <g id="df-rev-grid" transform="translate(50, 30)"></g>
+
+            <text x="280" y="20" text-anchor="middle" fill="#8a93a6" font-family="monospace" font-size="10">stats</text>
+            <text x="220" y="50" fill="#dbe1ec" font-family="monospace" font-size="11">t = <tspan id="df-rev-tval">T</tspan></text>
+            <text x="220" y="80" fill="#dbe1ec" font-family="monospace" font-size="11">signal √ᾱ_t = <tspan id="df-rev-sig">0</tspan></text>
+            <text x="220" y="110" fill="#dbe1ec" font-family="monospace" font-size="11">noise √(1−ᾱ_t) = <tspan id="df-rev-noi">1</tspan></text>
+
+            <text x="220" y="150" fill="#22d3ee" font-family="monospace" font-size="10">progress:</text>
+            <rect x="220" y="160" width="150" height="10" fill="#11141c" stroke="#242a3a"/>
+            <rect id="df-rev-progbar" x="220" y="160" width="0" height="10" fill="#22d3ee"/>
+          </svg>
+        </div>
+        <div class="sf-explain" id="df-rev-explain">
+          <h5>READY</h5>
+          <p>Starting state is pure noise. Each step reduces the noise contribution and reveals more of the signal — exactly what a trained denoiser would do.</p>
+          <p>Press <strong>Step →</strong> to take one denoising step.</p>
+        </div>
+      </div>
+      <div class="sf-params">
+        <label>T <input type="number" id="df-rev-T" value="20" step="1" min="5" max="60"></label>
+        <label>β start <input type="number" id="df-rev-b-start" value="0.02" step="0.01" min="0.001"></label>
+        <label>β end <input type="number" id="df-rev-b-end" value="0.2" step="0.01" min="0.01"></label>
+      </div>
+      <div class="sf-controls">
+        <button class="btn" onclick="resetDFR()">↺ Reset</button>
+        <div class="spacer"></div>
+        <button class="btn primary" onclick="stepDFR()">Step →</button>
+        <button class="btn" onclick="runDFR()">Run all</button>
+      </div>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="scheduler">7. Noise schedules</h2>
+
+    <p>The schedule $\{\beta_t\}$ is a critical design choice. Different schedules make the forward process destroy information at different rates, which changes which noise levels the model spends effort on.</p>
+
+    <div class="grid">
+      <div class="card">
+        <h4>Linear</h4>
+        <p>$\beta_t$ linearly interpolates between $\beta_1 = 10^{-4}$ and $\beta_T = 0.02$. The original DDPM schedule. Simple but wastes capacity on near-pure-noise timesteps that are already easy to denoise.</p>
+      </div>
+      <div class="card">
+        <h4>Cosine</h4>
+        <p>Introduced by Nichol &amp; Dhariwal (2021). $\bar{\alpha}_t$ follows a cosine curve so the noise level changes slowly near $t = 0$ and $t = T$. Better sample quality, especially at low step counts.</p>
+      </div>
+      <div class="card">
+        <h4>Variance-preserving (VP)</h4>
+        <p>The family DDPM belongs to: $\sqrt{\alpha_t}$ shrinks and $\sqrt{\beta_t}$ noise is added, preserving unit variance overall.</p>
+      </div>
+      <div class="card">
+        <h4>Variance-exploding (VE)</h4>
+        <p>Alternative formulation (Song &amp; Ermon). $x_t = x_0 + \sigma_t \epsilon$ with increasing $\sigma_t$. Variance grows unboundedly. Equivalent expressive power, different implementation details.</p>
+      </div>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="ddim">8. DDIM and faster samplers</h2>
+
+    <p>Vanilla DDPM sampling needs $T \approx 1000$ forward passes through the network to produce one image. For a large model that's slow — several seconds or minutes per sample. An enormous amount of research has gone into cutting down the step count without losing quality.</p>
+
+    <ul class="clean">
+      <li><strong>DDIM (Song et al., 2020)</strong> — a <em>deterministic</em> sampler derived from the same model. Uses the observation that multiple forward SDEs correspond to the same marginal distributions, so you can pick a slower or faster reverse trajectory. Works at 50 steps with no quality loss; still decent at 10.</li>
+      <li><strong>DPM-Solver (Lu et al., 2022)</strong> — treats the reverse process as a continuous-time ODE and uses classical high-order numerical solvers. Can produce good samples in 10–20 steps.</li>
+      <li><strong>Consistency models (Song et al., 2023)</strong> — a different training objective that lets you generate an image in a single forward pass, at some cost in quality.</li>
+      <li><strong>Rectified flow / flow matching</strong> — reformulate the problem as learning a straight-line interpolation between noise and data, enabling very few-step sampling. Used in Stable Diffusion 3 and SD XL Turbo.</li>
+    </ul>
+
+    <!-- ========================================================== -->
+    <h2 id="conditional">9. Conditional generation and classifier-free guidance</h2>
+
+    <p>So far we have described <em>unconditional</em> generation — sampling from $p(x)$ of the training distribution. For text-to-image models we want $p(x \mid \text{text})$. There are two main ways to condition a diffusion model on text.</p>
+
+    <h3>Classifier guidance</h3>
+    <p>Train a classifier $p_\phi(\text{text} \mid x_t)$ that predicts text captions from noisy images. At sampling time, add the gradient of the classifier's log-probability to the noise prediction, pushing the sample toward images the classifier thinks match the prompt. Works, but requires training a separate classifier on noisy images — annoying.</p>
+
+    <h3>Classifier-free guidance (CFG)</h3>
+    <p>The method that actually made text-to-image work. Train a single model that is <em>jointly</em> conditional and unconditional: with some probability (say 10%) drop the conditioning during training, so the model learns both $\epsilon_\theta(x_t, t, c)$ and $\epsilon_\theta(x_t, t, \varnothing)$. At sampling time, compute both and extrapolate:</p>
+
+    <div class="math-display">$$\tilde{\epsilon} = \epsilon_\theta(x_t, t, \varnothing) + w \left[\epsilon_\theta(x_t, t, c) - \epsilon_\theta(x_t, t, \varnothing)\right]$$</div>
+
+    <p>where $w$ is the <em>guidance scale</em>. $w = 1$ is plain conditional sampling; $w > 1$ exaggerates the influence of the prompt. Increasing $w$ produces images that more faithfully match the prompt at the cost of some realism. Typical values: $w = 7$ for Stable Diffusion.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="latent">10. Latent diffusion</h2>
+
+    <p>Running diffusion directly on $512 \times 512 \times 3$ images is expensive — the U-Net has to process tensors with 786,000 values at every step, $\times$ hundreds of steps. <strong>Latent diffusion</strong> (Rombach et al., 2022) fixes this by first compressing images into a much smaller latent space using a pretrained autoencoder, then running diffusion in that latent space.</p>
+
+    <ol>
+      <li>Train a VAE: encoder $E$ maps $x \mapsto z$ (e.g. $512^2 \times 3 \to 64^2 \times 4$ — about 48× smaller), decoder $D$ maps $z \mapsto \hat{x}$.</li>
+      <li>Train the diffusion model in $z$-space: add noise to $z_0 = E(x_0)$, predict the noise, etc. The U-Net is now much smaller.</li>
+      <li>At sampling: generate $z_0$ via DDPM/DDIM, then decode $x_0 = D(z_0)$.</li>
+    </ol>
+
+    <p>This is how Stable Diffusion works. The diffusion U-Net operates on $64 \times 64 \times 4$ latents (~16k values) regardless of the final image size. Text conditioning is injected through cross-attention with embeddings from a CLIP or T5 text encoder. The result: state-of-the-art image generation on consumer GPUs.</p>
+
+    <h3>The zoo, briefly</h3>
+    <ul class="clean">
+      <li><strong>Stable Diffusion 1.x / 2.x:</strong> latent diffusion, U-Net backbone, CLIP text encoder.</li>
+      <li><strong>SDXL:</strong> bigger U-Net, dual text encoders, improved training data.</li>
+      <li><strong>Stable Diffusion 3 / Flux:</strong> MM-DiT transformer backbone, flow matching objective, T5 text encoder.</li>
+      <li><strong>DALL-E 2 / 3:</strong> cascade: a prior model predicts CLIP image embeddings from text, then a diffusion model decodes them to pixels.</li>
+      <li><strong>Imagen:</strong> cascade of three diffusion models at progressively higher resolutions.</li>
+      <li><strong>Sora, Veo, Runway Gen-3:</strong> video diffusion, operating on latents that represent spatial + temporal tokens.</li>
+    </ul>
+
+    <!-- ========================================================== -->
+    <h2 id="summary">11. Summary</h2>
+
+    <div class="callout good">
+      <div class="label">ONE-PARAGRAPH SUMMARY</div>
+      <p style="margin:6px 0">Diffusion models define a fixed forward process that gradually corrupts data into Gaussian noise, and learn a neural network that reverses one step of that corruption at a time. The training objective reduces to a simple MSE regression: predict the noise in a partially-noised image. Sampling starts from pure noise and iterates the learned denoiser hundreds of times, producing a fresh sample from the data distribution. Latent diffusion shrinks the compute by diffusing a compressed latent representation, and classifier-free guidance turns the whole thing into a text-to-image system. All modern image, video, and audio generators — Stable Diffusion, DALL-E, Imagen, Sora — are built on this recipe.</p>
+    </div>
+
+    <h3>Where to go next</h3>
+    <ul class="clean">
+      <li><a href="backpropagation.html">→ Backpropagation</a> — how the U-Net is trained end-to-end.</li>
+      <li><a href="self-attention.html">→ Self-Attention</a> — used throughout modern diffusion backbones (DiT, cross-attention to text).</li>
+      <li><a class="ext" href="https://arxiv.org/abs/2006.11239" target="_blank">Ho et al., <em>Denoising Diffusion Probabilistic Models</em> (2020)</a> — the paper that made diffusion competitive with GANs.</li>
+      <li><a class="ext" href="https://arxiv.org/abs/2112.10752" target="_blank">Rombach et al., <em>High-Resolution Image Synthesis with Latent Diffusion Models</em> (2021)</a> — the Stable Diffusion paper.</li>
+      <li><a class="ext" href="https://lilianweng.github.io/posts/2021-07-11-diffusion-models/" target="_blank">Lilian Weng: What are Diffusion Models?</a> — the most popular review article on the topic.</li>
+      <li><a class="ext" href="https://yang-song.net/blog/2021/score/" target="_blank">Yang Song: Generative Modeling by Estimating Gradients of the Data Distribution</a> — the score-based perspective.</li>
+    </ul>
+  </article>
+</div>
+
+<script>
+// ============================================================
+// Shared: tiny 10x10 "smiley" image as baseline, values in [0,1]
+// ============================================================
+function makeSmiley() {
+  const s = [];
+  for (let r = 0; r < 10; r++) {
+    const row = [];
+    for (let c = 0; c < 10; c++) {
+      let v = 0;
+      // face circle
+      const dx = c - 4.5, dy = r - 4.5;
+      const d = Math.sqrt(dx*dx + dy*dy);
+      if (d > 4.5) v = 0.05;
+      else if (d > 3.8) v = 0.9;       // outline
+      else v = 0.6;                     // face fill
+      // eyes
+      if ((r === 3 && c === 3) || (r === 3 && c === 6)) v = 0.0;
+      // mouth
+      if (r === 6 && (c >= 3 && c <= 6)) v = 0.0;
+      if (r === 7 && (c === 3 || c === 6)) v = 0.0;
+      row.push(v);
+    }
+    s.push(row);
+  }
+  return s;
+}
+
+// Seeded deterministic-ish normal draws (Box-Muller from Math.random)
+function gauss() {
+  let u = 0, v = 0;
+  while (u === 0) u = Math.random();
+  while (v === 0) v = Math.random();
+  return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+}
+
+function renderGrid(gId, data, size = 12) {
+  const g = document.getElementById(gId);
+  let html = '';
+  for (let r = 0; r < data.length; r++) {
+    for (let c = 0; c < data[r].length; c++) {
+      const x = c * size, y = r * size;
+      const val = Math.max(0, Math.min(1, data[r][c]));
+      const shade = Math.round(val * 240);
+      html += `<rect x="${x}" y="${y}" width="${size}" height="${size}" fill="rgb(${shade},${shade},${shade})" stroke="#11141c" stroke-width="0.5"/>`;
+    }
+  }
+  g.innerHTML = html;
+}
+
+function fmtDF(n, d = 3) {
+  if (isNaN(n)) return '?';
+  return (+n).toFixed(d);
+}
+
+// ============================================================
+// FORWARD NOISING DEMO
+// ============================================================
+const dffState = {
+  x0: makeSmiley(),
+  current: null,
+  t: 0,
+  alphaBar: 1.0
+};
+
+function computeDFFBetas() {
+  const bs = parseFloat(document.getElementById('df-fwd-b-start').value) || 0.02;
+  const be = parseFloat(document.getElementById('df-fwd-b-end').value) || 0.2;
+  const T = parseInt(document.getElementById('df-fwd-T').value) || 20;
+  const betas = [];
+  for (let i = 0; i < T; i++) {
+    betas.push(bs + (be - bs) * i / Math.max(1, T - 1));
+  }
+  return { betas, T };
+}
+
+function resetDFF() {
+  dffState.x0 = makeSmiley();
+  dffState.current = dffState.x0.map(row => row.slice());
+  dffState.t = 0;
+  dffState.alphaBar = 1.0;
+  renderGrid('df-fwd-grid', dffState.current);
+  const { T } = computeDFFBetas();
+  document.getElementById('df-fwd-progress').textContent = `t = 0 / ${T}`;
+  document.getElementById('df-fwd-tval').textContent = '0';
+  document.getElementById('df-fwd-bval').textContent = '—';
+  document.getElementById('df-fwd-aval').textContent = '1.000';
+  document.getElementById('df-fwd-nval').textContent = '0.000';
+  document.getElementById('df-fwd-sval').textContent = '1.000';
+  document.getElementById('df-fwd-explain').innerHTML =
+    `<h5>READY</h5><p>Original image (t = 0). Press <strong>Step →</strong> to apply one step of the forward noising process.</p>`;
+}
+
+function stepDFF() {
+  const { betas, T } = computeDFFBetas();
+  if (dffState.t >= T) {
+    document.getElementById('df-fwd-explain').innerHTML =
+      `<h5>T REACHED</h5><p>After $T = ${T}$ steps, $\\bar{\\alpha}_T = ${fmtDF(dffState.alphaBar,4)}$. The image is essentially pure Gaussian noise.</p>`;
+    return;
+  }
+  const beta = betas[dffState.t];
+  const alpha = 1 - beta;
+  const sqrtAlpha = Math.sqrt(alpha);
+  const sqrtBeta = Math.sqrt(beta);
+  for (let r = 0; r < 10; r++) {
+    for (let c = 0; c < 10; c++) {
+      dffState.current[r][c] = sqrtAlpha * dffState.current[r][c] + sqrtBeta * gauss();
+    }
+  }
+  dffState.t++;
+  dffState.alphaBar *= alpha;
+  renderGrid('df-fwd-grid', dffState.current);
+  document.getElementById('df-fwd-progress').textContent = `t = ${dffState.t} / ${T}`;
+  document.getElementById('df-fwd-tval').textContent = dffState.t;
+  document.getElementById('df-fwd-bval').textContent = fmtDF(beta, 4);
+  document.getElementById('df-fwd-aval').textContent = fmtDF(dffState.alphaBar, 4);
+  document.getElementById('df-fwd-nval').textContent = fmtDF(Math.sqrt(1 - dffState.alphaBar), 3);
+  document.getElementById('df-fwd-sval').textContent = fmtDF(Math.sqrt(dffState.alphaBar), 3);
+  document.getElementById('df-fwd-explain').innerHTML =
+    `<h5>STEP ${dffState.t}</h5>
+     <p>$\\beta_{${dffState.t}} = ${fmtDF(beta, 4)}$, $\\alpha_{${dffState.t}} = ${fmtDF(alpha, 4)}$</p>
+     <p>$x_t \\leftarrow \\sqrt{\\alpha_t}\\, x_{t-1} + \\sqrt{\\beta_t}\\, \\epsilon$</p>
+     <p>$\\bar{\\alpha}_{${dffState.t}} = ${fmtDF(dffState.alphaBar, 4)}$ — signal retention ${fmtDF(Math.sqrt(dffState.alphaBar)*100, 1)}%</p>`;
+}
+
+function runDFF() {
+  const { T } = computeDFFBetas();
+  while (dffState.t < T) stepDFF();
+}
+
+// ============================================================
+// REVERSE DENOISING DEMO (simulated: interpolate signal + noise)
+// ============================================================
+const dfrState = {
+  x0: makeSmiley(),
+  current: null,
+  t: 0,
+  fixedNoise: null,  // fixed noise to keep visualization stable
+  alphaBars: []
+};
+
+function computeDFRSchedule() {
+  const bs = parseFloat(document.getElementById('df-rev-b-start').value) || 0.02;
+  const be = parseFloat(document.getElementById('df-rev-b-end').value) || 0.2;
+  const T = parseInt(document.getElementById('df-rev-T').value) || 20;
+  const alphaBars = [];
+  let ab = 1;
+  for (let i = 0; i < T; i++) {
+    const beta = bs + (be - bs) * i / Math.max(1, T - 1);
+    ab *= (1 - beta);
+    alphaBars.push(ab);
+  }
+  return { T, alphaBars };
+}
+
+function fillReverseImage(t, T, alphaBars) {
+  // For educational visualization: show sqrt(alpha_bar_t) * x0 + sqrt(1 - alpha_bar_t) * fixed_noise
+  // t = T means pure noise, t = 0 means pure image
+  let ab;
+  if (t <= 0) ab = 1.0;
+  else if (t > T) ab = alphaBars[T - 1];
+  else ab = alphaBars[t - 1];
+  const signal = Math.sqrt(ab);
+  const noise  = Math.sqrt(1 - ab);
+  for (let r = 0; r < 10; r++) {
+    for (let c = 0; c < 10; c++) {
+      dfrState.current[r][c] = signal * dfrState.x0[r][c] + noise * dfrState.fixedNoise[r][c];
+    }
+  }
+}
+
+function resetDFR() {
+  dfrState.x0 = makeSmiley();
+  dfrState.current = dfrState.x0.map(row => row.slice());
+  dfrState.fixedNoise = [];
+  for (let r = 0; r < 10; r++) {
+    const row = [];
+    for (let c = 0; c < 10; c++) row.push(gauss() * 0.5 + 0.5);
+    dfrState.fixedNoise.push(row);
+  }
+  const { T, alphaBars } = computeDFRSchedule();
+  dfrState.alphaBars = alphaBars;
+  dfrState.t = T;
+  fillReverseImage(T, T, alphaBars);
+  renderGrid('df-rev-grid', dfrState.current);
+  document.getElementById('df-rev-progress').textContent = `t = ${T} / ${T}`;
+  document.getElementById('df-rev-tval').textContent = T;
+  document.getElementById('df-rev-sig').textContent = fmtDF(Math.sqrt(alphaBars[T-1]), 3);
+  document.getElementById('df-rev-noi').textContent = fmtDF(Math.sqrt(1 - alphaBars[T-1]), 3);
+  document.getElementById('df-rev-progbar').setAttribute('width', 0);
+  document.getElementById('df-rev-explain').innerHTML =
+    `<h5>READY</h5><p>Starting at $t = T$: pure Gaussian noise. Press <strong>Step →</strong> to denoise one step at a time.</p>`;
+}
+
+function stepDFR() {
+  if (dfrState.t <= 0) return;
+  dfrState.t--;
+  const { T, alphaBars } = computeDFRSchedule();
+  fillReverseImage(dfrState.t, T, alphaBars);
+  renderGrid('df-rev-grid', dfrState.current);
+  const ab = dfrState.t > 0 ? alphaBars[dfrState.t - 1] : 1.0;
+  document.getElementById('df-rev-progress').textContent = `t = ${dfrState.t} / ${T}`;
+  document.getElementById('df-rev-tval').textContent = dfrState.t;
+  document.getElementById('df-rev-sig').textContent = fmtDF(Math.sqrt(ab), 3);
+  document.getElementById('df-rev-noi').textContent = fmtDF(Math.sqrt(1 - ab), 3);
+  const progress = (T - dfrState.t) / T;
+  document.getElementById('df-rev-progbar').setAttribute('width', 150 * progress);
+  document.getElementById('df-rev-explain').innerHTML =
+    `<h5>REVERSE STEP → t = ${dfrState.t}</h5>
+     <p>The network predicts the noise content and subtracts a scaled portion of it:</p>
+     <p>$x_{t-1} = \\frac{1}{\\sqrt{\\alpha_t}}\\left(x_t - \\frac{1-\\alpha_t}{\\sqrt{1-\\bar{\\alpha}_t}}\\, \\epsilon_\\theta(x_t,t)\\right) + \\sigma_t z$</p>
+     <p>Signal retention now $\\sqrt{\\bar{\\alpha}_t} = ${fmtDF(Math.sqrt(ab), 3)}$.</p>
+     ${dfrState.t === 0 ? '<p style="color:var(--good)"><strong>✓ Done.</strong> The final x₀ is the generated image.</p>' : ''}`;
+}
+
+function runDFR() {
+  while (dfrState.t > 0) stepDFR();
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  resetDFF();
+  resetDFR();
+});
+</script>
+<script defer src="../search-index.js"></script>
+<script defer src="../search.js"></script>
+</body>
+</html>

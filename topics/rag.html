@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Retrieval-Augmented Generation — Deep Dive</title>
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError: false});"></script>
+</head>
+<body>
+<div id="tooltip"></div>
+
+<nav class="topic-nav">
+  <a class="back" href="../ai-ml.html">← Back to AI/ML</a>
+  <div class="crumb">Deep Dives / <span class="topic-name">Retrieval-Augmented Generation</span></div>
+</nav>
+
+<div class="topic-layout">
+  <aside class="topic-toc">
+    <h4>ON THIS PAGE</h4>
+    <ul>
+      <li><a href="#intro">1. The core idea</a></li>
+      <li><a href="#pipeline">2. The pipeline</a></li>
+      <li><a href="#embed">3. Dense embeddings</a></li>
+      <li><a href="#retrieval">4. Cosine similarity &amp; top-k</a></li>
+      <li><a href="#demo">5. Interactive RAG demo</a></li>
+      <li><a href="#hybrid">6. Sparse + dense hybrid</a></li>
+      <li><a href="#rerank">7. Rerankers</a></li>
+      <li><a href="#code">8. Source code</a></li>
+      <li><a href="#summary">9. Summary</a></li>
+    </ul>
+  </aside>
+
+  <article class="topic-content">
+    <h1>Retrieval-Augmented Generation</h1>
+    <p class="subtitle">The cheapest and most widely-deployed technique on the 2024–25 frontier. Instead of teaching a model every fact in your private corpus, you let it <em>look things up</em> at inference time. This page covers dense retrieval, hybrid search, rerankers, and the pipeline that powers every "chat with your docs" product.</p>
+    <div class="meta-tags">
+      <span>Prereq: embeddings, LLMs</span>
+      <span>Time to read: ~18 min</span>
+      <span>Interactive figures: 1</span>
+      <span>Code: NumPy, Python, SQL</span>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="intro">1. The core idea</h2>
+
+    <p>Foundation models know a lot, but they don't know <em>your</em> data. Your product docs, your codebase, yesterday's Slack messages, last month's customer tickets — none of that is in the pretraining corpus. The straightforward fix — fine-tune the model on your data — is expensive, slow to update, and leaks memorization. RAG chooses a different path:</p>
+
+    <ol>
+      <li>Keep the base model frozen.</li>
+      <li>Put your data in an external store.</li>
+      <li>At query time, search the store for passages relevant to the query.</li>
+      <li>Paste those passages into the prompt.</li>
+      <li>Let the model generate its answer conditioned on the retrieved context.</li>
+    </ol>
+
+    <p>It's almost embarrassingly simple. It's also wildly effective, because modern LLMs are extremely good at the last step — given the right chunk of text in front of them, they extract the answer with high accuracy. The whole engineering game is "find the right chunk."</p>
+
+    <p>RAG was formalized by Lewis et al. (Facebook AI, 2020) but the technique builds on a much older line of open-domain QA research. Its explosion in 2023 was driven by two things: embeddings got good enough to find semantically relevant text without keyword overlap, and vector databases (or pgvector) made it a one-command operation.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="pipeline">2. The pipeline</h2>
+
+    <p>A standard 2024-era RAG pipeline has two phases. <strong>Indexing</strong> runs once per document update:</p>
+
+    <div class="math-display">$$\text{docs} \xrightarrow{\text{chunk}} \text{passages} \xrightarrow{\text{embed}} \text{vectors} \xrightarrow{\text{insert}} \text{vector DB}$$</div>
+
+    <p>And <strong>querying</strong> runs per user request:</p>
+
+    <div class="math-display">$$\text{query} \xrightarrow{\text{embed}} \mathbf{q} \xrightarrow{\text{search}} \text{top-}k \text{ passages} \xrightarrow{\text{prompt}} \text{LLM} \xrightarrow{} \text{answer}$$</div>
+
+    <p>Each arrow has half-a-dozen tunable choices. Chunk size (256? 1024? paragraphs? sentences?). Embedding model (OpenAI, BGE, E5, Nomic?). Vector DB (pgvector, Weaviate, Pinecone, Qdrant?). Top-$k$ (3? 10? 50?). Reranker (yes/no, what kind?). Prompt template (pasted verbatim, summarized, cited?). The whole field of "RAG engineering" is about finding good settings for all of these and then monitoring them as your data changes.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="embed">3. Dense embeddings</h2>
+
+    <p>The foundation of RAG is the embedding model. It maps a piece of text to a vector such that semantically similar texts map to nearby vectors. Training is typically contrastive: given a query $q$ and a relevant passage $p^+$, and some random irrelevant passages $p^-_1, \dots, p^-_n$, minimize:</p>
+
+    <div class="math-display">$$\mathcal{L} = -\log \frac{\exp(\mathbf{q} \cdot \mathbf{p}^+ / \tau)}{\exp(\mathbf{q} \cdot \mathbf{p}^+ / \tau) + \sum_{i=1}^{n} \exp(\mathbf{q} \cdot \mathbf{p}^-_i / \tau)}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Contrastive embedding loss</p>
+      <dl>
+        <dt>$\mathbf{q}$</dt><dd>The query embedding — an $d$-dimensional vector (typically 384, 768, or 1536) produced by running the query through the encoder.</dd>
+        <dt>$\mathbf{p}^+$</dt><dd>A positive passage embedding — a passage that actually answers the query. During training, these are mined from labeled QA pairs or from (question, linked passage) data.</dd>
+        <dt>$\mathbf{p}^-_i$</dt><dd>Negative passages — random other passages in the batch, or "hard negatives" mined to look similar to the positive but be wrong.</dd>
+        <dt>$\tau$</dt><dd>Temperature. Small $\tau$ sharpens the softmax; large $\tau$ smooths it. Usually around 0.01–0.1.</dd>
+        <dt>$\mathbf{q} \cdot \mathbf{p}$</dt><dd>Inner product between the query and passage embeddings. If embeddings are L2-normalized this equals cosine similarity.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>What it teaches the model</strong> "Pull the positive pair together, push the negatives away." After a few hundred million such updates, the encoder learns to place semantically similar sentences close in vector space — regardless of the exact words. A query for "how to reset my password" will be close to a passage that starts with "If you've forgotten your credentials, click Forgot Password" even though no words overlap.</p>
+    </div>
+
+    <p>Best-in-class 2024 open models (BGE-M3, E5-Mistral, Nomic Embed) achieve MTEB scores in the high 60s on average across 56 retrieval tasks. For reference, 2019's BERT-based DPR scored in the low 40s. This is where most of the RAG-quality gains of the last two years have come from.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="retrieval">4. Cosine similarity and top-k</h2>
+
+    <p>At query time you have a query vector $\mathbf{q}$ and a whole database of passage vectors $\mathbf{p}_1, \dots, \mathbf{p}_M$. You want the $k$ passages most similar to $\mathbf{q}$. The similarity metric is almost always cosine:</p>
+
+    <div class="math-display">$$\text{sim}(\mathbf{q}, \mathbf{p}) = \frac{\mathbf{q} \cdot \mathbf{p}}{\|\mathbf{q}\| \, \|\mathbf{p}\|}$$</div>
+
+    <p>If all your vectors are pre-normalized to unit length, this simplifies to a dot product. For $M$ passages and a single query, a brute-force scan is $O(M d)$ — usually fast enough up to ~1M vectors on modern hardware. Beyond that, you use an approximate nearest neighbor (ANN) index: HNSW, IVF-PQ, ScaNN. These trade a small amount of recall (~95–99%) for orders of magnitude speedup, making billion-vector search tractable.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="demo">5. Interactive RAG demo</h2>
+
+    <p>Below is a toy RAG index with 10 passages. Click a query to embed it (in this demo, into a hand-picked 2-D space) and see the top-3 retrieval. Notice how "password reset" matches "credentials" without any word overlap — that's dense retrieval doing its job.</p>
+
+    <div class="viz-3d">
+      <div class="v3-controls">
+        <span class="v3-label">Query:</span>
+        <button class="v3-btn" data-q="0">reset password</button>
+        <button class="v3-btn" data-q="1">cancel subscription</button>
+        <button class="v3-btn" data-q="2">export data</button>
+        <button class="v3-btn" data-q="3">change email</button>
+        <button class="v3-btn" data-q="4">refund policy</button>
+      </div>
+      <svg id="ragSvg" viewBox="0 0 720 380" style="width:100%;height:auto;background:#0a0d12;border-radius:6px;"></svg>
+      <p class="v3-caption" id="ragCaption">Top-3 retrieved passages for the selected query, shown in a 2-D embedding space.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="hybrid">6. Sparse + dense hybrid</h2>
+
+    <p>Dense retrieval is great at semantic similarity but bad at exact matches — proper nouns, rare tokens, product SKUs, error codes. Classical sparse retrieval (BM25) is the opposite: excellent on exact matches, blind to synonyms. The obvious move is to do both and combine:</p>
+
+    <div class="math-display">$$\text{score}(\mathbf{q}, p) = \alpha \cdot \text{sim}_\text{dense}(\mathbf{q}, p) + (1 - \alpha) \cdot \text{BM25}(\mathbf{q}, p)$$</div>
+
+    <p>This is called <em>hybrid search</em>, and it almost always beats either component alone on real-world corpora. Modern vector DBs (Weaviate, Qdrant, pgvector + full-text) support hybrid search natively.</p>
+
+    <p>Another approach: <strong>Reciprocal Rank Fusion (RRF)</strong>. Rather than weighted-summing scores, you sum the reciprocals of each system's rank:</p>
+
+    <div class="math-display">$$\text{RRF}(p) = \sum_i \frac{1}{k + \text{rank}_i(p)}$$</div>
+
+    <p>RRF is scale-invariant (BM25 and cosine live in different numerical ranges) and needs no tuning.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="rerank">7. Rerankers</h2>
+
+    <p>Top-$k$ retrieval, even with hybrid search, still returns a lot of noise. The next stage is a <strong>reranker</strong>: a small cross-encoder that takes (query, passage) pairs and produces a real relevance score. Unlike the retriever, which embeds query and passages separately, a reranker jointly encodes both and can model fine-grained interactions:</p>
+
+    <div class="math-display">$$s_{\text{rerank}} = f_\theta\big(\text{[CLS]} \, q \, \text{[SEP]} \, p\big)$$</div>
+
+    <p>Rerankers are too expensive to apply to your whole corpus (each (query, passage) needs its own forward pass), so the pipeline is always "retrieve top 50 with a cheap encoder, rerank those 50 with a cross-encoder, keep top 5 for the LLM." The rerank step is slow but only runs on a handful of candidates. Cohere's Rerank, BGE-Reranker, and Voyage Rerank are the 2024 reference implementations.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="code">8. Source code</h2>
+
+    <p>A minimum-viable RAG in NumPy. No vector DB, no fancy chunking — just enough to show the pieces.</p>
+
+    <div class="code-tabs" id="ct-rag">
+      <div class="ct-header">
+        <button class="ct-tab active" data-tab="np">NumPy (toy)</button>
+        <button class="ct-tab" data-tab="pt">PyTorch + HF</button>
+        <button class="ct-tab" data-tab="sql">pgvector SQL</button>
+        <span class="ct-label">RAG · index + query</span>
+      </div>
+      <div class="ct-panel active" data-tab="np"><pre><code><span class="kw">import</span> numpy <span class="kw">as</span> np
+
+<span class="kw">def</span> <span class="fn">normalize</span>(x, axis=-<span class="num">1</span>):
+    <span class="kw">return</span> x / (np.linalg.norm(x, axis=axis, keepdims=<span class="kw">True</span>) + <span class="num">1e-9</span>)
+
+<span class="kw">def</span> <span class="fn">build_index</span>(passages, embed_fn):
+    <span class="cmt"># 1. Chunk (here we assume passages are already chunks).</span>
+    <span class="cmt"># 2. Embed each chunk.</span>
+    vecs = np.stack([embed_fn(p) <span class="kw">for</span> p <span class="kw">in</span> passages])
+    vecs = <span class="fn">normalize</span>(vecs)
+    <span class="kw">return</span> {<span class="str">"texts"</span>: passages, <span class="str">"vecs"</span>: vecs}
+
+<span class="kw">def</span> <span class="fn">retrieve</span>(index, query, embed_fn, k=<span class="num">3</span>):
+    q = <span class="fn">normalize</span>(embed_fn(query))
+    scores = index[<span class="str">"vecs"</span>] @ q                     <span class="cmt"># cosine sim</span>
+    top = np.argsort(-scores)[:k]
+    <span class="kw">return</span> [(index[<span class="str">"texts"</span>][i], <span class="fn">float</span>(scores[i])) <span class="kw">for</span> i <span class="kw">in</span> top]
+
+<span class="kw">def</span> <span class="fn">rag_answer</span>(llm, index, query, embed_fn, k=<span class="num">3</span>):
+    ctx = <span class="fn">retrieve</span>(index, query, embed_fn, k)
+    prompt = <span class="str">"Answer using only the context below.\n\n"</span>
+    <span class="kw">for</span> i, (t, s) <span class="kw">in</span> <span class="fn">enumerate</span>(ctx, <span class="num">1</span>):
+        prompt += <span class="str">f"[{i}] {t}\n\n"</span>
+    prompt += <span class="str">f"Question: {query}\nAnswer:"</span>
+    <span class="kw">return</span> llm(prompt)
+</code></pre></div>
+
+      <div class="ct-panel" data-tab="pt"><pre><code><span class="kw">import</span> torch
+<span class="kw">from</span> sentence_transformers <span class="kw">import</span> SentenceTransformer, CrossEncoder
+<span class="kw">from</span> transformers <span class="kw">import</span> AutoModelForCausalLM, AutoTokenizer
+
+embedder = SentenceTransformer(<span class="str">"BAAI/bge-base-en-v1.5"</span>)
+reranker = CrossEncoder(<span class="str">"BAAI/bge-reranker-base"</span>)
+
+<span class="cmt"># Index</span>
+passages = [p <span class="kw">for</span> p <span class="kw">in</span> my_corpus]
+vecs = embedder.encode(passages, normalize_embeddings=<span class="kw">True</span>,
+                         convert_to_tensor=<span class="kw">True</span>)    <span class="cmt"># (M, d)</span>
+
+<span class="kw">def</span> <span class="fn">query</span>(q, k=<span class="num">5</span>, pool=<span class="num">50</span>):
+    <span class="cmt"># 1. Retrieve the top `pool` candidates by cosine</span>
+    qv = embedder.encode(q, normalize_embeddings=<span class="kw">True</span>, convert_to_tensor=<span class="kw">True</span>)
+    sims = (vecs @ qv).cpu().numpy()
+    cand_idx = sims.argsort()[::-<span class="num">1</span>][:pool]
+
+    <span class="cmt"># 2. Rerank those with the cross-encoder</span>
+    pairs = [(q, passages[i]) <span class="kw">for</span> i <span class="kw">in</span> cand_idx]
+    scores = reranker.predict(pairs)
+    order  = scores.argsort()[::-<span class="num">1</span>][:k]
+    <span class="kw">return</span> [passages[cand_idx[i]] <span class="kw">for</span> i <span class="kw">in</span> order]
+</code></pre></div>
+
+      <div class="ct-panel" data-tab="sql"><pre><code><span class="cmt">-- pgvector: Postgres extension for dense retrieval</span>
+
+<span class="kw">CREATE EXTENSION</span> <span class="kw">IF NOT EXISTS</span> vector;
+
+<span class="kw">CREATE TABLE</span> docs (
+  id      bigserial <span class="kw">PRIMARY KEY</span>,
+  text    text,
+  embed   vector(<span class="num">768</span>)
+);
+
+<span class="cmt">-- Index for fast top-k lookup</span>
+<span class="kw">CREATE INDEX ON</span> docs <span class="kw">USING</span> hnsw (embed vector_cosine_ops);
+
+<span class="cmt">-- Insert after embedding in Python</span>
+<span class="kw">INSERT INTO</span> docs (text, embed) <span class="kw">VALUES</span>
+  (<span class="str">'The user can reset their password from...'</span>, <span class="str">'[0.12, -0.03, ...]'</span>);
+
+<span class="cmt">-- Query: pass in the query embedding as a parameter</span>
+<span class="kw">SELECT</span> text, <span class="num">1</span> - (embed &lt;=&gt; :qvec) <span class="kw">AS</span> sim
+<span class="kw">FROM</span> docs
+<span class="kw">ORDER BY</span> embed &lt;=&gt; :qvec
+<span class="kw">LIMIT</span> <span class="num">5</span>;
+</code></pre></div>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="summary">9. Summary</h2>
+
+    <ul>
+      <li>RAG keeps the base model frozen and injects relevant context into the prompt at query time. It's the default way to plug private data into an LLM.</li>
+      <li>The pipeline splits into <strong>indexing</strong> (chunk → embed → store) and <strong>querying</strong> (embed → search → prompt → generate).</li>
+      <li>Dense embeddings trained with contrastive loss are the retrieval engine. They match on semantics, not keywords.</li>
+      <li><strong>Hybrid search</strong> (dense + BM25) and <strong>rerankers</strong> (cross-encoders on the top candidates) close the gap between "good enough" and "production quality."</li>
+      <li>Long-context models don't kill RAG — corpora keep getting bigger faster than context windows grow. For retrieval in a 1TB codebase, context-stuffing is not an option.</li>
+      <li>2024–25 trends: <em>GraphRAG</em> (traverses a knowledge graph), <em>agentic retrieval</em> (the LLM plans its own multi-hop queries), and <em>HyDE</em> (generate a hypothetical answer, embed <em>that</em>, retrieve on it).</li>
+    </ul>
+
+    <div class="bib">
+      <h4>Further reading</h4>
+      <ul>
+        <li>Lewis et al. (2020) — <em>Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks</em>.</li>
+        <li>Karpukhin et al. (2020) — <em>Dense Passage Retrieval for Open-Domain Question Answering</em>.</li>
+        <li>Gao et al. (2022) — <em>Precise Zero-Shot Dense Retrieval without Relevance Labels</em> (HyDE).</li>
+        <li>Edge et al. (2024) — <em>From Local to Global: A Graph RAG Approach to Query-Focused Summarization</em>.</li>
+        <li>BAAI (2023–24) — <em>BGE &amp; BGE-M3</em> technical reports on multi-functional embeddings.</li>
+      </ul>
+    </div>
+
+    <div class="next-card">
+      <div class="label">NEXT UP</div>
+      <a href="neuro-symbolic.html">→ Neuro-Symbolic AI</a>
+      <p>RAG pulls <em>text</em> into an LLM at query time. Neuro-symbolic AI pulls <em>structured reasoning</em> into an LLM. Next deep dive.</p>
+    </div>
+
+  </article>
+</div>
+
+<script>
+// =========================================================
+// Code tabs
+document.querySelectorAll('.code-tabs').forEach(root => {
+  const tabs = root.querySelectorAll('.ct-tab');
+  const panels = root.querySelectorAll('.ct-panel');
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const target = tab.getAttribute('data-tab');
+      tabs.forEach(t => t.classList.toggle('active', t === tab));
+      panels.forEach(p => p.classList.toggle('active', p.getAttribute('data-tab') === target));
+    });
+  });
+});
+
+// =========================================================
+// RAG retrieval demo: a hand-placed 2-D "embedding space" with 10 passages
+(function() {
+  const svg = document.getElementById('ragSvg');
+  if (!svg) return;
+  const NS = 'http://www.w3.org/2000/svg';
+  const caption = document.getElementById('ragCaption');
+
+  const passages = [
+    { text: 'Click Forgot Password on the login screen and follow the email link to restore your credentials.', x: 0.20, y: 0.15 },
+    { text: 'Two-factor authentication can be enabled in Settings → Security.',                                x: 0.30, y: 0.08 },
+    { text: 'To cancel your recurring plan, visit Billing and click End Subscription.',                        x: 0.78, y: 0.20 },
+    { text: 'Annual plans are prorated if canceled mid-term. Refunds take up to 10 business days.',            x: 0.88, y: 0.32 },
+    { text: 'You can export all your data as CSV or JSON from Settings → Data.',                               x: 0.55, y: 0.75 },
+    { text: 'API access is available on the Pro and Team plans.',                                              x: 0.70, y: 0.62 },
+    { text: 'Change the email address associated with your account in Profile → Account.',                    x: 0.15, y: 0.30 },
+    { text: 'We send a confirmation link to your new email before updating the account.',                     x: 0.12, y: 0.38 },
+    { text: 'Refund requests must be filed within 30 days of purchase.',                                       x: 0.93, y: 0.40 },
+    { text: 'Data exports include your full conversation history in machine-readable form.',                  x: 0.48, y: 0.82 },
+  ];
+
+  const queries = [
+    { name: 'reset password',      x: 0.22, y: 0.18 },
+    { name: 'cancel subscription', x: 0.82, y: 0.24 },
+    { name: 'export data',         x: 0.52, y: 0.78 },
+    { name: 'change email',        x: 0.14, y: 0.34 },
+    { name: 'refund policy',       x: 0.92, y: 0.36 },
+  ];
+
+  function draw(qIdx) {
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+    const W = 720, H = 380;
+    const ml = 40, mr = 340, mt = 30, mb = 30;
+    const plotW = W - ml - mr;
+    const plotH = H - mt - mb;
+
+    const fr = document.createElementNS(NS, 'rect');
+    fr.setAttribute('x', ml); fr.setAttribute('y', mt);
+    fr.setAttribute('width', plotW); fr.setAttribute('height', plotH);
+    fr.setAttribute('fill', '#0f131a');
+    fr.setAttribute('stroke', '#2a3446');
+    fr.setAttribute('stroke-width', 1);
+    svg.appendChild(fr);
+
+    // Title in plot area
+    const title = document.createElementNS(NS, 'text');
+    title.setAttribute('x', ml + 8); title.setAttribute('y', mt + 16);
+    title.setAttribute('fill', '#7a8a9a');
+    title.setAttribute('font-size', 10);
+    title.setAttribute('font-family', 'ui-monospace, monospace');
+    title.textContent = 'embedding space (2-D projection)';
+    svg.appendChild(title);
+
+    function toX(u) { return ml + u * plotW; }
+    function toY(v) { return mt + v * plotH; }
+
+    const q = queries[qIdx];
+    const qx = toX(q.x), qy = toY(q.y);
+
+    // Compute cosine-like similarity on 2D (closer → higher)
+    const scored = passages.map((p, i) => {
+      const dx = p.x - q.x, dy = p.y - q.y;
+      const d = Math.sqrt(dx * dx + dy * dy);
+      return { i, d, score: Math.max(0, 1 - d * 2) };
+    }).sort((a, b) => a.d - b.d);
+
+    const topIdx = new Set(scored.slice(0, 3).map(s => s.i));
+
+    // Draw passages
+    passages.forEach((p, i) => {
+      const px = toX(p.x), py = toY(p.y);
+      const isTop = topIdx.has(i);
+      // Line from query to top-k
+      if (isTop) {
+        const line = document.createElementNS(NS, 'line');
+        line.setAttribute('x1', qx); line.setAttribute('y1', qy);
+        line.setAttribute('x2', px); line.setAttribute('y2', py);
+        line.setAttribute('stroke', '#ff8a5b');
+        line.setAttribute('stroke-width', 1.5);
+        line.setAttribute('stroke-dasharray', '3,3');
+        svg.appendChild(line);
+      }
+      const c = document.createElementNS(NS, 'circle');
+      c.setAttribute('cx', px); c.setAttribute('cy', py);
+      c.setAttribute('r', isTop ? 6 : 4);
+      c.setAttribute('fill', isTop ? '#ff8a5b' : '#2a3446');
+      c.setAttribute('stroke', isTop ? '#fff' : '#4a5868');
+      c.setAttribute('stroke-width', 1);
+      svg.appendChild(c);
+      const lbl = document.createElementNS(NS, 'text');
+      lbl.setAttribute('x', px + 8); lbl.setAttribute('y', py + 3);
+      lbl.setAttribute('fill', isTop ? '#e3ecf7' : '#4a5868');
+      lbl.setAttribute('font-size', 9);
+      lbl.setAttribute('font-family', 'ui-monospace, monospace');
+      lbl.textContent = 'p' + i;
+      svg.appendChild(lbl);
+    });
+
+    // Draw query
+    const qc = document.createElementNS(NS, 'circle');
+    qc.setAttribute('cx', qx); qc.setAttribute('cy', qy); qc.setAttribute('r', 8);
+    qc.setAttribute('fill', '#63b3ff');
+    qc.setAttribute('stroke', '#fff');
+    qc.setAttribute('stroke-width', 2);
+    svg.appendChild(qc);
+    const ql = document.createElementNS(NS, 'text');
+    ql.setAttribute('x', qx + 10); ql.setAttribute('y', qy - 8);
+    ql.setAttribute('fill', '#63b3ff');
+    ql.setAttribute('font-size', 11);
+    ql.setAttribute('font-family', 'ui-monospace, monospace');
+    ql.textContent = 'query: ' + q.name;
+    svg.appendChild(ql);
+
+    // Passage list (right side)
+    const lx = W - mr + 8;
+    const lTitle = document.createElementNS(NS, 'text');
+    lTitle.setAttribute('x', lx); lTitle.setAttribute('y', mt + 16);
+    lTitle.setAttribute('fill', '#e3ecf7');
+    lTitle.setAttribute('font-size', 11);
+    lTitle.setAttribute('font-family', 'ui-monospace, monospace');
+    lTitle.textContent = 'retrieved passages (top 3)';
+    svg.appendChild(lTitle);
+
+    scored.slice(0, 3).forEach((s, rank) => {
+      const p = passages[s.i];
+      const py0 = mt + 34 + rank * 88;
+      const bg = document.createElementNS(NS, 'rect');
+      bg.setAttribute('x', lx); bg.setAttribute('y', py0);
+      bg.setAttribute('width', mr - 16); bg.setAttribute('height', 78);
+      bg.setAttribute('rx', 4);
+      bg.setAttribute('fill', '#1d2633');
+      bg.setAttribute('stroke', '#ff8a5b');
+      bg.setAttribute('stroke-width', 1);
+      svg.appendChild(bg);
+
+      const h = document.createElementNS(NS, 'text');
+      h.setAttribute('x', lx + 8); h.setAttribute('y', py0 + 16);
+      h.setAttribute('fill', '#ff8a5b');
+      h.setAttribute('font-size', 10);
+      h.setAttribute('font-family', 'ui-monospace, monospace');
+      h.textContent = `#${rank + 1}  p${s.i}  sim=${s.score.toFixed(2)}`;
+      svg.appendChild(h);
+
+      // Wrap text crudely
+      const words = p.text.split(' ');
+      const maxChars = 40;
+      const lines = [];
+      let cur = '';
+      words.forEach(w => {
+        if ((cur + ' ' + w).length > maxChars) { lines.push(cur); cur = w; }
+        else cur = cur ? cur + ' ' + w : w;
+      });
+      if (cur) lines.push(cur);
+      lines.slice(0, 3).forEach((ln, j) => {
+        const t = document.createElementNS(NS, 'text');
+        t.setAttribute('x', lx + 8); t.setAttribute('y', py0 + 32 + j * 13);
+        t.setAttribute('fill', '#b4c4d4');
+        t.setAttribute('font-size', 9);
+        t.setAttribute('font-family', 'ui-monospace, monospace');
+        t.textContent = ln;
+        svg.appendChild(t);
+      });
+    });
+
+    caption.textContent = `Query "${q.name}" → top-3 passages retrieved by cosine similarity. The orange lines show which passages were selected.`;
+  }
+
+  document.querySelectorAll('.v3-btn[data-q]').forEach(btn => {
+    btn.addEventListener('click', () => draw(parseInt(btn.getAttribute('data-q'), 10)));
+  });
+  draw(0);
+})();
+</script>
+<script defer src="../search-index.js"></script>
+<script defer src="../search.js"></script>
+</body>
+</html>

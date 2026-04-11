@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Neuro-Symbolic AI — Deep Dive</title>
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError: false});"></script>
+</head>
+<body>
+<div id="tooltip"></div>
+
+<nav class="topic-nav">
+  <a class="back" href="../ai-ml.html">← Back to AI/ML</a>
+  <div class="crumb">Deep Dives / <span class="topic-name">Neuro-Symbolic AI</span></div>
+</nav>
+
+<div class="topic-layout">
+  <aside class="topic-toc">
+    <h4>ON THIS PAGE</h4>
+    <ul>
+      <li><a href="#intro">1. Two schools of AI</a></li>
+      <li><a href="#why">2. Why combine them?</a></li>
+      <li><a href="#patterns">3. Integration patterns</a></li>
+      <li><a href="#diff">4. Differentiable logic</a></li>
+      <li><a href="#demo">5. Interactive fuzzy logic</a></li>
+      <li><a href="#alpha">6. Case study: AlphaGeometry</a></li>
+      <li><a href="#code">7. Source code</a></li>
+      <li><a href="#summary">8. Summary</a></li>
+    </ul>
+  </aside>
+
+  <article class="topic-content">
+    <h1>Neuro-Symbolic AI</h1>
+    <p class="subtitle">Marrying the two oldest traditions in AI: neural networks that perceive and learn, and symbolic systems that reason and prove. Neural nets are fast, fuzzy, and statistical; symbolic systems are slow, precise, and logical. Neuro-symbolic AI is the bet that you need both.</p>
+    <div class="meta-tags">
+      <span>Prereq: first-order logic, neural nets</span>
+      <span>Time to read: ~20 min</span>
+      <span>Interactive figures: 1</span>
+      <span>Code: Python, Prolog, PyTorch</span>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="intro">1. Two schools of AI</h2>
+
+    <p>AI has always had two traditions. The <strong>symbolic</strong> school, dominant from the 1950s through the 1990s, represents the world as facts and rules and does inference by manipulating discrete symbols. Expert systems, Prolog, Cyc, theorem provers, and chess engines like Deep Blue all belong here. Strengths: perfect logical consistency, interpretable reasoning, can handle problems that need <em>proofs</em>. Weaknesses: brittle, can't learn from raw data, every fact has to be hand-encoded, no graceful degradation under noise.</p>
+
+    <p>The <strong>connectionist</strong> school — neural networks — is the opposite. Strengths: learns from raw data, generalizes, handles noise and uncertainty, scales with compute. Weaknesses: can't reliably do long chains of precise reasoning, hallucinates, can't guarantee a proof is correct, nobody knows why it does what it does.</p>
+
+    <p>For sixty years these schools barely spoke. The deep learning revolution of the 2010s looked like connectionism had won outright. But by 2023 a few cracks had formed in that story: LLMs were great at language and terrible at arithmetic. They could cite a theorem and then misapply it. They would confidently output a math proof with a step that didn't follow. No amount of scale seemed to fix this class of error, because <em>it's not a scale problem — it's a reasoning model problem</em>.</p>
+
+    <p>Neuro-symbolic AI is the attempt to put the two schools back together: keep the neural nets for perception and pattern matching, keep the symbolic engines for verified reasoning, and find the right interface between them.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="why">2. Why combine them?</h2>
+
+    <p>Some tasks have a clean split between "a hard perception problem" and "a hard reasoning problem":</p>
+
+    <ul>
+      <li><strong>Visual question answering over images with explicit relationships.</strong> "Is the red cube to the left of the blue sphere?" Perception is a vision model; reasoning over the scene graph is a rule engine.</li>
+      <li><strong>Math word problems.</strong> Parsing English into algebra is language. Solving the algebra is a symbolic engine like SymPy.</li>
+      <li><strong>Legal or medical Q&amp;A.</strong> Understanding the question is neural. Applying codified rules (regulations, drug interactions) is symbolic lookup.</li>
+      <li><strong>Geometry.</strong> Seeing what lines and angles are in the figure is neural. Chaining "if X then Y" deduction steps to a proof is symbolic.</li>
+    </ul>
+
+    <p>The bet is: neither pure system handles the whole thing, but a hybrid does. And the interface between them — how the neural net "talks to" the symbolic engine — becomes the central design problem.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="patterns">3. Integration patterns</h2>
+
+    <p>There are roughly four ways to stitch the two halves together:</p>
+
+    <ol>
+      <li><strong>Neural front-end, symbolic back-end.</strong> The neural net converts raw input (pixels, text) into a structured representation — a parse tree, a scene graph, a set of facts. A symbolic engine then runs inference over that. Most "LLM + calculator" and "LLM + SQL" setups are this pattern.</li>
+      <li><strong>Symbolic loss / constraint layer.</strong> You add a logic-based penalty to the neural training loss: the network's outputs should satisfy first-order constraints (e.g., "the predicted parent-child relation graph must be a tree"). Differentiable relaxations of logic let you backprop through this.</li>
+      <li><strong>Neural guidance for symbolic search.</strong> A symbolic search algorithm (MCTS, SAT solver, theorem prover) explores an enormous space. A neural network prunes it, suggesting promising moves or subgoals. AlphaGo, AlphaZero, and AlphaGeometry all live here.</li>
+      <li><strong>Knowledge-graph-augmented neural.</strong> Link the neural model to an external KG and let it query at inference time. Similar to RAG but with structured facts instead of free text.</li>
+    </ol>
+
+    <!-- ========================================================== -->
+    <h2 id="diff">4. Differentiable logic</h2>
+
+    <p>For patterns that train end-to-end, you need to make logic differentiable. The standard trick is to replace boolean operators with smooth real-valued relaxations. For truth values $a, b \in [0, 1]$:</p>
+
+    <div class="math-display">$$\text{AND}(a, b) = a \cdot b$$</div>
+    <div class="math-display">$$\text{OR}(a, b)  = a + b - a \cdot b$$</div>
+    <div class="math-display">$$\text{NOT}(a)    = 1 - a$$</div>
+    <div class="math-display">$$\text{IMPLIES}(a, b) = \min(1, 1 - a + b)$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Fuzzy logic operators (Gödel / product t-norms)</p>
+      <dl>
+        <dt>$a, b$</dt><dd>Truth values in $[0, 1]$ instead of $\{0, 1\}$. Interpreted as the probability or the degree to which a proposition is true.</dd>
+        <dt>$\text{AND}(a, b) = ab$</dt><dd>If both $a$ and $b$ are near 1, the product is near 1. If either is near 0, the product is near 0. Reduces to classical AND when $a, b \in \{0, 1\}$.</dd>
+        <dt>$\text{OR}(a, b) = a + b - ab$</dt><dd>The "probabilistic OR" — the probability that at least one of two independent events is true. Reduces to classical OR on $\{0, 1\}$.</dd>
+        <dt>$\text{NOT}(a) = 1 - a$</dt><dd>Obvious. Keeps the range in $[0, 1]$.</dd>
+        <dt>$\text{IMPLIES}(a, b)$</dt><dd>Łukasiewicz implication, a standard choice. When $a = 1$ and $b = 0$ it gives 0 (implication fails); everywhere else it returns something $> 0$.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why this matters</strong> All of these are differentiable w.r.t. $a$ and $b$. You can plug them into a neural network's loss function as "soft constraints" that the output should satisfy. Training pushes the network to not just minimize prediction error but also obey the logical rules. Examples: Semantic Loss (Xu et al. 2018), DeepProbLog (Manhaeve et al. 2018), and Logic Tensor Networks (Serafini &amp; d'Avila Garcez 2016).</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="demo">5. Interactive fuzzy logic</h2>
+
+    <p>Drag the sliders for $a$ and $b$ to see each operator's output. The lines are the classical boolean values (0 or 1); the shaded curves are the fuzzy relaxations. Notice how fuzzy AND smoothly interpolates instead of switching at the thresholds.</p>
+
+    <div class="viz-3d">
+      <div class="v3-controls">
+        <span class="v3-label">a:</span>
+        <input id="fuzA" type="range" min="0" max="1" step="0.01" value="0.8" style="flex:1;max-width:300px;">
+        <span id="fuzALabel" style="min-width:36px;color:#63b3ff;font-family:ui-monospace,monospace;">0.80</span>
+        <span class="v3-label">b:</span>
+        <input id="fuzB" type="range" min="0" max="1" step="0.01" value="0.4" style="flex:1;max-width:300px;">
+        <span id="fuzBLabel" style="min-width:36px;color:#63b3ff;font-family:ui-monospace,monospace;">0.40</span>
+      </div>
+      <svg id="fuzSvg" viewBox="0 0 720 300" style="width:100%;height:auto;background:#0a0d12;border-radius:6px;"></svg>
+      <p class="v3-caption" id="fuzCaption">Fuzzy logic operators. Each bar is one operator; the orange fill is the fuzzy value, the dashed line is the classical boolean value.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="alpha">6. Case study: AlphaGeometry (2024)</h2>
+
+    <p>The most striking neuro-symbolic system of the last few years is DeepMind's <strong>AlphaGeometry</strong>. It solves IMO (International Mathematical Olympiad) geometry problems at roughly silver-medal level. The architecture is a canonical example of pattern 3 — neural guidance for symbolic search:</p>
+
+    <ul>
+      <li><strong>Symbolic engine.</strong> A classical deductive prover that chains forward from the given premises, applying known geometry axioms (congruent triangles, angle chasing, circle theorems). On easier problems this can solve the whole thing on its own.</li>
+      <li><strong>Neural language model.</strong> A transformer trained on 100 million synthetically generated proofs. Its job is to propose <em>auxiliary constructions</em> — extra points, lines, or circles — that the deductive engine wouldn't find on its own but that often unlock the proof.</li>
+      <li><strong>The interface.</strong> Whenever the deductive engine gets stuck, it asks the LM for a construction. The LM generates a few candidates; the engine tries each, and if one makes progress, search resumes.</li>
+    </ul>
+
+    <p>Neither half works alone. The symbolic engine can't invent the creative extra constructions. The language model can't reliably execute the multi-step logical chain. Together they solved 25 out of 30 Olympiad problems — the previous best was 10 out of 30. This is the clearest evidence yet that for some classes of reasoning, hybrid is not just a nice-to-have but a necessary architecture.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="code">7. Source code</h2>
+
+    <p>Three examples: fuzzy logic in NumPy, an LLM + calculator pattern, and a Prolog-style rule in Python.</p>
+
+    <div class="code-tabs" id="ct-ns">
+      <div class="ct-header">
+        <button class="ct-tab active" data-tab="fl">Fuzzy logic</button>
+        <button class="ct-tab" data-tab="tool">LLM + tool</button>
+        <button class="ct-tab" data-tab="rule">Rule engine</button>
+        <span class="ct-label">neuro-symbolic · integration patterns</span>
+      </div>
+      <div class="ct-panel active" data-tab="fl"><pre><code><span class="kw">import</span> torch
+
+<span class="kw">def</span> <span class="fn">fuzzy_and</span>(a, b):      <span class="kw">return</span> a * b
+<span class="kw">def</span> <span class="fn">fuzzy_or</span>(a, b):       <span class="kw">return</span> a + b - a * b
+<span class="kw">def</span> <span class="fn">fuzzy_not</span>(a):         <span class="kw">return</span> <span class="num">1</span> - a
+<span class="kw">def</span> <span class="fn">fuzzy_implies</span>(a, b):  <span class="kw">return</span> torch.clamp(<span class="num">1</span> - a + b, <span class="num">0</span>, <span class="num">1</span>)
+
+<span class="cmt"># Semantic loss: penalize predictions that violate a known constraint.</span>
+<span class="cmt"># E.g., a multi-label classifier where labels "cat" and "dog" are mutually exclusive.</span>
+<span class="kw">def</span> <span class="fn">semantic_loss</span>(probs):
+    p_cat, p_dog = probs[..., <span class="num">0</span>], probs[..., <span class="num">1</span>]
+    <span class="cmt"># NOT (cat AND dog) — the constraint as a soft truth value</span>
+    violation = <span class="fn">fuzzy_not</span>(<span class="fn">fuzzy_and</span>(p_cat, p_dog))
+    <span class="kw">return</span> -torch.log(violation + <span class="num">1e-9</span>).mean()
+
+<span class="cmt"># Total loss: cross-entropy for accuracy + λ * semantic loss for logical consistency</span>
+</code></pre></div>
+
+      <div class="ct-panel" data-tab="tool"><pre><code><span class="kw">import</span> re, sympy
+
+<span class="kw">def</span> <span class="fn">llm_plus_calculator</span>(llm, question):
+    <span class="cmt"># 1. Ask the LLM to produce a SymPy expression that solves the problem.</span>
+    prompt = <span class="str">f"""Problem: {question}
+Write a one-line SymPy expression whose value is the answer.
+Expression:"""</span>
+    expr_str = llm(prompt).strip()
+
+    <span class="cmt"># 2. Evaluate it symbolically — this is the verified step.</span>
+    <span class="kw">try</span>:
+        result = sympy.sympify(expr_str).evalf()
+    <span class="kw">except</span> sympy.SympifyError <span class="kw">as</span> e:
+        <span class="kw">return</span> <span class="str">f"Invalid expression: {e}"</span>
+
+    <span class="cmt"># 3. Feed the verified answer back to the LLM for natural-language explanation.</span>
+    explain = llm(<span class="str">f"The answer is {result}. Explain briefly."</span>)
+    <span class="kw">return</span> result, explain
+
+<span class="cmt"># This pattern guarantees the numerical answer is correct even though the LLM</span>
+<span class="cmt"># did the hard perception of parsing the problem.</span>
+</code></pre></div>
+
+      <div class="ct-panel" data-tab="rule"><pre><code><span class="cmt"># Tiny forward-chaining rule engine. Not Prolog, but close in spirit.</span>
+
+<span class="kw">class</span> <span class="fn">KB</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(self):
+        self.facts = <span class="fn">set</span>()
+        self.rules = []                    <span class="cmt"># each rule: (premises, conclusion)</span>
+
+    <span class="kw">def</span> <span class="fn">tell</span>(self, fact):  self.facts.add(fact)
+    <span class="kw">def</span> <span class="fn">rule</span>(self, premises, conclusion):
+        self.rules.append((premises, conclusion))
+
+    <span class="kw">def</span> <span class="fn">forward_chain</span>(self):
+        changed = <span class="kw">True</span>
+        <span class="kw">while</span> changed:
+            changed = <span class="kw">False</span>
+            <span class="kw">for</span> premises, conclusion <span class="kw">in</span> self.rules:
+                <span class="kw">if</span> <span class="fn">all</span>(p <span class="kw">in</span> self.facts <span class="kw">for</span> p <span class="kw">in</span> premises):
+                    <span class="kw">if</span> conclusion <span class="kw">not in</span> self.facts:
+                        self.facts.add(conclusion)
+                        changed = <span class="kw">True</span>
+
+kb = <span class="fn">KB</span>()
+kb.tell(<span class="str">"human(socrates)"</span>)
+kb.rule([<span class="str">"human(X)"</span>], <span class="str">"mortal(X)"</span>)   <span class="cmt"># (pretend X unifies)</span>
+kb.forward_chain()
+<span class="cmt"># Neural half: an LLM extracts facts ("Socrates is a human") → feeds them to kb.</span>
+<span class="cmt"># Symbolic half: kb chains rules forward to "mortal(socrates)".</span>
+</code></pre></div>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="summary">8. Summary</h2>
+
+    <ul>
+      <li>Neuro-symbolic AI combines neural networks (great at perception, weak at logic) with symbolic systems (great at logic, weak at perception).</li>
+      <li>Four integration patterns: neural front-end + symbolic back-end, logical constraints as a training loss, neural guidance for symbolic search, and knowledge-graph augmentation.</li>
+      <li><strong>Differentiable logic</strong> — replacing boolean operators with fuzzy relaxations — lets you backprop through logical constraints and train end-to-end.</li>
+      <li><strong>AlphaGeometry</strong> is the flagship demonstration: an LLM proposes auxiliary constructions; a symbolic prover chains axioms. Solves IMO problems no pure model can touch.</li>
+      <li>The modern realization: LLMs + external tools (calculators, solvers, databases) are themselves a pragmatic form of neuro-symbolic AI, even if nobody uses that label.</li>
+      <li>The open question is whether this is a permanent architecture or a scaffold that pure scale eventually subsumes. As of 2026 the evidence still favors "hybrid is necessary" for rigorous reasoning tasks.</li>
+    </ul>
+
+    <div class="bib">
+      <h4>Further reading</h4>
+      <ul>
+        <li>Garcez, Lamb, Gabbay (2009) — <em>Neural-Symbolic Cognitive Reasoning</em>. The classical reference.</li>
+        <li>Manhaeve et al. (2018) — <em>DeepProbLog: Neural Probabilistic Logic Programming</em>.</li>
+        <li>Xu et al. (2018) — <em>A Semantic Loss Function for Deep Learning with Symbolic Knowledge</em>.</li>
+        <li>Trinh et al. (2024) — <em>Solving Olympiad Geometry without Human Demonstrations</em> (AlphaGeometry).</li>
+        <li>Marcus (2020) — <em>The Next Decade in AI: Four Steps Towards Robust Artificial Intelligence</em>. Polemical but widely cited.</li>
+      </ul>
+    </div>
+
+    <div class="next-card">
+      <div class="label">NEXT UP</div>
+      <a href="edge-ai.html">→ Edge &amp; On-Device AI</a>
+      <p>Once a model is good, the next frontier is making it small enough to run anywhere. Quantization, distillation, pruning — the algorithms that put 7B models on your phone.</p>
+    </div>
+
+  </article>
+</div>
+
+<script>
+// =========================================================
+// Code tabs
+document.querySelectorAll('.code-tabs').forEach(root => {
+  const tabs = root.querySelectorAll('.ct-tab');
+  const panels = root.querySelectorAll('.ct-panel');
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const target = tab.getAttribute('data-tab');
+      tabs.forEach(t => t.classList.toggle('active', t === tab));
+      panels.forEach(p => p.classList.toggle('active', p.getAttribute('data-tab') === target));
+    });
+  });
+});
+
+// =========================================================
+// Fuzzy logic visualization
+(function() {
+  const svg = document.getElementById('fuzSvg');
+  if (!svg) return;
+  const NS = 'http://www.w3.org/2000/svg';
+  const aS = document.getElementById('fuzA');
+  const bS = document.getElementById('fuzB');
+  const aL = document.getElementById('fuzALabel');
+  const bL = document.getElementById('fuzBLabel');
+  const caption = document.getElementById('fuzCaption');
+
+  function draw() {
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+    const a = parseFloat(aS.value);
+    const b = parseFloat(bS.value);
+    aL.textContent = a.toFixed(2);
+    bL.textContent = b.toFixed(2);
+
+    const W = 720, H = 300;
+    const mt = 50, mb = 60;
+    const plotH = H - mt - mb;
+
+    const ops = [
+      { label: 'a',             v: a },
+      { label: 'b',             v: b },
+      { label: 'AND(a,b)',      v: a * b },
+      { label: 'OR(a,b)',       v: a + b - a * b },
+      { label: 'NOT(a)',        v: 1 - a },
+      { label: 'IMPLIES(a,b)',  v: Math.min(1, 1 - a + b) },
+    ];
+
+    const n = ops.length;
+    const barW = 60;
+    const gap = (W - n * barW) / (n + 1);
+    ops.forEach((o, i) => {
+      const x = gap + i * (barW + gap);
+      const barH = o.v * plotH;
+      // Frame
+      const fr = document.createElementNS(NS, 'rect');
+      fr.setAttribute('x', x); fr.setAttribute('y', mt);
+      fr.setAttribute('width', barW); fr.setAttribute('height', plotH);
+      fr.setAttribute('fill', '#0f131a');
+      fr.setAttribute('stroke', '#2a3446');
+      fr.setAttribute('stroke-width', 1);
+      svg.appendChild(fr);
+      // Fuzzy fill
+      const fill = document.createElementNS(NS, 'rect');
+      fill.setAttribute('x', x); fill.setAttribute('y', mt + plotH - barH);
+      fill.setAttribute('width', barW); fill.setAttribute('height', barH);
+      fill.setAttribute('fill', '#ff8a5b');
+      fill.setAttribute('fill-opacity', 0.55);
+      svg.appendChild(fill);
+      // Classical boolean line: threshold at 0.5
+      const cBool = i < 2 ? (o.v > 0.5 ? 1 : 0)
+                          : (() => {
+                              const aB = a > 0.5 ? 1 : 0, bB = b > 0.5 ? 1 : 0;
+                              if (o.label === 'AND(a,b)')     return aB & bB;
+                              if (o.label === 'OR(a,b)')      return aB | bB;
+                              if (o.label === 'NOT(a)')       return 1 - aB;
+                              if (o.label === 'IMPLIES(a,b)') return (!aB || bB) ? 1 : 0;
+                              return 0;
+                            })();
+      const ly = mt + plotH - cBool * plotH;
+      const cl = document.createElementNS(NS, 'line');
+      cl.setAttribute('x1', x - 4); cl.setAttribute('y1', ly);
+      cl.setAttribute('x2', x + barW + 4); cl.setAttribute('y2', ly);
+      cl.setAttribute('stroke', '#63b3ff');
+      cl.setAttribute('stroke-width', 2);
+      cl.setAttribute('stroke-dasharray', '4,3');
+      svg.appendChild(cl);
+
+      // Value label
+      const vt = document.createElementNS(NS, 'text');
+      vt.setAttribute('x', x + barW / 2); vt.setAttribute('y', mt + plotH - barH - 6);
+      vt.setAttribute('text-anchor', 'middle');
+      vt.setAttribute('fill', '#ff8a5b');
+      vt.setAttribute('font-size', 11);
+      vt.setAttribute('font-family', 'ui-monospace, monospace');
+      vt.textContent = o.v.toFixed(2);
+      svg.appendChild(vt);
+
+      // Operator label
+      const ol = document.createElementNS(NS, 'text');
+      ol.setAttribute('x', x + barW / 2); ol.setAttribute('y', mt + plotH + 18);
+      ol.setAttribute('text-anchor', 'middle');
+      ol.setAttribute('fill', '#b4c4d4');
+      ol.setAttribute('font-size', 10);
+      ol.setAttribute('font-family', 'ui-monospace, monospace');
+      ol.textContent = o.label;
+      svg.appendChild(ol);
+    });
+
+    // Title
+    const t = document.createElementNS(NS, 'text');
+    t.setAttribute('x', W / 2); t.setAttribute('y', 26);
+    t.setAttribute('text-anchor', 'middle');
+    t.setAttribute('fill', '#e3ecf7');
+    t.setAttribute('font-size', 13);
+    t.setAttribute('font-family', 'ui-monospace, monospace');
+    t.textContent = 'orange = fuzzy value     blue dashed = classical boolean (thresholded at 0.5)';
+    svg.appendChild(t);
+
+    caption.textContent = `a=${a.toFixed(2)}, b=${b.toFixed(2)}  →  AND=${(a*b).toFixed(2)}, OR=${(a+b-a*b).toFixed(2)}, NOT(a)=${(1-a).toFixed(2)}, IMPLIES=${Math.min(1, 1-a+b).toFixed(2)}`;
+  }
+
+  aS.addEventListener('input', draw);
+  bS.addEventListener('input', draw);
+  draw();
+})();
+</script>
+<script defer src="../search-index.js"></script>
+<script defer src="../search.js"></script>
+</body>
+</html>

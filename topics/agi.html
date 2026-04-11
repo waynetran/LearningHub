@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AGI — the goal · Deep Dive</title>
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError: false});"></script>
+</head>
+<body>
+<div id="tooltip"></div>
+
+<nav class="topic-nav">
+  <a class="back" href="../ai-ml.html">← Back to AI/ML</a>
+  <div class="crumb">Deep Dives / <span class="topic-name">AGI — the goal</span></div>
+</nav>
+
+<div class="topic-layout">
+  <aside class="topic-toc">
+    <h4>ON THIS PAGE</h4>
+    <ul>
+      <li><a href="#intro">1. What "AGI" actually means</a></li>
+      <li><a href="#definitions">2. The competing definitions</a></li>
+      <li><a href="#levels">3. DeepMind's 6 levels</a></li>
+      <li><a href="#labs">4. Who's building it</a></li>
+      <li><a href="#benchmarks">5. Benchmark trajectories</a></li>
+      <li><a href="#demo">6. Interactive: METR time-horizon</a></li>
+      <li><a href="#bottlenecks">7. What might stop it</a></li>
+      <li><a href="#reading">8. Further reading</a></li>
+    </ul>
+  </aside>
+
+  <article class="topic-content">
+    <h1>AGI — the goal</h1>
+    <p class="subtitle">Artificial General Intelligence is the stated target of every serious frontier AI lab, the premise of hundreds of billions in capex, and a moving goalpost that gets redrawn every time a model clears the previous line. This page tries to be useful about it: what the word means (and doesn't), who's racing, what the benchmarks show, and where the doubts are.</p>
+    <div class="meta-tags">
+      <span>Prereq: LLMs, scaling laws</span>
+      <span>Read time: ~25 min</span>
+      <span>Interactive figures: 1</span>
+      <span>Sources: linked inline</span>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="intro">1. What "AGI" actually means</h2>
+
+    <p>"Artificial General Intelligence" was coined in 2002 by Shane Legg and Ben Goertzel as a way to distinguish the original dream of AI — a single system that can do <em>any</em> intellectual work a human can — from the narrow task-specific AI that had come to dominate the field. For two decades the phrase lived in fringe conferences. In 2023 it started showing up in 10-K filings.</p>
+
+    <p>The problem is that "general intelligence" is a contested concept even among humans. Psychologists debate whether there's a single $g$ factor; evolutionary biologists point to enormous cross-species variation in kinds of cognition; anthropologists note that most human intelligence is socially distributed, not individual. Importing all this into ML was always going to produce disagreement.</p>
+
+    <p>What you can safely say: <strong>AGI is not a binary.</strong> The question isn't "did we reach AGI?" but "on which axes of general-purpose cognitive work does the system match or exceed humans, and at what cost?" Every useful conversation about AGI starts by being specific about the operationalization.</p>
+
+    <div class="callout">
+      <div class="label">Three things people mean when they say "AGI"</div>
+      <p style="margin:6px 0">
+        <strong>1. Cognitive AGI</strong> — matches a generalist human across a wide bundle of cognitive tasks.<br>
+        <strong>2. Economic AGI</strong> — can substitute for most of what humans get paid to do at the keyboard.<br>
+        <strong>3. Transformative AI</strong> — causes a phase-change in the economy and society comparable to the industrial revolution.<br>
+        These are not the same thing. A system can be economic-AGI without being cognitive-AGI (narrow tools with enough coverage) or cognitive-AGI without being transformative (expensive, slow, capped by compute).
+      </p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="definitions">2. The competing definitions</h2>
+
+    <p>A short tour of the influential definitions you'll see cited:</p>
+
+    <ul>
+      <li><strong>OpenAI (2018 charter).</strong> "Highly autonomous systems that outperform humans at most economically valuable work." Explicitly economic; vague on <em>which</em> humans and <em>which</em> work. Operationalized by Microsoft's contract as a revenue milestone: $100B in cumulative profit (per reporting in 2023).</li>
+      <li><strong>DeepMind (Morris et al. 2024).</strong> "An AI system that is at least as capable as a skilled adult human at most tasks." They propose a matrix of performance (5 levels) × generality (narrow vs general). By their own scoring, frontier LLMs are "Level 1 General — Emerging AGI." <a href="https://arxiv.org/abs/2311.02462" target="_blank" rel="noopener">arXiv:2311.02462</a>.</li>
+      <li><strong>Nilsson's employment test (2005).</strong> An AI is "general enough" if it could do the jobs that humans actually get hired for — including new ones. A pragmatic economic bar.</li>
+      <li><strong>Turing (1950).</strong> Pass an extended conversation with a human judge. Already passed in short-form controlled studies (Jones &amp; Bergen 2024). Obsolete as a finish line; useful as a historical milestone.</li>
+      <li><strong>Coffee test (Wozniak).</strong> A robot that can enter an unfamiliar house and make a cup of coffee. A physical-embodiment benchmark that is still far from solved — which is why "AGI" discussions are mostly about disembodied cognition in 2026.</li>
+      <li><strong>Karnofsky's "PASTA"</strong> — Process for Automating Scientific and Technological Advancement. An AI capable enough to automate the hard parts of AI research. The self-improvement entry point; explicitly the thing the <em>AI 2027</em> scenario organizes around.</li>
+    </ul>
+
+    <!-- ========================================================== -->
+    <h2 id="levels">3. DeepMind's 6 levels — a useful ladder</h2>
+
+    <p>Morris et al. propose a two-axis framework. Don't treat it as a law; treat it as a shared vocabulary.</p>
+
+    <table class="rank-table">
+      <thead>
+        <tr><th>Level</th><th>Narrow AI</th><th>General AI</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>0 · No AI</td><td>calculator, software</td><td>Amazon Mechanical Turk, human-in-the-loop software</td></tr>
+        <tr><td>1 · Emerging</td><td>simple rule-based systems</td><td><strong>ChatGPT, Gemini, Claude</strong> — the current frontier LLMs</td></tr>
+        <tr><td>2 · Competent (50th-percentile human)</td><td>Siri, Alexa, spam filters</td><td>not yet achieved</td></tr>
+        <tr><td>3 · Expert (90th-percentile)</td><td>Grammarly, Imagen</td><td>not yet achieved</td></tr>
+        <tr><td>4 · Virtuoso (99th-percentile)</td><td>Stockfish, AlphaFold</td><td>not yet achieved</td></tr>
+        <tr><td>5 · Superhuman</td><td>AlphaZero, AlphaProof</td><td>"ASI" — not yet achieved</td></tr>
+      </tbody>
+    </table>
+
+    <p>Two observations on this table:</p>
+    <ul>
+      <li>Narrow superhuman systems exist today in limited domains (chess, Go, protein folding, math-olympiad geometry). The gap is <em>generality</em>, not peak performance in any one area.</li>
+      <li>Putting frontier LLMs at "Emerging General" is charitable or deflationary depending on your prior. If you care most about general-knowledge fluency, they're past Level 2. If you care most about reliability over long horizons, they're barely Level 1.</li>
+    </ul>
+
+    <!-- ========================================================== -->
+    <h2 id="labs">4. Who's building it — 2026 field guide</h2>
+
+    <p>The "serious AGI lab" list is shorter than the "AI company" list. Entry requirements: (1) frontier-scale pretraining compute, (2) a public commitment to building AGI, (3) an in-house research agenda, not just a wrapper.</p>
+
+    <div class="grid">
+      <div class="card">
+        <h4>OpenAI</h4>
+        <p class="meta">est 2015 · SF · Altman &amp; Brockman</p>
+        <p>Charter: AGI that benefits all of humanity. Stack: GPT series, DALL·E, Sora, o-series reasoning, Realtime API. 2025 Stargate announcement: $500B compute buildout (Oracle/SoftBank/MGX/OpenAI). Microsoft is primary compute partner; Azure deal contains a clause that ends Microsoft's privileged access the moment OpenAI's board "determines we have achieved AGI."</p>
+        <span class="tag hot">frontier</span>
+      </div>
+      <div class="card">
+        <h4>Anthropic</h4>
+        <p class="meta">est 2021 · SF · Amodei siblings + ex-OpenAI</p>
+        <p>Charter: safe, powerful AI. Stack: Claude family (Opus/Sonnet/Haiku), extended-thinking reasoning, interpretability research (SAEs), responsible scaling policy. Dario's <em>Machines of Loving Grace</em> (Oct 2024) is the clearest public statement of how a frontier lab imagines the good case.</p>
+        <span class="tag hot">frontier</span>
+      </div>
+      <div class="card">
+        <h4>Google DeepMind</h4>
+        <p class="meta">merged 2023 · London + MTV · Hassabis</p>
+        <p>Full stack: TPUs, Gemini 2.x, Nano, AlphaFold 3, AlphaProof, AlphaGeometry 2, GraphCast, Genie, Project Astra. The only lab that ships both foundation models and specialized scientific AI at frontier scale. Hassabis won the 2024 Nobel in Chemistry for AlphaFold.</p>
+        <span class="tag hot">frontier</span>
+      </div>
+      <div class="card">
+        <h4>xAI</h4>
+        <p class="meta">est 2023 · Austin · Musk</p>
+        <p>Grok series. Built the "Colossus" cluster in Memphis from zero to 100k H100s in 122 days; expanding to 1M GPUs. Openly framed as an AGI race. Fused into X (the social network) for distribution and training data.</p>
+        <span class="tag">frontier</span>
+      </div>
+      <div class="card">
+        <h4>Meta Superintelligence Labs</h4>
+        <p class="meta">reorg 2025 · Menlo Park</p>
+        <p>After Meta's $14B investment in Scale AI (June 2025), Alexandr Wang joined to run a new Superintelligence Labs unit alongside FAIR. Llama 4 is open-weight; MSL is explicitly going after frontier. Internal tension: LeCun (FAIR) is skeptical LLMs get there without world models.</p>
+        <span class="tag">open</span>
+      </div>
+      <div class="card">
+        <h4>Safe Superintelligence Inc.</h4>
+        <p class="meta">est 2024 · Palo Alto + Tel Aviv · Sutskever</p>
+        <p>Ilya Sutskever's post-OpenAI lab. Single-product company: one goal, one team, one product — safe superintelligence. No APIs, no products shipped yet. Reportedly raising at a ~$30B valuation in 2025 on strength of the founders alone.</p>
+        <span class="tag">stealth</span>
+      </div>
+      <div class="card">
+        <h4>DeepSeek</h4>
+        <p class="meta">est 2023 · Hangzhou</p>
+        <p>Spun out of quant fund High-Flyer. DeepSeek-V3 (Dec 2024) and R1 (Jan 2025) shipped as open weights at fractions of US training cost. The January 2025 "DeepSeek moment" wiped ~$1T off US AI-infra market cap in a single day and reset assumptions about how much compute was really needed.</p>
+        <span class="tag hot">open</span>
+      </div>
+      <div class="card">
+        <h4>Alibaba Qwen / Zhipu / Moonshot</h4>
+        <p class="meta">China</p>
+        <p>The Chinese tigers. Qwen 3 is competitive with GPT-4o on many benchmarks and ships open-weight; Zhipu's GLM-4.5 and Moonshot's Kimi are close behind. US chip-export controls forced efficiency-first research cultures — much of the Chinese work is downstream of that constraint.</p>
+        <span class="tag">China</span>
+      </div>
+    </div>
+
+    <p>Two honorable mentions that don't fit the "frontier lab" bucket but matter:</p>
+    <ul>
+      <li><strong>Mistral AI (Paris)</strong> — Europe's sovereign-AI play. Ships both open and commercial models. Strategic, not sheer frontier.</li>
+      <li><strong>Tesla FSD / Optimus team</strong> — the only serious attempt at embodied, real-world general intelligence at scale. If "AGI must be physical" matters to you, Tesla is the main shop.</li>
+    </ul>
+
+    <!-- ========================================================== -->
+    <h2 id="benchmarks">5. Benchmark trajectories — the receipts</h2>
+
+    <p>A few numbers worth memorizing because they show how fast things are moving:</p>
+
+    <table class="rank-table">
+      <thead>
+        <tr><th>Benchmark</th><th>2022</th><th>2024 Q4</th><th>2025 frontier</th><th>Human baseline</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>MMLU (broad knowledge)</td><td>60% (GPT-3)</td><td>88% (GPT-4)</td><td>92%+ (saturated)</td><td>~89%</td></tr>
+        <tr><td>GPQA Diamond (grad-level science)</td><td>~30%</td><td>58% (o1)</td><td>85%+ (o3)</td><td>~65% (domain experts)</td></tr>
+        <tr><td>SWE-bench Verified (real GitHub bugs)</td><td>~2%</td><td>49% (Claude 3.5)</td><td>70%+ (Claude 4)</td><td>~85%</td></tr>
+        <tr><td>FrontierMath (research-level math)</td><td>—</td><td>2% (GPT-4o)</td><td>25%+ (o3)</td><td>~30% (Fields-medalist estimate)</td></tr>
+        <tr><td>ARC-AGI-1 (abstraction puzzles)</td><td>~5%</td><td>~30% (o1)</td><td>76% (o3 tuned)</td><td>~85%</td></tr>
+        <tr><td>Humanity's Last Exam</td><td>—</td><td>—</td><td>~14% (o3)</td><td>varies (crowdsourced experts)</td></tr>
+      </tbody>
+    </table>
+
+    <p>What to take from this table: the benchmarks that used to be "hard" get saturated in 12–18 months. Each time a new one is published, people expect it to survive 5 years and it survives 1. That's the empirical fact anyone who argues for long AGI timelines has to contend with; that's the empirical fact anyone who argues for imminent AGI can't stop pointing at.</p>
+
+    <p>But there are also honest caveats:</p>
+    <ul>
+      <li><strong>Benchmark gaming is real.</strong> Anything Internet-scrapeable ends up in pretraining data eventually. "Held-out" is harder than it sounds.</li>
+      <li><strong>Exam-style tasks reward a specific cognitive shape.</strong> They reward pattern completion on well-posed questions. Long-horizon, ambiguous, multi-tool work is not what MMLU measures.</li>
+      <li><strong>Test-time compute is a confound.</strong> o3's ARC-AGI performance used ~$2k of compute <em>per task</em>. That's impressive but also clarifies what "reasoning model" really means: throwing more serial compute at one problem.</li>
+    </ul>
+
+    <!-- ========================================================== -->
+    <h2 id="demo">6. Interactive: METR's time-horizon curve</h2>
+
+    <p>Arguably the most interesting recent metric is METR's <em>time-horizon</em> measurement — the length of a software task (measured in how long it takes a competent human) that a frontier model can complete with 50% reliability. Between 2019 and 2025, METR reports this number has roughly doubled every 7 months. Drag the slider to see what that trend implies.</p>
+
+    <div class="viz-3d">
+      <div class="v3-controls">
+        <span class="v3-label">Year:</span>
+        <input id="metrYear" type="range" min="2020" max="2032" value="2026" step="0.25" style="flex:1;max-width:340px;">
+        <span id="metrYearLabel" style="min-width:60px;color:#63b3ff;font-family:ui-monospace,monospace;">2026.0</span>
+      </div>
+      <svg id="metrSvg" viewBox="0 0 720 360" style="width:100%;height:auto;background:#0a0d12;border-radius:6px;"></svg>
+      <p class="v3-caption" id="metrCaption">Horizontal: calendar year. Vertical (log scale): task length, measured in human-minutes. Extrapolating a 7-month doubling puts "a full workday" tasks around 2028 and "a full work-week" tasks around 2029–30. These are extrapolations, not predictions.</p>
+    </div>
+
+    <div class="callout warn">
+      <div class="label">Why this matters (and why it might not)</div>
+      <p style="margin:6px 0">If a model can reliably complete a week-long task, an AGI labs' pitch deck writes itself: point it at "improve our model" and let it run. This is the <em>recursive self-improvement</em> mechanism that turns timelines sharp. The counter-argument: the doubling trend is on <em>software tasks</em>, which are the friendliest possible domain (clear specs, cheap verification). Extrapolating to biology, law, diplomacy, or physical work is optimism, not measurement.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="bottlenecks">7. What might stop it</h2>
+
+    <p>A sober engineer's list of things that might derail the "AGI by 2030" trajectory. None are fatal on their own; several together would be.</p>
+
+    <div class="grid">
+      <div class="card">
+        <h4>Data</h4>
+        <p>High-quality text tokens on the open internet are finite. Epoch AI's <a href="https://epochai.org/blog/will-we-run-out-of-ml-data-evidence-from-projecting-dataset" target="_blank" rel="noopener">2024 projection</a>: we exhaust the stock of human-written text at frontier-scale training sometime between 2026 and 2032. Synthetic data and multimodal data are the usual answers; both have open questions.</p>
+      </div>
+      <div class="card">
+        <h4>Compute &amp; power</h4>
+        <p>Training runs are moving past 10²⁶ FLOPs. That's roughly 100k+ GPUs running for months. The immediate bottlenecks are power (a 1 GW data center is a regional infrastructure project), chip supply, and cooling. Bookmark <a href="https://www.semianalysis.com/" target="_blank" rel="noopener">SemiAnalysis</a> if you want to track this.</p>
+      </div>
+      <div class="card">
+        <h4>Reliability &amp; evaluation</h4>
+        <p>Current models are great at 10-minute tasks and terrible at 10-hour tasks — the reliability curve falls off a cliff. We don't have well-understood scaling laws for reliability the way we do for loss. This is the current research frontier inside every lab.</p>
+      </div>
+      <div class="card">
+        <h4>Architecture lock-in</h4>
+        <p>LeCun's loudest point, and it has some teeth: the transformer plus next-token loss is extremely powerful but may be missing components (world models, explicit memory, planning over long horizons) that cognitive science suggests matter. If true, scaling the current recipe converges to a sub-AGI plateau.</p>
+      </div>
+      <div class="card">
+        <h4>Regulation / export controls</h4>
+        <p>US export controls on advanced GPUs to China, EU AI Act obligations, possible US federal regulation. None of these stop AGI; all of them change the cost structure and who wins.</p>
+      </div>
+      <div class="card">
+        <h4>Alignment verification</h4>
+        <p>Even labs that believe AGI is close say that deploying it requires solving evaluations we don't yet have. If interpretability and evals lag capabilities far enough, there's an implicit brake — either voluntary or imposed.</p>
+      </div>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="reading">8. Further reading</h2>
+
+    <div class="bib">
+      <h4>Primary sources and deep treatments</h4>
+      <ul>
+        <li>Morris, Sohl-Dickstein, Fiedel et al. (2024) — <em><a href="https://arxiv.org/abs/2311.02462" target="_blank" rel="noopener">Levels of AGI for Operationalizing Progress on the Path to AGI</a></em>. The DeepMind framework.</li>
+        <li>Legg &amp; Hutter (2007) — <em><a href="https://arxiv.org/abs/0706.3639" target="_blank" rel="noopener">A Collection of Definitions of Intelligence</a></em>. Seventy definitions of intelligence, collected. The paper that shaped modern AGI vocabulary.</li>
+        <li>Eloundou, Manning, Mishkin, Rock (2023) — <em><a href="https://arxiv.org/abs/2303.10130" target="_blank" rel="noopener">GPTs are GPTs</a></em>. Task-level labor-exposure analysis.</li>
+        <li>Amodei, Dario (2024) — <em><a href="https://darioamodei.com/machines-of-loving-grace" target="_blank" rel="noopener">Machines of Loving Grace</a></em>. Anthropic CEO's long-form case for the good outcome.</li>
+        <li>Kokotajlo, Alexander et al. (2025) — <em><a href="https://ai-2027.com/" target="_blank" rel="noopener">AI 2027</a></em>. A month-by-month scenario narrative, widely read inside labs.</li>
+        <li>METR (2025) — <em>Measuring AI Ability to Complete Long Tasks</em>. The time-horizon data.</li>
+        <li>Epoch AI — ongoing forecasting of compute, data, and scaling trends.</li>
+      </ul>
+    </div>
+
+    <div class="next-card">
+      <div class="label">NEXT UP</div>
+      <a href="singularity.html">→ The Singularity</a>
+      <p>If AGI arrives, what happens to the slope? The next page goes through Good's 1965 intelligence-explosion thesis, Kurzweil's curves, and a small takeoff-speed simulator you can play with.</p>
+    </div>
+
+  </article>
+</div>
+
+<script>
+// =========================================================
+// METR time-horizon plot
+(function() {
+  const svg = document.getElementById('metrSvg');
+  if (!svg) return;
+  const NS = 'http://www.w3.org/2000/svg';
+  const slider = document.getElementById('metrYear');
+  const yearLabel = document.getElementById('metrYearLabel');
+  const caption = document.getElementById('metrCaption');
+
+  const W = 720, H = 360, pad = {l: 70, r: 20, t: 24, b: 48};
+  const x0 = pad.l, x1 = W - pad.r;
+  const y0 = H - pad.b, y1 = pad.t;
+
+  // Data points (METR 2025, rounded): year, task length in minutes (50% reliability)
+  const points = [
+    { year: 2019.5, min: 0.05, label: 'GPT-2 era' },
+    { year: 2020.5, min: 0.15, label: 'GPT-3' },
+    { year: 2022.0, min: 0.7,  label: 'GPT-3.5' },
+    { year: 2023.2, min: 2,    label: 'GPT-4' },
+    { year: 2024.0, min: 8,    label: 'Claude 3.5 Sonnet' },
+    { year: 2024.8, min: 20,   label: 'o1 / Claude 3.5v2' },
+    { year: 2025.3, min: 45,   label: 'o3 / Claude 3.7' },
+  ];
+
+  const yearMin = 2019, yearMax = 2032;
+  const minMin = 0.03, minMax = 60 * 24 * 7; // up to one week
+
+  function xScale(year) {
+    return x0 + (year - yearMin) / (yearMax - yearMin) * (x1 - x0);
+  }
+  function yScale(mins) {
+    // log scale
+    const lm = Math.log10(Math.max(mins, minMin));
+    const l0 = Math.log10(minMin);
+    const l1 = Math.log10(minMax);
+    return y0 - (lm - l0) / (l1 - l0) * (y0 - y1);
+  }
+
+  function formatMinutes(m) {
+    if (m < 1) return (m * 60).toFixed(0) + 's';
+    if (m < 60) return m.toFixed(1) + 'm';
+    if (m < 60 * 24) return (m / 60).toFixed(1) + 'h';
+    if (m < 60 * 24 * 7) return (m / (60 * 24)).toFixed(1) + 'd';
+    return (m / (60 * 24 * 7)).toFixed(1) + 'w';
+  }
+
+  function render() {
+    const year = parseFloat(slider.value);
+    yearLabel.textContent = year.toFixed(1);
+
+    // Extrapolation: start from the latest data point, apply 7-month doubling
+    const last = points[points.length - 1];
+    const dtMonths = (year - last.year) * 12;
+    const extrapMin = last.min * Math.pow(2, dtMonths / 7);
+
+    svg.innerHTML = '';
+
+    // Grid: horizontal log lines
+    const gridMins = [1/60, 1, 5, 30, 60, 60*4, 60*24, 60*24*7];
+    const gridLabels = ['1s', '1m', '5m', '30m', '1h', '4h', '1d', '1w'];
+    gridMins.forEach((m, i) => {
+      const y = yScale(m);
+      const l = document.createElementNS(NS, 'line');
+      l.setAttribute('x1', x0); l.setAttribute('x2', x1);
+      l.setAttribute('y1', y); l.setAttribute('y2', y);
+      l.setAttribute('stroke', '#1a2030');
+      l.setAttribute('stroke-dasharray', '2 3');
+      svg.appendChild(l);
+      const t = document.createElementNS(NS, 'text');
+      t.setAttribute('x', x0 - 8); t.setAttribute('y', y + 4);
+      t.setAttribute('text-anchor', 'end');
+      t.setAttribute('fill', '#6b7590');
+      t.setAttribute('font-family', 'ui-monospace,monospace');
+      t.setAttribute('font-size', '11');
+      t.textContent = gridLabels[i];
+      svg.appendChild(t);
+    });
+
+    // X axis ticks
+    for (let y = 2020; y <= 2032; y += 2) {
+      const xp = xScale(y);
+      const tk = document.createElementNS(NS, 'line');
+      tk.setAttribute('x1', xp); tk.setAttribute('x2', xp);
+      tk.setAttribute('y1', y0); tk.setAttribute('y2', y0 + 5);
+      tk.setAttribute('stroke', '#6b7590');
+      svg.appendChild(tk);
+      const tl = document.createElementNS(NS, 'text');
+      tl.setAttribute('x', xp); tl.setAttribute('y', y0 + 20);
+      tl.setAttribute('text-anchor', 'middle');
+      tl.setAttribute('fill', '#6b7590');
+      tl.setAttribute('font-family', 'ui-monospace,monospace');
+      tl.setAttribute('font-size', '11');
+      tl.textContent = y;
+      svg.appendChild(tl);
+    }
+
+    // Axes
+    const xa = document.createElementNS(NS, 'line');
+    xa.setAttribute('x1', x0); xa.setAttribute('x2', x1);
+    xa.setAttribute('y1', y0); xa.setAttribute('y2', y0);
+    xa.setAttribute('stroke', '#384050'); xa.setAttribute('stroke-width', '1.5');
+    svg.appendChild(xa);
+    const ya = document.createElementNS(NS, 'line');
+    ya.setAttribute('x1', x0); ya.setAttribute('x2', x0);
+    ya.setAttribute('y1', y1); ya.setAttribute('y2', y0);
+    ya.setAttribute('stroke', '#384050'); ya.setAttribute('stroke-width', '1.5');
+    svg.appendChild(ya);
+
+    // Extrapolation line (all the way to yearMax)
+    const extrapPath = [];
+    for (let yy = points[0].year; yy <= yearMax; yy += 0.1) {
+      const mm = points[0].min * Math.pow(2, (yy - points[0].year) * 12 / 7);
+      extrapPath.push(`${xScale(yy).toFixed(1)},${yScale(mm).toFixed(1)}`);
+    }
+    const pl = document.createElementNS(NS, 'polyline');
+    pl.setAttribute('points', extrapPath.join(' '));
+    pl.setAttribute('fill', 'none');
+    pl.setAttribute('stroke', '#7c5cff');
+    pl.setAttribute('stroke-width', '1.5');
+    pl.setAttribute('stroke-dasharray', '4 4');
+    pl.setAttribute('opacity', '0.65');
+    svg.appendChild(pl);
+
+    // Historical points
+    points.forEach(p => {
+      const c = document.createElementNS(NS, 'circle');
+      c.setAttribute('cx', xScale(p.year));
+      c.setAttribute('cy', yScale(p.min));
+      c.setAttribute('r', 5);
+      c.setAttribute('fill', '#22d3ee');
+      c.setAttribute('stroke', '#0a0d12');
+      c.setAttribute('stroke-width', '2');
+      svg.appendChild(c);
+    });
+
+    // Today marker (current slider)
+    const cx = xScale(year), cy = yScale(extrapMin);
+    const hl = document.createElementNS(NS, 'line');
+    hl.setAttribute('x1', cx); hl.setAttribute('x2', cx);
+    hl.setAttribute('y1', y0); hl.setAttribute('y2', cy);
+    hl.setAttribute('stroke', '#f472b6');
+    hl.setAttribute('stroke-width', '1');
+    hl.setAttribute('stroke-dasharray', '3 3');
+    svg.appendChild(hl);
+    const bigDot = document.createElementNS(NS, 'circle');
+    bigDot.setAttribute('cx', cx); bigDot.setAttribute('cy', cy);
+    bigDot.setAttribute('r', 8);
+    bigDot.setAttribute('fill', '#f472b6');
+    bigDot.setAttribute('stroke', '#0a0d12');
+    bigDot.setAttribute('stroke-width', '2');
+    svg.appendChild(bigDot);
+
+    const txt = document.createElementNS(NS, 'text');
+    txt.setAttribute('x', cx + 12); txt.setAttribute('y', cy - 10);
+    txt.setAttribute('fill', '#f9a8d4');
+    txt.setAttribute('font-family', 'ui-monospace,monospace');
+    txt.setAttribute('font-size', '13');
+    txt.setAttribute('font-weight', 'bold');
+    txt.textContent = `${year.toFixed(1)} → ${formatMinutes(extrapMin)}`;
+    svg.appendChild(txt);
+
+    // Axis labels
+    const xl = document.createElementNS(NS, 'text');
+    xl.setAttribute('x', (x0 + x1) / 2); xl.setAttribute('y', H - 6);
+    xl.setAttribute('text-anchor', 'middle');
+    xl.setAttribute('fill', '#94a3b8');
+    xl.setAttribute('font-family', 'ui-monospace,monospace');
+    xl.setAttribute('font-size', '11');
+    xl.textContent = 'Year';
+    svg.appendChild(xl);
+
+    const yl = document.createElementNS(NS, 'text');
+    yl.setAttribute('x', 18); yl.setAttribute('y', (y0 + y1) / 2);
+    yl.setAttribute('fill', '#94a3b8');
+    yl.setAttribute('font-family', 'ui-monospace,monospace');
+    yl.setAttribute('font-size', '11');
+    yl.setAttribute('transform', `rotate(-90, 18, ${(y0 + y1) / 2})`);
+    yl.setAttribute('text-anchor', 'middle');
+    yl.textContent = 'Task length (50% reliability, log scale)';
+    svg.appendChild(yl);
+
+    caption.textContent = `At ${year.toFixed(1)}, the 7-month-doubling extrapolation implies task length ≈ ${formatMinutes(extrapMin)}. Dots are historical METR data (2019–2025). The dashed line is pure extrapolation.`;
+  }
+
+  slider.addEventListener('input', render);
+  render();
+})();
+</script>
+
+<script defer src="../search-index.js"></script>
+
+<script defer src="../search.js"></script>
+</body>
+</html>

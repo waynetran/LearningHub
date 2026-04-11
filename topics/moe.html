@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mixture of Experts — Deep Dive</title>
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError: false});"></script>
+</head>
+<body>
+<div id="tooltip"></div>
+
+<nav class="topic-nav">
+  <a class="back" href="../ai-ml.html">← Back to AI/ML</a>
+  <div class="crumb">Deep Dives / <span class="topic-name">Mixture of Experts</span></div>
+</nav>
+
+<div class="topic-layout">
+  <aside class="topic-toc">
+    <h4>ON THIS PAGE</h4>
+    <ul>
+      <li><a href="#intro">1. The core idea</a></li>
+      <li><a href="#router">2. The router (gating network)</a></li>
+      <li><a href="#topk">3. Top-k sparsification</a></li>
+      <li><a href="#demo">4. Interactive router demo</a></li>
+      <li><a href="#balance">5. Load balancing</a></li>
+      <li><a href="#systems">6. Systems challenges</a></li>
+      <li><a href="#code">7. Source code</a></li>
+      <li><a href="#history">8. A brief history</a></li>
+      <li><a href="#summary">9. Summary</a></li>
+    </ul>
+  </aside>
+
+  <article class="topic-content">
+    <h1>Mixture of Experts</h1>
+    <p class="subtitle">A trillion-parameter model that runs as cheaply as a 30B one. The routing trick that lets you decouple "how much a model knows" from "how much compute each token costs" — and the load-balancing problem that keeps everyone up at night.</p>
+    <div class="meta-tags">
+      <span>Prereq: MLPs, softmax</span>
+      <span>Time to read: ~22 min</span>
+      <span>Interactive figures: 1</span>
+      <span>Code: NumPy, PyTorch, JAX</span>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="intro">1. The core idea</h2>
+
+    <p>A standard Transformer feed-forward block takes a token's hidden state $\mathbf{h} \in \mathbb{R}^d$ and runs it through one big MLP:</p>
+
+    <div class="math-display">$$\text{FFN}(\mathbf{h}) = W_2 \, \phi(W_1 \mathbf{h})$$</div>
+
+    <p>In a dense model like Llama-3-70B, $W_1$ and $W_2$ are roughly $d \times 4d$ and $4d \times d$. <em>Every token</em> touches <em>every weight</em>. Capacity and compute are the same number — if you want the model to know twice as much, it costs twice as much to run.</p>
+
+    <p>Mixture of Experts breaks that coupling. Replace the single FFN with $N$ parallel FFNs, each called an <em>expert</em>:</p>
+
+    <div class="math-display">$$E_1(\mathbf{h}),\, E_2(\mathbf{h}),\, \dots,\, E_N(\mathbf{h})$$</div>
+
+    <p>Then a tiny <em>router</em> (also called a gate) decides, per token, which experts to send it to. Crucially, the token is sent to only $k \ll N$ of them — typically $k = 1$ or $2$. The output is a weighted sum of the active experts' outputs:</p>
+
+    <div class="math-display">$$\text{MoE}(\mathbf{h}) = \sum_{i \in \text{top-}k} g_i(\mathbf{h}) \, E_i(\mathbf{h})$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">The MoE equation explained</p>
+      <dl>
+        <dt>$\mathbf{h}$</dt><dd>The token's hidden state arriving at this MoE block — a vector of dimension $d$ (say 4096 for a large model).</dd>
+        <dt>$N$</dt><dd>Total number of experts in the layer. DeepSeek-V3 has 256, Mixtral has 8, GShard originally had thousands.</dd>
+        <dt>$k$</dt><dd>How many experts each token gets routed to. Small: 1 (Switch Transformer), 2 (Mixtral), or 8 (DeepSeek). The rest of the experts do <em>nothing</em> for this token.</dd>
+        <dt>$E_i(\mathbf{h})$</dt><dd>Expert $i$'s FFN applied to the token. Architecturally identical to a dense FFN; the experts differ only in their learned weights.</dd>
+        <dt>$g_i(\mathbf{h})$</dt><dd>The router's weight for expert $i$ on this token. A small positive number. Comes from a softmax over the router logits.</dd>
+        <dt>top-$k$</dt><dd>The indices of the $k$ experts with the largest router scores. Everyone else gets weight 0 and isn't computed.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Analogy</strong> A hospital with 256 specialists but only 8 doctors on duty per patient. The triage nurse (the router) looks at the incoming patient (token) for a moment, then picks the 8 most relevant specialists. The other 248 are paid to exist but sit in their offices. The hospital has the <em>knowledge</em> of 256 specialists at the <em>cost</em> of 8 consults per patient.</p>
+    </div>
+
+    <p>Total parameters scale with $N$. Compute per token scales with $k$. Those are now two independent knobs, and you can crank parameters without cranking cost. A 671B-parameter DeepSeek-V3 activates only ~37B parameters per token. The "effective model size" is 671B; the serving cost is closer to a 37B dense model.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="router">2. The router (gating network)</h2>
+
+    <p>The router is the simplest part of the system — it's a single linear layer followed by a softmax:</p>
+
+    <div class="math-display">$$\mathbf{s} = W_r \mathbf{h}, \quad \mathbf{g} = \text{softmax}(\mathbf{s})$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">The router network</p>
+      <dl>
+        <dt>$W_r \in \mathbb{R}^{N \times d}$</dt><dd>The router's only learnable parameters. One row per expert. A tiny matrix — for a 256-expert, $d=4096$ layer, that's ~1M params vs. billions in the experts themselves.</dd>
+        <dt>$\mathbf{s} \in \mathbb{R}^N$</dt><dd>The raw router logits — one score per expert, indicating how much the router "wants" each expert to handle this token.</dd>
+        <dt>$\mathbf{g} \in \Delta^N$</dt><dd>The softmax-normalized probabilities, summing to 1. $g_i$ is the fraction of this token's output that expert $i$ contributes.</dd>
+        <dt>$\text{softmax}$</dt><dd>$\text{softmax}(\mathbf{s})_i = \frac{e^{s_i}}{\sum_j e^{s_j}}$. Turns raw scores into a probability distribution.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Analogy</strong> The router is like asking "how much does this patient look like something for each of my 256 specialists?" and getting a percentage answer. We then pick the top $k$ percentages and send the patient to those.</p>
+    </div>
+
+    <p>Before taking the top-$k$, the router logits are usually perturbed with noise during training. That noise is what lets gradients flow to experts that would otherwise never be selected — without it, the argmax in top-$k$ kills learning for everyone not currently winning.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="topk">3. Top-k sparsification</h2>
+
+    <p>After softmax, we keep only the $k$ largest entries of $\mathbf{g}$ and zero out the rest:</p>
+
+    <div class="math-display">$$\tilde{g}_i = \begin{cases} g_i & \text{if } i \in \text{top-}k(\mathbf{g}) \\ 0 & \text{otherwise} \end{cases}$$</div>
+
+    <p>You usually renormalize the kept weights so they sum to 1 again, then compute only those $k$ experts:</p>
+
+    <div class="math-display">$$\text{MoE}(\mathbf{h}) = \sum_{i=1}^{N} \tilde{g}_i \, E_i(\mathbf{h}) = \sum_{i \in \text{top-}k} \frac{g_i}{\sum_{j \in \text{top-}k} g_j} \, E_i(\mathbf{h})$$</div>
+
+    <p>The key insight: the sum <em>looks</em> like it's over all $N$ experts, but $N - k$ terms are zero. The GPU never touches those weights. Forward and backward cost scale with $k$, not $N$.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="demo">4. Interactive router demo</h2>
+
+    <p>Below is a live 4-expert MoE layer with $k = 2$. Click on one of the tokens to "send" it through the router. You'll see the router logits, the softmax probabilities, and which two experts wake up to process it. The four experts are colored differently — expert 0 likes "warm" topics, 1 likes "cold", 2 likes "large numbers", 3 likes "small numbers". They've been pretrained in this simulation.</p>
+
+    <div class="viz-3d">
+      <div class="v3-controls">
+        <span class="v3-label">Click a token:</span>
+        <button class="v3-btn" data-token="0">sun</button>
+        <button class="v3-btn" data-token="1">ice</button>
+        <button class="v3-btn" data-token="2">billion</button>
+        <button class="v3-btn" data-token="3">tiny</button>
+        <button class="v3-btn" data-token="4">warm</button>
+        <button class="v3-btn" data-token="5">cold</button>
+        <button class="v3-btn" data-token="6">huge</button>
+        <button class="v3-btn" data-token="7">speck</button>
+      </div>
+      <svg id="moeSvg" viewBox="0 0 720 380" style="width:100%;height:auto;background:#0a0d12;border-radius:6px;">
+        <defs>
+          <linearGradient id="moeArrow" x1="0" x2="1">
+            <stop offset="0" stop-color="#63b3ff" stop-opacity="0"/>
+            <stop offset="1" stop-color="#63b3ff" stop-opacity="1"/>
+          </linearGradient>
+        </defs>
+      </svg>
+      <p class="v3-caption" id="moeCaption">Pick a token above. Active experts light up; dim experts are skipped (zero compute).</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="balance">5. Load balancing</h2>
+
+    <p>The dangerous failure mode of MoE is <strong>expert collapse</strong>: the router learns to send every token to the same 2 or 3 experts. Those experts get all the gradient updates, so they improve fastest, so the router sends them even more tokens, so they improve even faster. It's a winner-takes-all death spiral. The other $N - 3$ experts are dead weight in the checkpoint.</p>
+
+    <p>The fix is an auxiliary loss that punishes uneven assignment. Let $f_i$ be the fraction of tokens routed to expert $i$ across a batch, and $P_i$ the mean router probability for expert $i$. Then the <em>load-balancing loss</em> is:</p>
+
+    <div class="math-display">$$\mathcal{L}_{\text{balance}} = \alpha \cdot N \sum_{i=1}^{N} f_i \cdot P_i$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Balance loss explained</p>
+      <dl>
+        <dt>$f_i$</dt><dd>The fraction of tokens in this batch that chose expert $i$ in their top-$k$. A histogram over experts.</dd>
+        <dt>$P_i$</dt><dd>The average of the router's softmax output for expert $i$ across the batch — how much the router <em>wanted</em> to use expert $i$ on average.</dd>
+        <dt>$\alpha$</dt><dd>A small coefficient, typically 0.01 or 0.001. The main loss is the language-modeling loss; this is a gentle nudge on top.</dd>
+        <dt>$N$</dt><dd>The scaling factor $N$ ensures the loss has magnitude ~1 when assignment is uniform (each $f_i = P_i = 1/N$), so it doesn't depend on the number of experts.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why it works</strong> The loss is minimized when both $f_i$ and $P_i$ are uniform across experts. If expert 3 is getting way more tokens than average, the loss pushes the router to lower its score for expert 3 on the next batch. It's a pressure valve: any expert that starts to dominate gets penalized until routing evens out.</p>
+    </div>
+
+    <p>DeepSeek-V3 (2024) replaced this auxiliary loss with a bias term added to each expert's router score, adjusted step-by-step: overloaded experts get their bias lowered, underloaded experts get their bias raised. The token routing remains unchanged, but balance is maintained without the hack of an extra loss term. This is called <em>auxiliary-loss-free load balancing</em> and is a notable 2024 refinement.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="systems">6. Systems challenges</h2>
+
+    <p>On paper, MoE is an algorithmic trick. In practice, it's a systems nightmare because experts are distributed across many GPUs, and routing means every forward pass has to shuffle tokens between them:</p>
+
+    <ul>
+      <li><strong>All-to-all communication.</strong> Each GPU holds a handful of experts but sees tokens destined for all of them. Before the expert compute starts, every GPU has to send its non-local tokens to the GPUs that host the target experts. Then after compute, the reverse — send outputs back. This is two <code>all_to_all</code> collectives per MoE layer. On a fast interconnect (NVLink, InfiniBand) it's manageable; on slower networks it dominates.</li>
+      <li><strong>Expert capacity and dropping.</strong> If you don't know <em>ahead of time</em> how many tokens will land on each expert, you can't pre-allocate GPU memory for them. The standard fix is a capacity factor: each expert accepts at most $C = \text{capacity\_factor} \cdot k \cdot T / N$ tokens per batch, where $T$ is the batch-times-sequence token count. Overflow tokens are <em>dropped</em> (the expert output is zero, and they rely on the residual stream alone). Capacity factor is usually 1.25 or 2.0.</li>
+      <li><strong>Expert parallelism.</strong> The dimension along which experts are partitioned. A 64-expert layer split across 8 GPUs puts 8 experts on each. Combined with data, tensor, and pipeline parallelism, this is a 4-way partitioning scheme that DeepSpeed, Megatron, and JAX/Pallas all spend a lot of code handling.</li>
+      <li><strong>Memory vs. compute.</strong> Weights are large ($N \times$ a full FFN's worth) but compute is small. Inference-time MoE serving is bandwidth-bound, not compute-bound — exactly the opposite of dense models. This is why vLLM and SGLang added special MoE kernels (Marlin, ExLlamaV2-MoE).</li>
+    </ul>
+
+    <!-- ========================================================== -->
+    <h2 id="code">7. Source code</h2>
+
+    <p>A minimal MoE layer in three frameworks. No load balancing, no all-to-all — just the core logic of "route, pick top-k, compute, combine."</p>
+
+    <div class="code-tabs" id="ct-moe">
+      <div class="ct-header">
+        <button class="ct-tab active" data-tab="np">NumPy</button>
+        <button class="ct-tab" data-tab="pt">PyTorch</button>
+        <button class="ct-tab" data-tab="jax">JAX</button>
+        <span class="ct-label">mixture of experts · forward pass</span>
+      </div>
+      <div class="ct-panel active" data-tab="np"><pre><code><span class="kw">import</span> numpy <span class="kw">as</span> np
+
+<span class="kw">def</span> <span class="fn">softmax</span>(x, axis=-<span class="num">1</span>):
+    e = np.exp(x - x.max(axis=axis, keepdims=<span class="kw">True</span>))
+    <span class="kw">return</span> e / e.sum(axis=axis, keepdims=<span class="kw">True</span>)
+
+<span class="kw">def</span> <span class="fn">moe_forward</span>(h, W_r, experts, k=<span class="num">2</span>):
+    <span class="cmt"># h: (B, d) — batch of tokens</span>
+    <span class="cmt"># W_r: (N, d) — router weights for N experts</span>
+    <span class="cmt"># experts: list of N callables h -&gt; h</span>
+    B, d = h.shape
+    N = W_r.shape[<span class="num">0</span>]
+
+    logits = h @ W_r.T                      <span class="cmt"># (B, N)</span>
+    probs  = <span class="fn">softmax</span>(logits)               <span class="cmt"># (B, N)</span>
+
+    <span class="cmt"># Top-k indices per token</span>
+    topk_idx = np.argsort(-probs, axis=<span class="num">1</span>)[:, :k]   <span class="cmt"># (B, k)</span>
+    topk_prob = np.take_along_axis(probs, topk_idx, axis=<span class="num">1</span>)
+    topk_prob = topk_prob / topk_prob.sum(axis=<span class="num">1</span>, keepdims=<span class="kw">True</span>)
+
+    out = np.zeros_like(h)
+    <span class="kw">for</span> b <span class="kw">in</span> <span class="fn">range</span>(B):
+        <span class="kw">for</span> j <span class="kw">in</span> <span class="fn">range</span>(k):
+            i = topk_idx[b, j]
+            out[b] += topk_prob[b, j] * experts[i](h[b])
+    <span class="kw">return</span> out
+</code></pre></div>
+
+      <div class="ct-panel" data-tab="pt"><pre><code><span class="kw">import</span> torch, torch.nn <span class="kw">as</span> nn, torch.nn.functional <span class="kw">as</span> F
+
+<span class="kw">class</span> <span class="fn">Expert</span>(nn.Module):
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, d, dff):
+        <span class="fn">super</span>().__init__()
+        self.w1 = nn.Linear(d, dff, bias=<span class="kw">False</span>)
+        self.w2 = nn.Linear(dff, d, bias=<span class="kw">False</span>)
+    <span class="kw">def</span> <span class="fn">forward</span>(self, x):
+        <span class="kw">return</span> self.w2(F.silu(self.w1(x)))
+
+<span class="kw">class</span> <span class="fn">MoE</span>(nn.Module):
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, d=<span class="num">4096</span>, dff=<span class="num">11008</span>, N=<span class="num">8</span>, k=<span class="num">2</span>):
+        <span class="fn">super</span>().__init__()
+        self.N, self.k = N, k
+        self.router  = nn.Linear(d, N, bias=<span class="kw">False</span>)
+        self.experts = nn.ModuleList([<span class="fn">Expert</span>(d, dff) <span class="kw">for</span> _ <span class="kw">in</span> <span class="fn">range</span>(N)])
+
+    <span class="kw">def</span> <span class="fn">forward</span>(self, x):                 <span class="cmt"># x: (B, T, d)</span>
+        B, T, d = x.shape
+        x_flat  = x.reshape(-<span class="num">1</span>, d)          <span class="cmt"># (BT, d)</span>
+        logits  = self.router(x_flat)        <span class="cmt"># (BT, N)</span>
+        probs   = F.softmax(logits, dim=-<span class="num">1</span>)
+        topk_p, topk_i = probs.topk(self.k, dim=-<span class="num">1</span>)
+        topk_p  = topk_p / topk_p.sum(dim=-<span class="num">1</span>, keepdim=<span class="kw">True</span>)
+
+        out = torch.zeros_like(x_flat)
+        <span class="kw">for</span> e <span class="kw">in</span> <span class="fn">range</span>(self.N):
+            mask = (topk_i == e).any(dim=-<span class="num">1</span>)     <span class="cmt"># (BT,)</span>
+            <span class="kw">if</span> <span class="kw">not</span> mask.any(): <span class="kw">continue</span>
+            w = (topk_p * (topk_i == e).<span class="fn">float</span>()).sum(-<span class="num">1</span>)
+            out[mask] += w[mask, <span class="kw">None</span>] * self.experts[e](x_flat[mask])
+        <span class="kw">return</span> out.reshape(B, T, d)
+</code></pre></div>
+
+      <div class="ct-panel" data-tab="jax"><pre><code><span class="kw">import</span> jax, jax.numpy <span class="kw">as</span> jnp
+<span class="kw">from</span> flax <span class="kw">import</span> linen <span class="kw">as</span> nn
+
+<span class="kw">class</span> <span class="fn">MoE</span>(nn.Module):
+    d: <span class="fn">int</span>; dff: <span class="fn">int</span>; N: <span class="fn">int</span>; k: <span class="fn">int</span>
+
+    @nn.compact
+    <span class="kw">def</span> <span class="fn">__call__</span>(self, x):            <span class="cmt"># (B, T, d)</span>
+        logits = nn.Dense(self.N, use_bias=<span class="kw">False</span>, name=<span class="str">"router"</span>)(x)
+        probs  = jax.nn.softmax(logits)
+
+        topk_p, topk_i = jax.lax.top_k(probs, self.k)
+        topk_p = topk_p / topk_p.sum(-<span class="num">1</span>, keepdims=<span class="kw">True</span>)
+
+        <span class="cmt"># Compute all experts then gather — naive but vectorizes cleanly.</span>
+        <span class="kw">def</span> <span class="fn">expert</span>(i, x):
+            h = nn.Dense(self.dff, name=<span class="str">f"e{i}_w1"</span>)(x)
+            <span class="kw">return</span> nn.Dense(self.d, name=<span class="str">f"e{i}_w2"</span>)(jax.nn.silu(h))
+        stacked = jnp.stack([<span class="fn">expert</span>(i, x) <span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(self.N)], -<span class="num">2</span>)
+        <span class="cmt"># stacked: (B, T, N, d) — pick top-k and weight them</span>
+
+        onehot = jax.nn.one_hot(topk_i, self.N)          <span class="cmt"># (B, T, k, N)</span>
+        weights = (topk_p[..., <span class="kw">None</span>] * onehot).sum(-<span class="num">2</span>) <span class="cmt"># (B, T, N)</span>
+        <span class="kw">return</span> (stacked * weights[..., <span class="kw">None</span>]).sum(-<span class="num">2</span>)
+</code></pre></div>
+    </div>
+
+    <p>A real production MoE layer adds: noise injection during training, load-balancing loss or DeepSeek-style bias adjustment, expert capacity limits with token dropping, all-to-all communication primitives for expert parallelism, and grouped matmul kernels that process tokens bound for the same expert together. The above is the conceptual kernel, not the shippable one.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="history">8. A brief history</h2>
+
+    <ul>
+      <li><strong>1991</strong> — Jacobs, Jordan, Nowlan &amp; Hinton publish <em>Adaptive Mixtures of Local Experts</em>. The original gating-network-over-subnets idea. Not sparse. Not for language.</li>
+      <li><strong>2017</strong> — Shazeer et al., <em>Outrageously Large Neural Networks</em>. The first sparse MoE that scales: 137B parameters trained on a 1B-dense compute budget. Showed the decoupling trick works.</li>
+      <li><strong>2020</strong> — <em>GShard</em> (Google): applied sparse MoE to a Transformer for machine translation. Introduced the capacity factor and top-2 routing.</li>
+      <li><strong>2021</strong> — <em>Switch Transformer</em> (Fedus, Zoph, Shazeer): went to top-1 routing. Simpler, faster, and actually stable. 1.6T params. Showed training MoE at scale was a real engineering challenge, not just a math trick.</li>
+      <li><strong>2022</strong> — <em>GLaM</em>, <em>ST-MoE</em>, <em>Expert Choice</em>: cleanup. Expert Choice flipped the problem: instead of each token picking $k$ experts, each expert picks $k$ tokens. Guarantees perfect load balance, but breaks causality for autoregressive decoding.</li>
+      <li><strong>2023</strong> — <em>Mixtral 8×7B</em> (Mistral): first mainstream open-weights MoE. 8 experts, top-2, each expert a full Mistral-7B FFN. Proved MoE works in the wild, at home, on consumer GPUs.</li>
+      <li><strong>2024</strong> — <em>DeepSeek-V2</em> then <em>V3</em>: fine-grained MoE with 160 and 256 experts, shared "always-on" experts for common knowledge, and auxiliary-loss-free load balancing. The 671B-parameter V3 is the current open reference.</li>
+      <li><strong>2025</strong> — Research on dynamic-$k$ routing, hierarchical routing, and "upcycling" dense models into MoE. The design space is still rapidly expanding.</li>
+    </ul>
+
+    <!-- ========================================================== -->
+    <h2 id="summary">9. Summary</h2>
+
+    <ul>
+      <li>MoE replaces one big FFN with $N$ expert FFNs and a lightweight router that sends each token to only $k$ of them.</li>
+      <li>The result: <strong>total parameters scale with $N$</strong>, <strong>compute per token scales with $k$</strong>. You can have a trillion params and pay for a billion.</li>
+      <li>The router is one small linear layer + softmax. The magic is the top-$k$ gate that turns a dense weighted sum into a sparse one.</li>
+      <li>The core risk is <strong>expert collapse</strong> — all traffic going to a few experts. Solved by auxiliary load-balance loss, or 2024-era bias-adjusted routing.</li>
+      <li>Systems-wise, MoE layers are dominated by all-to-all communication and capacity planning, not by the matmuls themselves.</li>
+      <li>Every frontier open model of 2024–25 — Mixtral, DeepSeek-V2/V3, Qwen-MoE, Jamba — uses sparse MoE. It's the de-facto way to scale.</li>
+    </ul>
+
+    <div class="bib">
+      <h4>Further reading</h4>
+      <ul>
+        <li>Jacobs et al. (1991) — <em>Adaptive Mixtures of Local Experts</em>.</li>
+        <li>Shazeer et al. (2017) — <em>Outrageously Large Neural Networks: The Sparsely-Gated Mixture-of-Experts Layer</em>.</li>
+        <li>Fedus, Zoph &amp; Shazeer (2021) — <em>Switch Transformers: Scaling to Trillion Parameter Models</em>.</li>
+        <li>Zhou et al. (2022) — <em>Mixture-of-Experts with Expert Choice Routing</em>.</li>
+        <li>DeepSeek-AI (2024) — <em>DeepSeek-V3 Technical Report</em>.</li>
+      </ul>
+    </div>
+
+    <div class="next-card">
+      <div class="label">NEXT UP</div>
+      <a href="state-space.html">→ State Space Models &amp; Mamba</a>
+      <p>MoE makes width cheap. State Space Models make length cheap. Together they're the two main axes on which 2024–26 models escape Transformer limits.</p>
+    </div>
+
+  </article>
+</div>
+
+<script>
+// =========================================================
+// Code tabs
+document.querySelectorAll('.code-tabs').forEach(root => {
+  const tabs = root.querySelectorAll('.ct-tab');
+  const panels = root.querySelectorAll('.ct-panel');
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const target = tab.getAttribute('data-tab');
+      tabs.forEach(t => t.classList.toggle('active', t === tab));
+      panels.forEach(p => p.classList.toggle('active', p.getAttribute('data-tab') === target));
+    });
+  });
+});
+
+// =========================================================
+// MoE router demo
+(function() {
+  const svg = document.getElementById('moeSvg');
+  if (!svg) return;
+  const NS = 'http://www.w3.org/2000/svg';
+  const caption = document.getElementById('moeCaption');
+
+  // 4 experts, 8 tokens. Each token has a (warmth, size) embedding in [-1, 1].
+  // Experts have a preference direction; the router is defined so that
+  // logits = token · expert_dir.
+  const experts = [
+    { name: 'Expert 0 · warmth+', dir: [ 1.0,  0.0], color: '#ff8a5b' },
+    { name: 'Expert 1 · warmth−', dir: [-1.0,  0.0], color: '#63b3ff' },
+    { name: 'Expert 2 · size+',   dir: [ 0.0,  1.0], color: '#ffd166' },
+    { name: 'Expert 3 · size−',   dir: [ 0.0, -1.0], color: '#b58cff' },
+  ];
+  const tokens = [
+    { name: 'sun',     h: [ 0.9,  0.2] },
+    { name: 'ice',     h: [-0.9,  0.0] },
+    { name: 'billion', h: [ 0.1,  0.95] },
+    { name: 'tiny',    h: [ 0.0, -0.95] },
+    { name: 'warm',    h: [ 0.7, -0.2] },
+    { name: 'cold',    h: [-0.8,  0.1] },
+    { name: 'huge',    h: [ 0.2,  0.9] },
+    { name: 'speck',   h: [-0.1, -0.85] },
+  ];
+  const K = 2;
+
+  function softmax(xs) {
+    const m = Math.max(...xs);
+    const e = xs.map(x => Math.exp(x - m));
+    const s = e.reduce((a, b) => a + b, 0);
+    return e.map(v => v / s);
+  }
+
+  function render(tokIdx) {
+    while (svg.firstChild && svg.firstChild.tagName !== 'defs') svg.removeChild(svg.firstChild);
+    // Remove all non-defs children
+    [...svg.children].forEach(c => { if (c.tagName.toLowerCase() !== 'defs') svg.removeChild(c); });
+
+    const tok = tokens[tokIdx];
+    const logits = experts.map(e => 2.5 * (tok.h[0]*e.dir[0] + tok.h[1]*e.dir[1]));
+    const probs = softmax(logits);
+    const order = [...probs.keys()].sort((a, b) => probs[b] - probs[a]);
+    const active = new Set(order.slice(0, K));
+    const sumTop = order.slice(0, K).reduce((s, i) => s + probs[i], 0);
+
+    // Token column
+    const txCol = 90, tyTop = 60, step = 38;
+    tokens.forEach((t, i) => {
+      const cx = txCol, cy = tyTop + i * step;
+      const dim = i !== tokIdx;
+      const g = document.createElementNS(NS, 'g');
+      const r = document.createElementNS(NS, 'rect');
+      r.setAttribute('x', cx - 50); r.setAttribute('y', cy - 13);
+      r.setAttribute('width', 100); r.setAttribute('height', 26);
+      r.setAttribute('rx', 13);
+      r.setAttribute('fill', dim ? '#141923' : '#1d2633');
+      r.setAttribute('stroke', i === tokIdx ? '#63b3ff' : '#2a3446');
+      r.setAttribute('stroke-width', i === tokIdx ? 2 : 1);
+      g.appendChild(r);
+      const t1 = document.createElementNS(NS, 'text');
+      t1.setAttribute('x', cx); t1.setAttribute('y', cy + 4);
+      t1.setAttribute('text-anchor', 'middle');
+      t1.setAttribute('fill', dim ? '#4a5868' : '#e3ecf7');
+      t1.setAttribute('font-size', 12);
+      t1.setAttribute('font-family', 'ui-monospace, monospace');
+      t1.textContent = t.name;
+      g.appendChild(t1);
+      svg.appendChild(g);
+    });
+
+    // Router box
+    const rx = 260, ry = 155, rw = 120, rh = 70;
+    const rb = document.createElementNS(NS, 'rect');
+    rb.setAttribute('x', rx); rb.setAttribute('y', ry);
+    rb.setAttribute('width', rw); rb.setAttribute('height', rh);
+    rb.setAttribute('rx', 6);
+    rb.setAttribute('fill', '#1d2633');
+    rb.setAttribute('stroke', '#63b3ff');
+    rb.setAttribute('stroke-width', 1.5);
+    svg.appendChild(rb);
+    const rl = document.createElementNS(NS, 'text');
+    rl.setAttribute('x', rx + rw / 2); rl.setAttribute('y', ry + 28);
+    rl.setAttribute('text-anchor', 'middle');
+    rl.setAttribute('fill', '#e3ecf7');
+    rl.setAttribute('font-size', 13);
+    rl.setAttribute('font-family', 'ui-monospace, monospace');
+    rl.textContent = 'ROUTER';
+    svg.appendChild(rl);
+    const rl2 = document.createElementNS(NS, 'text');
+    rl2.setAttribute('x', rx + rw / 2); rl2.setAttribute('y', ry + 48);
+    rl2.setAttribute('text-anchor', 'middle');
+    rl2.setAttribute('fill', '#7a8a9a');
+    rl2.setAttribute('font-size', 10);
+    rl2.setAttribute('font-family', 'ui-monospace, monospace');
+    rl2.textContent = 'W_r · h → softmax';
+    svg.appendChild(rl2);
+
+    // Line from selected token into router
+    const tokY = tyTop + tokIdx * step;
+    const l1 = document.createElementNS(NS, 'line');
+    l1.setAttribute('x1', txCol + 50); l1.setAttribute('y1', tokY);
+    l1.setAttribute('x2', rx);         l1.setAttribute('y2', ry + rh / 2);
+    l1.setAttribute('stroke', '#63b3ff');
+    l1.setAttribute('stroke-width', 2);
+    svg.appendChild(l1);
+
+    // Experts column
+    const ex = 540, eyTop = 70, eStep = 72;
+    experts.forEach((e, i) => {
+      const cy = eyTop + i * eStep;
+      const isActive = active.has(i);
+      const re = document.createElementNS(NS, 'rect');
+      re.setAttribute('x', ex); re.setAttribute('y', cy - 22);
+      re.setAttribute('width', 150); re.setAttribute('height', 44);
+      re.setAttribute('rx', 6);
+      re.setAttribute('fill', isActive ? '#1d2633' : '#0f131a');
+      re.setAttribute('stroke', isActive ? e.color : '#2a3446');
+      re.setAttribute('stroke-width', isActive ? 2 : 1);
+      svg.appendChild(re);
+      const et = document.createElementNS(NS, 'text');
+      et.setAttribute('x', ex + 75); et.setAttribute('y', cy - 4);
+      et.setAttribute('text-anchor', 'middle');
+      et.setAttribute('fill', isActive ? '#e3ecf7' : '#4a5868');
+      et.setAttribute('font-size', 11);
+      et.setAttribute('font-family', 'ui-monospace, monospace');
+      et.textContent = e.name;
+      svg.appendChild(et);
+      const pt = document.createElementNS(NS, 'text');
+      pt.setAttribute('x', ex + 75); pt.setAttribute('y', cy + 13);
+      pt.setAttribute('text-anchor', 'middle');
+      pt.setAttribute('fill', isActive ? e.color : '#3a4858');
+      pt.setAttribute('font-size', 11);
+      pt.setAttribute('font-family', 'ui-monospace, monospace');
+      const renorm = isActive ? probs[i] / sumTop : 0;
+      pt.textContent = `p=${probs[i].toFixed(2)}${isActive ? `  g=${renorm.toFixed(2)}` : '  skip'}`;
+      svg.appendChild(pt);
+
+      // Line from router to expert
+      const line = document.createElementNS(NS, 'line');
+      line.setAttribute('x1', rx + rw); line.setAttribute('y1', ry + rh / 2);
+      line.setAttribute('x2', ex);      line.setAttribute('y2', cy);
+      line.setAttribute('stroke', isActive ? e.color : '#2a3446');
+      line.setAttribute('stroke-width', isActive ? 2 : 1);
+      line.setAttribute('stroke-dasharray', isActive ? '' : '3,3');
+      svg.appendChild(line);
+    });
+
+    caption.textContent = `Token "${tok.name}" → top-${K}: experts ${order.slice(0, K).join(', ')}. The other ${experts.length - K} experts do zero compute.`;
+  }
+
+  document.querySelectorAll('.v3-btn[data-token]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = parseInt(btn.getAttribute('data-token'), 10);
+      render(idx);
+    });
+  });
+  render(0);
+})();
+</script>
+<script defer src="../search-index.js"></script>
+<script defer src="../search.js"></script>
+</body>
+</html>

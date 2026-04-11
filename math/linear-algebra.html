@@ -1,0 +1,1399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Linear Algebra — Deep Dive</title>
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError: false});"></script>
+</head>
+<body>
+<div id="tooltip"></div>
+
+<nav class="topic-nav">
+  <a class="back" href="../index.html">← Learning Hub</a>
+  <div class="crumb">Mathematics / <span class="topic-name">Linear Algebra</span></div>
+</nav>
+
+<div class="topic-layout">
+  <aside class="topic-toc">
+    <h4>ON THIS PAGE</h4>
+    <ul>
+      <li><a href="#why">1. Why linear algebra</a></li>
+      <li><a href="#vocab">2. Vocabulary cheat-sheet</a></li>
+      <li><a href="#vectors">3. Vectors</a></li>
+      <li><a href="#dot">4. Dot products</a></li>
+      <li><a href="#matrices">5. Matrices</a></li>
+      <li><a href="#matmul">6. Matrix multiplication</a></li>
+      <li><a href="#demo">7. Interactive: 2×2 transformations</a></li>
+      <li><a href="#special">8. Special matrices</a></li>
+      <li><a href="#systems">9. Linear systems $A\mathbf{x}=\mathbf{b}$</a></li>
+      <li><a href="#spaces">10. Vector spaces</a></li>
+      <li><a href="#rank">11. Rank and nullspace</a></li>
+      <li><a href="#det">12. Determinants</a></li>
+      <li><a href="#eig">13. Eigenvalues and eigenvectors</a></li>
+      <li><a href="#diag">14. Diagonalization</a></li>
+      <li><a href="#ortho">15. Orthogonal bases, Gram–Schmidt</a></li>
+      <li><a href="#svd">16. The Singular Value Decomposition</a></li>
+      <li><a href="#pca">17. PCA in 30 lines</a></li>
+      <li><a href="#ml">18. Applications to ML</a></li>
+      <li><a href="#code">19. NumPy code</a></li>
+      <li><a href="#summary">20. Summary</a></li>
+    </ul>
+  </aside>
+
+  <article class="topic-content">
+    <h1>Linear Algebra</h1>
+    <p class="subtitle">The math of arrows, grids, and lists of numbers — and the single most important subject for anyone who wants to understand modern machine learning. By the end of this page you should be able to read a matrix expression, know what it does geometrically, and see why every line of a neural network is quietly doing linear algebra.</p>
+    <div class="meta-tags">
+      <span>Prereq: basic algebra (no calculus needed)</span>
+      <span>Read time: ~40 min</span>
+      <span>Interactive figures: 1</span>
+      <span>Code: NumPy</span>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="why">1. Why linear algebra</h2>
+
+    <p>Here is the headline: linear algebra is the language every modern ML model, every 3D graphics pipeline, and every signal processing system is written in. When someone says "GPT-4 has 1.7 trillion parameters," they mean that a collection of matrices has 1.7 trillion numbers in it. When someone says "the embedding of <em>dog</em>," they mean a vector. When someone says "attention," they mean dot products. When someone says "a forward pass of a neural network," they mean a sequence of matrix multiplications with some non-linear squashing in between.</p>
+
+    <p>If you only remember three sentences from this page, remember these:</p>
+
+    <ul>
+      <li><strong>Vectors are lists of numbers with direction and length.</strong> Every word, every image, every user in a recommender system eventually becomes a vector.</li>
+      <li><strong>Matrices are functions that send vectors to other vectors, in a very restricted way</strong> (they preserve lines and the origin). "Restricted" is what makes them tractable and fast.</li>
+      <li><strong>The dot product measures alignment.</strong> Two vectors that point the same way have a big dot product. Two that are perpendicular have zero. Attention is literally this, scaled.</li>
+    </ul>
+
+    <p>If you already know what a vector is, skim sections 3–6 and dive into eigenvalues and SVD. If you've never seen any of this — or haven't seen it since school — read straight through. Nothing here assumes calculus; we'll point to <a href="calculus.html">calculus.html</a> only where we mention derivatives, and you can ignore those footnotes on a first pass.</p>
+
+    <div class="callout">
+      <p><strong>The five things that break people's brains the first time</strong>, so you know to slow down:</p>
+      <ol>
+        <li>Matrix multiplication is not commutative. $AB \ne BA$ in general. This is not a typo or a convention — it reflects the fact that rotating then scaling is different from scaling then rotating.</li>
+        <li>Matrix multiplication looks like row · column, but the real meaning is linear combinations of columns.</li>
+        <li>An "eigenvector" is just "a direction the matrix doesn't rotate, only stretches." That's it. The Greek is scarier than the concept.</li>
+        <li>The determinant is the amount by which a matrix scales volume. Sign = orientation. That's it.</li>
+        <li>SVD says <em>every</em> matrix, no matter how ugly, is secretly a rotation, then a scaling along axes, then another rotation.</li>
+      </ol>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="vocab">2. Vocabulary cheat-sheet</h2>
+
+    <p>The notation is ugly and inconsistent across textbooks. Here is the set of conventions this page uses, and which we recommend you steal.</p>
+
+    <table class="rank-table">
+      <thead>
+        <tr><th>Symbol</th><th>Means</th><th>Example</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>$\mathbf{v}$ or $\vec v$</td><td>A vector (lowercase, bold or with an arrow)</td><td>$\mathbf{v} = (3, -1, 4)$</td></tr>
+        <tr><td>$v_i$</td><td>The $i$-th component (scalar) of vector $\mathbf{v}$</td><td>$v_2 = -1$</td></tr>
+        <tr><td>$A, B, M$</td><td>A matrix (uppercase)</td><td>$A = \begin{pmatrix}1&2\\3&4\end{pmatrix}$</td></tr>
+        <tr><td>$A_{ij}$</td><td>Entry in row $i$, column $j$ of $A$</td><td>$A_{12} = 2$</td></tr>
+        <tr><td>$A^T$</td><td>Transpose — rows and columns swapped</td><td>$(A^T)_{ij} = A_{ji}$</td></tr>
+        <tr><td>$A^{-1}$</td><td>Inverse — the matrix that undoes $A$</td><td>$A A^{-1} = I$</td></tr>
+        <tr><td>$I$ or $I_n$</td><td>Identity matrix (1s on the diagonal, 0 elsewhere)</td><td>$I_2 = \begin{pmatrix}1&0\\0&1\end{pmatrix}$</td></tr>
+        <tr><td>$\|\mathbf{v}\|$</td><td>Length (norm) of $\mathbf{v}$</td><td>$\|(3,4)\| = 5$</td></tr>
+        <tr><td>$\mathbf{a} \cdot \mathbf{b}$</td><td>Dot product — a scalar</td><td>$(1,2)\cdot(3,4) = 11$</td></tr>
+        <tr><td>$\mathbb{R}^n$</td><td>The set of $n$-dimensional real vectors</td><td>$(1.5, 2, -3) \in \mathbb{R}^3$</td></tr>
+        <tr><td>$\det(A)$ or $|A|$</td><td>Determinant of $A$</td><td>$\det(I_2) = 1$</td></tr>
+        <tr><td>$\lambda$</td><td>An eigenvalue (lowercase Greek lambda)</td><td>$A\mathbf{v} = \lambda \mathbf{v}$</td></tr>
+      </tbody>
+    </table>
+
+    <p>If a symbol appears on this page and you can't find it in this table, we'll define it inline where it appears. If we don't, report the bug.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="vectors">3. Vectors</h2>
+
+    <p>A <strong>vector</strong> is two things that happen to be the same thing:</p>
+
+    <ul>
+      <li>An ordered list of numbers, like $(3, -1, 4, 0.5)$. Programmers know this as a 1D array.</li>
+      <li>An arrow in space with a length and a direction, starting at the origin.</li>
+    </ul>
+
+    <p>When you do linear algebra, you want both pictures in your head at once. The list is how you <em>compute</em>; the arrow is how you <em>reason</em>.</p>
+
+    <p>A 2D vector $\mathbf{v} = (v_1, v_2)$ is an arrow from $(0,0)$ to the point $(v_1, v_2)$ in the plane. A 3D vector $(v_1, v_2, v_3)$ is an arrow in space. A 768-dimensional vector — the default size of a GPT embedding — is an arrow in a space you cannot visualize, but that still obeys the same rules. That's the whole trick: once you know how 2D works, the algebra carries you up into any dimension for free.</p>
+
+    <h3>Vector addition</h3>
+
+    <p>You add vectors component-by-component:</p>
+
+    <div class="math-display">$$\mathbf{a} + \mathbf{b} = (a_1 + b_1,\ a_2 + b_2,\ \dots,\ a_n + b_n)$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Vector addition</p>
+      <dl>
+        <dt>$\mathbf{a}, \mathbf{b}$</dt><dd>Two vectors of the same length $n$. You can't add a 3-vector to a 4-vector.</dd>
+        <dt>$a_i, b_i$</dt><dd>The $i$-th components (plain numbers) of $\mathbf{a}$ and $\mathbf{b}$.</dd>
+        <dt>$(\dots)$</dt><dd>The result is a new vector whose $i$-th component is $a_i + b_i$.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Geometry</strong>. Put the tail of $\mathbf{b}$ at the tip of $\mathbf{a}$. The arrow from the origin to the new tip is $\mathbf{a} + \mathbf{b}$. Equivalently: addition is the diagonal of the parallelogram they span. This is called the <em>tip-to-tail</em> rule and it's the geometric content of the component-wise formula above.</p>
+    </div>
+
+    <h3>Scalar multiplication</h3>
+
+    <p>Multiplying a vector by a plain number (a <em>scalar</em>) stretches or squashes it:</p>
+
+    <div class="math-display">$$c \cdot \mathbf{v} = (c v_1,\ c v_2,\ \dots,\ c v_n)$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Scalar multiplication</p>
+      <dl>
+        <dt>$c$</dt><dd>A scalar (a single real number). Could be $2$, $-3$, or $0.5$.</dd>
+        <dt>$\mathbf{v}$</dt><dd>Any vector.</dd>
+        <dt>$c v_i$</dt><dd>Ordinary number multiplication applied component-by-component.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Geometry</strong>. $c > 1$ stretches the arrow; $0 < c < 1$ shrinks it; $c < 0$ flips it through the origin. The direction is preserved (or reversed), the length is multiplied by $|c|$.</p>
+    </div>
+
+    <p>These two operations — addition and scalar multiplication — are the <em>only</em> operations that define what "linear" means. Everything else in this subject is built out of them.</p>
+
+    <h3>Norms: how long is a vector?</h3>
+
+    <p>A <strong>norm</strong> is any reasonable way to measure the length of a vector. There are several, and they show up in different ML contexts.</p>
+
+    <p>The default, and the one you already know from Pythagoras, is the <strong>Euclidean norm</strong> or <strong>$\ell_2$ norm</strong>:</p>
+
+    <div class="math-display">$$\|\mathbf{v}\|_2 = \sqrt{v_1^2 + v_2^2 + \dots + v_n^2} = \sqrt{\sum_{i=1}^n v_i^2}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">The Euclidean norm</p>
+      <dl>
+        <dt>$\|\mathbf{v}\|_2$</dt><dd>The "length" of $\mathbf{v}$ that matches ordinary geometric distance.</dd>
+        <dt>$v_i$</dt><dd>The $i$-th component of $\mathbf{v}$.</dd>
+        <dt>$\sum_{i=1}^n v_i^2$</dt><dd>Sum of the squares of every component. The "$\sum$" is a summation symbol — it means "add up everything inside for $i$ from 1 to $n$".</dd>
+        <dt>$\sqrt{\cdot}$</dt><dd>Square root. Without it you'd have "squared length," which is sometimes more convenient to compute but is not an actual length.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why the subscript 2?</strong> Because you sum the components raised to the 2nd power. That hints at a family of norms.</p>
+    </div>
+
+    <p>The <strong>$\ell_1$ norm</strong> adds absolute values instead:</p>
+
+    <div class="math-display">$$\|\mathbf{v}\|_1 = |v_1| + |v_2| + \dots + |v_n| = \sum_{i=1}^n |v_i|$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">The $\ell_1$ norm (aka "taxicab" or "Manhattan" distance)</p>
+      <dl>
+        <dt>$\|\mathbf{v}\|_1$</dt><dd>Sum of the absolute values of the components.</dd>
+        <dt>$|v_i|$</dt><dd>Absolute value — strip the sign.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why "Manhattan"?</strong> In a city grid you can't cut diagonally across buildings. The distance you actually walk from $(0,0)$ to $(3,4)$ is $3 + 4 = 7$ blocks, not $\sqrt{9+16}=5$. The $\ell_1$ norm shows up in L1-regularization (which encourages <em>sparse</em> weights) and in LASSO regression.</p>
+    </div>
+
+    <p>And the <strong>$\ell_\infty$ norm</strong> takes the max:</p>
+
+    <div class="math-display">$$\|\mathbf{v}\|_\infty = \max_i |v_i|$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">The $\ell_\infty$ (max) norm</p>
+      <dl>
+        <dt>$\|\mathbf{v}\|_\infty$</dt><dd>The largest absolute value among the components. Ignores the others.</dd>
+        <dt>$\max_i$</dt><dd>"Maximum over $i$" — scan all indices and keep the biggest.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why the $\infty$?</strong> It's the limit of $\ell_p = (\sum |v_i|^p)^{1/p}$ as $p \to \infty$ — the largest term dominates. Shows up in robustness bounds and adversarial examples ("how big is the worst pixel change").</p>
+    </div>
+
+    <p>All three answer the question "how big is this vector?" but give different answers. Pick the one that fits your problem. For most things in ML, $\ell_2$ is the default.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="dot">4. Dot products</h2>
+
+    <p>The dot product is the single most important operation in this subject. Learn it and you've learned 40% of linear algebra.</p>
+
+    <p>There are two definitions. They're equal. The trick is that each definition tells you something different about <em>why</em> it matters.</p>
+
+    <h3>The algebraic definition</h3>
+
+    <div class="math-display">$$\mathbf{a} \cdot \mathbf{b} = a_1 b_1 + a_2 b_2 + \dots + a_n b_n = \sum_{i=1}^n a_i b_i$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Dot product (algebraic)</p>
+      <dl>
+        <dt>$\mathbf{a}, \mathbf{b}$</dt><dd>Two vectors of the same length $n$. Again, they must match in length.</dd>
+        <dt>$a_i b_i$</dt><dd>Ordinary number multiplication of the $i$-th components.</dd>
+        <dt>$\sum$</dt><dd>Add them all up. The result is <em>a single number</em>, not a vector.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>What the result means</strong>. A scalar that measures how "aligned" the two vectors are. Big positive → same direction. Zero → perpendicular. Big negative → opposite directions.</p>
+    </div>
+
+    <h3>The geometric definition</h3>
+
+    <div class="math-display">$$\mathbf{a} \cdot \mathbf{b} = \|\mathbf{a}\|\,\|\mathbf{b}\|\,\cos\theta$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Dot product (geometric)</p>
+      <dl>
+        <dt>$\|\mathbf{a}\|, \|\mathbf{b}\|$</dt><dd>Euclidean lengths of the two vectors.</dd>
+        <dt>$\theta$</dt><dd>The angle between them, measured in radians.</dd>
+        <dt>$\cos\theta$</dt><dd>Cosine of the angle. Ranges from $1$ (same direction) to $0$ (perpendicular) to $-1$ (opposite).</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Read it as</strong>: "how long are they" × "how parallel are they." Two long vectors that point in roughly the same direction have a huge dot product. Two long vectors pointing perpendicularly have zero, because there's no alignment.</p>
+    </div>
+
+    <p>The fact that these two formulas are equal is not obvious. It follows from the law of cosines, and it's essentially the entire reason linear algebra works: the thing you can compute (the sum) equals the thing that has geometric meaning (the angle × length).</p>
+
+    <p>Rearranging:</p>
+
+    <div class="math-display">$$\cos\theta = \frac{\mathbf{a}\cdot\mathbf{b}}{\|\mathbf{a}\|\,\|\mathbf{b}\|}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Cosine similarity</p>
+      <dl>
+        <dt>LHS $\cos\theta$</dt><dd>The cosine of the angle between the two vectors.</dd>
+        <dt>$\mathbf{a}\cdot\mathbf{b}$</dt><dd>Dot product (algebraic formula).</dd>
+        <dt>$\|\mathbf{a}\|\|\mathbf{b}\|$</dt><dd>Product of the two lengths — this normalizes out magnitude so you only compare direction.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Where you've seen it</strong>. <a href="../topics/embeddings.html">Embedding</a> search — "find me the documents whose meaning is closest to this query" — is exactly this formula, over millions of vectors. Return the items with the highest cosine similarity. "Semantic search" in one line.</p>
+    </div>
+
+    <h3>Projections</h3>
+
+    <p>If $\mathbf{u}$ is a unit vector (length 1), the dot product $\mathbf{a}\cdot\mathbf{u}$ is the length of the shadow $\mathbf{a}$ casts onto the line through $\mathbf{u}$. This is the <strong>projection</strong> of $\mathbf{a}$ onto $\mathbf{u}$:</p>
+
+    <div class="math-display">$$\text{proj}_{\mathbf{u}}(\mathbf{a}) = (\mathbf{a}\cdot\mathbf{u})\,\mathbf{u}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Projection onto a unit vector</p>
+      <dl>
+        <dt>$\mathbf{u}$</dt><dd>A unit vector — a direction with length 1.</dd>
+        <dt>$\mathbf{a}\cdot\mathbf{u}$</dt><dd>A scalar — how far along the $\mathbf{u}$ direction $\mathbf{a}$ reaches.</dd>
+        <dt>$(\mathbf{a}\cdot\mathbf{u})\mathbf{u}$</dt><dd>Scalar times direction = a new vector, pointing along $\mathbf{u}$, with the right length.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Picture</strong>. Shine a light straight down onto the $\mathbf{u}$-axis. The shadow of $\mathbf{a}$ is the projection. Everything else — Fourier analysis, least squares, <a href="../topics/self-attention.html">attention</a>, PCA — is projection in fancier clothes.</p>
+    </div>
+
+    <p>Why does attention appear here? In a transformer, the "score" between a query and a key is literally $\mathbf{q}\cdot\mathbf{k}$. High dot product → "these two tokens are relevant to each other" → high attention weight. That's the whole idea. The softmax is window dressing.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="matrices">5. Matrices</h2>
+
+    <p>A <strong>matrix</strong> is a rectangular grid of numbers. If it has $m$ rows and $n$ columns we say it is $m \times n$ and write $A \in \mathbb{R}^{m\times n}$. The entry in row $i$, column $j$ is written $A_{ij}$.</p>
+
+    <div class="math-display">$$A = \begin{pmatrix} A_{11} & A_{12} & A_{13} \\ A_{21} & A_{22} & A_{23} \end{pmatrix} \in \mathbb{R}^{2\times 3}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Matrix notation</p>
+      <dl>
+        <dt>$A$</dt><dd>The whole matrix. Capital letter.</dd>
+        <dt>$A_{ij}$</dt><dd>The scalar in row $i$, column $j$. <em>Rows first, columns second</em> — this convention is universal and you will never stop fighting it.</dd>
+        <dt>$\mathbb{R}^{2\times 3}$</dt><dd>"Real-valued matrices with 2 rows and 3 columns." A set.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Numpy hint</strong>. <code>A[i, j]</code> is $A_{ij}$, except NumPy counts from 0 so the first entry is $A_{11}$ in math but <code>A[0, 0]</code> in code. Off-by-ones are forever.</p>
+    </div>
+
+    <h3>Matrix as function: a vector-transforming machine</h3>
+
+    <p>Here is the point of view that turns all of this into something meaningful, rather than a spreadsheet exercise:</p>
+
+    <div class="defn">
+      <strong>A matrix is a function.</strong> Specifically, an $m \times n$ matrix $A$ is a function that takes an $n$-vector as input and produces an $m$-vector as output. You invoke it by writing $A\mathbf{x}$.
+    </div>
+
+    <p>And not just any function — a <em>linear</em> function. "Linear" means two properties hold:</p>
+
+    <div class="math-display">$$A(\mathbf{x} + \mathbf{y}) = A\mathbf{x} + A\mathbf{y}, \qquad A(c\mathbf{x}) = c\,A\mathbf{x}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Linearity</p>
+      <dl>
+        <dt>$A$</dt><dd>A matrix (viewed as a function).</dd>
+        <dt>$\mathbf{x}, \mathbf{y}$</dt><dd>Any two input vectors of the right size.</dd>
+        <dt>$c$</dt><dd>Any scalar.</dd>
+        <dt>First equation</dt><dd>"$A$ of a sum is the sum of the $A$s." Additive.</dd>
+        <dt>Second equation</dt><dd>"Scaling the input scales the output by the same amount." Homogeneous.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Geometric consequence</strong>. A linear function sends straight lines to straight lines and keeps the origin fixed. Grids stay grids. No curves, no shifts. That restriction is what makes linear algebra so powerful: everything is determined by what the function does to just a few basis vectors.</p>
+    </div>
+
+    <p>How do you know a matrix when it's given to you as a function? Apply it to the standard basis vectors and read off the answers:</p>
+
+    <div class="math-display">$$A = \begin{pmatrix} | & | & & | \\ A\mathbf{e}_1 & A\mathbf{e}_2 & \cdots & A\mathbf{e}_n \\ | & | & & | \end{pmatrix}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Columns of a matrix</p>
+      <dl>
+        <dt>$\mathbf{e}_i$</dt><dd>The $i$-th standard basis vector — all zeros except a 1 in position $i$.</dd>
+        <dt>$A\mathbf{e}_i$</dt><dd>"What $A$ does to the unit vector pointing along the $i$-th axis." A column vector.</dd>
+        <dt>The block notation</dt><dd>Stacks those output vectors side-by-side as columns.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Crucial takeaway</strong>. <em>The columns of $A$ are the images of the standard basis vectors under the function $A$.</em> If you want to hand-write a matrix that rotates 2D space by 90°, you just ask "where does $\hat x$ go?" (answer: $(0,1)$) and "where does $\hat y$ go?" (answer: $(-1,0)$) and stack them as columns. Done.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="matmul">6. Matrix multiplication</h2>
+
+    <p>Matrix multiplication is the operation people get most wrong most often. We'll show two pictures, both equally valid. Use whichever makes more sense at the time.</p>
+
+    <h3>The row · column picture</h3>
+
+    <p>If $A$ is $m \times k$ and $B$ is $k \times n$, the product $C = AB$ is $m \times n$, with entries:</p>
+
+    <div class="math-display">$$C_{ij} = \sum_{p=1}^{k} A_{ip} B_{pj}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Matrix product, entry by entry</p>
+      <dl>
+        <dt>$C_{ij}$</dt><dd>Entry of $C$ in row $i$, column $j$.</dd>
+        <dt>$A_{ip}$</dt><dd>Entries of the $i$-th row of $A$.</dd>
+        <dt>$B_{pj}$</dt><dd>Entries of the $j$-th column of $B$.</dd>
+        <dt>$\sum_{p=1}^k$</dt><dd>Sum over the shared dimension. The inner dimensions must match: $A$'s column count = $B$'s row count = $k$.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Mnemonic</strong>. Entry $(i,j)$ of $AB$ is the dot product of the $i$-th row of $A$ with the $j$-th column of $B$. "Row × column." This is the recipe you computed in school. It's correct, but it doesn't tell you <em>why</em>.</p>
+    </div>
+
+    <h3>The column picture (this is the one to remember)</h3>
+
+    <p>Here is the much more useful way to see it. If $B$ has columns $\mathbf{b}_1, \dots, \mathbf{b}_n$, then:</p>
+
+    <div class="math-display">$$AB = A\,[\mathbf{b}_1\ \mathbf{b}_2\ \dots\ \mathbf{b}_n] = [A\mathbf{b}_1\ A\mathbf{b}_2\ \dots\ A\mathbf{b}_n]$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Columns of $AB$ are $A$ applied to columns of $B$</p>
+      <dl>
+        <dt>$\mathbf{b}_j$</dt><dd>The $j$-th column of $B$, viewed as a vector.</dd>
+        <dt>$A\mathbf{b}_j$</dt><dd>$A$ applied to that vector — another vector.</dd>
+        <dt>$[\cdot\ \cdot\ \cdot]$</dt><dd>Stacking the results side-by-side as the columns of a new matrix.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why this is the "right" picture</strong>. Matrix multiplication is <em>function composition</em>. $(AB)\mathbf{x} = A(B\mathbf{x})$ — first apply $B$ to $\mathbf{x}$, then apply $A$ to the result. The $j$-th column of the product tells you what the composed transformation does to the $j$-th basis vector. This is exactly why it isn't commutative: "rotate then scale" and "scale then rotate" are different composed functions.</p>
+    </div>
+
+    <h3>A worked example</h3>
+
+    <p>Let's compute a small one by hand. Take:</p>
+
+    <div class="math-display">$$A = \begin{pmatrix} 1 & 2 \\ 3 & 4 \end{pmatrix},\qquad B = \begin{pmatrix} 5 & 6 \\ 7 & 8 \end{pmatrix}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Setup</p>
+      <dl>
+        <dt>$A$</dt><dd>A 2×2 matrix. Rows $(1,2)$ and $(3,4)$.</dd>
+        <dt>$B$</dt><dd>A 2×2 matrix. Rows $(5,6)$ and $(7,8)$.</dd>
+      </dl>
+      <p class="mg-why">We'll compute $AB$ both ways and confirm the answers agree.</p>
+    </div>
+
+    <p>Row × column:</p>
+
+    <ul>
+      <li>$C_{11}$ = row 1 of $A$ · column 1 of $B$ = $(1,2) \cdot (5,7) = 5+14 = 19$</li>
+      <li>$C_{12}$ = row 1 of $A$ · column 2 of $B$ = $(1,2) \cdot (6,8) = 6+16 = 22$</li>
+      <li>$C_{21}$ = row 2 of $A$ · column 1 of $B$ = $(3,4) \cdot (5,7) = 15+28 = 43$</li>
+      <li>$C_{22}$ = row 2 of $A$ · column 2 of $B$ = $(3,4) \cdot (6,8) = 18+32 = 50$</li>
+    </ul>
+
+    <div class="math-display">$$AB = \begin{pmatrix} 19 & 22 \\ 43 & 50 \end{pmatrix}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Result of $AB$</p>
+      <dl>
+        <dt>$19, 22, 43, 50$</dt><dd>The four dot products computed above.</dd>
+      </dl>
+      <p class="mg-why">Now let's verify with the column picture. The first column of $B$ is $(5,7)$. $A\cdot(5,7) = (1\cdot 5 + 2\cdot 7,\ 3\cdot 5 + 4\cdot 7) = (19, 43)$. That's the first column of the answer. The second column of $B$ is $(6,8)$. $A\cdot(6,8) = (1\cdot 6 + 2\cdot 8,\ 3\cdot 6 + 4\cdot 8) = (22, 50)$. That's the second column. Agrees.</p>
+    </div>
+
+    <p>Now compute $BA$ and watch it come out different:</p>
+
+    <div class="math-display">$$BA = \begin{pmatrix} 23 & 34 \\ 31 & 46 \end{pmatrix} \ne AB$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Non-commutativity in the flesh</p>
+      <dl>
+        <dt>$BA$</dt><dd>Same matrices, multiplied in the other order.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Non-commutativity is a feature, not a bug.</strong> It reflects the fact that the order in which you compose transformations matters. Rotate 90°, then reflect across the x-axis, is different from reflect first then rotate. The math tracks reality.</p>
+    </div>
+
+    <h3>What does multiply (associativity and distributivity)</h3>
+
+    <p>Matrix multiplication is associative and distributive, but <em>not</em> commutative:</p>
+
+    <div class="math-display">$$(AB)C = A(BC), \quad A(B+C) = AB + AC, \quad AB \ne BA \text{ in general}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Algebraic properties</p>
+      <dl>
+        <dt>Associativity</dt><dd>You can re-group parentheses in a chain of multiplications. This is <em>crucial</em> in practice because it lets you choose the cheapest order to compute big products.</dd>
+        <dt>Distributivity</dt><dd>You can factor a matrix out of a sum. Normal arithmetic rules apply, except for commutativity.</dd>
+        <dt>No commutativity</dt><dd>Order matters. Write it right.</dd>
+      </dl>
+      <p class="mg-why">Associativity is how frameworks like PyTorch save compute: a chain like $ABC\mathbf{x}$ of sizes $(n\times n)(n\times n)(n\times n)(n \times 1)$ should be computed right-to-left as $A(B(C\mathbf{x}))$, which is three matrix-vector products ($O(n^2)$ each) instead of two matrix-matrix products ($O(n^3)$ each).</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="demo">7. Interactive: 2×2 transformations</h2>
+
+    <p>Time to build intuition with your hands. Below is a 2D playground. Adjust the four entries of a 2×2 matrix $M$ with the sliders. The cyan outline is the original unit square with its basis vectors drawn; the violet outline is the <em>image</em> of the unit square under $M$ — what it becomes after you apply the transformation. You'll see the columns of $M$ become the new positions of $\hat x$ and $\hat y$. That is not a coincidence; that's section 5.</p>
+
+    <p>Watch for:</p>
+    <ul>
+      <li>What a rotation looks like: try $\begin{pmatrix}\cos 30° & -\sin 30°\\ \sin 30° & \cos 30°\end{pmatrix} \approx \begin{pmatrix}0.87 & -0.5\\ 0.5 & 0.87\end{pmatrix}$.</li>
+      <li>What a scale looks like: set $M = \begin{pmatrix}2 & 0\\0 & 0.5\end{pmatrix}$.</li>
+      <li>What a shear looks like: set $M = \begin{pmatrix}1 & 1\\0 & 1\end{pmatrix}$.</li>
+      <li>A collapse: $M = \begin{pmatrix}1 & 1\\2 & 2\end{pmatrix}$ — notice the unit square becomes a line segment. The determinant is 0. Rank dropped.</li>
+    </ul>
+
+    <div class="viz-3d">
+      <div class="v3-controls">
+        <span class="v3-label">$M_{11}$:</span>
+        <input id="la_a" type="range" min="-2" max="2" value="1" step="0.05" style="flex:1;max-width:180px;">
+        <span id="la_a_lbl" style="min-width:44px;color:#7c5cff;font-family:ui-monospace,monospace;">1.00</span>
+        <span class="v3-label">$M_{12}$:</span>
+        <input id="la_b" type="range" min="-2" max="2" value="0" step="0.05" style="flex:1;max-width:180px;">
+        <span id="la_b_lbl" style="min-width:44px;color:#7c5cff;font-family:ui-monospace,monospace;">0.00</span>
+      </div>
+      <div class="v3-controls">
+        <span class="v3-label">$M_{21}$:</span>
+        <input id="la_c" type="range" min="-2" max="2" value="0" step="0.05" style="flex:1;max-width:180px;">
+        <span id="la_c_lbl" style="min-width:44px;color:#7c5cff;font-family:ui-monospace,monospace;">0.00</span>
+        <span class="v3-label">$M_{22}$:</span>
+        <input id="la_d" type="range" min="-2" max="2" value="1" step="0.05" style="flex:1;max-width:180px;">
+        <span id="la_d_lbl" style="min-width:44px;color:#7c5cff;font-family:ui-monospace,monospace;">1.00</span>
+      </div>
+      <svg id="laSvg" viewBox="0 0 720 420" style="width:100%;height:auto;background:#0a0d12;border-radius:6px;"></svg>
+      <p class="v3-caption" id="laCaption">The cyan square is the original unit square. The violet shape is its image under $M$. The two violet arrows are $M$'s columns — the new positions of the $\hat x$ and $\hat y$ basis vectors.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="special">8. Special matrices</h2>
+
+    <p>Most matrices you meet in the wild are one of a handful of types. Naming them matters, because the algorithms that operate on them are specialized to the type.</p>
+
+    <h3>Identity matrix $I$</h3>
+
+    <p>The matrix that does nothing: $I\mathbf{x} = \mathbf{x}$ for any $\mathbf{x}$. It has 1s on the diagonal and 0s everywhere else. The multiplicative identity: $AI = IA = A$.</p>
+
+    <div class="math-display">$$I_3 = \begin{pmatrix} 1 & 0 & 0 \\ 0 & 1 & 0 \\ 0 & 0 & 1 \end{pmatrix}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Identity matrix</p>
+      <dl>
+        <dt>$I_n$</dt><dd>The $n\times n$ identity — a square matrix with 1s down the diagonal, 0s off the diagonal.</dd>
+        <dt>$I\mathbf{x}=\mathbf{x}$</dt><dd>It leaves every vector alone.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Role</strong>. Plays the role of "1" for matrix multiplication. Is never not around.</p>
+    </div>
+
+    <h3>Zero matrix $\mathbf{0}$</h3>
+
+    <p>All entries 0. Sends every vector to the zero vector. The additive identity.</p>
+
+    <h3>Diagonal matrix</h3>
+
+    <p>Only the diagonal entries can be non-zero. A diagonal matrix $D$ scales each coordinate independently:</p>
+
+    <div class="math-display">$$D = \begin{pmatrix} d_1 & 0 & 0 \\ 0 & d_2 & 0 \\ 0 & 0 & d_3 \end{pmatrix}, \quad D\mathbf{x} = (d_1 x_1,\ d_2 x_2,\ d_3 x_3)$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Diagonal matrix</p>
+      <dl>
+        <dt>$d_i$</dt><dd>Scalars on the diagonal. Everything else is 0.</dd>
+        <dt>$D\mathbf{x}$</dt><dd>Component-wise scaling of $\mathbf{x}$.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why you care</strong>. Diagonal matrices are trivial to invert ($d_i \to 1/d_i$), trivial to raise to powers, and their determinant is just the product of the diagonal. Most of linear algebra is spent trying to turn non-diagonal matrices into diagonal ones via changes of basis.</p>
+    </div>
+
+    <h3>Triangular matrix</h3>
+
+    <p>All entries above (or all below) the diagonal are 0. Upper triangular looks like:</p>
+
+    <div class="math-display">$$U = \begin{pmatrix} u_{11} & u_{12} & u_{13} \\ 0 & u_{22} & u_{23} \\ 0 & 0 & u_{33} \end{pmatrix}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Upper triangular matrix</p>
+      <dl>
+        <dt>$u_{ij}$ with $i\le j$</dt><dd>Free — any value.</dd>
+        <dt>$u_{ij}$ with $i > j$</dt><dd>Forced to 0.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why you care</strong>. Triangular systems can be solved by back-substitution in $O(n^2)$ time instead of $O(n^3)$. Gaussian elimination exists to turn an arbitrary matrix into a triangular one.</p>
+    </div>
+
+    <h3>Symmetric matrix</h3>
+
+    <p>A matrix is <strong>symmetric</strong> if $A = A^T$, i.e. $A_{ij} = A_{ji}$.</p>
+
+    <div class="math-display">$$A = \begin{pmatrix} 2 & -1 & 3 \\ -1 & 5 & 0 \\ 3 & 0 & 4 \end{pmatrix} = A^T$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Symmetric matrix</p>
+      <dl>
+        <dt>$A = A^T$</dt><dd>The matrix equals its own transpose.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Where they come from</strong>. Covariance matrices, Gram matrices $X^T X$, Hessians of smooth functions. Symmetric matrices have a spectacular property: their eigenvectors are orthogonal, and the spectral theorem guarantees you can diagonalize them with a rotation. This is what PCA exploits.</p>
+    </div>
+
+    <h3>Orthogonal matrix</h3>
+
+    <p>A square matrix $Q$ is <strong>orthogonal</strong> if $Q^T Q = I$, i.e. $Q^T = Q^{-1}$. Equivalently, its columns are mutually perpendicular unit vectors.</p>
+
+    <div class="math-display">$$Q^T Q = I \iff Q^{-1} = Q^T$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Orthogonal matrix</p>
+      <dl>
+        <dt>$Q$</dt><dd>A square matrix.</dd>
+        <dt>$Q^T$</dt><dd>Its transpose.</dd>
+        <dt>$I$</dt><dd>The identity.</dd>
+        <dt>$\iff$</dt><dd>"If and only if" — the two statements are equivalent.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Geometry</strong>. Orthogonal matrices are exactly the rigid motions of space that fix the origin: rotations and reflections. They preserve lengths ($\|Q\mathbf{x}\| = \|\mathbf{x}\|$) and angles. If your transformation is a rotation, you want an orthogonal matrix. Their inverse costs nothing — just transpose. This is a big deal numerically.</p>
+    </div>
+
+    <h3>Rotation matrix</h3>
+
+    <p>In 2D, the matrix that rotates by angle $\theta$ counterclockwise is:</p>
+
+    <div class="math-display">$$R(\theta) = \begin{pmatrix} \cos\theta & -\sin\theta \\ \sin\theta & \cos\theta \end{pmatrix}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">2D rotation matrix</p>
+      <dl>
+        <dt>$\theta$</dt><dd>The angle of rotation, in radians, counterclockwise.</dd>
+        <dt>$\cos, \sin$</dt><dd>Trigonometric functions.</dd>
+        <dt>Columns</dt><dd>First column is where $\hat x$ goes: $(\cos\theta,\sin\theta)$. Second column is where $\hat y$ goes: $(-\sin\theta,\cos\theta)$. This is the "columns are images of basis vectors" principle in action.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Sanity check</strong>. When $\theta = 0$, $R(0) = I$ — no rotation, matches. When $\theta = \pi/2$ (90°), $R = \begin{pmatrix}0&-1\\1&0\end{pmatrix}$, which rotates $(1,0)$ into $(0,1)$. Right.</p>
+    </div>
+
+    <h3>Permutation matrix</h3>
+
+    <p>An identity matrix with its rows rearranged. When you multiply $P\mathbf{x}$, you get $\mathbf{x}$ with its components permuted. Permutation matrices are orthogonal.</p>
+
+    <h3>Projection matrix</h3>
+
+    <p>A square matrix $P$ with $P^2 = P$. Applied twice, it does the same thing as once — because after the first application you're already in the target subspace. The "shine a light onto this subspace" operator.</p>
+
+    <div class="math-display">$$P^2 = P$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Projection (idempotent) matrix</p>
+      <dl>
+        <dt>$P$</dt><dd>A square matrix.</dd>
+        <dt>$P^2$</dt><dd>$P$ multiplied by itself (matrix mult).</dd>
+        <dt>$P^2 = P$</dt><dd>Applying $P$ twice is the same as once — idempotent.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Canonical example</strong>. The projection onto the $x$-axis in 2D is $\begin{pmatrix}1&0\\0&0\end{pmatrix}$. It flattens everything to the horizontal line. Once you're on the line, projecting again does nothing. Least squares is a projection onto the column space of $X$; attention, viewed from the right angle, is a weighted projection too.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="systems">9. Linear systems $A\mathbf{x}=\mathbf{b}$</h2>
+
+    <p>The original motivation for linear algebra, and still the most common practical problem: you're given a matrix $A$ and a vector $\mathbf{b}$, and you want to find the vector $\mathbf{x}$ such that $A\mathbf{x} = \mathbf{b}$.</p>
+
+    <div class="math-display">$$A\mathbf{x} = \mathbf{b}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">The fundamental equation of linear algebra</p>
+      <dl>
+        <dt>$A$</dt><dd>A known $m \times n$ matrix.</dd>
+        <dt>$\mathbf{x}$</dt><dd>The unknown $n$-vector you're solving for.</dd>
+        <dt>$\mathbf{b}$</dt><dd>A known $m$-vector — the "target."</dd>
+      </dl>
+      <p class="mg-analogy"><strong>What it encodes</strong>. A system of $m$ linear equations in $n$ unknowns. Row $i$ says "this linear combination of the $x$'s equals $b_i$." Linear algebra is the apparatus for solving this problem robustly and at scale.</p>
+    </div>
+
+    <h3>Three outcomes</h3>
+
+    <p>There are exactly three things that can happen when you try to solve $A\mathbf{x} = \mathbf{b}$:</p>
+
+    <ol>
+      <li><strong>Unique solution.</strong> There's exactly one $\mathbf{x}$. This is the best case. It happens when $A$ is square and "full rank" (see §11).</li>
+      <li><strong>No solution.</strong> The equation is inconsistent. Geometrically: $\mathbf{b}$ is not in the span of $A$'s columns — there's no way to combine the columns to hit it. Think "three equations, two unknowns, incompatible."</li>
+      <li><strong>Infinitely many solutions.</strong> There's at least one $\mathbf{x}$, but you can slide it along some direction and stay a solution. This happens when $A$ has fewer effective constraints than unknowns.</li>
+    </ol>
+
+    <p>Geometrically, each row of $A\mathbf{x}=\mathbf{b}$ is a constraint ("stay on this hyperplane"). The solution set is the intersection of all the constraints. Three planes in 3D generically meet at a point; if two are parallel and different you get no solution; if all three coincide you get a whole plane of solutions.</p>
+
+    <h3>Gaussian elimination</h3>
+
+    <p>The canonical algorithm for solving $A\mathbf{x}=\mathbf{b}$, going back 2000+ years in China and named after Gauss in the 1800s. The idea is boring and unstoppable: add multiples of one equation to another until the system is upper triangular, then back-substitute.</p>
+
+    <p>Three operations are allowed (they don't change the solution set):</p>
+
+    <ul>
+      <li>Swap two rows.</li>
+      <li>Multiply a row by a non-zero scalar.</li>
+      <li>Add a multiple of one row to another.</li>
+    </ul>
+
+    <p>The resulting form is called <strong>row echelon form</strong>. If you also clean up the upper part to get 1s on the pivots and 0s above them, it's <strong>reduced row echelon form</strong> (RREF). The row of a pivot tells you which variables are "leading"; the rest are free parameters.</p>
+
+    <div class="callout">
+      <p><strong>A note on what people actually use.</strong> No one solves medium-to-large linear systems with raw Gaussian elimination. They use LU decomposition (essentially the same algorithm, stored more cleverly), or QR for least squares, or iterative methods (conjugate gradient, GMRES) for truly huge sparse systems. That's the subject of <a href="numerical-analysis.html">numerical analysis</a>. Gaussian elimination is still how you understand what's going on.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="spaces">10. Vector spaces</h2>
+
+    <p>We've been throwing around the word "vector" informally. Here's the formal version. A <strong>vector space</strong> is a set $V$ with two operations — addition and scalar multiplication — that obey the eight rules you'd expect (associativity, commutativity of addition, distributivity, existence of a zero element, etc.). For our purposes $V = \mathbb{R}^n$ is the only example that matters.</p>
+
+    <h3>Span</h3>
+
+    <p>The <strong>span</strong> of a set of vectors is the set of all their linear combinations:</p>
+
+    <div class="math-display">$$\text{span}\{\mathbf{v}_1, \dots, \mathbf{v}_k\} = \{c_1 \mathbf{v}_1 + c_2\mathbf{v}_2 + \dots + c_k \mathbf{v}_k \ :\ c_i \in \mathbb{R}\}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Span</p>
+      <dl>
+        <dt>$\mathbf{v}_1, \dots, \mathbf{v}_k$</dt><dd>Some fixed set of vectors — our "ingredients."</dd>
+        <dt>$c_i$</dt><dd>Arbitrary real scalars ("how much of ingredient $i$").</dd>
+        <dt>$c_1 \mathbf{v}_1 + \dots + c_k\mathbf{v}_k$</dt><dd>A <em>linear combination</em> — a weighted sum. This is the only thing you can do with vectors in linear algebra.</dd>
+        <dt>$\{\ \cdot\ :\ \cdot\ \}$</dt><dd>Set-builder notation. Read as "the set of things of the form ___ such that ___ ."</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Picture</strong>. The span of a single non-zero vector is a line through the origin. The span of two non-parallel vectors in the plane is the entire plane. The span of two parallel vectors is a line — the second one adds nothing. Span is "the reachable set."</p>
+    </div>
+
+    <h3>Linear independence</h3>
+
+    <p>A set of vectors $\{\mathbf{v}_1, \dots, \mathbf{v}_k\}$ is <strong>linearly independent</strong> if the only way to get the zero vector as a combination is to use all zero coefficients:</p>
+
+    <div class="math-display">$$c_1\mathbf{v}_1 + c_2\mathbf{v}_2 + \dots + c_k\mathbf{v}_k = \mathbf{0} \implies c_1 = c_2 = \dots = c_k = 0$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Linear independence</p>
+      <dl>
+        <dt>$c_i$</dt><dd>Scalars.</dd>
+        <dt>$\mathbf{0}$</dt><dd>The zero vector.</dd>
+        <dt>$\implies$</dt><dd>"Implies." If the left side holds, then the right side must also hold.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Informal</strong>. The vectors are independent if none of them can be built from the others. Each one adds a genuinely new direction. Three vectors in 3D are independent exactly when they don't all lie in the same plane.</p>
+    </div>
+
+    <h3>Basis and dimension</h3>
+
+    <p>A <strong>basis</strong> of a vector space is a linearly independent set that spans the whole space. In $\mathbb{R}^n$, the "standard basis" is the set of unit vectors along each axis: $\mathbf{e}_1 = (1,0,\dots,0)$, $\mathbf{e}_2 = (0,1,\dots,0)$, and so on. Any vector in $\mathbb{R}^n$ is a unique linear combination of these.</p>
+
+    <p>The <strong>dimension</strong> of a vector space is the number of vectors in any basis. For $\mathbb{R}^n$ that's $n$. Different bases can have different vectors — they just always have the same <em>count</em>.</p>
+
+    <p>Why care? Because the whole point of choosing a basis is that expressing a vector or a matrix in the right basis can make a hard problem trivial. That's the entire content of diagonalization: find a basis in which $A$ looks like a diagonal matrix.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="rank">11. Rank and nullspace</h2>
+
+    <p>Given a matrix $A$, there are four natural subspaces associated with it. They are called the <strong>four fundamental subspaces</strong> (Gil Strang's phrase) and they tell you everything about what $A$ does.</p>
+
+    <ul>
+      <li><strong>Column space</strong> $\text{Col}(A)$ — the span of the columns of $A$. This is the set of possible outputs of $A\mathbf{x}$. If $\mathbf{b}$ is in the column space, $A\mathbf{x} = \mathbf{b}$ has a solution; otherwise it doesn't.</li>
+      <li><strong>Null space</strong> $\text{Null}(A)$ — the set of $\mathbf{x}$ with $A\mathbf{x} = \mathbf{0}$. These are the input vectors the matrix annihilates.</li>
+      <li><strong>Row space</strong> $\text{Row}(A) = \text{Col}(A^T)$.</li>
+      <li><strong>Left null space</strong> $\text{Null}(A^T)$.</li>
+    </ul>
+
+    <p>The <strong>rank</strong> of $A$ is the dimension of its column space — equivalently, the number of linearly independent columns. Equivalently again, the number of linearly independent rows. That these are all equal is already a small miracle.</p>
+
+    <h3>Rank–nullity theorem</h3>
+
+    <div class="math-display">$$\text{rank}(A) + \dim(\text{Null}(A)) = n$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Rank–nullity theorem</p>
+      <dl>
+        <dt>$A$</dt><dd>An $m \times n$ matrix.</dd>
+        <dt>$\text{rank}(A)$</dt><dd>Dimension of the column space of $A$.</dd>
+        <dt>$\dim(\text{Null}(A))$</dt><dd>Dimension of the null space — the "nullity."</dd>
+        <dt>$n$</dt><dd>Number of columns, i.e. input dimension.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Conservation law</strong>. The $n$ input directions are split into two disjoint kinds: "directions the matrix sees" (rank) and "directions the matrix kills" (nullity). Every direction is one or the other; there are exactly $n$ of them. This is the cleanest conservation law in linear algebra.</p>
+    </div>
+
+    <p>A square $n\times n$ matrix is <strong>full rank</strong> (rank $n$) if and only if its null space is just $\{\mathbf{0}\}$, if and only if it is invertible, if and only if its determinant is non-zero, if and only if $A\mathbf{x}=\mathbf{b}$ has a unique solution for every $\mathbf{b}$. These are all the same statement.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="det">12. Determinants</h2>
+
+    <p>The <strong>determinant</strong> $\det(A)$ of a square matrix is a single number that says "by how much does $A$ scale oriented volume?" That's it. That's the whole story.</p>
+
+    <p>For a 2×2 matrix:</p>
+
+    <div class="math-display">$$\det\begin{pmatrix} a & b \\ c & d \end{pmatrix} = ad - bc$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">2×2 determinant</p>
+      <dl>
+        <dt>$a, b, c, d$</dt><dd>The four entries of the matrix.</dd>
+        <dt>$ad - bc$</dt><dd>A single number. Can be positive, negative, or zero.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Geometry</strong>. The unit square has area 1. After you apply the matrix to it, the image is a parallelogram (section 7 showed you this interactively). Its <em>signed</em> area is $ad - bc$. Sign indicates orientation: positive means "still right-handed," negative means the matrix flipped the plane. Zero means "the square collapsed to a line or a point" — the columns of the matrix are linearly dependent, so rank < 2.</p>
+    </div>
+
+    <p>For a 3×3 matrix, the determinant is the signed <em>volume</em> of the parallelepiped spanned by the columns. For an $n\times n$ matrix, it's the signed $n$-dimensional volume of the $n$-parallelepiped spanned by the columns. Every textbook defines it differently — by cofactor expansion, by permutations, by LU decomposition — but they all compute the same number, and the number always means this.</p>
+
+    <h3>Key properties</h3>
+
+    <ul>
+      <li>$\det(I) = 1$ — the identity scales volume by 1.</li>
+      <li>$\det(AB) = \det(A)\det(B)$ — composing transformations multiplies their volume factors.</li>
+      <li>$\det(A^T) = \det(A)$.</li>
+      <li>$\det(A) = 0 \iff A$ is singular $\iff$ columns are linearly dependent $\iff$ rank < $n$.</li>
+      <li>$\det(A^{-1}) = 1/\det(A)$.</li>
+    </ul>
+
+    <p>If you see $\det(A) = 0$ anywhere in ML, something collapsed. Usually it's a signal to reach for a pseudoinverse or add regularization.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="eig">13. Eigenvalues and eigenvectors</h2>
+
+    <p>Pick any square matrix $A$. Most vectors, when you apply $A$, come out pointing in a different direction. But for some special vectors, $A$ just stretches them — it doesn't rotate them. Those special directions are <strong>eigenvectors</strong>, and the stretch factors are <strong>eigenvalues</strong>.</p>
+
+    <div class="math-display">$$A\mathbf{v} = \lambda \mathbf{v}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">The eigenvalue equation</p>
+      <dl>
+        <dt>$A$</dt><dd>A square matrix — $n \times n$.</dd>
+        <dt>$\mathbf{v}$</dt><dd>A non-zero vector. The zero vector is excluded because it trivially satisfies $A\mathbf{0}=\mathbf{0}$ for any $\lambda$.</dd>
+        <dt>$\lambda$</dt><dd>A scalar — the eigenvalue. Can be real or complex.</dd>
+        <dt>$=$</dt><dd>Reads as: "applying $A$ to $\mathbf{v}$ gives back the same direction, just scaled by $\lambda$."</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Geometric picture</strong>. Stand on an eigenvector. Apply the matrix. You stay on the same line through the origin — you just move farther (or closer, or flip) along it. Every other direction rotates. A matrix can have up to $n$ eigen-directions.</p>
+    </div>
+
+    <h3>How to find them by hand</h3>
+
+    <p>Rewrite the eigenvalue equation:</p>
+
+    <div class="math-display">$$A\mathbf{v} - \lambda\mathbf{v} = \mathbf{0} \iff (A - \lambda I)\mathbf{v} = \mathbf{0}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">The characteristic equation setup</p>
+      <dl>
+        <dt>$(A - \lambda I)$</dt><dd>A new matrix — $A$ with $\lambda$ subtracted off each diagonal entry.</dd>
+        <dt>$\mathbf{v}$</dt><dd>A non-zero vector we're trying to find.</dd>
+        <dt>$\mathbf{0}$</dt><dd>Zero vector.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Key insight</strong>. For a non-zero $\mathbf{v}$ to satisfy $(A-\lambda I)\mathbf{v} = \mathbf{0}$, the matrix $(A-\lambda I)$ must be singular — otherwise the only solution would be $\mathbf{v}=\mathbf{0}$. Singular matrices have determinant zero.</p>
+    </div>
+
+    <p>So the eigenvalues are the roots of the <strong>characteristic polynomial</strong>:</p>
+
+    <div class="math-display">$$\det(A - \lambda I) = 0$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Characteristic polynomial</p>
+      <dl>
+        <dt>$\det$</dt><dd>Determinant.</dd>
+        <dt>$A - \lambda I$</dt><dd>$A$ with $\lambda$ subtracted off the diagonal.</dd>
+        <dt>$= 0$</dt><dd>The scalar equation whose solutions are the eigenvalues.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why polynomial?</strong> The determinant, expanded out in terms of $\lambda$, is a polynomial of degree $n$ in $\lambda$. Its roots are the eigenvalues. By the fundamental theorem of algebra it has exactly $n$ roots (counting multiplicity, possibly complex). So an $n \times n$ matrix has exactly $n$ eigenvalues — some may repeat, some may be complex.</p>
+    </div>
+
+    <h3>Worked example: a 2×2 case</h3>
+
+    <p>Take $A = \begin{pmatrix} 4 & 1 \\ 2 & 3 \end{pmatrix}$. Then:</p>
+
+    <div class="math-display">$$\det(A - \lambda I) = \det\begin{pmatrix} 4-\lambda & 1 \\ 2 & 3-\lambda \end{pmatrix} = (4-\lambda)(3-\lambda) - 2 = \lambda^2 - 7\lambda + 10$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Expanding the determinant</p>
+      <dl>
+        <dt>$(4-\lambda)(3-\lambda)$</dt><dd>Product of the diagonal entries of $A - \lambda I$.</dd>
+        <dt>$-2$</dt><dd>Subtraction of the off-diagonal product, which is $1\cdot 2 = 2$. (Recall $\det \begin{pmatrix}a&b\\c&d\end{pmatrix} = ad-bc$.)</dd>
+        <dt>$\lambda^2 - 7\lambda + 10$</dt><dd>The result after multiplying out — a degree-2 polynomial in $\lambda$.</dd>
+      </dl>
+    </div>
+
+    <p>Solve the quadratic: $\lambda^2 - 7\lambda + 10 = 0$ factors as $(\lambda - 5)(\lambda - 2)$. So $\lambda_1 = 5$, $\lambda_2 = 2$. To find the eigenvectors, plug each $\lambda$ back into $(A-\lambda I)\mathbf{v}=\mathbf{0}$:</p>
+
+    <ul>
+      <li>For $\lambda = 5$: $(A - 5I)\mathbf{v} = \begin{pmatrix}-1 & 1\\ 2 & -2\end{pmatrix}\mathbf{v} = 0$. The rows are multiples of each other, so one equation is enough: $-v_1 + v_2 = 0$, hence $v_2 = v_1$. Any vector along $(1,1)$ works. Take $\mathbf{v}_1 = (1,1)$.</li>
+      <li>For $\lambda = 2$: $(A - 2I)\mathbf{v} = \begin{pmatrix}2&1\\2&1\end{pmatrix}\mathbf{v} = 0$ gives $2v_1 + v_2 = 0$, i.e. $v_2 = -2v_1$. Take $\mathbf{v}_2 = (1,-2)$.</li>
+    </ul>
+
+    <p>Check: $A\mathbf{v}_1 = \begin{pmatrix}4+1\\2+3\end{pmatrix} = \begin{pmatrix}5\\5\end{pmatrix} = 5\mathbf{v}_1$. Good. $A\mathbf{v}_2 = \begin{pmatrix}4-2\\2-6\end{pmatrix} = \begin{pmatrix}2\\-4\end{pmatrix} = 2\mathbf{v}_2$. Good.</p>
+
+    <p>Once you've done this a few times, you'll never want to do it for anything bigger than 3×3 again. Everything larger gets computed numerically.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="diag">14. Diagonalization</h2>
+
+    <p>Suppose $A$ is a square matrix with $n$ linearly independent eigenvectors $\mathbf{v}_1, \dots, \mathbf{v}_n$ and eigenvalues $\lambda_1, \dots, \lambda_n$. Pack the eigenvectors into the columns of a matrix $P$ and the eigenvalues onto the diagonal of a matrix $D$. Then:</p>
+
+    <div class="math-display">$$A = P D P^{-1}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Diagonalization (eigendecomposition)</p>
+      <dl>
+        <dt>$A$</dt><dd>A square $n\times n$ matrix.</dd>
+        <dt>$P$</dt><dd>The matrix whose columns are the eigenvectors of $A$.</dd>
+        <dt>$D$</dt><dd>A diagonal matrix with $\lambda_1, \dots, \lambda_n$ on the diagonal.</dd>
+        <dt>$P^{-1}$</dt><dd>The inverse of $P$ (exists because the eigenvectors are independent).</dd>
+      </dl>
+      <p class="mg-analogy"><strong>How to read this</strong>. "$A$, viewed in the eigenvector basis, is just a diagonal matrix." Reading right to left: $P^{-1}$ changes coordinates into the eigenbasis, $D$ scales each eigendirection independently, $P$ changes back. A messy non-diagonal $A$ is secretly a diagonal operation in disguise.</p>
+    </div>
+
+    <p>Not every matrix is diagonalizable — if it has fewer than $n$ independent eigenvectors it isn't, and you need Jordan normal form. But every <em>symmetric</em> matrix is diagonalizable by an orthogonal matrix (the spectral theorem), and even matrices that aren't diagonalizable over the reals can be diagonalized in the generalized sense of SVD — see the next section.</p>
+
+    <p>Diagonalization is why eigenvalues matter in practice. If $A = PDP^{-1}$, then:</p>
+
+    <div class="math-display">$$A^k = P D^k P^{-1}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Powers of a diagonalizable matrix</p>
+      <dl>
+        <dt>$A^k$</dt><dd>$A$ multiplied by itself $k$ times.</dd>
+        <dt>$D^k$</dt><dd>Diagonal matrix with $\lambda_i^k$ on the diagonal — trivially cheap.</dd>
+        <dt>$P, P^{-1}$</dt><dd>Same change-of-basis matrices as before; they cancel in the middle when you expand the product.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Consequence</strong>. Raising $A$ to the 1000th power would be absurd if you did it directly. Through the eigenbasis it's just raising each eigenvalue to the 1000th power. This is how you solve linear recurrences (Fibonacci has a closed form this way), analyze Markov chains, and — in ML — understand how gradient descent with linear dynamics converges.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="ortho">15. Orthogonal bases and Gram–Schmidt</h2>
+
+    <p>A basis is <strong>orthogonal</strong> if all pairs of basis vectors are perpendicular: $\mathbf{v}_i \cdot \mathbf{v}_j = 0$ for $i \ne j$. It's <strong>orthonormal</strong> if additionally each basis vector has length 1. Orthonormal bases are magical: once you have one, everything is easy.</p>
+
+    <p>In an orthonormal basis $\{\mathbf{q}_1, \dots, \mathbf{q}_n\}$, any vector $\mathbf{x}$ is:</p>
+
+    <div class="math-display">$$\mathbf{x} = \sum_{i=1}^n (\mathbf{x}\cdot\mathbf{q}_i)\,\mathbf{q}_i$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Coordinates in an orthonormal basis</p>
+      <dl>
+        <dt>$\mathbf{q}_i$</dt><dd>The $i$-th orthonormal basis vector.</dd>
+        <dt>$\mathbf{x}\cdot\mathbf{q}_i$</dt><dd>A scalar — the "coordinate" of $\mathbf{x}$ along $\mathbf{q}_i$, just a projection.</dd>
+        <dt>$(\mathbf{x}\cdot\mathbf{q}_i)\mathbf{q}_i$</dt><dd>Scalar times direction — a vector along $\mathbf{q}_i$ of the right length.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why this is great</strong>. You don't have to solve a linear system to find coordinates in an orthonormal basis — you just take dot products. Fourier series work exactly this way. PCA works exactly this way. Finding your basis components becomes one matrix-vector multiply by $Q^T$.</p>
+    </div>
+
+    <p><strong>Gram–Schmidt</strong> is the recipe for turning an arbitrary linearly independent set $\{\mathbf{a}_1, \dots, \mathbf{a}_k\}$ into an orthonormal set $\{\mathbf{q}_1, \dots, \mathbf{q}_k\}$ spanning the same space. You process the vectors one at a time, subtracting off the part that points along the directions you've already made orthonormal:</p>
+
+    <div class="math-display">$$\mathbf{u}_i = \mathbf{a}_i - \sum_{j=1}^{i-1}(\mathbf{a}_i\cdot\mathbf{q}_j)\mathbf{q}_j, \qquad \mathbf{q}_i = \frac{\mathbf{u}_i}{\|\mathbf{u}_i\|}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Gram–Schmidt orthogonalization</p>
+      <dl>
+        <dt>$\mathbf{a}_i$</dt><dd>The $i$-th input vector.</dd>
+        <dt>$\mathbf{q}_j$</dt><dd>The $j$-th already-orthonormalized basis vector ($j < i$).</dd>
+        <dt>$(\mathbf{a}_i\cdot\mathbf{q}_j)\mathbf{q}_j$</dt><dd>Projection of $\mathbf{a}_i$ onto $\mathbf{q}_j$.</dd>
+        <dt>$\mathbf{u}_i$</dt><dd>What's left of $\mathbf{a}_i$ after removing its components along the earlier basis vectors — guaranteed perpendicular to all of them.</dd>
+        <dt>$\mathbf{q}_i = \mathbf{u}_i/\|\mathbf{u}_i\|$</dt><dd>Normalize to length 1.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Result</strong>. An orthonormal basis $\{\mathbf{q}_1,\dots,\mathbf{q}_k\}$ whose span equals the span of the input. Gram–Schmidt is also how you prove that the <strong>QR decomposition</strong> exists: any full-column-rank matrix $A$ can be written as $A = QR$ with $Q$ orthogonal and $R$ upper triangular.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="svd">16. The Singular Value Decomposition</h2>
+
+    <p>Now the big one. The SVD is the most important factorization in linear algebra and, by extension, in machine learning. It is to linear algebra what the Taylor series is to <a href="calculus.html">calculus</a>: it takes any object of the subject and writes it in a standard, useful form.</p>
+
+    <div class="defn">
+      <strong>SVD theorem.</strong> Any $m \times n$ matrix $A$ — real, rectangular, ugly, singular, any — can be written as $A = U\Sigma V^T$, where $U$ is $m \times m$ orthogonal, $V$ is $n \times n$ orthogonal, and $\Sigma$ is $m \times n$ with non-negative entries only on the diagonal.
+    </div>
+
+    <div class="math-display">$$A = U\Sigma V^T$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">SVD (Singular Value Decomposition)</p>
+      <dl>
+        <dt>$A$</dt><dd>Any $m\times n$ matrix. No assumptions.</dd>
+        <dt>$U$</dt><dd>An $m\times m$ orthogonal matrix. Its columns $\mathbf{u}_1, \dots, \mathbf{u}_m$ are the <em>left singular vectors</em>.</dd>
+        <dt>$\Sigma$</dt><dd>An $m \times n$ matrix with singular values $\sigma_1 \ge \sigma_2 \ge \dots \ge 0$ on the diagonal and zeros everywhere else. The $\sigma_i$ are non-negative real numbers.</dd>
+        <dt>$V^T$</dt><dd>The transpose of an $n\times n$ orthogonal matrix $V$. Columns of $V$ are <em>right singular vectors</em>.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>The geometric content</strong>. Any linear transformation is really just three steps:
+      <ol>
+        <li><strong>Rotate</strong> (or reflect) the input space with $V^T$.</li>
+        <li><strong>Scale</strong> each axis independently by $\sigma_i$ with $\Sigma$.</li>
+        <li><strong>Rotate</strong> again with $U$ to land in the output space.</li>
+      </ol>
+      That's it. Every matrix in the universe is this. Pick any 2×2 matrix, apply it to a unit circle, and you get an ellipse — the ellipse's axes are $\sigma_1 \mathbf{u}_1$ and $\sigma_2 \mathbf{u}_2$. The $\sigma_i$ tell you how much stretching happens in each principal direction, and if some $\sigma_i$ are zero, the matrix is rank-deficient and collapses a dimension.</p>
+    </div>
+
+    <h3>Why SVD is the most important factorization in ML</h3>
+
+    <p>Four huge applications, all of which reduce to "look at the SVD":</p>
+
+    <ul>
+      <li><strong>PCA (Principal Component Analysis).</strong> Given a data matrix $X$, the top singular vectors of (a centered version of) $X$ point in the directions of maximum variance. Dimensionality reduction, denoising, feature engineering — all this, from SVD. See next section.</li>
+      <li><strong>Low-rank approximation.</strong> The best rank-$k$ approximation of $A$ in both Frobenius and spectral norm is the one obtained by keeping only the top $k$ singular values. This is <strong>Eckart–Young</strong>. Low-rank approximations are how you compress weight matrices (think LoRA), how you do matrix completion (Netflix), and how you regularize fat models.</li>
+      <li><strong>Pseudoinverse.</strong> When $A$ is not invertible — rectangular or rank-deficient — the Moore–Penrose pseudoinverse $A^+ = V\Sigma^+ U^T$ gives you the "best available" solution to $A\mathbf{x}=\mathbf{b}$. $\Sigma^+$ is $\Sigma$ with non-zero singular values inverted. This is what <code>numpy.linalg.lstsq</code> is doing under the hood.</li>
+      <li><strong>Condition number.</strong> $\kappa(A) = \sigma_1/\sigma_n$. Tells you how numerically dangerous a linear system is. Close to 1: safe. Huge: forget it. This is the single most useful diagnostic in numerical linear algebra.</li>
+    </ul>
+
+    <p>The Eckart–Young truncation:</p>
+
+    <div class="math-display">$$A_k = \sum_{i=1}^{k} \sigma_i\, \mathbf{u}_i \mathbf{v}_i^T$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Low-rank approximation</p>
+      <dl>
+        <dt>$A_k$</dt><dd>The best rank-$k$ approximation to $A$ in the least-squares sense.</dd>
+        <dt>$\sigma_i$</dt><dd>The $i$-th singular value.</dd>
+        <dt>$\mathbf{u}_i, \mathbf{v}_i$</dt><dd>The $i$-th left and right singular vectors.</dd>
+        <dt>$\mathbf{u}_i\mathbf{v}_i^T$</dt><dd>An <em>outer product</em> — an $m\times n$ rank-1 matrix.</dd>
+        <dt>$\sum_{i=1}^k$</dt><dd>Sum the top $k$ rank-1 pieces.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Practical meaning</strong>. If the singular values decay fast, a rank-$k$ approximation with tiny $k$ captures almost all of $A$. That is why low-rank compression works: real-world data matrices (word co-occurrences, user-item ratings, image patches, neural network weights) are approximately low-rank. LoRA is literally this: store $A \approx A_k$ as $UV^T$ of rank $k = 8$ or 16.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="pca">17. PCA in 30 lines</h2>
+
+    <p>Let's walk through PCA (Principal Component Analysis) as a single, concrete application of SVD — no more abstract fanfare.</p>
+
+    <p>You have $N$ data points, each a $d$-dimensional vector. You stack them into a data matrix $X$ of shape $N \times d$. You want to represent each point with just $k \ll d$ numbers, while losing as little information as possible.</p>
+
+    <p>The recipe:</p>
+
+    <ol>
+      <li><strong>Center the data.</strong> Subtract the mean of each column. Call the result $\tilde X$. This ensures the data cloud is centered at the origin.</li>
+      <li><strong>Compute the SVD</strong>: $\tilde X = U\Sigma V^T$.</li>
+      <li><strong>The columns of $V$ are the principal components.</strong> $V_1$ is the direction of maximum variance in the data; $V_2$ is the direction of second-most variance, perpendicular to $V_1$; and so on.</li>
+      <li><strong>Project</strong>: the $k$-dimensional representation of each data point is $\tilde X V_{:,1:k}$, where you keep only the first $k$ columns of $V$.</li>
+      <li><strong>Reconstruct</strong> (optional): $\tilde X_{\text{approx}} = \tilde X V_{:,1:k} V_{:,1:k}^T$.</li>
+    </ol>
+
+    <p>The variance captured by the $i$-th principal component is $\sigma_i^2 / (N-1)$. Sum the top $k$ squared singular values and divide by the total sum of squared singular values; that's the fraction of variance you kept. If it's 99% with $k=20$ on 1000-dimensional data, you just compressed by 50× with almost no loss.</p>
+
+    <div class="callout good">
+      <p><strong>Geometric picture.</strong> PCA fits the best $k$-dimensional subspace to the cloud of data points, in the least-squares sense. For $k=1$ it's fitting a line; for $k=2$ a plane; for $k=3$ a 3-flat. "Best" means "minimizes the total squared distance from the points to the subspace." That the answer is the top singular vectors of the data matrix is a beautiful consequence of Eckart–Young.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="ml">18. Applications to ML</h2>
+
+    <p>Here's the quick survey. Every item on this list reuses the stuff above.</p>
+
+    <h3>Embeddings are vectors</h3>
+
+    <p>Every <a href="../topics/embeddings.html">embedding model</a> maps things (words, sentences, images, users, molecules) to vectors in $\mathbb{R}^d$, typically with $d$ between 128 and 4096. You then compare them with cosine similarity — which we showed is dot product normalized by norms. The entire business of semantic search is linear algebra over these embeddings.</p>
+
+    <h3>A neural network layer is $W\mathbf{x}+\mathbf{b}$</h3>
+
+    <p>The fully connected ("dense") layer, the workhorse of every deep network, does:</p>
+
+    <div class="math-display">$$\mathbf{y} = W\mathbf{x} + \mathbf{b}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Dense layer</p>
+      <dl>
+        <dt>$\mathbf{x}$</dt><dd>Input vector of size $d_{\text{in}}$.</dd>
+        <dt>$W$</dt><dd>The weight matrix — size $d_{\text{out}} \times d_{\text{in}}$. Learned.</dd>
+        <dt>$\mathbf{b}$</dt><dd>A bias vector of size $d_{\text{out}}$. Learned.</dd>
+        <dt>$\mathbf{y}$</dt><dd>Output — an activation then gets applied (ReLU, GELU) before the next layer.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>In a GPT-style model</strong>, $W$ might be $4096 \times 4096$, and there are dozens of these in each of tens of layers. When someone says "run a forward pass," they mean: chain a few hundred of these linear transforms together, interleaved with non-linearities. Training is <a href="../topics/gradient-descent.html">gradient descent</a> on the entries of all the $W$'s. That's what a trillion-parameter model is — a trillion entries, across many $W$'s.</p>
+    </div>
+
+    <h3>Attention is $\text{softmax}(QK^T/\sqrt{d_k})V$</h3>
+
+    <p>Self-attention computes, for each query vector, a weighted sum of value vectors, where the weights are softmaxed dot products between the query and keys. Three matrix multiplies plus a scaling. See <a href="../topics/self-attention.html">self-attention</a> for the full mechanics — the math is entirely the stuff on this page.</p>
+
+    <h3>Softmax, layer norm, residuals</h3>
+
+    <ul>
+      <li><strong>Softmax</strong> is coordinate-wise exponentiation then division by a sum. It turns a vector of "scores" into a probability distribution. Not linear, but it operates on vectors from linear-algebraic pipelines.</li>
+      <li><strong>Layer normalization</strong> rescales each vector to unit variance and zero mean — a norm-based operation.</li>
+      <li><strong>Residual connections</strong> add the input back to the output: $\mathbf{y} = \mathbf{x} + f(\mathbf{x})$. This is just vector addition, but it changes the optimization landscape dramatically.</li>
+    </ul>
+
+    <h3>Weight matrices, and why they're often nearly low-rank</h3>
+
+    <p>Empirically, the weight matrices of trained transformers are approximately low-rank — their spectrum decays quickly. That's the observation LoRA exploits: instead of fine-tuning the full $W$, add a low-rank update $\Delta W = BA$ where $A \in \mathbb{R}^{r \times d}$ and $B \in \mathbb{R}^{d \times r}$ with $r$ small (8 to 64). You update $r \cdot 2d$ parameters instead of $d^2$. Same SVD intuition, applied to updates instead of weights.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="code">19. NumPy code</h2>
+
+    <p>Three tabs: core matrix operations, eigendecomposition, and SVD + PCA. No library beyond NumPy.</p>
+
+    <div class="code-tabs" id="ct-la">
+      <div class="ct-header">
+        <button class="ct-tab active" data-tab="ops">Matrix ops &amp; solving</button>
+        <button class="ct-tab" data-tab="eig">Eigendecomp</button>
+        <button class="ct-tab" data-tab="svd">SVD + PCA</button>
+        <span class="ct-label">linear algebra · numpy</span>
+      </div>
+      <div class="ct-panel active" data-tab="ops"><pre><code><span class="kw">import</span> numpy <span class="kw">as</span> np
+
+<span class="cmt"># Vectors</span>
+a = np.array([<span class="num">1.0</span>, <span class="num">2.0</span>, <span class="num">3.0</span>])
+b = np.array([<span class="num">4.0</span>, <span class="num">5.0</span>, <span class="num">6.0</span>])
+
+<span class="cmt"># Dot product — four equivalent forms</span>
+<span class="fn">print</span>(np.<span class="fn">dot</span>(a, b))          <span class="cmt"># 32.0</span>
+<span class="fn">print</span>(a @ b)                 <span class="cmt"># 32.0  (Python 3.5+ operator)</span>
+<span class="fn">print</span>((a * b).<span class="fn">sum</span>())         <span class="cmt"># 32.0</span>
+<span class="fn">print</span>(np.<span class="fn">einsum</span>(<span class="str">"i,i-&gt;"</span>, a, b))<span class="cmt"># 32.0</span>
+
+<span class="cmt"># Norms</span>
+<span class="fn">print</span>(np.linalg.<span class="fn">norm</span>(a))                  <span class="cmt"># L2 norm ≈ 3.742</span>
+<span class="fn">print</span>(np.linalg.<span class="fn">norm</span>(a, ord=<span class="num">1</span>))           <span class="cmt"># L1 norm = 6.0</span>
+<span class="fn">print</span>(np.linalg.<span class="fn">norm</span>(a, ord=np.inf))      <span class="cmt"># L-inf norm = 3.0</span>
+
+<span class="cmt"># Matrices</span>
+A = np.array([[<span class="num">1.0</span>, <span class="num">2.0</span>], [<span class="num">3.0</span>, <span class="num">4.0</span>]])
+B = np.array([[<span class="num">5.0</span>, <span class="num">6.0</span>], [<span class="num">7.0</span>, <span class="num">8.0</span>]])
+
+<span class="cmt"># Matrix multiplication — use @, not *</span>
+C = A @ B                             <span class="cmt"># [[19, 22], [43, 50]]</span>
+<span class="fn">print</span>(C)
+
+<span class="cmt"># A * B is ELEMENT-WISE, not matrix multiplication. Classic bug.</span>
+elementwise = A * B                   <span class="cmt"># [[ 5, 12], [21, 32]]</span>
+
+<span class="cmt"># Transpose, inverse, determinant</span>
+<span class="fn">print</span>(A.T)                          <span class="cmt"># [[1, 3], [2, 4]]</span>
+<span class="fn">print</span>(np.linalg.<span class="fn">inv</span>(A))              <span class="cmt"># [[-2, 1], [1.5, -0.5]]</span>
+<span class="fn">print</span>(np.linalg.<span class="fn">det</span>(A))              <span class="cmt"># -2.0</span>
+
+<span class="cmt"># Solving Ax = b — NEVER compute inv(A) @ b. Use solve().</span>
+b_vec = np.array([<span class="num">5.0</span>, <span class="num">11.0</span>])
+x = np.linalg.<span class="fn">solve</span>(A, b_vec)        <span class="cmt"># [1., 2.] (unique solution exists)</span>
+<span class="fn">print</span>(<span class="str">"check residual:"</span>, A @ x - b_vec)
+</code></pre></div>
+
+      <div class="ct-panel" data-tab="eig"><pre><code><span class="kw">import</span> numpy <span class="kw">as</span> np
+
+<span class="cmt"># A general 2x2 matrix</span>
+A = np.array([[<span class="num">4.0</span>, <span class="num">1.0</span>],
+              [<span class="num">2.0</span>, <span class="num">3.0</span>]])
+
+<span class="cmt"># Eigenvalues and eigenvectors (columns of V are the eigenvectors)</span>
+vals, V = np.linalg.<span class="fn">eig</span>(A)
+<span class="fn">print</span>(<span class="str">"eigenvalues:"</span>, vals)            <span class="cmt"># [5., 2.]</span>
+<span class="fn">print</span>(<span class="str">"eigenvectors (cols):"</span>, V)
+
+<span class="cmt"># Sanity check: A v = lambda v for each eigenpair</span>
+<span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(<span class="fn">len</span>(vals)):
+    lhs = A @ V[:, i]
+    rhs = vals[i] * V[:, i]
+    <span class="fn">print</span>(<span class="fn">np.allclose</span>(lhs, rhs))       <span class="cmt"># True</span>
+
+<span class="cmt"># Reconstruct A = P D P^-1 (diagonalization)</span>
+D = np.<span class="fn">diag</span>(vals)
+A_rebuilt = V @ D @ np.linalg.<span class="fn">inv</span>(V)
+<span class="fn">print</span>(<span class="fn">np.allclose</span>(A_rebuilt, A))        <span class="cmt"># True</span>
+
+<span class="cmt"># For SYMMETRIC matrices, use eigh — it is faster and gives</span>
+<span class="cmt"># real eigenvalues and orthonormal eigenvectors.</span>
+S = np.array([[<span class="num">2.0</span>, <span class="num">1.0</span>],
+              [<span class="num">1.0</span>, <span class="num">3.0</span>]])
+w, Q = np.linalg.<span class="fn">eigh</span>(S)
+<span class="fn">print</span>(w)                              <span class="cmt"># real, sorted ascending</span>
+<span class="fn">print</span>(Q.T @ Q)                         <span class="cmt"># ≈ identity: Q is orthogonal</span>
+
+<span class="cmt"># Power iteration: find the dominant eigenvalue without eig().</span>
+<span class="cmt"># Used for PageRank, and as a building block for Lanczos / Arnoldi.</span>
+<span class="kw">def</span> <span class="fn">power_iter</span>(M, steps=<span class="num">100</span>):
+    v = np.random.<span class="fn">randn</span>(M.shape[<span class="num">0</span>])
+    <span class="kw">for</span> _ <span class="kw">in</span> <span class="fn">range</span>(steps):
+        v = M @ v
+        v /= np.linalg.<span class="fn">norm</span>(v)
+    lam = v @ (M @ v)                 <span class="cmt"># Rayleigh quotient</span>
+    <span class="kw">return</span> lam, v
+
+lam, v = <span class="fn">power_iter</span>(A)
+<span class="fn">print</span>(<span class="str">"dominant lambda ≈"</span>, lam)       <span class="cmt"># ≈ 5.0</span>
+</code></pre></div>
+
+      <div class="ct-panel" data-tab="svd"><pre><code><span class="kw">import</span> numpy <span class="kw">as</span> np
+
+<span class="cmt"># =========  SVD of an arbitrary (non-square) matrix  =========</span>
+A = np.array([[<span class="num">1.0</span>, <span class="num">2.0</span>, <span class="num">3.0</span>],
+              [<span class="num">4.0</span>, <span class="num">5.0</span>, <span class="num">6.0</span>],
+              [<span class="num">7.0</span>, <span class="num">8.0</span>, <span class="num">9.0</span>],
+              [<span class="num">10.</span>, <span class="num">11.</span>, <span class="num">12.</span>]])   <span class="cmt"># 4x3, rank 2 (columns are collinear in a 2-plane)</span>
+
+U, s, Vt = np.linalg.<span class="fn">svd</span>(A, full_matrices=<span class="kw">False</span>)
+<span class="fn">print</span>(<span class="str">"singular values:"</span>, s)         <span class="cmt"># e.g. [25.5, 1.29, ~0]</span>
+<span class="fn">print</span>(<span class="str">"rank ≈"</span>, np.<span class="fn">sum</span>(s &gt; <span class="num">1e-10</span>))   <span class="cmt"># 2</span>
+
+<span class="cmt"># Reconstruct A from its SVD</span>
+A_rebuilt = U @ np.<span class="fn">diag</span>(s) @ Vt
+<span class="fn">print</span>(<span class="fn">np.allclose</span>(A_rebuilt, A))      <span class="cmt"># True</span>
+
+<span class="cmt"># Rank-1 approximation (Eckart–Young)</span>
+A1 = s[<span class="num">0</span>] * np.<span class="fn">outer</span>(U[:, <span class="num">0</span>], Vt[<span class="num">0</span>])
+<span class="fn">print</span>(<span class="str">"rank-1 error:"</span>, np.linalg.<span class="fn">norm</span>(A - A1))
+
+<span class="cmt"># =========  PCA in a dozen lines  =========</span>
+<span class="kw">def</span> <span class="fn">pca</span>(X, k):
+    <span class="cmt"># X: (N, d) data matrix</span>
+    mu = X.<span class="fn">mean</span>(axis=<span class="num">0</span>, keepdims=<span class="kw">True</span>)
+    Xc = X - mu                       <span class="cmt"># center the data</span>
+    U, s, Vt = np.linalg.<span class="fn">svd</span>(Xc, full_matrices=<span class="kw">False</span>)
+    components = Vt[:k]               <span class="cmt"># (k, d) — principal axes</span>
+    scores     = Xc @ components.T    <span class="cmt"># (N, k) — compressed coords</span>
+    var_explained = (s[:k] ** <span class="num">2</span>) / (s ** <span class="num">2</span>).<span class="fn">sum</span>()
+    <span class="kw">return</span> scores, components, var_explained, mu
+
+<span class="cmt"># Try it on random 100-d data with hidden 5-d structure</span>
+rng = np.random.<span class="fn">default_rng</span>(<span class="num">0</span>)
+latent = rng.<span class="fn">standard_normal</span>((<span class="num">1000</span>, <span class="num">5</span>))
+W      = rng.<span class="fn">standard_normal</span>((<span class="num">5</span>, <span class="num">100</span>))
+X      = latent @ W + <span class="num">0.01</span> * rng.<span class="fn">standard_normal</span>((<span class="num">1000</span>, <span class="num">100</span>))
+
+scores, comps, var_exp, mu = <span class="fn">pca</span>(X, k=<span class="num">5</span>)
+<span class="fn">print</span>(<span class="str">"variance captured by top-5:"</span>, var_exp.<span class="fn">sum</span>())   <span class="cmt"># &gt;0.999</span>
+
+<span class="cmt"># Reconstruct</span>
+X_hat = scores @ comps + mu
+<span class="fn">print</span>(<span class="str">"rmse:"</span>, np.<span class="fn">sqrt</span>(((X - X_hat) ** <span class="num">2</span>).<span class="fn">mean</span>()))
+</code></pre></div>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="summary">20. Summary</h2>
+
+    <ul>
+      <li>Vectors are lists of numbers with geometric meaning. You add them component-wise and stretch them with scalars. The three most useful norms are $\ell_1$, $\ell_2$, and $\ell_\infty$.</li>
+      <li>The dot product is the simultaneously algebraic ($\sum a_i b_i$) and geometric ($\|a\|\|b\|\cos\theta$) measure of alignment. It's what makes attention, embeddings search, and projection work.</li>
+      <li>A matrix is a linear function from one vector space to another. Its columns are the images of the basis vectors. Matrix multiplication is function composition, which is why it isn't commutative.</li>
+      <li>$A\mathbf{x} = \mathbf{b}$ has either one, zero, or infinitely many solutions, and Gaussian elimination tells you which.</li>
+      <li>Rank is "how many independent directions the matrix sees"; nullity is "how many it kills"; rank-nullity says they add up to $n$.</li>
+      <li>The determinant is the signed volume scaling factor. Zero determinant = rank-deficient = non-invertible.</li>
+      <li>Eigenvectors are directions a matrix preserves (up to scaling); eigenvalues are the scale factors. A matrix is diagonalizable when it has a full set of independent eigenvectors, and in that basis it acts like a diagonal matrix.</li>
+      <li>SVD is the ultimate factorization: every matrix is a rotation, a scaling, and another rotation. It gives you PCA, low-rank approximation, the pseudoinverse, and the condition number.</li>
+      <li>Every modern ML technique you've heard of — embeddings, attention, weight matrices, PCA, LoRA — is linear algebra with a few layers of glue on top.</li>
+    </ul>
+
+    <h3>See also</h3>
+
+    <div class="grid">
+      <div class="card">
+        <h4><a href="multivariable-calculus.html">Multivariable calculus</a></h4>
+        <p>Gradients, Jacobians, Hessians. Calculus becomes linear algebra once you're in more than one dimension.</p>
+      </div>
+      <div class="card">
+        <h4><a href="numerical-analysis.html">Numerical analysis</a></h4>
+        <p>How you actually solve these problems on a computer with finite precision: LU, QR, Cholesky, iterative methods.</p>
+      </div>
+      <div class="card">
+        <h4><a href="../topics/self-attention.html">Self-attention</a></h4>
+        <p>Attention is a scaled dot-product followed by a softmax. Section 4 was a spoiler.</p>
+      </div>
+      <div class="card">
+        <h4><a href="../topics/embeddings.html">Embeddings</a></h4>
+        <p>Dense vector representations of words, images, and anything else. Cosine similarity all the way down.</p>
+      </div>
+      <div class="card">
+        <h4><a href="../topics/foundation-models.html">Foundation models</a></h4>
+        <p>Trillion-parameter matrices, trained by gradient descent on a next-token loss. Linear algebra at scale.</p>
+      </div>
+      <div class="card">
+        <h4><a href="../topics/gradient-descent.html">Gradient descent</a></h4>
+        <p>How you fit those matrices. Gradients are just stacked partial derivatives — vectors and matrices again.</p>
+      </div>
+      <div class="card">
+        <h4><a href="../cs/optimization.html">Optimization</a></h4>
+        <p>Convex and non-convex optimization, constrained problems, Lagrange multipliers. Linear algebra is the substrate.</p>
+      </div>
+    </div>
+
+    <div class="bib">
+      <h4>Further reading</h4>
+      <ul>
+        <li><strong>Gilbert Strang</strong>, <em>Introduction to Linear Algebra</em> (6th ed., 2023). The canonical textbook. Strang is the reason most of the world thinks about the "four fundamental subspaces" the way they do. His MIT 18.06 lectures are on YouTube and are the best free linear algebra course that exists.</li>
+        <li><strong>Sheldon Axler</strong>, <em>Linear Algebra Done Right</em> (4th ed., 2024). The opposite pedagogical choice: starts from linear maps and vector spaces, treats determinants as an afterthought. Better if you already have one linear-algebra course under your belt and want the clean axiomatic version.</li>
+        <li><strong>3Blue1Brown</strong>, <em>Essence of Linear Algebra</em> (YouTube, 2016). A 15-video visual series that does in two hours what a textbook takes a semester to do. Watch it first if you've never seen any of this. <a href="https://www.3blue1brown.com/topics/linear-algebra">3blue1brown.com/topics/linear-algebra</a></li>
+        <li><strong>Trefethen &amp; Bau</strong>, <em>Numerical Linear Algebra</em> (1997). The reference for how you actually compute SVDs, QRs, and eigendecompositions on finite-precision hardware. Bridge to <a href="numerical-analysis.html">numerical analysis</a>.</li>
+        <li><strong>Deisenroth, Faisal &amp; Ong</strong>, <em>Mathematics for Machine Learning</em> (Cambridge, 2020). A free PDF that covers linear algebra, calculus, and probability specifically for ML. Good if you want everything in one book.</li>
+      </ul>
+    </div>
+
+    <div class="next-card">
+      <div class="label">NEXT UP</div>
+      <a href="multivariable-calculus.html">→ Multivariable calculus</a>
+      <p>Once your variables are vectors instead of scalars, derivatives become gradients and Jacobians — and you're already halfway to understanding backpropagation. This is the natural follow-on to linear algebra for anyone heading toward ML.</p>
+    </div>
+
+  </article>
+</div>
+
+<script>
+// =========================================================
+// Code tabs
+document.querySelectorAll('.code-tabs').forEach(root => {
+  const tabs = root.querySelectorAll('.ct-tab');
+  const panels = root.querySelectorAll('.ct-panel');
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const target = tab.getAttribute('data-tab');
+      tabs.forEach(t => t.classList.toggle('active', t === tab));
+      panels.forEach(p => p.classList.toggle('active', p.getAttribute('data-tab') === target));
+    });
+  });
+});
+
+// =========================================================
+// 2x2 linear-transformation visualizer
+(function() {
+  const svg = document.getElementById('laSvg');
+  if (!svg) return;
+  const NS = 'http://www.w3.org/2000/svg';
+
+  const sA = document.getElementById('la_a');
+  const sB = document.getElementById('la_b');
+  const sC = document.getElementById('la_c');
+  const sD = document.getElementById('la_d');
+  const lA = document.getElementById('la_a_lbl');
+  const lB = document.getElementById('la_b_lbl');
+  const lC = document.getElementById('la_c_lbl');
+  const lD = document.getElementById('la_d_lbl');
+  const caption = document.getElementById('laCaption');
+
+  // SVG coordinates: y grows downward, so we flip.
+  const W = 720, H = 420;
+  // Center of the plot, in SVG px
+  const cx = W / 2;
+  const cy = H / 2;
+  // Pixels per math-unit
+  const PU = 55;
+
+  function mathToPx(x, y) {
+    return [cx + x * PU, cy - y * PU];
+  }
+
+  function makeEl(name, attrs) {
+    const el = document.createElementNS(NS, name);
+    for (const k in attrs) el.setAttribute(k, attrs[k]);
+    return el;
+  }
+
+  function draw() {
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+
+    const a = parseFloat(sA.value);
+    const b = parseFloat(sB.value);
+    const c = parseFloat(sC.value);
+    const d = parseFloat(sD.value);
+    lA.textContent = a.toFixed(2);
+    lB.textContent = b.toFixed(2);
+    lC.textContent = c.toFixed(2);
+    lD.textContent = d.toFixed(2);
+
+    const det = a * d - b * c;
+
+    // Background frame
+    svg.appendChild(makeEl('rect', {
+      x: 0, y: 0, width: W, height: H,
+      fill: '#0a0d12'
+    }));
+
+    // Grid lines, from -6..6 in math-coords
+    for (let i = -6; i <= 6; i++) {
+      const [vx0, vy0] = mathToPx(i, -6);
+      const [vx1, vy1] = mathToPx(i,  6);
+      svg.appendChild(makeEl('line', {
+        x1: vx0, y1: vy0, x2: vx1, y2: vy1,
+        stroke: i === 0 ? '#384050' : '#1a2030',
+        'stroke-width': i === 0 ? 1.5 : 1
+      }));
+      const [hx0, hy0] = mathToPx(-6, i);
+      const [hx1, hy1] = mathToPx( 6, i);
+      svg.appendChild(makeEl('line', {
+        x1: hx0, y1: hy0, x2: hx1, y2: hy1,
+        stroke: i === 0 ? '#384050' : '#1a2030',
+        'stroke-width': i === 0 ? 1.5 : 1
+      }));
+    }
+
+    // Original unit square corners (math coords)
+    const orig = [[0,0],[1,0],[1,1],[0,1]];
+
+    // Image corners under M
+    const img = orig.map(([x,y]) => [a*x + b*y, c*x + d*y]);
+
+    // Helper to build a polygon path
+    function poly(pts) {
+      return pts.map(([x,y]) => mathToPx(x,y).join(',')).join(' ');
+    }
+
+    // Draw original unit square (cyan, light fill)
+    svg.appendChild(makeEl('polygon', {
+      points: poly(orig),
+      fill: 'rgba(34, 211, 238, 0.10)',
+      stroke: '#22d3ee',
+      'stroke-width': 1.5,
+      'stroke-dasharray': '4,3'
+    }));
+
+    // Draw image quadrilateral (violet)
+    svg.appendChild(makeEl('polygon', {
+      points: poly(img),
+      fill: 'rgba(124, 92, 255, 0.18)',
+      stroke: '#7c5cff',
+      'stroke-width': 2
+    }));
+
+    // Axis arrows for the ORIGINAL basis (cyan)
+    function drawArrow(x0,y0,x1,y1,color,width) {
+      const [px0, py0] = mathToPx(x0,y0);
+      const [px1, py1] = mathToPx(x1,y1);
+      // Line
+      svg.appendChild(makeEl('line', {
+        x1: px0, y1: py0, x2: px1, y2: py1,
+        stroke: color, 'stroke-width': width,
+        'stroke-linecap': 'round'
+      }));
+      // Arrowhead
+      const dx = px1 - px0, dy = py1 - py0;
+      const len = Math.sqrt(dx*dx + dy*dy);
+      if (len < 1) return;
+      const ux = dx/len, uy = dy/len;
+      const size = 9;
+      const bx = px1 - ux*size, by = py1 - uy*size;
+      const perpx = -uy, perpy = ux;
+      const p1x = bx + perpx * size*0.55;
+      const p1y = by + perpy * size*0.55;
+      const p2x = bx - perpx * size*0.55;
+      const p2y = by - perpy * size*0.55;
+      svg.appendChild(makeEl('polygon', {
+        points: `${px1},${py1} ${p1x},${p1y} ${p2x},${p2y}`,
+        fill: color
+      }));
+    }
+
+    // Original basis: ê1 = (1,0), ê2 = (0,1), drawn dim cyan
+    drawArrow(0,0,1,0,'#22d3ee',2);
+    drawArrow(0,0,0,1,'#22d3ee',2);
+
+    // Image basis: M ê1 = (a,c), M ê2 = (b,d), drawn violet
+    drawArrow(0,0,a,c,'#7c5cff',2.5);
+    drawArrow(0,0,b,d,'#f472b6',2.5);
+
+    // Text labels near the violet arrows
+    function textAt(x,y,txt,color) {
+      const [px,py] = mathToPx(x,y);
+      const t = makeEl('text', {
+        x: px+6, y: py-4,
+        fill: color,
+        'font-family': 'ui-monospace, monospace',
+        'font-size': 11
+      });
+      t.textContent = txt;
+      svg.appendChild(t);
+    }
+    textAt(a, c, `M·ê₁=(${a.toFixed(1)},${c.toFixed(1)})`, '#7c5cff');
+    textAt(b, d, `M·ê₂=(${b.toFixed(1)},${d.toFixed(1)})`, '#f472b6');
+
+    // Caption with determinant
+    let msg = `det(M) = ${a.toFixed(2)}·${d.toFixed(2)} − ${b.toFixed(2)}·${c.toFixed(2)} = ${det.toFixed(2)}. `;
+    if (Math.abs(det) < 0.01) {
+      msg += 'Rank < 2 — the square has collapsed to a line or point.';
+    } else if (det < 0) {
+      msg += 'Negative — the transformation flipped orientation.';
+    } else {
+      msg += `Area scale factor |det| = ${Math.abs(det).toFixed(2)}.`;
+    }
+    caption.textContent = msg;
+  }
+
+  [sA, sB, sC, sD].forEach(s => s.addEventListener('input', draw));
+  draw();
+})();
+</script>
+<script defer src="../search-index.js"></script>
+<script defer src="../search.js"></script>
+</body>
+</html>

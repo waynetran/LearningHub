@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Foundation Models — Deep Dive</title>
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError: false});"></script>
+</head>
+<body>
+<div id="tooltip"></div>
+
+<nav class="topic-nav">
+  <a class="back" href="../ai-ml.html">← Back to AI/ML</a>
+  <div class="crumb">Deep Dives / <span class="topic-name">Foundation Models</span></div>
+</nav>
+
+<div class="topic-layout">
+  <aside class="topic-toc">
+    <h4>ON THIS PAGE</h4>
+    <ul>
+      <li><a href="#intro">1. What's a foundation model?</a></li>
+      <li><a href="#pretrain">2. The pretraining loss</a></li>
+      <li><a href="#kaplan">3. Kaplan scaling laws</a></li>
+      <li><a href="#chinchilla">4. Chinchilla</a></li>
+      <li><a href="#demo">5. Interactive scaling calculator</a></li>
+      <li><a href="#emergent">6. Emergent abilities</a></li>
+      <li><a href="#adapt">7. Adaptation</a></li>
+      <li><a href="#code">8. Source code</a></li>
+      <li><a href="#summary">9. Summary</a></li>
+    </ul>
+  </aside>
+
+  <article class="topic-content">
+    <h1>Foundation Models</h1>
+    <p class="subtitle">Pretrain once, adapt everywhere. The term was coined at Stanford in 2021 to name the biggest shift in ML practice since ImageNet: a single big pretrained model as the base of an entire ecosystem. This page covers the pretraining recipe, the scaling laws that guide it, and how you turn a base model into a useful application.</p>
+    <div class="meta-tags">
+      <span>Prereq: transformers, cross-entropy</span>
+      <span>Time to read: ~20 min</span>
+      <span>Interactive figures: 1</span>
+      <span>Code: PyTorch, NumPy</span>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="intro">1. What's a foundation model?</h2>
+
+    <p>The term "foundation model" was introduced in a 2021 Stanford report by Bommasani, Liang et al. The claim was modest but load-bearing: training a single model on a huge, diverse dataset and then adapting it to many downstream tasks had become <em>the</em> dominant paradigm in NLP, vision, speech, and robotics — not just another technique. Everything now ran on top of a base.</p>
+
+    <p>Concretely, a foundation model has three properties:</p>
+
+    <ul>
+      <li><strong>Pretrained at scale.</strong> Trained on a dataset orders of magnitude larger than any single downstream task could provide. For language, that means hundreds of billions to trillions of tokens of web text.</li>
+      <li><strong>Self-supervised.</strong> No labels. The training signal comes from the structure of the data itself — next-token prediction, masked reconstruction, contrastive image-text alignment.</li>
+      <li><strong>Generalist.</strong> Good at a wide range of downstream tasks after light adaptation (fine-tuning, prompting, adapters) rather than one specific task.</li>
+    </ul>
+
+    <p>Everything in 2024–25 is a foundation model. GPT, Claude, Gemini, Llama, Mistral, Qwen, DeepSeek — language. DINOv2, SAM, SigLIP — vision. Whisper — speech. AlphaFold 3 — structural biology. The details differ; the recipe is the same.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="pretrain">2. The pretraining loss</h2>
+
+    <p>For a decoder-only language model — the GPT lineage — the pretraining objective is <em>next-token prediction</em> over a corpus:</p>
+
+    <div class="math-display">$$\mathcal{L}(\theta) = -\sum_{t=1}^{T} \log p_\theta(x_t \mid x_{<t})$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Next-token loss</p>
+      <dl>
+        <dt>$\theta$</dt><dd>The model's parameters (all of its weights).</dd>
+        <dt>$x_1, \dots, x_T$</dt><dd>A sequence of tokens (words, subwords, bytes). $T$ is the sequence length — typically thousands.</dd>
+        <dt>$x_{<t}$</dt><dd>Shorthand for $(x_1, x_2, \dots, x_{t-1})$ — all tokens before position $t$. The model's context window.</dd>
+        <dt>$p_\theta(x_t \mid x_{<t})$</dt><dd>The probability the model assigns to the actual next token, given the past. This comes from a softmax over the vocabulary at position $t$.</dd>
+        <dt>$-\log$</dt><dd>The negative log converts probability into "surprise" — it rewards the model for assigning high probability to what actually comes next.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Analogy</strong> You're reading a book with one word covered at a time and trying to guess it based on everything before. If you guess "the" right 90% of the time, you're only mildly surprised. If you say "xyzzy" and the real word is "and", you're very surprised. The loss is the average surprise across all the blanks in the book. Minimizing it is what teaches the model grammar, facts, style, and — eventually — the ability to follow instructions.</p>
+    </div>
+
+    <p>This objective looks trivial. It <em>is</em> trivial. Yet it is sufficient, at scale, to produce models that do translation, coding, math, analogical reasoning, and instruction following. Nothing in the loss function asks for any of that. It emerges from compression pressure: to predict the next token well on a sufficiently diverse corpus, you have to model the world that generated it.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="kaplan">3. Kaplan scaling laws (2020)</h2>
+
+    <p>In 2020, Kaplan, McCandlish et al. at OpenAI did the first systematic study of how LLM loss depends on three knobs: model size $N$, dataset size $D$, and compute budget $C$. Their finding — a clean power law:</p>
+
+    <div class="math-display">$$L(N) \approx \left(\frac{N_c}{N}\right)^{\alpha_N}, \quad L(D) \approx \left(\frac{D_c}{D}\right)^{\alpha_D}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Kaplan scaling</p>
+      <dl>
+        <dt>$L$</dt><dd>Test loss (cross-entropy per token) on a held-out set.</dd>
+        <dt>$N$</dt><dd>Non-embedding parameter count.</dd>
+        <dt>$D$</dt><dd>Number of training tokens processed.</dd>
+        <dt>$N_c, D_c$</dt><dd>Empirical constants that set the scale. They absorb the specifics of the architecture and data mix.</dd>
+        <dt>$\alpha_N, \alpha_D$</dt><dd>Scaling exponents — Kaplan found $\alpha_N \approx 0.076$, $\alpha_D \approx 0.095$. Small positive numbers, so loss drops slowly but predictably with each doubling.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>What's shocking</strong> The power law holds over <em>seven orders of magnitude</em> of compute. No bumps, no plateaus, no discontinuities. Double the compute; subtract a constant from the log-loss. This is why the 2020–2024 era was defined by "just make it bigger" — the curve kept going, and nobody could find the wall.</p>
+    </div>
+
+    <p>Kaplan's law also gave a formula for how to split a fixed compute budget between model size and dataset size. His conclusion: if compute doubles, scale up parameters more aggressively than tokens. GPT-3 (175B params, 300B tokens) was a textbook application.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="chinchilla">4. Chinchilla (2022)</h2>
+
+    <p>Two years later, Hoffmann et al. at DeepMind redid the experiment more carefully and got a different answer. They fit scaling curves at many $(N, D)$ pairs, held compute fixed, and found Kaplan had under-trained his biggest models:</p>
+
+    <div class="math-display">$$L(N, D) \approx L_\infty + \frac{A}{N^\alpha} + \frac{B}{D^\beta}$$</div>
+
+    <p>With $\alpha \approx 0.34$, $\beta \approx 0.28$. The optimal split is roughly "tokens and parameters scale in proportion" — for a fixed compute budget $C = 6 N D$, you should have:</p>
+
+    <div class="math-display">$$N_{\text{opt}} \propto C^{0.5}, \quad D_{\text{opt}} \propto C^{0.5}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Chinchilla</p>
+      <dl>
+        <dt>$C = 6ND$</dt><dd>The approximate compute (FLOPs) of training a decoder-only model with $N$ parameters on $D$ tokens. The factor 6 comes from 2 multiplies + 1 add per parameter in forward + backward.</dd>
+        <dt>$L_\infty$</dt><dd>Irreducible loss — the entropy of the data itself. No matter how big your model, you can't beat this floor.</dd>
+        <dt>$A/N^\alpha$</dt><dd>Parameter-scarcity term. Shrinks as $N$ grows.</dd>
+        <dt>$B/D^\beta$</dt><dd>Data-scarcity term. Shrinks as $D$ grows.</dd>
+        <dt>$\alpha, \beta \approx 0.3$</dt><dd>Much larger than Kaplan's $\sim$0.08. Chinchilla's curve is <em>steeper</em>, meaning each doubling helps more — and the optimal tradeoff is more balanced.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>The Chinchilla rule of thumb</strong>: train a model on ~20 tokens per parameter. A 70B model should see ~1.4T tokens. GPT-3 at 300B tokens was <em>under-trained</em> for its size; Chinchilla at 70B params trained on 1.4T tokens beat it despite being 2.5× smaller. The result reshaped the industry — Llama, Mistral, and Gemma are all Chinchilla-style: smaller than GPT-3 but trained on far more tokens.</p>
+    </div>
+
+    <p>Since 2023 the pendulum has swung again: for inference-heavy deployments, even "over-training" well past the Chinchilla optimum is worth it, because a smaller overtrained model is cheaper to serve forever. Llama-3-8B trained on 15T tokens is the canonical 2024 example.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="demo">5. Interactive scaling calculator</h2>
+
+    <p>Pick a compute budget (in FLOPs). The calculator applies Chinchilla's law to find the optimal $(N, D)$ split and estimates the resulting loss. Drag the slider and watch the frontier move.</p>
+
+    <div class="viz-3d">
+      <div class="v3-controls">
+        <span class="v3-label">Compute (log₁₀ FLOPs):</span>
+        <input id="scaleC" type="range" min="19" max="26" value="22" step="0.1" style="flex:1;max-width:340px;">
+        <span id="scaleCLabel" style="min-width:70px;color:#63b3ff;font-family:ui-monospace,monospace;">1e22</span>
+      </div>
+      <svg id="scaleSvg" viewBox="0 0 720 340" style="width:100%;height:auto;background:#0a0d12;border-radius:6px;"></svg>
+      <p class="v3-caption" id="scaleCaption">Chinchilla-optimal N and D for the selected compute budget. More compute → both axes grow together.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="emergent">6. Emergent abilities</h2>
+
+    <p>One of the most interesting and contested observations in the scaling literature: some capabilities appear <em>suddenly</em> as you scale, rather than improving smoothly. Arithmetic, multi-step reasoning, instruction following — on plots of accuracy vs. scale they look flat near random, then sharply rise past some threshold.</p>
+
+    <p>The caveat, from Schaeffer et al. (2023): many apparent emergent abilities disappear when you use smoother metrics. A graded metric like "partial credit on digit-level accuracy" shows continuous improvement where the brittle "exact match accuracy" shows a cliff. So the jumps are partly an artifact of the evaluation, not the model.</p>
+
+    <p>What's genuinely not an artifact: in-context learning, chain-of-thought reasoning, and tool use all require some minimum scale before they're even discoverable. The 125M parameter GPT-2 cannot be prompted into solving arithmetic no matter how you phrase the prompt. Something qualitative happens around 7B–70B parameters that makes those capabilities accessible.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="adapt">7. Adaptation — turning a base into an app</h2>
+
+    <p>A pretrained base model is not, by itself, a useful product. It will cheerfully continue any text, including things you didn't want it to say. Adaptation turns it into an assistant. Three standard layers:</p>
+
+    <ol>
+      <li><strong>Supervised fine-tuning (SFT).</strong> Train on a few tens of thousands of high-quality instruction–response pairs. Cheap, effective, and mostly shapes tone and format.</li>
+      <li><strong>Preference optimization.</strong> Collect pairs of outputs $(y_w, y_l)$ where $y_w$ is preferred to $y_l$, and train the model to prefer $y_w$ over $y_l$. Flavors: RLHF (PPO on a learned reward), DPO (closed-form supervised objective), IPO, KTO. Shapes values, helpfulness, safety.</li>
+      <li><strong>Lightweight adapters.</strong> LoRA, QLoRA, IA³ — instead of updating all billions of parameters, train a tiny add-on module (~1% of params) for a specific task. The base stays frozen. You can serve thousands of LoRA adapters for different customers on a single shared base.</li>
+    </ol>
+
+    <p>The division of labor is important: pretraining teaches the model the world. Fine-tuning teaches it the <em>interface</em> — how to be a chatbot, how to follow a format, what domain to privilege. It's much cheaper to do the second step; a 7B model can be fine-tuned on a single GPU in an afternoon.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="code">8. Source code</h2>
+
+    <p>A minimal next-token pretraining loop (no mixed precision, no distributed, no tricks), and a Chinchilla calculator.</p>
+
+    <div class="code-tabs" id="ct-fm">
+      <div class="ct-header">
+        <button class="ct-tab active" data-tab="pt">PyTorch (pretrain step)</button>
+        <button class="ct-tab" data-tab="np">Chinchilla calc (NumPy)</button>
+        <button class="ct-tab" data-tab="lora">LoRA adapter</button>
+        <span class="ct-label">foundation model · core pieces</span>
+      </div>
+      <div class="ct-panel active" data-tab="pt"><pre><code><span class="kw">import</span> torch, torch.nn.functional <span class="kw">as</span> F
+
+<span class="kw">def</span> <span class="fn">pretrain_step</span>(model, batch, optimizer):
+    <span class="cmt"># batch: dict with input_ids (B, T+1)</span>
+    ids = batch[<span class="str">"input_ids"</span>]
+    x = ids[:, :-<span class="num">1</span>]                             <span class="cmt"># (B, T) — inputs</span>
+    y = ids[:, <span class="num">1</span>:]                              <span class="cmt"># (B, T) — targets, shifted</span>
+
+    logits = model(x)                              <span class="cmt"># (B, T, V)</span>
+    loss = F.cross_entropy(
+        logits.reshape(-<span class="num">1</span>, logits.size(-<span class="num">1</span>)),
+        y.reshape(-<span class="num">1</span>),
+    )
+    optimizer.zero_grad(set_to_none=<span class="kw">True</span>)
+    loss.backward()
+    torch.nn.utils.clip_grad_norm_(model.parameters(), <span class="num">1.0</span>)
+    optimizer.step()
+    <span class="kw">return</span> loss.item()
+
+<span class="cmt"># That's it. Loop this a few trillion times on the internet and a foundation</span>
+<span class="cmt"># model falls out. Every other detail is scale, data, and optimization tricks.</span>
+</code></pre></div>
+
+      <div class="ct-panel" data-tab="np"><pre><code><span class="kw">import</span> math
+
+<span class="kw">def</span> <span class="fn">chinchilla_optimal</span>(C):
+    <span class="cmt"># Given compute budget C (FLOPs), return (N_opt, D_opt) per Chinchilla.</span>
+    <span class="cmt"># Rule of thumb: N ~ (C / 6)^0.5, D ~ (C / 6)^0.5, with D ≈ 20 N.</span>
+    <span class="cmt"># Under C = 6 N D, this gives N = sqrt(C / 120), D = 20 N.</span>
+    N_opt = math.sqrt(C / <span class="num">120</span>)
+    D_opt = <span class="num">20</span> * N_opt
+    <span class="kw">return</span> N_opt, D_opt
+
+<span class="kw">def</span> <span class="fn">chinchilla_loss</span>(N, D, Linf=<span class="num">1.69</span>, A=<span class="num">406.4</span>, B=<span class="num">410.7</span>,
+                              alpha=<span class="num">0.34</span>, beta=<span class="num">0.28</span>):
+    <span class="cmt"># Predict loss from N and D using the Chinchilla paper's fit.</span>
+    <span class="kw">return</span> Linf + A / (N ** alpha) + B / (D ** beta)
+
+<span class="cmt"># Example: 1e22 FLOPs (a mid-size pretraining run ca. 2023)</span>
+N, D = <span class="fn">chinchilla_optimal</span>(<span class="num">1e22</span>)
+<span class="fn">print</span>(<span class="str">f"N = {N/1e9:.1f}B params, D = {D/1e9:.0f}B tokens"</span>)
+<span class="fn">print</span>(<span class="str">f"loss ≈ {chinchilla_loss(N, D):.3f}"</span>)
+</code></pre></div>
+
+      <div class="ct-panel" data-tab="lora"><pre><code><span class="kw">import</span> torch, torch.nn <span class="kw">as</span> nn
+
+<span class="kw">class</span> <span class="fn">LoRALinear</span>(nn.Module):
+    <span class="cmt"># A drop-in replacement for nn.Linear that adds a low-rank update:</span>
+    <span class="cmt">#    y = (W + (alpha/r) * B @ A) x</span>
+    <span class="cmt"># The base W is frozen. Only A and B are trained, ~0.1% of params.</span>
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, base: nn.Linear, r=<span class="num">8</span>, alpha=<span class="num">16</span>):
+        <span class="fn">super</span>().__init__()
+        self.base  = base
+        self.base.weight.requires_grad_(<span class="kw">False</span>)
+        <span class="kw">if</span> self.base.bias <span class="kw">is</span> <span class="kw">not</span> <span class="kw">None</span>:
+            self.base.bias.requires_grad_(<span class="kw">False</span>)
+        d_in, d_out = base.in_features, base.out_features
+        self.A = nn.Parameter(torch.randn(r, d_in) * <span class="num">0.01</span>)
+        self.B = nn.Parameter(torch.zeros(d_out, r))   <span class="cmt"># zero-init: starts as identity</span>
+        self.scale = alpha / r
+
+    <span class="kw">def</span> <span class="fn">forward</span>(self, x):
+        <span class="kw">return</span> self.base(x) + self.scale * (x @ self.A.T @ self.B.T)
+</code></pre></div>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="summary">9. Summary</h2>
+
+    <ul>
+      <li>A foundation model is a single self-supervised base, trained at massive scale, that acts as the starting point for many downstream applications.</li>
+      <li>The pretraining loss is almost trivially simple — next-token prediction for language, masked reconstruction for images, contrastive alignment for multimodal. Everything else is scale and data.</li>
+      <li><strong>Kaplan (2020)</strong> found clean power-law scaling across 7 orders of magnitude of compute. Scale param-heavy.</li>
+      <li><strong>Chinchilla (2022)</strong> fixed the recipe: scale parameters and tokens in roughly equal proportion. Rule of thumb — 20 tokens per parameter.</li>
+      <li>Post-2023 pendulum: over-train small models past Chinchilla-optimal if you're going to pay serving costs forever.</li>
+      <li>Adaptation layers — SFT, DPO/RLHF, LoRA — turn a base model into a useful application. The base is the expensive part, but you only have to do it once.</li>
+    </ul>
+
+    <div class="bib">
+      <h4>Further reading</h4>
+      <ul>
+        <li>Bommasani et al. (2021) — <em>On the Opportunities and Risks of Foundation Models</em>.</li>
+        <li>Kaplan et al. (2020) — <em>Scaling Laws for Neural Language Models</em>.</li>
+        <li>Hoffmann et al. (2022) — <em>Training Compute-Optimal Large Language Models</em> (Chinchilla).</li>
+        <li>Hu et al. (2021) — <em>LoRA: Low-Rank Adaptation of Large Language Models</em>.</li>
+        <li>Schaeffer et al. (2023) — <em>Are Emergent Abilities of Large Language Models a Mirage?</em></li>
+      </ul>
+    </div>
+
+    <div class="next-card">
+      <div class="label">NEXT UP</div>
+      <a href="rag.html">→ Retrieval-Augmented Generation</a>
+      <p>Scaling a foundation model is one way to give it more knowledge. Letting it look things up is the other. Read on for the retrieval-augmented approach.</p>
+    </div>
+
+  </article>
+</div>
+
+<script>
+// =========================================================
+// Code tabs
+document.querySelectorAll('.code-tabs').forEach(root => {
+  const tabs = root.querySelectorAll('.ct-tab');
+  const panels = root.querySelectorAll('.ct-panel');
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const target = tab.getAttribute('data-tab');
+      tabs.forEach(t => t.classList.toggle('active', t === tab));
+      panels.forEach(p => p.classList.toggle('active', p.getAttribute('data-tab') === target));
+    });
+  });
+});
+
+// =========================================================
+// Chinchilla scaling calculator
+(function() {
+  const svg = document.getElementById('scaleSvg');
+  if (!svg) return;
+  const NS = 'http://www.w3.org/2000/svg';
+  const slider = document.getElementById('scaleC');
+  const label = document.getElementById('scaleCLabel');
+  const caption = document.getElementById('scaleCaption');
+
+  function chinchilla(C) {
+    // C = 6ND, D = 20N → C = 120 N² → N = sqrt(C/120)
+    const N = Math.sqrt(C / 120);
+    const D = 20 * N;
+    // Chinchilla fit constants (Hoffmann et al.)
+    const Linf = 1.69, A = 406.4, B = 410.7, alpha = 0.34, beta = 0.28;
+    const L = Linf + A / Math.pow(N, alpha) + B / Math.pow(D, beta);
+    return { N, D, L };
+  }
+
+  function fmt(x) {
+    if (x >= 1e12) return (x / 1e12).toFixed(2) + 'T';
+    if (x >= 1e9)  return (x / 1e9).toFixed(2) + 'B';
+    if (x >= 1e6)  return (x / 1e6).toFixed(2) + 'M';
+    if (x >= 1e3)  return (x / 1e3).toFixed(2) + 'K';
+    return x.toFixed(0);
+  }
+
+  // Known models for reference points
+  const models = [
+    { name: 'GPT-2',        N: 1.5e9, D: 40e9,  C: 6 * 1.5e9 * 40e9 },
+    { name: 'GPT-3',        N: 175e9, D: 300e9, C: 6 * 175e9 * 300e9 },
+    { name: 'Chinchilla',   N: 70e9,  D: 1.4e12, C: 6 * 70e9 * 1.4e12 },
+    { name: 'Llama-3 8B',   N: 8e9,   D: 15e12,  C: 6 * 8e9 * 15e12 },
+    { name: 'Llama-3 70B',  N: 70e9,  D: 15e12,  C: 6 * 70e9 * 15e12 },
+  ];
+
+  function draw() {
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+
+    const logC = parseFloat(slider.value);
+    const C = Math.pow(10, logC);
+    const { N, D, L } = chinchilla(C);
+
+    label.textContent = `1e${logC.toFixed(1)}`;
+
+    const W = 720, H = 340;
+    const ml = 70, mr = 30, mt = 30, mb = 50;
+    const plotW = W - ml - mr;
+    const plotH = H - mt - mb;
+
+    // Axis frame
+    const fr = document.createElementNS(NS, 'rect');
+    fr.setAttribute('x', ml); fr.setAttribute('y', mt);
+    fr.setAttribute('width', plotW); fr.setAttribute('height', plotH);
+    fr.setAttribute('fill', '#0f131a');
+    fr.setAttribute('stroke', '#2a3446');
+    fr.setAttribute('stroke-width', 1);
+    svg.appendChild(fr);
+
+    // Log-log axes. X: N (params), Y: D (tokens).
+    const logNmin = 6, logNmax = 12.5;   // 1M to ~300B
+    const logDmin = 9, logDmax = 14;     // 1B to 100T
+    function xOf(logn) { return ml + (logn - logNmin) / (logNmax - logNmin) * plotW; }
+    function yOf(logd) { return mt + plotH - (logd - logDmin) / (logDmax - logDmin) * plotH; }
+
+    // Gridlines
+    for (let lN = Math.ceil(logNmin); lN <= Math.floor(logNmax); lN++) {
+      const x = xOf(lN);
+      const ln = document.createElementNS(NS, 'line');
+      ln.setAttribute('x1', x); ln.setAttribute('y1', mt);
+      ln.setAttribute('x2', x); ln.setAttribute('y2', mt + plotH);
+      ln.setAttribute('stroke', '#1a212e');
+      svg.appendChild(ln);
+      const tl = document.createElementNS(NS, 'text');
+      tl.setAttribute('x', x); tl.setAttribute('y', mt + plotH + 16);
+      tl.setAttribute('text-anchor', 'middle');
+      tl.setAttribute('fill', '#7a8a9a');
+      tl.setAttribute('font-size', 11);
+      tl.setAttribute('font-family', 'ui-monospace, monospace');
+      tl.textContent = '1e' + lN;
+      svg.appendChild(tl);
+    }
+    for (let lD = Math.ceil(logDmin); lD <= Math.floor(logDmax); lD++) {
+      const y = yOf(lD);
+      const ln = document.createElementNS(NS, 'line');
+      ln.setAttribute('x1', ml); ln.setAttribute('y1', y);
+      ln.setAttribute('x2', ml + plotW); ln.setAttribute('y2', y);
+      ln.setAttribute('stroke', '#1a212e');
+      svg.appendChild(ln);
+      const tl = document.createElementNS(NS, 'text');
+      tl.setAttribute('x', ml - 8); tl.setAttribute('y', y + 4);
+      tl.setAttribute('text-anchor', 'end');
+      tl.setAttribute('fill', '#7a8a9a');
+      tl.setAttribute('font-size', 11);
+      tl.setAttribute('font-family', 'ui-monospace, monospace');
+      tl.textContent = '1e' + lD;
+      svg.appendChild(tl);
+    }
+
+    // Chinchilla-optimal line: D = 20 N → logD = logN + log(20)
+    const lineD = logN => logN + Math.log10(20);
+    const l1 = document.createElementNS(NS, 'line');
+    l1.setAttribute('x1', xOf(logNmin)); l1.setAttribute('y1', yOf(lineD(logNmin)));
+    l1.setAttribute('x2', xOf(logNmax)); l1.setAttribute('y2', yOf(lineD(logNmax)));
+    l1.setAttribute('stroke', '#63b3ff');
+    l1.setAttribute('stroke-width', 2);
+    l1.setAttribute('stroke-dasharray', '4,4');
+    svg.appendChild(l1);
+
+    const ll = document.createElementNS(NS, 'text');
+    ll.setAttribute('x', xOf(logNmax) - 6); ll.setAttribute('y', yOf(lineD(logNmax)) - 8);
+    ll.setAttribute('text-anchor', 'end');
+    ll.setAttribute('fill', '#63b3ff');
+    ll.setAttribute('font-size', 11);
+    ll.setAttribute('font-family', 'ui-monospace, monospace');
+    ll.textContent = 'Chinchilla-optimal D = 20 N';
+    svg.appendChild(ll);
+
+    // Reference models
+    models.forEach(m => {
+      const cx = xOf(Math.log10(m.N));
+      const cy = yOf(Math.log10(m.D));
+      const c = document.createElementNS(NS, 'circle');
+      c.setAttribute('cx', cx); c.setAttribute('cy', cy); c.setAttribute('r', 4);
+      c.setAttribute('fill', '#b4c4d4');
+      svg.appendChild(c);
+      const tl = document.createElementNS(NS, 'text');
+      tl.setAttribute('x', cx + 8); tl.setAttribute('y', cy - 5);
+      tl.setAttribute('fill', '#b4c4d4');
+      tl.setAttribute('font-size', 10);
+      tl.setAttribute('font-family', 'ui-monospace, monospace');
+      tl.textContent = m.name;
+      svg.appendChild(tl);
+    });
+
+    // Current point
+    const cx = xOf(Math.log10(N));
+    const cy = yOf(Math.log10(D));
+    const pt = document.createElementNS(NS, 'circle');
+    pt.setAttribute('cx', cx); pt.setAttribute('cy', cy); pt.setAttribute('r', 7);
+    pt.setAttribute('fill', '#ff8a5b');
+    pt.setAttribute('stroke', '#fff');
+    pt.setAttribute('stroke-width', 1.5);
+    svg.appendChild(pt);
+
+    // Axis titles
+    const xl = document.createElementNS(NS, 'text');
+    xl.setAttribute('x', ml + plotW / 2); xl.setAttribute('y', H - 10);
+    xl.setAttribute('text-anchor', 'middle');
+    xl.setAttribute('fill', '#b4c4d4');
+    xl.setAttribute('font-size', 12);
+    xl.setAttribute('font-family', 'ui-monospace, monospace');
+    xl.textContent = 'parameters N (log)';
+    svg.appendChild(xl);
+
+    const yl = document.createElementNS(NS, 'text');
+    yl.setAttribute('x', 20); yl.setAttribute('y', mt + plotH / 2);
+    yl.setAttribute('text-anchor', 'middle');
+    yl.setAttribute('fill', '#b4c4d4');
+    yl.setAttribute('font-size', 12);
+    yl.setAttribute('font-family', 'ui-monospace, monospace');
+    yl.setAttribute('transform', `rotate(-90 20 ${mt + plotH / 2})`);
+    yl.textContent = 'training tokens D (log)';
+    svg.appendChild(yl);
+
+    caption.textContent = `C = ${C.toExponential(1)} FLOPs → N ≈ ${fmt(N)} params, D ≈ ${fmt(D)} tokens, predicted loss ≈ ${L.toFixed(3)}.`;
+  }
+
+  slider.addEventListener('input', draw);
+  draw();
+})();
+</script>
+<script defer src="../search-index.js"></script>
+<script defer src="../search.js"></script>
+</body>
+</html>
