@@ -6,6 +6,9 @@
 <title>Astronomy &amp; Space Exploration — From Ancient Skywatchers to the JWST</title>
 <link rel="stylesheet" href="../styles.css">
 <style>
+  /* Wider canvas for the dense astronomy timeline */
+  .timeline { min-width: 6400px; }
+
   /* Cyan-dominant accent for astronomy */
   .timeline .event .dot { background: #22d3ee; box-shadow: 0 0 0 2px rgba(34,211,238,0.25); }
   .timeline .event:hover .dot { background: #67e8f9; box-shadow: 0 0 0 3px rgba(34,211,238,0.35), 0 0 14px #22d3ee; }
@@ -634,21 +637,50 @@ const timelineEvents = [
 
 function renderTimeline() {
   const timeline = document.getElementById('timeline');
-  const minYear = -300, maxYear = 2040;
-  const totalWidth = 4200;
+  const totalWidth = 6400;
 
+  // Piecewise non-linear scale:
+  //   -300 → 1900  (2200 years) → 18% of canvas  (ancient/pre-space)
+  //   1900 → 2040  ( 140 years) → 82% of canvas  (space age, spread out)
+  const BREAK = 1900;
+  const BREAK_PCT = 18;
+  function yearToPercent(y) {
+    if (y <= BREAK) {
+      return ((y - (-300)) / (BREAK - (-300))) * BREAK_PCT;
+    } else {
+      return BREAK_PCT + ((y - BREAK) / (2040 - BREAK)) * (100 - BREAK_PCT);
+    }
+  }
+
+  // Year marks: sparse for ancient, every 10yr for modern
   const yearMarks = document.createElement('div');
   yearMarks.className = 'year-marks';
-  for (let y = -200; y <= 2040; y += 200) {
+  const ancientMarks = [-200, 0, 500, 1000, 1500, 1700, 1800, 1900];
+  const modernMarks = [];
+  for (let y = 1910; y <= 2040; y += 10) modernMarks.push(y);
+  [...ancientMarks, ...modernMarks].forEach(y => {
     const span = document.createElement('span');
-    span.style.left = (((y - minYear) / (maxYear - minYear)) * 100) + '%';
+    span.style.left = yearToPercent(y) + '%';
     span.textContent = y < 0 ? Math.abs(y) + ' BCE' : y;
     yearMarks.appendChild(span);
-  }
+  });
   timeline.appendChild(yearMarks);
 
+  // Visual break marker at 1900
+  const breakMark = document.createElement('div');
+  breakMark.style.cssText = `position:absolute;left:${BREAK_PCT}%;top:0;bottom:0;
+    width:2px;background:linear-gradient(to bottom,transparent,rgba(34,211,238,0.4),transparent);
+    pointer-events:none;`;
+  timeline.appendChild(breakMark);
+  const breakLabel = document.createElement('span');
+  breakLabel.style.cssText = `position:absolute;left:calc(${BREAK_PCT}% + 4px);top:4px;
+    font-size:9px;font-family:var(--mono);color:rgba(34,211,238,0.5);letter-spacing:.06em;
+    white-space:nowrap;pointer-events:none;`;
+  breakLabel.textContent = '← compressed · expanded →';
+  timeline.appendChild(breakLabel);
+
   const enriched = timelineEvents.map(e => {
-    const pct = ((e.year - minYear) / (maxYear - minYear)) * 100;
+    const pct = yearToPercent(e.year);
     return { ...e, xPct: pct, xPx: (pct / 100) * totalWidth };
   }).sort((a, b) => a.xPx - b.xPx);
 
