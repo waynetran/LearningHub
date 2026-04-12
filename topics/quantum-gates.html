@@ -1,0 +1,1346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quantum Gates and Circuits — Deep Dive</title>
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError: false});"></script>
+</head>
+<body>
+<div id="tooltip"></div>
+
+<nav class="topic-nav">
+  <a class="back" href="../quantum-computing.html">← Back to Quantum Computing</a>
+  <div class="crumb">Deep Dives / <span class="topic-name">Quantum Gates and Circuits</span></div>
+</nav>
+
+<div class="topic-layout">
+  <aside class="topic-toc">
+    <h4>ON THIS PAGE</h4>
+    <ul>
+      <li><a href="#classical-vs-quantum">1. Classical vs quantum gates</a></li>
+      <li><a href="#single-qubit">2. Single-qubit gates</a></li>
+      <li><a href="#rotation-gates">3. Rotation gates</a></li>
+      <li><a href="#two-qubit">4. Two-qubit gates</a></li>
+      <li><a href="#universal-sets">5. Universal gate sets</a></li>
+      <li><a href="#circuit-notation">6. Circuit notation</a></li>
+      <li><a href="#identities">7. Circuit identities</a></li>
+      <li><a href="#measurement">8. Measurement &amp; feedback</a></li>
+      <li><a href="#circuit-builder">9. Interactive: circuit builder</a></li>
+      <li><a href="#source-code">10. Source code</a></li>
+      <li><a href="#summary">11. Summary</a></li>
+    </ul>
+  </aside>
+
+  <article class="topic-content">
+    <h1>Quantum Gates and Circuits</h1>
+    <p class="subtitle">The unitary building blocks of quantum algorithms — from Pauli flips and Hadamard superpositions to CNOT entanglement and fault-tolerant gate sets, worked through with matrices, circuit diagrams, and a live simulator you can run in your browser.</p>
+    <div class="meta-tags">
+      <span>Prereq: linear algebra, complex numbers, qubit basics</span>
+      <span>Time to read: ~35 min</span>
+      <span>Interactive figures: 1</span>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="classical-vs-quantum">1. From classical logic gates to quantum gates</h2>
+
+    <p>Classical computers process bits through logic gates: AND, OR, NOT, NAND, XOR. These gates are the physical instantiation of Boolean algebra, and they work perfectly — but most of them are <em>irreversible</em>. Feed a 1 and a 0 into an AND gate and you get 0. Feed a 0 and a 0 and you also get 0. Two different inputs produce the same output, so you cannot run the gate backwards and recover what went in.</p>
+
+    <p>This irreversibility has a physical consequence known as <strong>Landauer's principle</strong>: erasing one bit of information releases at least $k_B T \ln 2$ of heat into the environment (roughly $3 \times 10^{-21}$ J at room temperature). Modern CPUs erase trillions of bits per second; the heat they generate is not just an engineering inconvenience — it is thermodynamically mandated by the irreversible logic they compute.</p>
+
+    <div class="callout">
+      <div class="label">KEY CONTRAST</div>
+      <p style="margin:6px 0">Every quantum gate is a <strong>unitary transformation</strong> $U$ on the state space $\mathbb{C}^{2^n}$. Unitary means $U U^\dagger = U^\dagger U = I$ — the gate has an inverse $U^\dagger$ (the conjugate transpose), so it is reversible by construction. Quantum computation is always reversible until measurement.</p>
+    </div>
+
+    <p>A state $|\psi\rangle$ transforms as $|\psi'\rangle = U|\psi\rangle$. Because $U$ is unitary, it preserves the inner product: $\langle\psi'|\psi'\rangle = \langle\psi|U^\dagger U|\psi\rangle = \langle\psi|\psi\rangle = 1$. The norm is always preserved — probabilities always sum to 1.</p>
+
+    <h3>The bridge: Toffoli gate</h3>
+    <p>Before quantum, there was classical reversible computing. The <strong>Toffoli gate</strong> (CCNOT) is a 3-bit reversible gate: it flips the target bit if and only if both control bits are 1. It can simulate AND (set target to 0 before the gate; it comes out as $c_1 \wedge c_2$) and NOT (set both controls to 1). Since AND and NOT suffice for all Boolean logic, Toffoli is classically universal — and it is reversible because the output uniquely determines the input.</p>
+
+    <p>Adding the <strong>Hadamard gate</strong> $H$ (which creates superpositions) to the Toffoli set makes it quantum-universal. Every quantum algorithm is built from combinations of gates like these.</p>
+
+    <div class="math-glossary">
+      <div class="mg-row"><span class="mg-term">Unitary matrix</span><span class="mg-def">$U^\dagger U = I$; preserves vector norms; represents a reversible quantum operation</span></div>
+      <div class="mg-row"><span class="mg-term">$U^\dagger$</span><span class="mg-def">Conjugate transpose (adjoint) of $U$ — the quantum inverse</span></div>
+      <div class="mg-row"><span class="mg-term">Landauer's principle</span><span class="mg-def">Erasing one bit of information dissipates at least $k_B T \ln 2 \approx 2.9 \times 10^{-21}$ J at 300 K</span></div>
+      <div class="mg-row"><span class="mg-term">Bloch sphere</span><span class="mg-def">Unit sphere $|\psi\rangle = \cos(\theta/2)|0\rangle + e^{i\phi}\sin(\theta/2)|1\rangle$ visualizing single-qubit states; gates are rotations on this sphere</span></div>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="single-qubit">2. Single-qubit gates</h2>
+
+    <p>A single qubit lives in $\mathbb{C}^2$. A single-qubit gate is a $2 \times 2$ unitary matrix. Below is the complete catalog of the gates you will encounter in essentially every quantum algorithm.</p>
+
+    <h3>Pauli gates — $\pi$ rotations on the Bloch sphere</h3>
+
+    <p>The three Pauli matrices $\{X, Y, Z\}$ are the quantum analogs of classical bit-flips and phase-flips. Each squares to the identity ($X^2 = Y^2 = Z^2 = I$) and is its own inverse ($X = X^\dagger$, etc.).</p>
+
+    <div class="rank-table">
+      <table>
+        <thead>
+          <tr>
+            <th>Gate</th>
+            <th>Matrix</th>
+            <th>Action on basis</th>
+            <th>Bloch rotation</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>X</strong> (NOT)</td>
+            <td>$\begin{pmatrix}0&amp;1\\1&amp;0\end{pmatrix}$</td>
+            <td>$|0\rangle \leftrightarrow |1\rangle$</td>
+            <td>180° around X-axis</td>
+          </tr>
+          <tr>
+            <td><strong>Y</strong></td>
+            <td>$\begin{pmatrix}0&amp;-i\\i&amp;0\end{pmatrix}$</td>
+            <td>$|0\rangle \to i|1\rangle,\; |1\rangle \to -i|0\rangle$</td>
+            <td>180° around Y-axis</td>
+          </tr>
+          <tr>
+            <td><strong>Z</strong></td>
+            <td>$\begin{pmatrix}1&amp;0\\0&amp;-1\end{pmatrix}$</td>
+            <td>$|0\rangle \to |0\rangle,\; |1\rangle \to -|1\rangle$</td>
+            <td>180° around Z-axis</td>
+          </tr>
+          <tr>
+            <td><strong>H</strong> (Hadamard)</td>
+            <td>$\frac{1}{\sqrt{2}}\begin{pmatrix}1&amp;1\\1&amp;-1\end{pmatrix}$</td>
+            <td>$|0\rangle \to |{+}\rangle,\; |1\rangle \to |{-}\rangle$</td>
+            <td>180° around $(X{+}Z)/\sqrt{2}$</td>
+          </tr>
+          <tr>
+            <td><strong>S</strong> ($\sqrt{Z}$)</td>
+            <td>$\begin{pmatrix}1&amp;0\\0&amp;i\end{pmatrix}$</td>
+            <td>$|0\rangle \to |0\rangle,\; |1\rangle \to i|1\rangle$</td>
+            <td>90° around Z-axis</td>
+          </tr>
+          <tr>
+            <td><strong>T</strong> ($\sqrt{S}$)</td>
+            <td>$\begin{pmatrix}1&amp;0\\0&amp;e^{i\pi/4}\end{pmatrix}$</td>
+            <td>$|0\rangle \to |0\rangle,\; |1\rangle \to e^{i\pi/4}|1\rangle$</td>
+            <td>45° around Z-axis</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Hadamard in detail</h3>
+    <p>The Hadamard gate is the workhorse of quantum computing. It creates equal superpositions from computational basis states:</p>
+    <div class="math-display">$$H|0\rangle = \frac{|0\rangle + |1\rangle}{\sqrt{2}} \equiv |{+}\rangle, \qquad H|1\rangle = \frac{|0\rangle - |1\rangle}{\sqrt{2}} \equiv |{-}\rangle$$</div>
+    <p>Applying $H$ twice returns to the original state: $H^2 = I$. You can verify this by matrix multiplication: $\frac{1}{\sqrt{2}}\begin{pmatrix}1&amp;1\\1&-1\end{pmatrix} \cdot \frac{1}{\sqrt{2}}\begin{pmatrix}1&amp;1\\1&-1\end{pmatrix} = \begin{pmatrix}1&0\\0&1\end{pmatrix}$.</p>
+    <p>On the Bloch sphere, $H$ is a 180° rotation around the axis $(X+Z)/\sqrt{2}$ — the axis pointing diagonally between the $+X$ and $+Z$ poles. This swaps the $X$ and $Z$ axes, which is why $HXH = Z$ and $HZH = X$ (see §7).</p>
+
+    <h3>Phase gates: S, T, and the general $P(\lambda)$</h3>
+    <p>Phase gates leave $|0\rangle$ alone and multiply $|1\rangle$ by a phase factor. They don't change measurement probabilities in the computational basis, but they affect interference patterns and are essential for quantum algorithms.</p>
+    <div class="math-display">$$P(\lambda) = \begin{pmatrix}1 &amp; 0 \\ 0 &amp; e^{i\lambda}\end{pmatrix}$$</div>
+    <p>Setting $\lambda = \pi/2$ gives $S$; $\lambda = \pi/4$ gives $T$; $\lambda = \pi$ gives $Z$. The $T$ gate is the most expensive gate in fault-tolerant quantum computing because it requires <em>magic state distillation</em> — a resource-intensive error-correction protocol. The number of $T$ gates in a circuit (the <strong>T-count</strong>) is the dominant cost metric for fault-tolerant algorithms.</p>
+
+    <div class="callout">
+      <div class="label">FAULT-TOLERANCE NOTE</div>
+      <p style="margin:6px 0">In fault-tolerant quantum computing (using the surface code or similar), the Clifford gates $\{H, S, \text{CNOT}\}$ are "cheap" — they can be implemented transversally. The $T$ gate is "expensive" — it requires a distilled magic state $|m\rangle \propto |0\rangle + e^{i\pi/4}|1\rangle$ and gate teleportation. A fault-tolerant $T$ gate may cost 100× more than a Clifford gate. Circuit optimization largely means reducing T-count.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="rotation-gates">3. Rotation gates and parameterized circuits</h2>
+
+    <p>Every $2\times 2$ unitary (up to global phase) can be written as a rotation on the Bloch sphere. The primitive rotation gates around each axis are:</p>
+
+    <div class="math-display">$$R_x(\theta) = e^{-i\theta X/2} = \cos\!\frac{\theta}{2}\,I - i\sin\!\frac{\theta}{2}\,X = \begin{pmatrix}\cos(\theta/2) &amp; -i\sin(\theta/2) \\ -i\sin(\theta/2) &amp; \cos(\theta/2)\end{pmatrix}$$</div>
+
+    <div class="math-display">$$R_y(\theta) = e^{-i\theta Y/2} = \begin{pmatrix}\cos(\theta/2) &amp; -\sin(\theta/2) \\ \sin(\theta/2) &amp; \cos(\theta/2)\end{pmatrix}$$</div>
+
+    <div class="math-display">$$R_z(\theta) = e^{-i\theta Z/2} = \begin{pmatrix}e^{-i\theta/2} &amp; 0 \\ 0 &amp; e^{i\theta/2}\end{pmatrix}$$</div>
+
+    <p>The exponential form $e^{-i\theta P/2}$ for a Pauli $P$ is computed using the identity $e^{i\alpha P} = \cos\alpha \cdot I + i\sin\alpha \cdot P$, which holds because $P^2 = I$ for all Paulis.</p>
+
+    <h3>Euler decomposition</h3>
+    <p>Any single-qubit gate $U$ (up to global phase) can be decomposed into three rotations:</p>
+    <div class="math-display">$$U = e^{i\alpha} R_z(\beta)\, R_y(\gamma)\, R_z(\delta)$$</div>
+    <p>This is the quantum analog of Euler angles in 3D. Given any target gate, you can find $\alpha, \beta, \gamma, \delta$ explicitly. This decomposition is used by circuit compilers to express arbitrary single-qubit gates in terms of hardware-native rotations.</p>
+
+    <h3>Parameterized circuits and variational algorithms</h3>
+    <p>Variational quantum algorithms (VQE, QAOA) use circuits where some rotation angles $\theta$ are free parameters, optimized by a classical outer loop. The continuous parameterization means the gradient of the circuit output with respect to $\theta$ can be computed via the <strong>parameter-shift rule</strong>:</p>
+    <div class="math-display">$$\frac{\partial}{\partial\theta}\langle\psi(\theta)|O|\psi(\theta)\rangle = \frac{1}{2}\left[\langle O \rangle_{\theta+\pi/2} - \langle O \rangle_{\theta-\pi/2}\right]$$</div>
+    <p>This lets you compute exact gradients on real quantum hardware by running the circuit at shifted parameter values — no finite differences required.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="two-qubit">4. Two-qubit gates</h2>
+
+    <p>Two-qubit gates are $4 \times 4$ unitary matrices acting on the composite Hilbert space $\mathbb{C}^2 \otimes \mathbb{C}^2 = \mathbb{C}^4$. The computational basis for two qubits is $\{|00\rangle, |01\rangle, |10\rangle, |11\rangle\}$ (first qubit is the most significant bit by convention).</p>
+
+    <h3>CNOT (Controlled-NOT)</h3>
+    <p>The CNOT gate is the fundamental entangling gate. The control qubit's state determines whether the target qubit is flipped:</p>
+    <div class="math-display">$$\text{CNOT} = \begin{pmatrix}1&amp;0&amp;0&amp;0\\0&amp;1&amp;0&amp;0\\0&amp;0&amp;0&amp;1\\0&amp;0&amp;1&amp;0\end{pmatrix}$$</div>
+    <p>Reading the matrix column by column: $|00\rangle\to|00\rangle$, $|01\rangle\to|01\rangle$, $|10\rangle\to|11\rangle$, $|11\rangle\to|10\rangle$. The bottom-right $2\times 2$ block is the Pauli $X$ gate, applied to the target only when the control is $|1\rangle$.</p>
+
+    <h3>Bell state creation</h3>
+    <p>Applying $H$ to the first qubit, then CNOT, starting from $|00\rangle$:</p>
+    <div class="math-display">$$|00\rangle \xrightarrow{H \otimes I} \frac{1}{\sqrt{2}}(|0\rangle + |1\rangle)|0\rangle = \frac{1}{\sqrt{2}}(|00\rangle + |10\rangle) \xrightarrow{\text{CNOT}} \frac{1}{\sqrt{2}}(|00\rangle + |11\rangle) = |\Phi^+\rangle$$</div>
+    <p>The result $|\Phi^+\rangle$ is maximally entangled — measuring qubit 0 immediately determines qubit 1's state, regardless of distance. This is the fundamental resource for quantum teleportation and superdense coding.</p>
+
+    <h3>CZ (Controlled-Z)</h3>
+    <div class="math-display">$$\text{CZ} = \begin{pmatrix}1&amp;0&amp;0&amp;0\\0&amp;1&amp;0&amp;0\\0&amp;0&amp;1&amp;0\\0&amp;0&amp;0&amp;-1\end{pmatrix}$$</div>
+    <p>The CZ gate applies a $-1$ phase to $|11\rangle$ and leaves all other basis states unchanged. Unlike CNOT, it is <em>symmetric</em>: control and target are interchangeable (the matrix is symmetric). CZ is the native two-qubit gate on many superconducting platforms (e.g., Google Sycamore). Any CNOT can be implemented as $H \cdot \text{CZ} \cdot H$ on the target qubit.</p>
+
+    <h3>SWAP and iSWAP</h3>
+    <p>The SWAP gate exchanges the states of two qubits: $\text{SWAP}|ab\rangle = |ba\rangle$. Its matrix is:</p>
+    <div class="math-display">$$\text{SWAP} = \begin{pmatrix}1&amp;0&amp;0&amp;0\\0&amp;0&amp;1&amp;0\\0&amp;1&amp;0&amp;0\\0&amp;0&amp;0&amp;1\end{pmatrix}$$</div>
+    <p>SWAP can be decomposed as three CNOTs: $\text{SWAP} = \text{CNOT}_{01} \cdot \text{CNOT}_{10} \cdot \text{CNOT}_{01}$. This decomposition is important for routing circuits onto hardware with limited connectivity.</p>
+    <p>The iSWAP gate is native on some superconducting and trapped-ion platforms: $\text{iSWAP}|01\rangle = i|10\rangle$ and $\text{iSWAP}|10\rangle = i|01\rangle$. The extra $i$ phase matters for interference patterns in larger circuits.</p>
+
+    <h3>Controlled-$U$ gates</h3>
+    <p>For any single-qubit unitary $U$, the controlled-$U$ gate applies $U$ to the target if the control is $|1\rangle$:</p>
+    <div class="math-display">$$C\text{-}U = \begin{pmatrix}I &amp; 0 \\ 0 &amp; U\end{pmatrix} = |0\rangle\langle 0| \otimes I + |1\rangle\langle 1| \otimes U$$</div>
+    <p>Setting $U = X$ gives CNOT; $U = Z$ gives CZ; $U = H$ gives CH. Multi-controlled versions generalize further: the Toffoli gate is $\text{CCX}$ (doubly-controlled $X$).</p>
+
+    <div class="rank-table">
+      <table>
+        <thead>
+          <tr><th>Gate</th><th>Qubits</th><th>Key property</th><th>Native hardware</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>CNOT</td><td>2</td><td>Fundamental entangler; universal with single-qubit gates</td><td>Superconducting, trapped ion</td></tr>
+          <tr><td>CZ</td><td>2</td><td>Symmetric; $\text{CNOT} = (I \otimes H)\,\text{CZ}\,(I \otimes H)$</td><td>Google Sycamore, Rigetti</td></tr>
+          <tr><td>iSWAP</td><td>2</td><td>Native exchange interaction; adds $i$ phase</td><td>Superconducting (flux tunable)</td></tr>
+          <tr><td>SWAP</td><td>2</td><td>Routing qubits; = 3 CNOTs</td><td>Compiled from CNOT</td></tr>
+          <tr><td>Toffoli (CCX)</td><td>3</td><td>Universal reversible classical; = 6 CNOTs</td><td>Compiled</td></tr>
+          <tr><td>Fredkin (CSWAP)</td><td>3</td><td>Controlled swap; useful in arithmetic circuits</td><td>Compiled</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="universal-sets">5. Universal gate sets</h2>
+
+    <p>A gate set is <strong>universal</strong> if any $n$-qubit unitary can be approximated to any precision $\epsilon$ using a finite sequence of gates from the set. The key word is <em>approximated</em> — you generally cannot implement an arbitrary unitary exactly with a finite gate set, but you can get arbitrarily close.</p>
+
+    <h3>Solovay-Kitaev theorem</h3>
+    <p>The Solovay-Kitaev theorem (1995, independently by Kitaev and Solovay) provides an explicit efficiency guarantee: any universal gate set can approximate any single-qubit gate to precision $\epsilon$ using only $O(\log^c(1/\epsilon))$ gates, where $c \approx 3.97$ (and can be reduced with better algorithms). The theorem is constructive — it gives an algorithm to find the approximating sequence.</p>
+
+    <div class="callout">
+      <div class="label">PRACTICAL IMPLICATION</div>
+      <p style="margin:6px 0">To achieve $\epsilon = 10^{-6}$ precision, you need roughly $\log^4(10^6) \approx 2000$ gates from $\{H, T, \text{CNOT}\}$. In practice, compilers find much shorter sequences for specific targets — the theorem is a worst-case bound.</p>
+    </div>
+
+    <h3>Standard universal gate sets</h3>
+    <div class="math-display no-center">$$\{H,\, T,\, \text{CNOT}\} \quad\text{(most commonly cited)}$$</div>
+    <div class="math-display no-center">$$\{H,\, S,\, T,\, \text{CNOT}\} \quad\text{(Clifford+T, fault-tolerant standard)}$$</div>
+    <div class="math-display no-center">$$\{R_y(\theta),\, R_z(\theta),\, \text{CNOT}\} \quad\text{(continuous, for VQE/QAOA)}$$</div>
+
+    <h3>Clifford group and the Gottesman-Knill theorem</h3>
+    <p>The <strong>Clifford gates</strong> are those that map Pauli operators to Pauli operators under conjugation: $U P U^\dagger$ is a Pauli (up to phase) for all Paulis $P$. The Clifford group is generated by $\{H, S, \text{CNOT}\}$.</p>
+    <p>The <strong>Gottesman-Knill theorem</strong> states: any quantum circuit consisting entirely of Clifford gates, computational basis preparation, and computational basis measurement can be simulated efficiently on a classical computer (polynomial time and space in the number of qubits).</p>
+    <p>This means Clifford circuits have no quantum advantage — they are "classically easy." The $T$ gate breaks this simulability. Adding even a single $T$ gate to a Clifford circuit can make it classically hard to simulate. The <strong>T-count</strong> is therefore the metric of quantum hardness in fault-tolerant settings.</p>
+
+    <div class="math-glossary">
+      <div class="mg-row"><span class="mg-term">Universal gate set</span><span class="mg-def">Gates sufficient to approximate any unitary to arbitrary precision</span></div>
+      <div class="mg-row"><span class="mg-term">Clifford gates</span><span class="mg-def">$\{H, S, \text{CNOT}\}$ and their products; map Paulis to Paulis; classically simulable</span></div>
+      <div class="mg-row"><span class="mg-term">T-count</span><span class="mg-def">Number of $T$ gates in a circuit; dominant cost in fault-tolerant computing</span></div>
+      <div class="mg-row"><span class="mg-term">Solovay-Kitaev</span><span class="mg-def">Any universal set approximates any unitary to $\epsilon$ in $O(\log^c(1/\epsilon))$ gates</span></div>
+      <div class="mg-row"><span class="mg-term">Gottesman-Knill</span><span class="mg-def">Clifford-only circuits are classically simulable in polynomial time</span></div>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="circuit-notation">6. Quantum circuit notation</h2>
+
+    <p>Quantum circuits are drawn with horizontal wires (one per qubit, time flowing left to right), boxes or symbols for gates, and measurement symbols. Classical bits use double wires.</p>
+
+    <h3>Notation conventions</h3>
+    <ul class="clean">
+      <li><strong>Wire</strong>: horizontal line, represents a qubit (or classical bit with double line)</li>
+      <li><strong>Gate</strong>: box with gate name, or standard symbol (circle for phase, X-in-circle for CNOT target)</li>
+      <li><strong>Control</strong>: filled circle (•) connected by vertical line to the gate it controls</li>
+      <li><strong>CNOT target</strong>: ⊕ (XOR symbol, also called "positive controlled target")</li>
+      <li><strong>CZ target</strong>: filled circle on both wires — both ends look like controls</li>
+      <li><strong>Measurement</strong>: meter-box symbol (M), outputs a classical bit on a double wire</li>
+      <li><strong>SWAP</strong>: two crossed X symbols (×) on the two wires being swapped</li>
+    </ul>
+
+    <h3>Circuit metrics</h3>
+    <ul class="clean">
+      <li><strong>Width</strong>: number of qubits (qubit count)</li>
+      <li><strong>Depth</strong>: length of the critical path (maximum number of sequential gate layers)</li>
+      <li><strong>Gate count</strong>: total number of gate operations</li>
+      <li><strong>T-count</strong>: number of $T$ gates (fault-tolerant cost)</li>
+      <li><strong>T-depth</strong>: depth of the T-gate critical path</li>
+    </ul>
+
+    <h3>Example circuits as ASCII diagrams</h3>
+
+    <p><strong>Bell state preparation</strong> — $|\Phi^+\rangle = \frac{1}{\sqrt{2}}(|00\rangle + |11\rangle)$:</p>
+<pre style="background:var(--bg-2);border:1px solid var(--border);border-radius:6px;padding:12px;overflow-x:auto;font-size:0.85em;color:var(--fg-1)">
+q0: ─── H ───•───
+             │
+q1: ─────── ⊕ ───
+</pre>
+
+    <p><strong>3-qubit GHZ state</strong> — $|GHZ\rangle = \frac{1}{\sqrt{2}}(|000\rangle + |111\rangle)$:</p>
+<pre style="background:var(--bg-2);border:1px solid var(--border);border-radius:6px;padding:12px;overflow-x:auto;font-size:0.85em;color:var(--fg-1)">
+q0: ─── H ───•───•───
+             │   │
+q1: ─────── ⊕ ──┼───
+                │
+q2: ─────────── ⊕ ──
+</pre>
+
+    <p><strong>Quantum teleportation circuit</strong> (teleport $|\psi\rangle$ from Alice to Bob):</p>
+<pre style="background:var(--bg-2);border:1px solid var(--border);border-radius:6px;padding:12px;overflow-x:auto;font-size:0.85em;color:var(--fg-1)">
+     ┌───────┐
+q0:  │ |ψ⟩  ├─── •─── H ─── M ──╥────────────
+     └───────┘   │              ║
+q1: ─ H ─── ⊕ ──•─── M ────╥──╫────────────
+                             ║  ║
+q2: ─────────────────── X ──╨──Z ─── |ψ⟩
+                          │    │
+                    (classical feedforward)
+</pre>
+
+    <p><strong>3-qubit QFT</strong> (Quantum Fourier Transform, unrolled):</p>
+<pre style="background:var(--bg-2);border:1px solid var(--border);border-radius:6px;padding:12px;overflow-x:auto;font-size:0.85em;color:var(--fg-1)">
+q0: ─── H ─── R2 ─── R3 ───────────────────── ×─────
+              │        │                        │
+q1: ──────────•── H ─── R2 ────────────────── ×│────
+                        │                       ││
+q2: ────────────────────•─── H ─────────────── ──×──
+                                                (SWAP)
+R2 = P(π/2),  R3 = P(π/4)
+</pre>
+
+    <!-- ========================================================== -->
+    <h2 id="identities">7. Circuit identities and simplification</h2>
+
+    <p>Circuit identities let you rewrite circuits in equivalent forms — simplifying gate counts, reducing T-count, or adapting to hardware connectivity constraints. The following are among the most useful.</p>
+
+    <h3>Single-qubit identities</h3>
+    <div class="math-display">$$H X H = Z, \qquad H Z H = X, \qquad H Y H = -Y$$</div>
+    <div class="math-display">$$T^2 = S, \qquad S^2 = Z, \qquad T^4 = Z, \qquad T^8 = I$$</div>
+    <div class="math-display">$$X = H Z H, \qquad Z = H X H, \qquad Y = i X Z$$</div>
+
+    <p>The $H$-conjugation identities $HXH = Z$ and $HZH = X$ are the quantum analog of the fact that $H$ swaps the $X$ and $Z$ axes on the Bloch sphere. They are constantly used to change the basis in which an operation acts: if you want a $Z$-basis rotation but only have $X$-basis tools, sandwich with $H$.</p>
+
+    <h3>Two-qubit identities</h3>
+    <div class="math-display">$$\text{SWAP} = \text{CNOT}_{01} \cdot \text{CNOT}_{10} \cdot \text{CNOT}_{01}$$</div>
+    <div class="math-display">$$\text{CNOT}_{10} = (H \otimes H)\,\text{CNOT}_{01}\,(H \otimes H)$$</div>
+    <p>The second identity says you can swap the control and target of a CNOT by conjugating both qubits with $H$. This is critical for hardware with directed connectivity — if only one CNOT direction is native, you can implement the other with 2 extra Hadamards.</p>
+
+    <div class="callout">
+      <div class="label">COMMUTATION RULES</div>
+      <p style="margin:6px 0">$Z$ commutes with CNOT on the control qubit: $(Z \otimes I)\,\text{CNOT} = \text{CNOT}\,(Z \otimes I)$.<br>
+      $X$ commutes with CNOT on the target qubit: $(I \otimes X)\,\text{CNOT} = \text{CNOT}\,(I \otimes X)$.<br>
+      These rules allow $Z$ errors on the control and $X$ errors on the target to "pass through" a CNOT, which is why they are called <em>stabilizer propagation rules</em> in error correction.</p>
+    </div>
+
+    <h3>Useful simplifications</h3>
+    <ul class="clean">
+      <li>$U \cdot U^\dagger = I$ — any gate followed by its inverse cancels</li>
+      <li>$H \cdot H = I$, $X \cdot X = I$, $Z \cdot Z = I$ — all Pauli gates and $H$ are their own inverses</li>
+      <li>$S \cdot S = Z$, $S^\dagger \cdot S = I$ — watch the adjoint vs. the gate</li>
+      <li>Two adjacent CNOTs with same control and target cancel: $\text{CNOT}^2 = I$</li>
+      <li>$ZX = iY$, $XZ = -iY$ — products of Paulis are Paulis (up to phase)</li>
+    </ul>
+
+    <!-- ========================================================== -->
+    <h2 id="measurement">8. Measurement and classical feedback</h2>
+
+    <p>Measuring a qubit in the computational basis collapses the state $|\psi\rangle = \alpha|0\rangle + \beta|1\rangle$ to $|0\rangle$ with probability $|\alpha|^2$ or $|1\rangle$ with probability $|\beta|^2$. The post-measurement state is the collapsed eigenstate — the superposition is destroyed.</p>
+
+    <h3>Deferred measurement principle</h3>
+    <p>The <strong>deferred measurement principle</strong> states: any mid-circuit measurement followed by a classically-controlled gate can be replaced by a fully coherent (quantum-controlled) circuit with the measurement deferred to the end, without changing the output distribution. Formally, replacing a classical if-statement with a quantum controlled gate and moving the measurement to the end gives an equivalent circuit for all observables.</p>
+    <p>This means that, in principle, you never need to measure mid-circuit. But in practice, mid-circuit measurement is essential for:</p>
+    <ul class="clean">
+      <li><strong>Quantum error correction</strong>: syndrome measurements detect errors without destroying logical information</li>
+      <li><strong>Quantum teleportation</strong>: Bell measurement collapses the state and the outcome determines classical corrections</li>
+      <li><strong>Magic state preparation</strong>: post-selection on measurement outcomes</li>
+      <li><strong>Adaptive circuits</strong>: circuits where later gates depend on earlier measurement results (dynamic circuits)</li>
+    </ul>
+
+    <h3>Dynamic circuits and classical feedback</h3>
+    <p>A <strong>dynamic circuit</strong> contains mid-circuit measurements and classically conditioned gates: measure qubits $q_0, q_1$ to get classical bits $c_0, c_1$, then apply $X^{c_0}$ and $Z^{c_1}$ to qubit $q_2$. This is exactly the classical correction step in quantum teleportation.</p>
+    <p>Dynamic circuits are strictly more powerful than static (measurement-free) circuits for some tasks — quantum teleportation <em>requires</em> classical communication and cannot be done with a fixed circuit. They are also used in lattice surgery for fault-tolerant quantum computation.</p>
+
+    <div class="callout">
+      <div class="label">TELEPORTATION PROTOCOL</div>
+      <p style="margin:6px 0">
+      1. Alice and Bob share a Bell pair $|\Phi^+\rangle_{12}$.<br>
+      2. Alice has $|\psi\rangle_0 = \alpha|0\rangle + \beta|1\rangle$ to teleport.<br>
+      3. Alice applies CNOT$(q_0 \to q_1)$ then $H(q_0)$.<br>
+      4. Alice measures $q_0, q_1$ to get bits $m_0, m_1$.<br>
+      5. Alice sends $m_0, m_1$ to Bob via classical channel.<br>
+      6. Bob applies $X^{m_1} Z^{m_0}$ to $q_2$. Now $q_2 = |\psi\rangle$.<br>
+      No information is transmitted faster than light — step 5 requires classical communication.
+      </p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="circuit-builder">9. Interactive: quantum circuit builder</h2>
+    <p>Build a 2-qubit circuit by selecting a gate from the palette and clicking a cell on the grid. Press <strong>Simulate</strong> to run the circuit on $|00\rangle$ and see the output state vector. The pre-loaded circuit creates a Bell state.</p>
+
+    <div class="viz-3d" id="qc-builder">
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:10px">
+        <span style="font-family:monospace;font-size:0.85em;color:var(--fg-2)">PALETTE:</span>
+        <button class="btn qc-gate-btn active" data-gate="H">H</button>
+        <button class="btn qc-gate-btn" data-gate="X">X</button>
+        <button class="btn qc-gate-btn" data-gate="Z">Z</button>
+        <button class="btn qc-gate-btn" data-gate="CNOT">CNOT</button>
+        <button class="btn qc-gate-btn" data-gate="M">M</button>
+        <button class="btn qc-gate-btn" data-gate="DEL" style="color:var(--accent-red,#f87171)">DEL</button>
+        <div style="flex:1"></div>
+        <button class="btn" id="qc-reset-btn">↺ Reset</button>
+        <button class="btn primary" id="qc-simulate-btn">▶ Simulate</button>
+      </div>
+
+      <svg id="qc-svg" viewBox="0 0 600 180" width="100%" style="background:var(--bg-1);border:1px solid var(--border);border-radius:6px;cursor:pointer">
+        <!-- Background grid lines drawn by JS -->
+      </svg>
+
+      <div style="margin-top:10px">
+        <div style="font-family:monospace;font-size:0.8em;color:var(--fg-2);margin-bottom:6px">OUTPUT STATE VECTOR (after Simulate):</div>
+        <table id="qc-state-table" style="width:100%;border-collapse:collapse;font-family:monospace;font-size:0.85em">
+          <thead>
+            <tr style="border-bottom:1px solid var(--border)">
+              <th style="text-align:left;padding:4px 8px;color:var(--fg-2)">State</th>
+              <th style="text-align:left;padding:4px 8px;color:var(--fg-2)">Amplitude (re + im·i)</th>
+              <th style="text-align:left;padding:4px 8px;color:var(--fg-2)">Probability</th>
+              <th style="text-align:left;padding:4px 8px;color:var(--fg-2)">Bar</th>
+            </tr>
+          </thead>
+          <tbody id="qc-state-tbody">
+            <tr><td colspan="4" style="padding:8px;color:var(--fg-3);font-style:italic">Press Simulate to see output.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div id="qc-msg" style="font-family:monospace;font-size:0.8em;margin-top:6px;color:var(--accent-cyan,#22d3ee)"></div>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="source-code">10. Source code</h2>
+
+    <details class="algo-code">
+      <summary>Source — Quantum Gates and Circuit Simulation</summary>
+      <div class="code-tabs">
+        <div class="ct-header">
+          <button class="ct-tab active" data-tab="qg-pseudo">Pseudocode</button>
+          <button class="ct-tab" data-tab="qg-py">Python</button>
+          <button class="ct-tab" data-tab="qg-js">JavaScript</button>
+          <button class="ct-tab" data-tab="qg-c">C</button>
+          <button class="ct-tab" data-tab="qg-cpp">C++</button>
+          <button class="ct-tab" data-tab="qg-java">Java</button>
+          <button class="ct-tab" data-tab="qg-go">Go</button>
+        </div>
+
+        <div class="ct-panel active" data-tab="qg-pseudo"><pre><code>// State vector: array of 2^n complex amplitudes
+// |psi> = sum_i a_i |i>  where |a_i|^2 = probability of |i>
+
+StateVector:
+    n_qubits: int
+    amplitudes: complex[2^n]  // indexed by bitstring
+
+function init_zero_state(n):
+    sv = StateVector(n)
+    sv.amplitudes[0] = 1 + 0i   // |00...0>
+    sv.amplitudes[i] = 0 for i > 0
+    return sv
+
+function apply_single_qubit_gate(sv, gate_matrix[2][2], qubit):
+    // Iterate over all 2^n basis states
+    for each pair (|...0...>, |...1...>) differing only at 'qubit':
+        i0 = bitstring with 0 at qubit position
+        i1 = bitstring with 1 at qubit position
+        a0 = sv.amplitudes[i0]
+        a1 = sv.amplitudes[i1]
+        sv.amplitudes[i0] = gate[0][0]*a0 + gate[0][1]*a1
+        sv.amplitudes[i1] = gate[1][0]*a0 + gate[1][1]*a1
+
+function apply_cnot(sv, control, target):
+    for each basis state i where bit at 'control' is 1:
+        j = i XOR (1 << target)   // flip target bit
+        swap sv.amplitudes[i], sv.amplitudes[j]
+
+function measure(sv, qubit):
+    prob_0 = sum |sv.amplitudes[i]|^2 for all i with bit qubit = 0
+    result = 0 with probability prob_0, else 1
+    // Collapse and renormalize
+    norm = sqrt(prob_result)
+    for each i where bit at qubit != result:
+        sv.amplitudes[i] = 0
+    for each i where bit at qubit == result:
+        sv.amplitudes[i] /= norm
+    return result
+
+// Bell state example:
+sv = init_zero_state(2)
+apply_single_qubit_gate(sv, H, qubit=0)
+apply_cnot(sv, control=0, target=1)
+// sv.amplitudes = [0.707, 0, 0, 0.707]  -> |00> and |11></code></pre></div>
+
+        <div class="ct-panel" data-tab="qg-py"><pre><code>"""Quantum gate simulation with NumPy and Qiskit."""
+import numpy as np
+from qiskit import QuantumCircuit
+from qiskit.quantum_info import Statevector
+
+# ── Gate matrices ───────────────────────────────────────────────
+I  = np.eye(2, dtype=complex)
+X  = np.array([[0, 1], [1, 0]], dtype=complex)
+Y  = np.array([[0, -1j], [1j, 0]], dtype=complex)
+Z  = np.array([[1, 0], [0, -1]], dtype=complex)
+H  = np.array([[1, 1], [1, -1]], dtype=complex) / np.sqrt(2)
+S  = np.array([[1, 0], [0, 1j]], dtype=complex)
+T  = np.array([[1, 0], [0, np.exp(1j * np.pi / 4)]], dtype=complex)
+
+def Rx(theta):
+    c, s = np.cos(theta/2), np.sin(theta/2)
+    return np.array([[c, -1j*s], [-1j*s, c]], dtype=complex)
+
+def Ry(theta):
+    c, s = np.cos(theta/2), np.sin(theta/2)
+    return np.array([[c, -s], [s, c]], dtype=complex)
+
+def Rz(theta):
+    return np.array([[np.exp(-1j*theta/2), 0],
+                     [0, np.exp(1j*theta/2)]], dtype=complex)
+
+CNOT = np.array([[1,0,0,0],[0,1,0,0],[0,0,0,1],[0,0,1,0]], dtype=complex)
+CZ   = np.array([[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,-1]], dtype=complex)
+
+# ── Manual state vector simulation ──────────────────────────────
+def apply_gate(state, U, qubit, n_qubits):
+    """Apply 2x2 unitary U to 'qubit' in an n-qubit state vector."""
+    state = state.copy()
+    for idx in range(1 << n_qubits):
+        if (idx >> qubit) & 1 == 0:  # bit at 'qubit' is 0
+            partner = idx | (1 << qubit)
+            a0, a1 = state[idx], state[partner]
+            state[idx]     = U[0,0]*a0 + U[0,1]*a1
+            state[partner] = U[1,0]*a0 + U[1,1]*a1
+    return state
+
+def apply_cnot(state, control, target, n_qubits):
+    """Apply CNOT with given control and target qubit indices."""
+    state = state.copy()
+    for idx in range(1 << n_qubits):
+        if (idx >> control) & 1 == 1:  # control is 1
+            partner = idx ^ (1 << target)
+            if idx < partner:
+                state[idx], state[partner] = state[partner], state[idx]
+    return state
+
+# ── Bell state preparation ───────────────────────────────────────
+def bell_state():
+    n = 2
+    psi = np.zeros(1 << n, dtype=complex)
+    psi[0] = 1.0  # |00>
+    psi = apply_gate(psi, H, qubit=0, n_qubits=n)
+    psi = apply_cnot(psi, control=0, target=1, n_qubits=n)
+    return psi  # [0.707, 0, 0, 0.707]
+
+psi = bell_state()
+print("Bell state amplitudes:", psi.round(3))
+
+# ── Using Qiskit ─────────────────────────────────────────────────
+qc = QuantumCircuit(2)
+qc.h(0)
+qc.cx(0, 1)
+sv = Statevector(qc)
+print("Qiskit Statevector:", sv.data.round(3))
+
+# ── GHZ state ────────────────────────────────────────────────────
+qc3 = QuantumCircuit(3)
+qc3.h(0)
+qc3.cx(0, 1)
+qc3.cx(0, 2)
+sv3 = Statevector(qc3)
+print("GHZ state:", sv3.data.round(3))
+# [0.707, 0, 0, 0, 0, 0, 0, 0.707]  ->  |000> + |111></code></pre></div>
+
+        <div class="ct-panel" data-tab="qg-js"><pre><code>/**
+ * 2-qubit quantum statevector simulator.
+ * State: [a00, a01, a10, a11] where index = q0*2 + q1 (q0 = MSB).
+ */
+
+// Complex number helpers
+const C = {
+  add:  ([r1,i1],[r2,i2]) => [r1+r2, i1+i2],
+  mul:  ([r1,i1],[r2,i2]) => [r1*r2 - i1*i2, r1*i2 + i1*r2],
+  scale:([r,i], s)        => [r*s, i*s],
+  norm: ([r,i])           => r*r + i*i,
+  fmt:  ([r,i], d=4)      => `${r.toFixed(d)}${i>=0?'+':'-'}${Math.abs(i).toFixed(d)}i`
+};
+
+// Gate matrices as flat arrays of [re,im] pairs: [a00,a01,a10,a11]
+const GATES = {
+  H:  [[1/Math.SQRT2,0],[1/Math.SQRT2,0],[1/Math.SQRT2,0],[-1/Math.SQRT2,0]],
+  X:  [[0,0],[1,0],[1,0],[0,0]],
+  Y:  [[0,0],[0,-1],[0,1],[0,0]],
+  Z:  [[1,0],[0,0],[0,0],[-1,0]],
+  S:  [[1,0],[0,0],[0,0],[0,1]],
+  T:  [[1,0],[0,0],[0,0],[Math.cos(Math.PI/4), Math.sin(Math.PI/4)]],
+};
+
+// Initial state |00>
+function zeroState() {
+  return [[1,0],[0,0],[0,0],[0,0]];
+}
+
+// Apply 2x2 gate to qubit 0 (MSB) or qubit 1 (LSB) of 2-qubit state
+function applySingle(state, gate, qubit) {
+  const out = state.map(a => [a[0], a[1]]);
+  // qubit 0: pairs (0,2) and (1,3) — differ in bit 1 (MSB)
+  // qubit 1: pairs (0,1) and (2,3) — differ in bit 0 (LSB)
+  const pairs = qubit === 0 ? [[0,2],[1,3]] : [[0,1],[2,3]];
+  for (const [i0, i1] of pairs) {
+    const a0 = state[i0], a1 = state[i1];
+    out[i0] = C.add(C.mul(gate[0], a0), C.mul(gate[1], a1));
+    out[i1] = C.add(C.mul(gate[2], a0), C.mul(gate[3], a1));
+  }
+  return out;
+}
+
+// CNOT: control=qubit 0 (MSB), target=qubit 1 (LSB)
+function applyCNOT(state) {
+  const out = state.map(a => [a[0], a[1]]);
+  // When control (q0) = 1: indices 2 (|10>) and 3 (|11>) get target flipped
+  out[2] = state[3];
+  out[3] = state[2];
+  return out;
+}
+
+// Run a circuit described as [{gate, qubit}] on |00>
+function simulate(ops) {
+  let state = zeroState();
+  for (const op of ops) {
+    if (op.gate === 'CNOT') {
+      state = applyCNOT(state);
+    } else {
+      state = applySingle(state, GATES[op.gate], op.qubit);
+    }
+  }
+  return state;
+}
+
+// Bell state: H on q0, CNOT
+const bellOps = [{ gate:'H', qubit:0 }, { gate:'CNOT' }];
+const bell = simulate(bellOps);
+console.log('Bell state:');
+['|00>','|01>','|10>','|11>'].forEach((label, i) => {
+  const prob = (C.norm(bell[i]) * 100).toFixed(1);
+  console.log(`  ${label}: ${C.fmt(bell[i])}  (${prob}%)`);
+});
+// |00>: 0.7071+0.0000i  (50.0%)
+// |11>: 0.7071+0.0000i  (50.0%)</code></pre></div>
+
+        <div class="ct-panel" data-tab="qg-c"><pre><code>/*
+ * 2-qubit quantum statevector simulation in C.
+ * State: complex[4]  indexed by q0*2 + q1.
+ */
+#include &lt;stdio.h&gt;
+#include &lt;math.h&gt;
+#include &lt;complex.h&gt;  /* C99 complex */
+
+typedef double complex cx;
+
+/* Gate as 4-element array [a00, a01, a10, a11] */
+static const cx H_mat[4] = {
+    1.0/M_SQRT2, 1.0/M_SQRT2,
+    1.0/M_SQRT2,-1.0/M_SQRT2
+};
+static const cx X_mat[4] = {0, 1, 1, 0};
+static const cx Z_mat[4] = {1, 0, 0, -1};
+
+void apply_single(cx state[4], const cx gate[4], int qubit)
+{
+    /* qubit 0 (MSB): pairs (0,2) and (1,3)
+       qubit 1 (LSB): pairs (0,1) and (2,3) */
+    int pairs[2][2];
+    if (qubit == 0) { pairs[0][0]=0; pairs[0][1]=2; pairs[1][0]=1; pairs[1][1]=3; }
+    else            { pairs[0][0]=0; pairs[0][1]=1; pairs[1][0]=2; pairs[1][1]=3; }
+    for (int p = 0; p &lt; 2; p++) {
+        int i0 = pairs[p][0], i1 = pairs[p][1];
+        cx a0 = state[i0], a1 = state[i1];
+        state[i0] = gate[0]*a0 + gate[1]*a1;
+        state[i1] = gate[2]*a0 + gate[3]*a1;
+    }
+}
+
+void apply_cnot(cx state[4])
+{
+    /* Swap |10> and |11> (indices 2 and 3) */
+    cx tmp = state[2];
+    state[2] = state[3];
+    state[3] = tmp;
+}
+
+void print_state(const cx state[4])
+{
+    const char *labels[] = {"|00>", "|01>", "|10>", "|11>"};
+    for (int i = 0; i &lt; 4; i++) {
+        double re = creal(state[i]), im = cimag(state[i]);
+        double prob = re*re + im*im;
+        printf("  %s  %+.4f %+.4fi  prob=%.2f%%\n",
+               labels[i], re, im, prob*100.0);
+    }
+}
+
+int main(void)
+{
+    cx state[4] = {1, 0, 0, 0};   /* |00> */
+    printf("Initial state:\n"); print_state(state);
+
+    apply_single(state, H_mat, 0);  /* H on q0 */
+    apply_cnot(state);              /* CNOT q0->q1 */
+
+    printf("\nBell state (H then CNOT):\n");
+    print_state(state);
+    /* Expected: |00>=0.707, |11>=0.707 */
+    return 0;
+}</code></pre></div>
+
+        <div class="ct-panel" data-tab="qg-cpp"><pre><code>/**
+ * Templated n-qubit quantum simulator in C++20.
+ * State vector size: 2^N complex amplitudes.
+ */
+#include &lt;cmath&gt;
+#include &lt;complex&gt;
+#include &lt;vector&gt;
+#include &lt;array&gt;
+#include &lt;iostream&gt;
+#include &lt;stdexcept&gt;
+#include &lt;numbers&gt;
+
+using cx  = std::complex&lt;double&gt;;
+using Mat2 = std::array&lt;cx, 4&gt;;   /* row-major 2x2 */
+
+template &lt;int N&gt;
+class QuantumSim {
+public:
+    static constexpr int DIM = 1 &lt;&lt; N;
+    std::vector&lt;cx&gt; state;
+
+    QuantumSim() : state(DIM, 0.0) { state[0] = 1.0; }
+
+    /* Apply 2x2 gate to the given qubit index (0 = MSB). */
+    void applyGate(const Mat2&amp; U, int qubit) {
+        int step = 1 &lt;&lt; (N - 1 - qubit);
+        for (int i = 0; i &lt; DIM; i += 2*step) {
+            for (int j = i; j &lt; i + step; j++) {
+                cx a0 = state[j], a1 = state[j + step];
+                state[j]        = U[0]*a0 + U[1]*a1;
+                state[j + step] = U[2]*a0 + U[3]*a1;
+            }
+        }
+    }
+
+    /* CNOT with given control and target qubit indices. */
+    void applyCNOT(int ctrl, int tgt) {
+        int ctrlBit = 1 &lt;&lt; (N - 1 - ctrl);
+        int tgtBit  = 1 &lt;&lt; (N - 1 - tgt);
+        for (int i = 0; i &lt; DIM; i++) {
+            if ((i &amp; ctrlBit) &amp;&amp; !(i &amp; tgtBit)) {
+                std::swap(state[i], state[i | tgtBit]);
+            }
+        }
+    }
+
+    void print() const {
+        for (int i = 0; i &lt; DIM; i++) {
+            double re = state[i].real(), im = state[i].imag();
+            double prob = re*re + im*im;
+            if (prob &gt; 1e-9) {
+                std::cout &lt;&lt; "  |" &lt;&lt; std::bitset&lt;N&gt;(i) &lt;&lt; "> "
+                          &lt;&lt; std::showpos &lt;&lt; re &lt;&lt; " " &lt;&lt; im &lt;&lt; "i  "
+                          &lt;&lt; std::noshowpos &lt;&lt; "p=" &lt;&lt; prob*100 &lt;&lt; "%\n";
+            }
+        }
+    }
+};
+
+/* Standard gate matrices */
+const Mat2 H_gate = {
+    1.0/std::numbers::sqrt2,  1.0/std::numbers::sqrt2,
+    1.0/std::numbers::sqrt2, -1.0/std::numbers::sqrt2
+};
+const Mat2 X_gate = { 0, 1, 1, 0 };
+const Mat2 Z_gate = { 1, 0, 0, -1 };
+
+inline Mat2 Rz(double theta) {
+    cx emi = std::exp(cx{0, -theta/2});
+    cx epi = std::exp(cx{0,  theta/2});
+    return { emi, 0, 0, epi };
+}
+inline Mat2 Ry(double theta) {
+    double c = std::cos(theta/2), s = std::sin(theta/2);
+    return { c, -s, s, c };
+}
+
+int main() {
+    QuantumSim&lt;2&gt; sim;
+    std::cout &lt;&lt; "=== Bell state ===\n";
+    sim.applyGate(H_gate, 0);
+    sim.applyCNOT(0, 1);
+    sim.print();
+
+    QuantumSim&lt;3&gt; sim3;
+    std::cout &lt;&lt; "\n=== GHZ state (3 qubits) ===\n";
+    sim3.applyGate(H_gate, 0);
+    sim3.applyCNOT(0, 1);
+    sim3.applyCNOT(0, 2);
+    sim3.print();
+}</code></pre></div>
+
+        <div class="ct-panel" data-tab="qg-java"><pre><code>/**
+ * QubitSystem: 2-qubit statevector simulator.
+ * Demonstrates gate matrices, Bell state, and measurement.
+ */
+public class QubitSystem {
+
+    private final int n;          // number of qubits
+    private final int dim;        // 2^n
+    private double[] re, im;      // real and imaginary parts of amplitude
+
+    public QubitSystem(int n) {
+        this.n = n;
+        this.dim = 1 &lt;&lt; n;
+        re = new double[dim];
+        im = new double[dim];
+        re[0] = 1.0;              // start in |00...0&gt;
+    }
+
+    /** Apply 2x2 gate (given as [re00,im00, re01,im01, re10,im10, re11,im11])
+     *  to the specified qubit (0 = MSB). */
+    public void applyGate(double[] ure, double[] uim, int qubit) {
+        int step = 1 &lt;&lt; (n - 1 - qubit);
+        for (int i = 0; i &lt; dim; i += 2 * step) {
+            for (int j = i; j &lt; i + step; j++) {
+                double r0 = re[j], i0 = im[j];
+                double r1 = re[j+step], i1 = im[j+step];
+                re[j]      = ure[0]*r0 - uim[0]*i0 + ure[1]*r1 - uim[1]*i1;
+                im[j]      = ure[0]*i0 + uim[0]*r0 + ure[1]*i1 + uim[1]*r1;
+                re[j+step] = ure[2]*r0 - uim[2]*i0 + ure[3]*r1 - uim[3]*i1;
+                im[j+step] = ure[2]*i0 + uim[2]*r0 + ure[3]*i1 + uim[3]*r1;
+            }
+        }
+    }
+
+    /** CNOT with control and target qubit indices. */
+    public void applyCNOT(int ctrl, int tgt) {
+        int ctrlBit = 1 &lt;&lt; (n - 1 - ctrl);
+        int tgtBit  = 1 &lt;&lt; (n - 1 - tgt);
+        for (int i = 0; i &lt; dim; i++) {
+            if ((i &amp; ctrlBit) != 0 &amp;&amp; (i &amp; tgtBit) == 0) {
+                int partner = i | tgtBit;
+                double tr = re[i]; re[i] = re[partner]; re[partner] = tr;
+                double ti = im[i]; im[i] = im[partner]; im[partner] = ti;
+            }
+        }
+    }
+
+    public void printState() {
+        String[] labels = {"|00>","|01>","|10>","|11>"};
+        for (int i = 0; i &lt; dim; i++) {
+            double prob = re[i]*re[i] + im[i]*im[i];
+            if (prob &gt; 1e-9) {
+                System.out.printf("  %s  %+.4f %+.4fi  p=%.1f%%\n",
+                    labels[i], re[i], im[i], prob*100);
+            }
+        }
+    }
+
+    public static void main(String[] args) {
+        double s = 1.0 / Math.sqrt(2);
+        double[] Hre = {s, s, s, -s};
+        double[] Him = {0, 0, 0, 0};
+
+        System.out.println("=== Bell state ===");
+        QubitSystem qs = new QubitSystem(2);
+        qs.applyGate(Hre, Him, 0);   // H on q0
+        qs.applyCNOT(0, 1);          // CNOT q0 -> q1
+        qs.printState();
+        // |00>: +0.7071 +0.0000i  p=50.0%
+        // |11>: +0.7071 +0.0000i  p=50.0%
+    }
+}</code></pre></div>
+
+        <div class="ct-panel" data-tab="qg-go"><pre><code>// Quantum statevector simulation using complex128.
+// Demonstrates H, CNOT, Bell state, and GHZ state.
+package main
+
+import (
+	"fmt"
+	"math"
+	"math/cmplx"
+)
+
+type State []complex128
+
+// NewState returns |00...0> for n qubits.
+func NewState(n int) State {
+	s := make(State, 1&lt;&lt;n)
+	s[0] = 1
+	return s
+}
+
+// ApplyGate applies a 2x2 unitary to the specified qubit (0 = MSB).
+func ApplyGate(s State, u [4]complex128, qubit, nQubits int) {
+	step := 1 &lt;&lt; (nQubits - 1 - qubit)
+	dim := len(s)
+	for i := 0; i &lt; dim; i += 2 * step {
+		for j := i; j &lt; i+step; j++ {
+			a0, a1 := s[j], s[j+step]
+			s[j]      = u[0]*a0 + u[1]*a1
+			s[j+step] = u[2]*a0 + u[3]*a1
+		}
+	}
+}
+
+// ApplyCNOT applies CNOT with given control and target qubit indices.
+func ApplyCNOT(s State, ctrl, tgt, nQubits int) {
+	ctrlBit := 1 &lt;&lt; (nQubits - 1 - ctrl)
+	tgtBit  := 1 &lt;&lt; (nQubits - 1 - tgt)
+	for i := range s {
+		if (i&amp;ctrlBit) != 0 &amp;&amp; (i&amp;tgtBit) == 0 {
+			partner := i | tgtBit
+			s[i], s[partner] = s[partner], s[i]
+		}
+	}
+}
+
+func PrintState(s State, labels []string) {
+	for i, amp := range s {
+		p := real(amp)*real(amp) + imag(amp)*imag(amp)
+		if p &gt; 1e-9 {
+			fmt.Printf("  %s  %+.4f %+.4fi  p=%.1f%%\n",
+				labels[i], real(amp), imag(amp), p*100)
+		}
+	}
+}
+
+func main() {
+	sq2 := complex(1.0/math.Sqrt2, 0)
+	H := [4]complex128{sq2, sq2, sq2, -sq2}
+	X := [4]complex128{0, 1, 1, 0}
+	_  = X // available for use
+
+	// Bell state: H|0> then CNOT
+	fmt.Println("=== Bell state |Φ+> ===")
+	s2 := NewState(2)
+	ApplyGate(s2, H, 0, 2)
+	ApplyCNOT(s2, 0, 1, 2)
+	PrintState(s2, []string{"|00>", "|01>", "|10>", "|11>"})
+
+	// GHZ state: H on q0, CNOT(0,1), CNOT(0,2)
+	fmt.Println("\n=== GHZ state ===")
+	s3 := NewState(3)
+	ApplyGate(s3, H, 0, 3)
+	ApplyCNOT(s3, 0, 1, 3)
+	ApplyCNOT(s3, 0, 2, 3)
+	labels3 := []string{"|000>","|001>","|010>","|011>",
+	                    "|100>","|101>","|110>","|111>"}
+	PrintState(s3, labels3)
+	// |000>: +0.7071  p=50.0%
+	// |111>: +0.7071  p=50.0%
+
+	// Verify Rz rotation
+	theta := math.Pi / 4 // T gate
+	Rz := [4]complex128{
+		cmplx.Exp(complex(0, -theta/2)), 0,
+		0, cmplx.Exp(complex(0, theta/2)),
+	}
+	st := NewState(1)
+	ApplyGate(st, H[:], 0, 1) // Need 1-qubit ApplyGate - see full version
+	_ = Rz
+	fmt.Println("\nDone.")
+}</code></pre></div>
+      </div>
+    </details>
+
+    <!-- ========================================================== -->
+    <h2 id="summary">11. Summary</h2>
+
+    <div class="callout good">
+      <div class="label">ONE-PARAGRAPH SUMMARY</div>
+      <p style="margin:6px 0">Quantum gates are unitary transformations on qubit state spaces — reversible by construction, unlike classical logic gates. Single-qubit gates ($X$, $Y$, $Z$, $H$, $S$, $T$, and the rotation family $R_x, R_y, R_z$) correspond to rotations on the Bloch sphere; any single-qubit gate decomposes into three rotations via Euler angles. Two-qubit gates (CNOT, CZ, SWAP, iSWAP) create entanglement and are the primitive operations that distinguish quantum from classical computation. The gate set $\{H, T, \text{CNOT}\}$ is universal: any $n$-qubit unitary can be approximated to precision $\epsilon$ in $O(\log^c 1/\epsilon)$ gates (Solovay-Kitaev). The Clifford gates are classically simulable (Gottesman-Knill), so the $T$ gate is the resource that makes circuits classically hard; T-count is the dominant cost in fault-tolerant quantum computing. Circuits are read left-to-right; their complexity is measured by depth, gate count, and T-count. Measurement collapses superpositions, and classical feedback on measurement outcomes enables dynamic circuits essential for error correction and teleportation.</p>
+    </div>
+
+    <h3>Key numbers to remember</h3>
+    <div class="rank-table">
+      <table>
+        <thead>
+          <tr><th>Fact</th><th>Value</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Landauer's erasure cost at 300 K</td><td>$k_B T \ln 2 \approx 2.9 \times 10^{-21}$ J</td></tr>
+          <tr><td>Euler angles for any single-qubit gate</td><td>3 rotations suffice: $R_z R_y R_z$</td></tr>
+          <tr><td>SWAP = how many CNOTs?</td><td>3 CNOTs</td></tr>
+          <tr><td>Toffoli = how many CNOTs?</td><td>6 CNOTs (with ancilla: 4)</td></tr>
+          <tr><td>Clifford + T: what breaks simulability?</td><td>First $T$ gate</td></tr>
+          <tr><td>Solovay-Kitaev exponent $c$</td><td>$\approx 3.97$ (best known: near 2)</td></tr>
+          <tr><td>T gates to achieve precision $\epsilon = 10^{-4}$</td><td>$\sim O(\log^4 10^4) \approx 860$</td></tr>
+          <tr><td>Bell states (maximally entangled 2-qubit states)</td><td>4: $|\Phi^\pm\rangle$, $|\Psi^\pm\rangle$</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Where to go next</h3>
+    <ul class="clean">
+      <li><a href="quantum-computing.html">→ Quantum Computing overview</a> — the big picture of quantum algorithms and hardware platforms</li>
+      <li><a class="ext" href="https://quantum.country/qcvc" target="_blank">Quantum Computing: An Applied Approach (Hidary)</a> — chapter on circuits and universality with worked examples</li>
+      <li><a class="ext" href="https://www.youtube.com/watch?v=F_Riqjdh2oM" target="_blank">3Blue1Brown: Quantum computing basics</a> — visual introduction to gates on the Bloch sphere</li>
+      <li><a class="ext" href="https://arxiv.org/abs/quant-ph/9511018" target="_blank">Solovay-Kitaev theorem (original paper)</a> — the universality result with full proof</li>
+      <li><a class="ext" href="https://arxiv.org/abs/quant-ph/9807006" target="_blank">Gottesman-Knill theorem</a> — why Clifford circuits are efficiently simulable classically</li>
+      <li><a class="ext" href="https://qiskit.org/learn/" target="_blank">Qiskit Textbook</a> — hands-on circuit building with IBM's open-source quantum framework</li>
+    </ul>
+  </article>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ============================================================
+  // Complex number helpers
+  // ============================================================
+  function cAdd(a, b)  { return [a[0]+b[0], a[1]+b[1]]; }
+  function cMul(a, b)  { return [a[0]*b[0]-a[1]*b[1], a[0]*b[1]+a[1]*b[0]]; }
+  function cNorm(a)    { return a[0]*a[0] + a[1]*a[1]; }
+  function cFmt(a, d)  {
+    d = d || 4;
+    var re = a[0].toFixed(d), im = a[1];
+    return re + (im >= 0 ? '+' : '') + im.toFixed(d) + 'i';
+  }
+
+  var SQ2 = 1 / Math.sqrt(2);
+
+  // ============================================================
+  // Gate definitions (2x2 matrices as [a00, a01, a10, a11])
+  // Each element is [re, im]
+  // ============================================================
+  var GATE_MATS = {
+    H: [[SQ2,0],[SQ2,0],[SQ2,0],[-SQ2,0]],
+    X: [[0,0],[1,0],[1,0],[0,0]],
+    Z: [[1,0],[0,0],[0,0],[-1,0]],
+  };
+
+  // ============================================================
+  // 2-qubit statevector  (4 amplitudes: [00, 01, 10, 11])
+  // qubit 0 = MSB, qubit 1 = LSB
+  // ============================================================
+  function zeroState() {
+    return [[1,0],[0,0],[0,0],[0,0]];
+  }
+
+  function applySingle(state, gateName, qubit) {
+    var g = GATE_MATS[gateName];
+    if (!g) return state;
+    var out = state.map(function(a){ return [a[0],a[1]]; });
+    // qubit 0 (MSB): pairs (0,2),(1,3)   qubit 1 (LSB): pairs (0,1),(2,3)
+    var pairs = qubit === 0 ? [[0,2],[1,3]] : [[0,1],[2,3]];
+    pairs.forEach(function(pr) {
+      var i0=pr[0], i1=pr[1];
+      var a0=state[i0], a1=state[i1];
+      out[i0] = cAdd(cMul(g[0],a0), cMul(g[1],a1));
+      out[i1] = cAdd(cMul(g[2],a0), cMul(g[3],a1));
+    });
+    return out;
+  }
+
+  function applyCNOT(state) {
+    var out = state.map(function(a){ return [a[0],a[1]]; });
+    // control=q0(MSB) flips target=q1(LSB)
+    // |10>=index2, |11>=index3 → swap them
+    out[2] = [state[3][0],state[3][1]];
+    out[3] = [state[2][0],state[2][1]];
+    return out;
+  }
+
+  // ============================================================
+  // Circuit builder state
+  // ============================================================
+  var COLS = 6;  // number of time steps
+  var ROWS = 2;  // number of qubits
+  var CELL_W = 72, CELL_H = 70;
+  var MARGIN_L = 50, MARGIN_T = 30;
+
+  // circuit[col][row] = { type: 'H'|'X'|'Z'|'CNOT'|'M', role: 'gate'|'ctrl'|'tgt' }
+  var circuit = [];
+
+  // Pre-load: H on q0 col0, CNOT (ctrl q0, tgt q1) col1
+  function makeEmptyCircuit() {
+    var c = [];
+    for (var col = 0; col < COLS; col++) {
+      c.push([null, null]);
+    }
+    return c;
+  }
+
+  function loadBellCircuit() {
+    circuit = makeEmptyCircuit();
+    circuit[0][0] = { type: 'H', role: 'gate' };
+    circuit[1][0] = { type: 'CNOT', role: 'ctrl' };
+    circuit[1][1] = { type: 'CNOT', role: 'tgt' };
+  }
+
+  var selectedGate = 'H';
+
+  // ============================================================
+  // SVG rendering
+  // ============================================================
+  var svg = document.getElementById('qc-svg');
+  var NS = 'http://www.w3.org/2000/svg';
+
+  function svgEl(tag, attrs) {
+    var el = document.createElementNS(NS, tag);
+    Object.keys(attrs).forEach(function(k){ el.setAttribute(k, attrs[k]); });
+    return el;
+  }
+
+  function colX(col) { return MARGIN_L + col * CELL_W + CELL_W / 2; }
+  function rowY(row) { return MARGIN_T + row * CELL_H + CELL_H / 2; }
+
+  function renderCircuit() {
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+
+    // Qubit wire labels
+    for (var row = 0; row < ROWS; row++) {
+      var lbl = svgEl('text', {
+        x: MARGIN_L - 6, y: rowY(row) + 4,
+        'text-anchor': 'end', fill: '#8a93a6',
+        'font-family': 'monospace', 'font-size': '12'
+      });
+      lbl.textContent = 'q' + row + ':';
+      svg.appendChild(lbl);
+
+      // Wire line
+      var wire = svgEl('line', {
+        x1: MARGIN_L, y1: rowY(row),
+        x2: MARGIN_L + COLS * CELL_W, y2: rowY(row),
+        stroke: '#2a3040', 'stroke-width': '1.5'
+      });
+      svg.appendChild(wire);
+    }
+
+    // Column step numbers
+    for (var col = 0; col < COLS; col++) {
+      var num = svgEl('text', {
+        x: colX(col), y: 16,
+        'text-anchor': 'middle', fill: '#3a4155',
+        'font-family': 'monospace', 'font-size': '10'
+      });
+      num.textContent = 't' + col;
+      svg.appendChild(num);
+    }
+
+    // Gate cells (clickable)
+    for (var col2 = 0; col2 < COLS; col2++) {
+      for (var row2 = 0; row2 < ROWS; row2++) {
+        var cx = colX(col2), cy = rowY(row2);
+        var cell = circuit[col2][row2];
+
+        // Invisible hit area
+        var hit = svgEl('rect', {
+          x: cx - CELL_W/2 + 4, y: cy - CELL_H/2 + 4,
+          width: CELL_W - 8, height: CELL_H - 8,
+          fill: 'transparent', cursor: 'pointer',
+          'data-col': col2, 'data-row': row2
+        });
+        hit.addEventListener('click', onCellClick);
+        svg.appendChild(hit);
+
+        if (!cell) continue;
+
+        if (cell.role === 'gate' || cell.type === 'M') {
+          // Gate box
+          var bg = svgEl('rect', {
+            x: cx - 18, y: cy - 16,
+            width: 36, height: 32, rx: 4,
+            fill: gateColor(cell.type), stroke: '#1a1f2e', 'stroke-width': '1'
+          });
+          svg.appendChild(bg);
+          var gtxt = svgEl('text', {
+            x: cx, y: cy + 5,
+            'text-anchor': 'middle', fill: '#fff',
+            'font-family': 'monospace', 'font-size': '13', 'font-weight': 'bold'
+          });
+          gtxt.textContent = cell.type;
+          svg.appendChild(gtxt);
+        } else if (cell.role === 'ctrl') {
+          // Control dot
+          var dot = svgEl('circle', { cx: cx, cy: cy, r: 6, fill: '#22d3ee' });
+          svg.appendChild(dot);
+          // Vertical line to target
+          var tgtY = rowY(row2 + 1);
+          var vline = svgEl('line', {
+            x1: cx, y1: cy, x2: cx, y2: tgtY,
+            stroke: '#22d3ee', 'stroke-width': '1.5'
+          });
+          svg.appendChild(vline);
+        } else if (cell.role === 'tgt') {
+          // Target circle (XOR symbol)
+          var tcirc = svgEl('circle', { cx: cx, cy: cy, r: 12, fill: 'none',
+            stroke: '#22d3ee', 'stroke-width': '1.5' });
+          svg.appendChild(tcirc);
+          var th1 = svgEl('line', { x1: cx-12, y1: cy, x2: cx+12, y2: cy,
+            stroke: '#22d3ee', 'stroke-width': '1.5' });
+          svg.appendChild(th1);
+          var tv1 = svgEl('line', { x1: cx, y1: cy-12, x2: cx, y2: cy+12,
+            stroke: '#22d3ee', 'stroke-width': '1.5' });
+          svg.appendChild(tv1);
+        }
+      }
+    }
+  }
+
+  function gateColor(type) {
+    var map = { H:'#7c5cff', X:'#f472b6', Z:'#22d3ee', M:'#f59e0b', CNOT:'#22d3ee' };
+    return map[type] || '#555';
+  }
+
+  // ============================================================
+  // Cell click handler
+  // ============================================================
+  function onCellClick(e) {
+    var col = parseInt(e.target.getAttribute('data-col'));
+    var row = parseInt(e.target.getAttribute('data-row'));
+
+    if (selectedGate === 'DEL') {
+      // Clear cell and partner
+      if (circuit[col][row] && circuit[col][row].type === 'CNOT') {
+        var partner = row === 0 ? 1 : 0;
+        circuit[col][partner] = null;
+      }
+      circuit[col][row] = null;
+      renderCircuit();
+      return;
+    }
+
+    if (selectedGate === 'CNOT') {
+      // Place ctrl on row, tgt on other row (only works for 2-qubit system)
+      var ctrl = row, tgt = row === 0 ? 1 : 0;
+      circuit[col][ctrl] = { type: 'CNOT', role: 'ctrl' };
+      circuit[col][tgt]  = { type: 'CNOT', role: 'tgt' };
+    } else {
+      circuit[col][row] = { type: selectedGate, role: 'gate' };
+    }
+    renderCircuit();
+  }
+
+  // ============================================================
+  // Palette buttons
+  // ============================================================
+  document.querySelectorAll('.qc-gate-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      selectedGate = btn.getAttribute('data-gate');
+      document.querySelectorAll('.qc-gate-btn').forEach(function(b){ b.classList.remove('active'); });
+      btn.classList.add('active');
+    });
+  });
+
+  // ============================================================
+  // Simulation
+  // ============================================================
+  function runSimulation() {
+    var state = zeroState();
+
+    for (var col = 0; col < COLS; col++) {
+      var c0 = circuit[col][0], c1 = circuit[col][1];
+
+      if (c0 && c0.type === 'CNOT' && c0.role === 'ctrl') {
+        state = applyCNOT(state);
+      } else {
+        if (c0 && c0.role === 'gate' && c0.type !== 'M') {
+          state = applySingle(state, c0.type, 0);
+        }
+        if (c1 && c1.role === 'gate' && c1.type !== 'M') {
+          state = applySingle(state, c1.type, 1);
+        }
+      }
+    }
+
+    var labels = ['|00\u27E9', '|01\u27E9', '|10\u27E9', '|11\u27E9'];
+    var tbody = document.getElementById('qc-state-tbody');
+    tbody.innerHTML = '';
+    var hasAny = false;
+
+    labels.forEach(function(lbl, i) {
+      var prob = cNorm(state[i]);
+      if (prob < 1e-9) return;
+      hasAny = true;
+      var tr = document.createElement('tr');
+      tr.style.borderBottom = '1px solid var(--border)';
+
+      function td(content, align) {
+        var el = document.createElement('td');
+        el.style.padding = '4px 8px';
+        el.style.textAlign = align || 'left';
+        el.textContent = content;
+        return el;
+      }
+
+      var barWidth = Math.round(prob * 120);
+      var barHtml = '<div style="width:' + barWidth + 'px;height:10px;background:var(--accent-purple,#7c5cff);border-radius:2px;display:inline-block"></div>';
+
+      var tdBar = document.createElement('td');
+      tdBar.style.padding = '4px 8px';
+      tdBar.innerHTML = barHtml;
+
+      tr.appendChild(td(lbl));
+      tr.appendChild(td(cFmt(state[i], 4)));
+      tr.appendChild(td((prob * 100).toFixed(1) + '%'));
+      tr.appendChild(tdBar);
+      tbody.appendChild(tr);
+    });
+
+    if (!hasAny) {
+      var row = document.createElement('tr');
+      var cell = document.createElement('td');
+      cell.colSpan = 4;
+      cell.style.padding = '8px';
+      cell.style.color = 'var(--fg-3)';
+      cell.textContent = 'All amplitudes are zero (degenerate circuit).';
+      row.appendChild(cell);
+      tbody.appendChild(row);
+    }
+
+    document.getElementById('qc-msg').textContent =
+      'Simulated on |00\u27E9. ' + new Date().toLocaleTimeString();
+  }
+
+  document.getElementById('qc-simulate-btn').addEventListener('click', runSimulation);
+  document.getElementById('qc-reset-btn').addEventListener('click', function() {
+    loadBellCircuit();
+    renderCircuit();
+    var tbody = document.getElementById('qc-state-tbody');
+    tbody.innerHTML = '<tr><td colspan="4" style="padding:8px;color:var(--fg-3);font-style:italic">Press Simulate to see output.</td></tr>';
+    document.getElementById('qc-msg').textContent = '';
+  });
+
+  // ============================================================
+  // Code tabs (shared handler for all .algo-code blocks)
+  // ============================================================
+  document.querySelectorAll('.code-tabs').forEach(function(tabs) {
+    tabs.querySelectorAll('.ct-tab').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var tabId = btn.getAttribute('data-tab');
+        tabs.querySelectorAll('.ct-tab').forEach(function(b){ b.classList.remove('active'); });
+        tabs.querySelectorAll('.ct-panel').forEach(function(p){ p.classList.remove('active'); });
+        btn.classList.add('active');
+        tabs.querySelector('.ct-panel[data-tab="' + tabId + '"]').classList.add('active');
+      });
+    });
+  });
+
+  // ============================================================
+  // Init
+  // ============================================================
+  loadBellCircuit();
+  renderCircuit();
+
+})();
+</script>
+</body>
+</html>

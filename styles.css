@@ -880,6 +880,45 @@ main {
 }
 .track-banner.tb-chem .tb-arrow { color: var(--warn); }
 
+/* Blockchain track — orange #f97316 */
+.track-banner.tb-chain {
+  border-color: rgba(249, 115, 22, 0.45);
+}
+.track-banner.tb-chain::before {
+  background: linear-gradient(135deg, rgba(249, 115, 22, 0.20), rgba(249, 115, 22, 0.04) 55%, transparent 90%);
+}
+.track-banner.tb-chain:hover { border-color: #f97316; }
+.track-banner.tb-chain .tb-label {
+  color: #f97316;
+  border-color: rgba(249, 115, 22, 0.5);
+}
+.track-banner.tb-chain .tb-arrow { color: #f97316; }
+
+/* Quantum Computing track — violet #a855f7 */
+.track-banner.tb-qc {
+  border-color: rgba(168, 85, 247, 0.45);
+}
+.track-banner.tb-qc::before {
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.20), rgba(168, 85, 247, 0.04) 55%, transparent 90%);
+}
+.track-banner.tb-qc:hover { border-color: #a855f7; }
+.track-banner.tb-qc .tb-label {
+  color: #a855f7;
+  border-color: rgba(168, 85, 247, 0.5);
+}
+.track-banner.tb-qc .tb-arrow { color: #a855f7; }
+
+.hero-nav-btn.tb-chain {
+  background: rgba(249,115,22,0.12);
+  border-color: rgba(249,115,22,0.35);
+  color: #f97316;
+}
+.hero-nav-btn.tb-qc {
+  background: rgba(168,85,247,0.12);
+  border-color: rgba(168,85,247,0.35);
+  color: #a855f7;
+}
+
 @media (max-width: 700px) {
   .track-banner {
     padding: 20px 18px;

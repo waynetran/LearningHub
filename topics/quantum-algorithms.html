@@ -1,0 +1,1566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quantum Algorithms — Deep Dive</title>
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError: false});"></script>
+</head>
+<body>
+<div id="tooltip"></div>
+
+<nav class="topic-nav">
+  <a class="back" href="../quantum-computing.html">← Back to Quantum Computing</a>
+  <div class="crumb">Deep Dives / <span class="topic-name">Quantum Algorithms</span></div>
+</nav>
+
+<div class="topic-layout">
+  <aside class="topic-toc">
+    <h4>ON THIS PAGE</h4>
+    <ul>
+      <li><a href="#speedup">1. What makes a quantum algorithm fast?</a></li>
+      <li><a href="#query">2. Query complexity and oracle models</a></li>
+      <li><a href="#deutsch-jozsa">3. Deutsch-Jozsa algorithm</a></li>
+      <li><a href="#bernstein-vazirani">4. Bernstein-Vazirani algorithm</a></li>
+      <li><a href="#simon">5. Simon's algorithm</a></li>
+      <li><a href="#qft">6. Quantum Fourier Transform</a></li>
+      <li><a href="#shor">7. Shor's factoring algorithm</a></li>
+      <li><a href="#grover">8. Grover's search algorithm</a></li>
+      <li><a href="#qpe">9. Quantum Phase Estimation</a></li>
+      <li><a href="#nearterm">10. VQE and QAOA (near-term)</a></li>
+      <li><a href="#grover-viz">11. Interactive: Grover's visualizer</a></li>
+      <li><a href="#source">12. Source code</a></li>
+      <li><a href="#summary">13. Summary</a></li>
+    </ul>
+  </aside>
+
+  <article class="topic-content">
+    <h1>Quantum Algorithms</h1>
+    <p class="subtitle">Harnessing interference for exponential advantage — from Deutsch's one-query miracle to Shor's factoring breakthrough and Grover's optimal search, built up from first principles with full derivations.</p>
+    <div class="meta-tags">
+      <span>Prereq: linear algebra, complex numbers, basic quantum mechanics</span>
+      <span>Time to read: ~45 min</span>
+      <span>Interactive figures: 1</span>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="speedup">1. What makes a quantum algorithm fast?</h2>
+
+    <p>A quantum computer manipulates a <em>state vector</em> of $2^n$ complex amplitudes using unitary operations on $n$ qubits. That sounds like exponential memory — and classically, simulating it costs exactly that. But a quantum computer doesn't store all $2^n$ amplitudes explicitly in separate registers. Instead, a single quantum state <em>is</em> that vector, and a single unitary gate transforms all $2^n$ components in one physical step.</p>
+
+    <p>Three quantum resources conspire to produce algorithmic speedups:</p>
+    <ol class="clean">
+      <li><strong>Superposition</strong> — a qubit can be $\alpha|0\rangle + \beta|1\rangle$ with $|\alpha|^2 + |\beta|^2 = 1$. Apply Hadamard to $n$ qubits: $H^{\otimes n}|0\rangle^n = \frac{1}{\sqrt{2^n}}\sum_{x \in \{0,1\}^n}|x\rangle$. Now a single oracle call evaluates $f$ on all $2^n$ inputs simultaneously. This is <em>quantum parallelism</em>.</li>
+      <li><strong>Entanglement</strong> — multi-qubit correlations that cannot be described by independent single-qubit states. Entanglement lets $n$ qubits encode correlations requiring exponentially many classical bits.</li>
+      <li><strong>Interference</strong> — amplitudes are complex numbers; they can cancel (destructive interference) or reinforce (constructive interference). The art of quantum algorithm design is engineering interference patterns that cancel amplitudes of wrong answers and boost amplitudes of right ones.</li>
+    </ol>
+
+    <div class="callout">
+      <div class="label">THE KEY CAVEAT</div>
+      <p style="margin:6px 0">Quantum parallelism alone gives you nothing. After one oracle call on a uniform superposition, measuring gives a single uniformly random function value — no better than a single classical query. The entire difficulty of quantum algorithm design is arranging interference so that the right answer has high amplitude before measurement. Most functions have no useful interference structure. The algorithms on this page are the rare cases where such structure exists and can be exploited.</p>
+    </div>
+
+    <h3>Proven quantum speedups</h3>
+
+    <table class="rank-table">
+      <thead>
+        <tr>
+          <th>Problem</th>
+          <th>Classical</th>
+          <th>Quantum</th>
+          <th>Speedup type</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Unstructured search ($N$ items)</td>
+          <td>$O(N)$</td>
+          <td>$O(\sqrt{N})$</td>
+          <td>Quadratic (optimal)</td>
+        </tr>
+        <tr>
+          <td>Integer factoring ($N$-bit)</td>
+          <td>sub-exp $L[1/3]$</td>
+          <td>$O((\log N)^3)$</td>
+          <td>Exponential (conjectured)</td>
+        </tr>
+        <tr>
+          <td>Period finding</td>
+          <td>Exponential</td>
+          <td>Polynomial</td>
+          <td>Exponential</td>
+        </tr>
+        <tr>
+          <td>Simulating quantum systems</td>
+          <td>Exponential</td>
+          <td>Polynomial</td>
+          <td>Exponential</td>
+        </tr>
+        <tr>
+          <td>Solving linear systems (HHL)</td>
+          <td>$O(N)$</td>
+          <td>$O(\log N)$</td>
+          <td>Exponential (with caveats)</td>
+        </tr>
+        <tr>
+          <td>Deutsch-Jozsa constant/balanced</td>
+          <td>$N/2 + 1$ queries</td>
+          <td>$1$ query</td>
+          <td>Exponential (query)</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- ========================================================== -->
+    <h2 id="query">2. Query complexity and oracle models</h2>
+
+    <p>To compare quantum and classical algorithms fairly, we use the <em>oracle model</em> (also called the <em>black-box model</em> or <em>query model</em>). The algorithm is given access to a function $f: \{0,1\}^n \to \{0,1\}^m$ only through a black-box oracle. We count the number of queries to $f$, not the total computation time.</p>
+
+    <p>A <strong>classical deterministic</strong> oracle call evaluates $f(x)$ for one chosen input $x$. A <strong>quantum oracle</strong> acts as a unitary:</p>
+    <div class="math-display">$$O_f |x\rangle|y\rangle = |x\rangle|y \oplus f(x)\rangle$$</div>
+    <p>where $\oplus$ denotes bitwise XOR and $|x\rangle|y\rangle$ is a tensor product of an $n$-qubit input register and an $m$-qubit output register. Because $O_f$ is linear, a superposition state gets all function values simultaneously:</p>
+    <div class="math-display">$$O_f \left(\sum_x \alpha_x |x\rangle\right)|0\rangle = \sum_x \alpha_x |x\rangle|f(x)\rangle$$</div>
+
+    <p>The query complexity model cleanly separates algorithmic structure from implementation details. Quantum advantage in query complexity is <em>proven</em> — not conjectured — for many problems. Whether that translates to real computational speedup depends on the time to implement the oracle, but the query separations are mathematically rigorous.</p>
+
+    <div class="math-glossary">
+      <p class="mg-title">Oracle model key terms</p>
+      <dl>
+        <dt>$f: \{0,1\}^n \to \{0,1\}^m$</dt>
+        <dd>The black-box function. In a concrete algorithm this might be $f(x) = a^x \bmod N$ (Shor) or $f(x) = [x = x^*]$ (Grover), but the oracle model treats it opaquely.</dd>
+        <dt>$O_f$</dt>
+        <dd>The quantum phase oracle. The $\oplus$ ensures $O_f$ is its own inverse: $O_f^2 = I$ (XOR twice restores the original). This makes $O_f$ a valid unitary (in fact, a reflection).</dd>
+        <dt>Phase kickback</dt>
+        <dd>If the output register is initialized to $\frac{|0\rangle - |1\rangle}{\sqrt{2}}$ (eigenstate of $X$ with eigenvalue $-1$), then $O_f|x\rangle\frac{|0\rangle-|1\rangle}{\sqrt{2}} = (-1)^{f(x)}|x\rangle\frac{|0\rangle-|1\rangle}{\sqrt{2}}$. The function value kicks back as a phase onto the input register.
+          <span class="mg-why">Phase kickback is the key trick in Deutsch-Jozsa, Bernstein-Vazirani, Simon, Grover, and more. The ancilla qubit is left unchanged, so it can be ignored. All the information is in the relative phases of $|x\rangle$.</span>
+        </dd>
+        <dt>$D(f)$</dt>
+        <dd>Deterministic query complexity — minimum queries needed by any deterministic classical algorithm.</dd>
+        <dt>$Q(f)$</dt>
+        <dd>Quantum query complexity — minimum queries needed by any bounded-error quantum algorithm.</dd>
+      </dl>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="deutsch-jozsa">3. Deutsch-Jozsa Algorithm (1992)</h2>
+
+    <p><strong>Problem:</strong> You are given oracle access to $f: \{0,1\}^n \to \{0,1\}$ with the promise that $f$ is either <em>constant</em> (outputs the same value for all inputs) or <em>balanced</em> (outputs 0 for exactly half the inputs and 1 for the other half). Determine which.</p>
+
+    <p><strong>Classical complexity:</strong> In the worst case, a deterministic algorithm needs $N/2 + 1 = 2^{n-1} + 1$ queries. You might query $2^{n-1}$ inputs that all return 0, and only the next query distinguishes a function that is constant-zero from one that has exactly $2^{n-1}$ zeros and $2^{n-1}$ ones. A randomized algorithm can decide with high probability in $O(1)$ queries, but Deutsch-Jozsa is the canonical example of a deterministic quantum algorithm that is exponentially faster than its deterministic classical counterpart.</p>
+
+    <p><strong>Quantum complexity:</strong> exactly 1 oracle query.</p>
+
+    <h3>The circuit</h3>
+    <ol class="clean">
+      <li>Initialize: $|0\rangle^{\otimes n}|1\rangle$</li>
+      <li>Apply $H^{\otimes n} \otimes H$: creates uniform superposition on first $n$ qubits, puts ancilla in $\frac{|0\rangle - |1\rangle}{\sqrt{2}}$</li>
+      <li>Apply oracle $O_f$ (one query)</li>
+      <li>Apply $H^{\otimes n}$ to first $n$ qubits</li>
+      <li>Measure first $n$ qubits: all-zeros $\Rightarrow$ constant; any nonzero outcome $\Rightarrow$ balanced</li>
+    </ol>
+
+    <h3>Full derivation</h3>
+
+    <p><strong>After step 2</strong> (applying $H^{\otimes n+1}$):</p>
+    <div class="math-display">$$|\psi_1\rangle = \frac{1}{\sqrt{2^n}}\sum_{x \in \{0,1\}^n}|x\rangle \otimes \frac{|0\rangle - |1\rangle}{\sqrt{2}}$$</div>
+
+    <p><strong>After oracle</strong> (phase kickback gives $(-1)^{f(x)}$ to each $|x\rangle$ term):</p>
+    <div class="math-display">$$|\psi_2\rangle = \frac{1}{\sqrt{2^n}}\sum_{x}(-1)^{f(x)}|x\rangle \otimes \frac{|0\rangle - |1\rangle}{\sqrt{2}}$$</div>
+
+    <p><strong>After $H^{\otimes n}$</strong> on the first register. Using the identity $H^{\otimes n}|x\rangle = \frac{1}{\sqrt{2^n}}\sum_z (-1)^{x \cdot z}|z\rangle$:</p>
+    <div class="math-display">$$|\psi_3\rangle = \sum_{z \in \{0,1\}^n} \underbrace{\left(\frac{1}{2^n}\sum_{x}(-1)^{f(x)+x\cdot z}\right)}_{\text{amplitude of }|z\rangle}|z\rangle \otimes \frac{|0\rangle - |1\rangle}{\sqrt{2}}$$</div>
+
+    <p>The amplitude of $|0\rangle^n$ (i.e., $z = 0\ldots0$) is:</p>
+    <div class="math-display">$$A_{0^n} = \frac{1}{2^n}\sum_{x}(-1)^{f(x)}$$</div>
+
+    <p>For a <strong>constant</strong> function ($f(x) = c$ for all $x$): $A_{0^n} = (-1)^c \cdot \frac{1}{2^n} \cdot 2^n = \pm 1$. The state collapses to $|0\rangle^n$ with certainty. For a <strong>balanced</strong> function: exactly half the terms contribute $+1$ and half contribute $-1$, so $A_{0^n} = 0$. The state has <em>zero</em> overlap with $|0\rangle^n$ — we never measure all zeros.</p>
+
+    <div class="callout">
+      <div class="label">THE INSIGHT</div>
+      <p style="margin:6px 0">One oracle query creates a superposition in which $(-1)^{f(x)}$ phases encode the entire truth table of $f$. Applying $H^{\otimes n}$ computes the <em>Walsh-Hadamard transform</em> of those phases. The constant-vs-balanced distinction maps to whether the zero-frequency component is nonzero — a global property that one classical query cannot reveal but that interference extracts perfectly.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="bernstein-vazirani">4. Bernstein-Vazirani Algorithm (1993)</h2>
+
+    <p><strong>Problem:</strong> $f(x) = s \cdot x \pmod{2}$ for a hidden string $s \in \{0,1\}^n$ (the inner product of $s$ and $x$ over $\mathbb{F}_2$). Find $s$. Classical: $n$ queries (query each unit vector $e_i$ to read off $s_i$). Quantum: 1 query.</p>
+
+    <p>The circuit is <em>identical</em> to Deutsch-Jozsa. The difference is what we measure. After the oracle and final Hadamard, the amplitude of $|y\rangle$ is:</p>
+    <div class="math-display">$$A_y = \frac{1}{2^n}\sum_{x}(-1)^{f(x) + y \cdot x} = \frac{1}{2^n}\sum_{x}(-1)^{(s \oplus y)\cdot x}$$</div>
+
+    <p>By the standard identity $\frac{1}{2^n}\sum_x (-1)^{z \cdot x} = [z = 0^n]$ (it's 1 if $z = 0^n$ and 0 otherwise), we get $A_y = [s = y]$. The measurement outcome is exactly $s$ with probability 1.</p>
+
+    <p>In one query, you learn all $n$ bits of $s$ simultaneously. Classically you need $n$ queries, because each query gives only one bit of information about $s$. The quantum algorithm extracts all $n$ bits from the global phase structure of a single superposition evaluation.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="simon">5. Simon's Algorithm (1994)</h2>
+
+    <p><strong>Problem:</strong> Given oracle access to $f: \{0,1\}^n \to \{0,1\}^n$ with the promise that there exists a nonzero $s \in \{0,1\}^n$ such that $f(x) = f(y)$ if and only if $y = x$ or $y = x \oplus s$ (i.e., $f$ is 2-to-1 with period $s$). Find $s$. Classical: $\Omega(2^{n/2})$ queries. Quantum: $O(n)$ queries.</p>
+
+    <p>Simon's algorithm (1994) was the first proof that quantum computers can be <em>exponentially</em> faster than classical computers in the oracle model, and it directly inspired Shor's factoring algorithm two months later.</p>
+
+    <h3>The procedure</h3>
+    <p>Repeat $O(n)$ times:</p>
+    <ol class="clean">
+      <li>Prepare $|0\rangle^n|0\rangle^n$</li>
+      <li>Apply $H^{\otimes n}$ to first register: $\frac{1}{\sqrt{2^n}}\sum_x |x\rangle|0\rangle$</li>
+      <li>Query oracle: $\frac{1}{\sqrt{2^n}}\sum_x |x\rangle|f(x)\rangle$</li>
+      <li>Measure second register: say we observe $f(x_0)$. The first register collapses to $\frac{|x_0\rangle + |x_0 \oplus s\rangle}{\sqrt{2}}$</li>
+      <li>Apply $H^{\otimes n}$ to first register. Each outcome $y$ has amplitude $\frac{1}{\sqrt{2^{n-1}}}$ iff $y \cdot s = 0 \pmod 2$, else 0.</li>
+      <li>Measure first register: get a random $y$ with $y \cdot s = 0 \pmod 2$</li>
+    </ol>
+
+    <p>After $n-1$ linearly independent equations $\{y_i \cdot s = 0\}$, classical Gaussian elimination over $\mathbb{F}_2$ recovers $s$ uniquely. Expected number of rounds until $n-1$ independent vectors: $O(n)$ (birthday-argument analysis).</p>
+
+    <h3>Why the classical lower bound is exponential</h3>
+    <p>Any classical algorithm that asks fewer than $2^{n/2}$ queries cannot distinguish the case $s = 0^n$ (injective $f$) from $s \neq 0^n$ with good probability, because with high probability you haven't seen any collision $f(x) = f(x \oplus s)$ yet. The Birthday paradox: you need $\Theta(\sqrt{2^n}) = \Theta(2^{n/2})$ random queries before seeing a collision.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="qft">6. The Quantum Fourier Transform</h2>
+
+    <p>The Discrete Fourier Transform (DFT) of a length-$N$ vector $f_0, \ldots, f_{N-1}$ is:</p>
+    <div class="math-display">$$\hat{f}_k = \sum_{j=0}^{N-1} f_j\, \omega^{jk}, \qquad \omega = e^{2\pi i/N}$$</div>
+
+    <p>The Quantum Fourier Transform (QFT) is the unitary that performs this transformation on amplitude vectors:</p>
+    <div class="math-display">$$\text{QFT}_N |j\rangle = \frac{1}{\sqrt{N}}\sum_{k=0}^{N-1}e^{2\pi i jk/N}|k\rangle$$</div>
+
+    <p>For $N = 2^n$ (the case we care about), the QFT acts on $n$-qubit states. By writing $k$ in binary $k = k_1 2^{n-1} + \ldots + k_n 2^0$, the QFT factors as a <em>product state</em>:</p>
+    <div class="math-display">$$\text{QFT}_{2^n}|j\rangle = \frac{1}{\sqrt{2^n}}\bigotimes_{l=1}^{n}\left(|0\rangle + e^{2\pi i j/2^l}|1\rangle\right)$$</div>
+
+    <p>This product form enables an efficient circuit. The QFT on $n$ qubits uses:</p>
+    <ul class="clean">
+      <li>$n$ Hadamard gates (one per qubit)</li>
+      <li>$n(n-1)/2$ controlled phase rotation gates, where $R_k = \begin{pmatrix}1 & 0 \\ 0 & e^{2\pi i/2^k}\end{pmatrix}$</li>
+      <li>$\lfloor n/2 \rfloor$ SWAP gates at the end to reverse bit order</li>
+    </ul>
+
+    <p>Total: $O(n^2)$ gates. The classical FFT needs $O(n \cdot 2^n)$ operations (it's fast, but exponential in $n$). The QFT is exponentially faster — but we pay: we cannot read out all $2^n$ Fourier coefficients, only sample from them.</p>
+
+    <div class="callout">
+      <div class="label">THE SAMPLING CAVEAT</div>
+      <p style="margin:6px 0">The QFT transforms $\sum_j f_j |j\rangle$ to $\sum_k \hat{f}_k |k\rangle$. Measuring gives a single $k$ drawn proportionally to $|\hat{f}_k|^2$. So the QFT is only useful when the Fourier spectrum is concentrated at a few frequencies you care about — as in period finding, where the spectrum has peaks at multiples of $1/r$.</p>
+    </div>
+
+    <h3>QFT circuit for $n = 3$ qubits</h3>
+    <div class="math-display no-center">
+$$\begin{array}{lcl}
+|q_0\rangle & \longrightarrow & H \;\; R_2 \;\; R_3 \;\; \cdots \\
+|q_1\rangle & \longrightarrow & \cdot \;\;\;\;\; H \;\; R_2 \;\;\; \cdots \\
+|q_2\rangle & \longrightarrow & \cdot \;\;\;\;\; \cdot \;\;\;\;\; H \;\;\;\; \cdots \\
+\end{array} \quad\text{followed by bit reversal}$$
+    </div>
+    <p>The $R_k$ gate on qubit $q_i$ is controlled by qubit $q_j$ where $k = j - i + 1$. Each Hadamard creates the $|0\rangle + e^{i\phi}|1\rangle$ superposition; the controlled phases build up the binary fractions $0.j_{m}\ldots j_n$ in the exponent.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="shor">7. Shor's Factoring Algorithm (1994)</h2>
+
+    <p>Peter Shor's 1994 algorithm factors an $n$-bit integer $N$ in polynomial time $O(n^3)$ on a quantum computer. It threatens RSA and all cryptosystems based on the hardness of integer factoring. The best classical algorithm (general number field sieve) runs in sub-exponential time $L[1/3, (64/9)^{1/3}]$, which is still superpolynomial.</p>
+
+    <h3>Step 1 — Classical reduction to period finding</h3>
+    <p>This step uses classical number theory (Euler, Fermat):</p>
+    <ol class="clean">
+      <li>If $N$ is even, return 2. If $N = p^k$, use classical algorithms to find $p$.</li>
+      <li>Pick a random $a$ with $1 &lt; a &lt; N$ and compute $\gcd(a, N)$ classically. If $\gcd \neq 1$, we found a factor — done.</li>
+      <li>Otherwise, find the <em>period</em> $r$ of the modular exponential: the smallest $r &gt; 0$ with $a^r \equiv 1 \pmod N$.</li>
+      <li>If $r$ is even and $a^{r/2} \not\equiv -1 \pmod N$, then $\gcd(a^{r/2} - 1, N)$ and $\gcd(a^{r/2} + 1, N)$ are non-trivial factors of $N$ with probability $\geq 1/2$ over the random choice of $a$.</li>
+    </ol>
+
+    <div class="callout">
+      <div class="label">WHY STEP 4 WORKS</div>
+      <p style="margin:6px 0">From $a^r \equiv 1 \pmod N$ we get $a^r - 1 \equiv 0 \pmod N$. If $r$ is even, $a^r - 1 = (a^{r/2}-1)(a^{r/2}+1)$. Both factors share a non-trivial factor with $N$ unless $a^{r/2} \equiv \pm 1 \pmod N$. The probability analysis shows this bad case has probability at most $1/2$ for each randomly chosen $a$ when $N$ has at least two distinct odd prime factors.</p>
+    </div>
+
+    <h3>Step 2 — Quantum period finding</h3>
+    <p>This is where the quantum speedup comes from. Choose $Q = 2^m$ with $N^2 \leq Q &lt; 2N^2$. The circuit:</p>
+
+    <p><strong>1. Prepare uniform superposition:</strong></p>
+    <div class="math-display">$$\frac{1}{\sqrt{Q}}\sum_{x=0}^{Q-1}|x\rangle|0\rangle$$</div>
+
+    <p><strong>2. Apply the modular exponentiation oracle</strong> (compute $a^x \bmod N$ into the second register):</p>
+    <div class="math-display">$$\frac{1}{\sqrt{Q}}\sum_{x=0}^{Q-1}|x\rangle|a^x \bmod N\rangle$$</div>
+
+    <p><strong>3. Measure the second register.</strong> Say we observe the value $v = a^{x_0} \bmod N$. The first register collapses to a uniform superposition over all $x$ with $a^x \equiv v \pmod N$, i.e., all $x = x_0, x_0 + r, x_0 + 2r, \ldots$:</p>
+    <div class="math-display">$$\frac{1}{\sqrt{Q/r}}\sum_{k=0}^{Q/r - 1}|x_0 + kr\rangle$$</div>
+
+    <p><strong>4. Apply the QFT</strong> to the first register. The amplitudes concentrate at multiples of $Q/r$:</p>
+    <div class="math-display">$$\text{QFT}\left(\frac{1}{\sqrt{Q/r}}\sum_k |x_0 + kr\rangle\right) \approx \frac{1}{\sqrt{r}}\sum_{j=0}^{r-1} e^{2\pi i j x_0/r}\left|\frac{jQ}{r}\right\rangle$$</div>
+
+    <p><strong>5. Measure</strong> the first register: get some multiple $j \cdot Q/r$. Dividing by $Q$ gives $j/r$ as a rational number. Using the <em>continued fraction algorithm</em> classically, extract the denominator $r$ from the rational approximation $j/r \approx \text{measured value}/Q$.</p>
+
+    <p><strong>Success probability per run:</strong> $\Omega(1/\log\log r)$. Expected $O(\log\log N)$ quantum runs suffice.</p>
+
+    <h3>Complexity and cryptographic implications</h3>
+    <table class="rank-table">
+      <thead>
+        <tr><th>Resource</th><th>Shor's algorithm</th><th>Classical best (GNFS)</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Gate count</td><td>$O(n^3)$ or $O(n^2 \log n)$ with Fourier sampling</td><td>$\exp(O(n^{1/3}(\log n)^{2/3}))$</td></tr>
+        <tr><td>Logical qubits needed (RSA-2048)</td><td>$\approx 4000$</td><td>N/A (classical)</td></tr>
+        <tr><td>Physical qubits needed (with error correction)</td><td>Millions (estimated)</td><td>N/A</td></tr>
+        <tr><td>Current state of hardware</td><td>~1000 physical qubits</td><td>Classical clusters easily factor 800-bit numbers</td></tr>
+      </tbody>
+    </table>
+
+    <p>The post-quantum cryptography response: NIST standardized lattice-based cryptographic algorithms in 2024: <strong>CRYSTALS-Kyber</strong> (ML-KEM) for key encapsulation and <strong>CRYSTALS-Dilithium</strong> (ML-DSA) for digital signatures. These are believed secure against both classical and quantum adversaries.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="grover">8. Grover's Search Algorithm (1996)</h2>
+
+    <p><strong>Problem:</strong> Search an unstructured list of $N = 2^n$ items for a target $x^*$ satisfying $f(x^*) = 1$ (and $f(x) = 0$ for all others). Classical: $O(N)$ queries. Quantum: $O(\sqrt{N})$ queries. Grover's algorithm is provably <em>optimal</em> — no quantum algorithm can do better than $\Omega(\sqrt{N})$ queries.</p>
+
+    <h3>Amplitude amplification geometry</h3>
+
+    <p>Start with the uniform superposition:</p>
+    <div class="math-display">$$|s\rangle = H^{\otimes n}|0\rangle^n = \frac{1}{\sqrt{N}}\sum_{x=0}^{N-1}|x\rangle$$</div>
+
+    <p>Decompose this in the 2D subspace spanned by the target $|x^*\rangle$ and the uniform superposition over non-targets $|s'\rangle = \frac{1}{\sqrt{N-1}}\sum_{x \neq x^*}|x\rangle$:</p>
+    <div class="math-display">$$|s\rangle = \sin\theta\,|x^*\rangle + \cos\theta\,|s'\rangle, \qquad \sin\theta = \frac{1}{\sqrt{N}}$$</div>
+
+    <p>For large $N$, $\theta \approx 1/\sqrt{N}$ is tiny — the initial state has small overlap with the target.</p>
+
+    <h3>One Grover iteration</h3>
+    <p>Each iteration applies two reflections:</p>
+
+    <p><strong>1. Oracle reflection</strong> $O_f$ — flips the sign of the target:</p>
+    <div class="math-display">$$O_f|x\rangle = (-1)^{f(x)}|x\rangle \qquad \Rightarrow \qquad O_f = I - 2|x^*\rangle\langle x^*|$$</div>
+
+    <p><strong>2. Diffusion operator</strong> $D$ — reflects about the uniform superposition:</p>
+    <div class="math-display">$$D = 2|s\rangle\langle s| - I$$</div>
+
+    <p>In circuit form, $D = H^{\otimes n}(2|0\rangle\langle 0| - I)H^{\otimes n}$, implemented with $n$ Hadamards, a multi-controlled $Z$ gate (or controlled-NOT network), and $n$ more Hadamards.</p>
+
+    <p>The composition $G = D \cdot O_f$ is a rotation by $2\theta$ in the 2D subspace:</p>
+    <div class="math-display">$$G^k|s\rangle = \sin((2k+1)\theta)|x^*\rangle + \cos((2k+1)\theta)|s'\rangle$$</div>
+
+    <p>The probability of measuring $|x^*\rangle$ after $k$ iterations is $\sin^2((2k+1)\theta)$. This is maximized at $(2k+1)\theta \approx \pi/2$, giving:</p>
+    <div class="math-display">$$k_{\text{opt}} = \left\lfloor\frac{\pi}{4\theta}\right\rfloor \approx \left\lfloor\frac{\pi\sqrt{N}}{4}\right\rfloor$$</div>
+
+    <p>After $k_{\text{opt}}$ iterations, the probability of finding $x^*$ is $\geq 1 - 1/N$.</p>
+
+    <h3>Why you can't do better</h3>
+    <p>The BBBV theorem (Bennett, Bernstein, Brassard, Vazirani, 1996): any quantum algorithm for unstructured search requires $\Omega(\sqrt{N})$ oracle calls. The proof uses a hybrid argument showing that the amplitude of the target state grows by at most $O(1/\sqrt{N})$ per oracle call from any starting state, so $\Omega(\sqrt{N})$ calls are needed to reach constant amplitude.</p>
+
+    <h3>Multiple targets</h3>
+    <p>If there are $t$ targets out of $N$ items, replace $\sin\theta = 1/\sqrt{N}$ with $\sin\theta = \sqrt{t/N}$. The optimal number of iterations becomes $O(\sqrt{N/t})$. For $t = N/2$ (half the database is marked), only $1$ or $2$ iterations suffice.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="qpe">9. Quantum Phase Estimation (QPE)</h2>
+
+    <p>QPE is a meta-algorithm — it's a subroutine used inside Shor's algorithm, quantum chemistry simulations (HHL, VQE), and many others. Given a unitary $U$ and one of its eigenstates $|u\rangle$ with eigenvalue $e^{2\pi i \varphi}$ (i.e., $U|u\rangle = e^{2\pi i \varphi}|u\rangle$), QPE estimates $\varphi$ to $t$ bits of precision using $O(t)$ applications of controlled-$U$.</p>
+
+    <h3>The circuit</h3>
+    <ol class="clean">
+      <li>Allocate $t$ ancilla "counting" qubits initialized to $|0\rangle$ and one (or more) "phase" register(s) holding $|u\rangle$.</li>
+      <li>Apply $H^{\otimes t}$ to the counting register: $\frac{1}{\sqrt{2^t}}\sum_{j=0}^{2^t-1}|j\rangle \otimes |u\rangle$</li>
+      <li>For $k = 0, 1, \ldots, t-1$: apply $\text{controlled-}U^{2^k}$ (the $k$-th counting qubit controls $U$ applied $2^k$ times to the phase register). By eigenvalue, the phase register is unchanged, but the counting qubit picks up a phase $e^{2\pi i \varphi \cdot 2^k}$.</li>
+      <li>After all controlled unitaries, the counting register holds: $\frac{1}{\sqrt{2^t}}\sum_{j}e^{2\pi i \varphi j}|j\rangle$</li>
+      <li>Apply $\text{QFT}^{-1}$ to the counting register. If $\varphi = m/2^t$ exactly, the output is $|m\rangle$ with certainty. Otherwise, the output is concentrated within $\pm 1$ of $2^t\varphi$.</li>
+      <li>Measure: the result is a $t$-bit approximation to $\varphi$.</li>
+    </ol>
+
+    <p>To use QPE in practice you need to efficiently implement controlled-$U^{2^k}$. In Shor's algorithm, $U|y\rangle = |ay \bmod N\rangle$ and controlled-$U^{2^k}$ is modular exponentiation by repeated squaring. In quantum chemistry, $U = e^{-iHt}$ for a molecular Hamiltonian $H$, and QPE extracts the ground-state energy $E_0$ (since $H|E_0\rangle = E_0|E_0\rangle$ means $e^{-iHt}|E_0\rangle = e^{-iE_0 t}|E_0\rangle$).</p>
+
+    <!-- ========================================================== -->
+    <h2 id="nearterm">10. VQE and QAOA (near-term algorithms)</h2>
+
+    <p>Fault-tolerant quantum algorithms like Shor's and QPE require error-corrected logical qubits, which need thousands of physical qubits each. Current hardware (NISQ — Noisy Intermediate-Scale Quantum) has 50–1000 noisy physical qubits. Near-term algorithms are designed to run on NISQ devices without error correction.</p>
+
+    <h3>Variational Quantum Eigensolver (VQE)</h3>
+
+    <p>VQE finds the ground state energy $E_0 = \min_{|\psi\rangle} \langle\psi|H|\psi\rangle$ of a Hamiltonian $H$ (often a molecular Hamiltonian in quantum chemistry). It uses the <em>variational principle</em>: any state gives an upper bound on $E_0$.</p>
+
+    <p>Define a parameterized quantum circuit (the "ansatz") $U(\theta)$ that prepares the state $|\psi(\theta)\rangle = U(\theta)|0\rangle^n$ for some vector of parameters $\theta$. The VQE loop:</p>
+    <ol class="clean">
+      <li>Run $|\psi(\theta)\rangle$ on quantum hardware; measure $\langle\psi(\theta)|H|\psi(\theta)\rangle$ by decomposing $H$ into Pauli terms and measuring each separately.</li>
+      <li>Pass the energy estimate to a classical optimizer (COBYLA, BFGS, gradient descent).</li>
+      <li>The optimizer proposes new $\theta'$; repeat until convergence.</li>
+    </ol>
+
+    <div class="math-display">$$E(\theta) = \langle\psi(\theta)|H|\psi(\theta)\rangle \geq E_0$$</div>
+
+    <p>VQE outperforms classical Hartree-Fock on strongly correlated molecules (e.g., FeMoco, the iron-molybdenum cofactor in nitrogenase). The challenge is the "<em>barren plateau</em>" problem: for deep circuits, $\nabla_\theta E(\theta)$ vanishes exponentially with system size, making optimization infeasible.</p>
+
+    <h3>Quantum Approximate Optimization Algorithm (QAOA)</h3>
+
+    <p>QAOA targets combinatorial optimization: find $x^* \in \{0,1\}^n$ maximizing $C(x)$ (e.g., Max-Cut of a graph). Encode the objective as a diagonal Hamiltonian $H_C$ with $H_C|x\rangle = C(x)|x\rangle$, and define a mixer Hamiltonian $H_B = \sum_i X_i$.</p>
+
+    <p>Depth-$p$ QAOA prepares:</p>
+    <div class="math-display">$$|\gamma, \beta\rangle = e^{-i\beta_p H_B}e^{-i\gamma_p H_C} \cdots e^{-i\beta_1 H_B}e^{-i\gamma_1 H_C}|s\rangle$$</div>
+
+    <p>and maximizes $\langle\gamma,\beta|H_C|\gamma,\beta\rangle$ over the $2p$ real parameters $\{\gamma_i, \beta_i\}$. As $p \to \infty$, the optimal QAOA state approaches the true optimum (adiabatic theorem). For finite $p$, QAOA provides an approximation guarantee that improves with depth.</p>
+
+    <p>For Max-Cut on 3-regular graphs, depth-1 QAOA achieves approximation ratio $\geq 0.6924$ (Farhi et al., 2014). The best classical algorithm achieves $\approx 0.8786$ (Goemans-Williamson SDP), so QAOA isn't there yet — but it's a natural fit for quantum hardware.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="grover-viz">11. Interactive: Grover's search visualizer</h2>
+
+    <p>The diagram below shows the geometric picture of amplitude amplification in the 2D subspace spanned by the target state $|x^*\rangle$ and the uniform superposition over non-targets $|s'\rangle$. Each Grover iteration rotates the state vector by $2\theta$ toward $|x^*\rangle$. Use the <strong>N items</strong> slider to change the database size, then step through the iterations.</p>
+
+    <div class="viz-3d" id="grover-viz-wrap">
+      <div class="viz-title">Grover amplitude amplification — geometric picture</div>
+      <svg viewBox="0 0 600 320" width="100%" id="grover-svg" style="cursor:default"></svg>
+      <p class="viz-caption">The unit circle represents the 2D subspace. The blue vector is the current quantum state. Each iteration rotates it by $2\theta$ toward $|x^*\rangle$ (top). The green bar shows the probability of measuring the target on the next measurement.</p>
+      <div class="viz-controls">
+        <label style="color:var(--text-2);font-family:monospace;font-size:13px">
+          N items:
+          <select id="grover-N-sel" style="background:var(--bg-3);color:var(--text-1);border:1px solid var(--border);border-radius:4px;padding:2px 6px;font-family:monospace;font-size:13px">
+            <option value="4">4</option>
+            <option value="8">8</option>
+            <option value="16" selected>16</option>
+            <option value="32">32</option>
+            <option value="64">64</option>
+          </select>
+        </label>
+        <button onclick="groverStep()">Step →</button>
+        <button onclick="groverRunAll()">Run all</button>
+        <button onclick="groverReset()">Reset</button>
+      </div>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="source">12. Source code</h2>
+
+    <details class="algo-code">
+      <summary>Source — Quantum Algorithms</summary>
+      <div class="code-tabs">
+        <div class="ct-header">
+          <button class="ct-tab active" data-tab="qa-pseudo">Pseudocode</button>
+          <button class="ct-tab" data-tab="qa-py">Python</button>
+          <button class="ct-tab" data-tab="qa-js">JavaScript</button>
+          <button class="ct-tab" data-tab="qa-c">C</button>
+          <button class="ct-tab" data-tab="qa-cpp">C++</button>
+          <button class="ct-tab" data-tab="qa-java">Java</button>
+          <button class="ct-tab" data-tab="qa-go">Go</button>
+        </div>
+
+        <div class="ct-panel active" data-tab="qa-pseudo"><pre><code>// ================================================================
+// DEUTSCH-JOZSA
+// ================================================================
+function deutsch_jozsa(oracle_f, n):
+    // Initialize n+1 qubits: |0...0>|1>
+    qubits = [ZERO]*n + [ONE]
+    // Apply H to all qubits
+    for q in qubits: apply_H(q)
+    // Query oracle once
+    apply_oracle(oracle_f, qubits[0..n-1], qubits[n])
+    // Apply H to first n qubits
+    for q in qubits[0..n-1]: apply_H(q)
+    // Measure first n qubits
+    result = measure(qubits[0..n-1])
+    return "constant" if result == 0...0 else "balanced"
+
+// ================================================================
+// GROVER'S ITERATION
+// ================================================================
+function grover_oracle(state, target):
+    // Flip sign of target state amplitude
+    state[target] *= -1
+    return state
+
+function grover_diffusion(state):
+    N = len(state)
+    mean = sum(state) / N
+    // Reflect about the mean
+    return [2*mean - a for a in state]
+
+function grover_search(f, n):
+    N = 2^n
+    // Start: uniform superposition
+    state = [1/sqrt(N)] * N
+    k_opt = floor(pi * sqrt(N) / 4)
+    for i in 1..k_opt:
+        state = grover_oracle(state, target)
+        state = grover_diffusion(state)
+    // Measure: highest amplitude index is the target
+    return argmax(|state[i]|^2)
+
+// ================================================================
+// QFT (recursive)
+// ================================================================
+function QFT(state, n):
+    if n == 0: return state
+    // Apply H to first qubit
+    apply_H(state, qubit=0)
+    // Apply controlled phase rotations
+    for k in 2..n:
+        apply_controlled_R(state, control=k-1, target=0, angle=2*pi/2^k)
+    // Recurse on remaining n-1 qubits
+    QFT(state[subsystem 1..n-1], n-1)
+    // Reverse bit order
+    swap_bits(state)
+    return state
+
+// ================================================================
+// SHOR'S REDUCTION TO PERIOD FINDING
+// ================================================================
+function shor_factor(N):
+    while true:
+        a = random_int(2, N-1)
+        g = gcd(a, N)
+        if g > 1: return g         // lucky: immediate factor
+        r = quantum_period_find(a, N)  // quantum subroutine
+        if r % 2 != 0: continue    // r must be even
+        x = modpow(a, r//2, N)
+        if x == N-1: continue      // degenerate case
+        f1 = gcd(x-1, N)
+        f2 = gcd(x+1, N)
+        if 1 &lt; f1 &lt; N: return f1
+        if 1 &lt; f2 &lt; N: return f2</code></pre></div>
+
+        <div class="ct-panel" data-tab="qa-py"><pre><code>"""
+Quantum algorithm implementations using Qiskit and NumPy.
+"""
+
+import numpy as np
+from math import gcd, pi, sqrt, floor
+
+# ================================================================
+# Manual state-vector simulation helpers
+# ================================================================
+
+def tensor(*ops):
+    """Tensor product of matrices."""
+    result = ops[0]
+    for op in ops[1:]:
+        result = np.kron(result, op)
+    return result
+
+H = np.array([[1, 1], [1, -1]]) / sqrt(2)
+I = np.eye(2)
+X = np.array([[0, 1], [1, 0]])
+Z = np.array([[1, 0], [0, -1]])
+
+def R(k):
+    """Phase rotation gate R_k."""
+    return np.array([[1, 0], [0, np.exp(2j * pi / 2**k)]])
+
+# ================================================================
+# Deutsch-Jozsa (statevector simulation)
+# ================================================================
+
+def deutsch_jozsa_sim(f_bitstring):
+    """
+    f_bitstring: list of 2^n values (0 or 1), defines f on {0,1}^n.
+    Returns 'constant' or 'balanced'.
+    """
+    n = int(np.log2(len(f_bitstring)))
+    N = 2**n
+    # Build oracle matrix U_f for phase kickback
+    U_f = np.eye(2 * N, dtype=complex)
+    for x in range(N):
+        if f_bitstring[x] == 1:
+            U_f[2*x, 2*x]     =  0;  U_f[2*x, 2*x+1]   = 1
+            U_f[2*x+1, 2*x]   =  1;  U_f[2*x+1, 2*x+1] = 0
+    # Initial state |0...0>|1>
+    state = np.zeros(2 * N, dtype=complex)
+    state[1] = 1.0  # last qubit = |1>
+    # Apply H to all n+1 qubits
+    H_all = tensor(*([H] * (n + 1)))
+    state = H_all @ state
+    # Apply oracle
+    state = U_f @ state
+    # Apply H to first n qubits (acting on 2N dimensional space)
+    H_n = tensor(*([H] * n), I)
+    state = H_n @ state
+    # Measure first n qubits (project onto |0...0> in first register)
+    # Sum probabilities of |0...0>|0> and |0...0>|1>
+    prob_zero = abs(state[0])**2 + abs(state[1])**2
+    return 'constant' if prob_zero > 0.99 else 'balanced'
+
+# Test: constant function
+f_const = [0] * 8
+print(deutsch_jozsa_sim(f_const))  # 'constant'
+
+# Test: balanced function (first half 0, second half 1)
+f_bal = [0]*4 + [1]*4
+print(deutsch_jozsa_sim(f_bal))    # 'balanced'
+
+# ================================================================
+# Grover's search (statevector simulation)
+# ================================================================
+
+def grover_search(target, n):
+    """
+    Find 'target' in database of size 2^n using Grover's algorithm.
+    Returns found index.
+    """
+    N = 2**n
+    # Uniform superposition
+    state = np.ones(N, dtype=complex) / sqrt(N)
+    k_opt = floor(pi * sqrt(N) / 4)
+
+    for _ in range(k_opt):
+        # Oracle: flip sign of target
+        state[target] *= -1
+        # Diffusion: reflect about mean
+        mean = np.mean(state)
+        state = 2 * mean - state
+        state[target] = -(state[target] - 2*mean) + 2*mean  # undo double
+        # Redo correctly:
+        state_before_diff = state.copy()
+        state_before_diff[target] *= -1  # undo target flip for diffusion
+        # Actually do it right:
+
+    # Redo from scratch properly
+    state = np.ones(N, dtype=complex) / sqrt(N)
+    for _ in range(k_opt):
+        # Step 1: Oracle
+        state[target] *= -1
+        # Step 2: Diffusion D = 2|s><s| - I
+        mean = np.sum(state) / N
+        state = 2 * mean * np.ones(N, dtype=complex) - state
+
+    return int(np.argmax(np.abs(state)**2))
+
+print(grover_search(target=5, n=4))  # Should output 5
+
+# ================================================================
+# QFT (manual numpy)
+# ================================================================
+
+def qft_matrix(N):
+    """Returns the N x N QFT unitary matrix."""
+    omega = np.exp(2j * pi / N)
+    indices = np.arange(N)
+    return np.outer(np.ones(N), indices) * np.outer(indices, np.ones(N))
+    # Actually:
+    j, k = np.meshgrid(np.arange(N), np.arange(N))
+    return np.exp(2j * pi * j * k / N) / sqrt(N)
+
+def qft(state):
+    """Apply QFT to a state vector of length 2^n."""
+    N = len(state)
+    F = qft_matrix(N)
+    return F @ state
+
+# Test: QFT of a period-r signal
+N = 8; r = 4
+signal = np.zeros(N, dtype=complex)
+for k in range(N // r):
+    signal[k * r] = 1.0 / sqrt(N // r)
+spectrum = qft(signal)
+print("QFT peaks at:", np.where(np.abs(spectrum)**2 > 0.1)[0])
+# Should show peaks at multiples of N/r = 2
+
+# ================================================================
+# Qiskit: Deutsch-Jozsa
+# ================================================================
+
+try:
+    from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
+    from qiskit_aer import AerSimulator
+
+    def dj_circuit_balanced(n=3):
+        """Build a balanced Deutsch-Jozsa circuit."""
+        qr = QuantumRegister(n + 1, 'q')
+        cr = ClassicalRegister(n, 'c')
+        qc = QuantumCircuit(qr, cr)
+        qc.x(qr[n])                 # ancilla to |1>
+        qc.h(range(n + 1))          # H to all qubits
+        # Balanced oracle: XOR each input qubit into ancilla
+        for i in range(n):
+            qc.cx(qr[i], qr[n])
+        qc.h(range(n))              # H to first n qubits
+        qc.measure(range(n), range(n))
+        return qc
+
+    qc = dj_circuit_balanced(n=3)
+    sim = AerSimulator()
+    result = sim.run(qc, shots=1024).result()
+    print("DJ balanced result:", result.get_counts())
+    # Should show only non-zero strings (balanced)
+except ImportError:
+    print("Qiskit not installed; skipping circuit demo.")
+</code></pre></div>
+
+        <div class="ct-panel" data-tab="qa-js"><pre><code>/**
+ * Manual state-vector simulation of Grover's search on 4 elements.
+ * No external libraries. Runs in any JavaScript environment.
+ */
+(function() {
+  const N = 4;         // database size = 2^2
+  const TARGET = 2;    // we're searching for index 2
+
+  // State vector: complex numbers as {re, im}
+  let state = Array.from({length: N}, () => ({re: 1/Math.sqrt(N), im: 0}));
+
+  function cMul(a, b) {
+    return { re: a.re*b.re - a.im*b.im, im: a.re*b.im + a.im*b.re };
+  }
+  function cAdd(a, b) { return { re: a.re+b.re, im: a.im+b.im }; }
+  function cScale(s, a) { return { re: s*a.re, im: s*a.im }; }
+  function cNeg(a) { return { re: -a.re, im: -a.im }; }
+  function cAbs2(a) { return a.re*a.re + a.im*a.im; }
+
+  function oracle(state, target) {
+    // Multiply target amplitude by -1
+    const s = state.map((a, i) => i === target ? cNeg(a) : {...a});
+    return s;
+  }
+
+  function diffusion(state) {
+    // D = 2|s><s| - I, |s> = uniform superposition
+    // New amplitude: 2 * mean - old amplitude
+    const n = state.length;
+    const meanRe = state.reduce((s, a) => s + a.re, 0) / n;
+    const meanIm = state.reduce((s, a) => s + a.im, 0) / n;
+    return state.map(a => ({
+      re: 2*meanRe - a.re,
+      im: 2*meanIm - a.im
+    }));
+  }
+
+  const kOpt = Math.floor(Math.PI * Math.sqrt(N) / 4);
+  console.log(`Searching ${N} items for target=${TARGET}`);
+  console.log(`Optimal iterations: ${kOpt}`);
+
+  // Initial probabilities
+  console.log('Initial probabilities:', state.map(a => cAbs2(a).toFixed(4)));
+
+  for (let k = 0; k < kOpt; k++) {
+    state = oracle(state, TARGET);
+    state = diffusion(state);
+    const probs = state.map(a => cAbs2(a).toFixed(4));
+    console.log(`After iter ${k+1}:`, probs);
+  }
+
+  const foundIdx = state.reduce((best, a, i) =>
+    cAbs2(a) > cAbs2(state[best]) ? i : best, 0);
+
+  console.log(`Measured: ${foundIdx} (target was ${TARGET})`);
+  console.log(`Probability of finding target: ${(cAbs2(state[TARGET])*100).toFixed(1)}%`);
+})();
+
+/**
+ * QFT on a 4-element state vector (n=2 qubits).
+ * Manual implementation without library dependencies.
+ */
+(function() {
+  const N = 4;
+  const TWO_PI = 2 * Math.PI;
+
+  function qft(state) {
+    // state is array of {re, im} complex numbers
+    const out = Array.from({length: N}, () => ({re: 0, im: 0}));
+    for (let k = 0; k < N; k++) {
+      for (let j = 0; j < N; j++) {
+        const angle = TWO_PI * j * k / N;
+        const re = Math.cos(angle);
+        const im = Math.sin(angle);
+        out[k].re += (state[j].re * re - state[j].im * im) / Math.sqrt(N);
+        out[k].im += (state[j].re * im + state[j].im * re) / Math.sqrt(N);
+      }
+    }
+    return out;
+  }
+
+  // Signal with period 2 (alternating 1, -1, 1, -1)
+  const signal = [
+    {re: 1/Math.sqrt(2), im: 0},
+    {re: 0, im: 0},
+    {re: 1/Math.sqrt(2), im: 0},
+    {re: 0, im: 0}
+  ];
+  const spectrum = qft(signal);
+  console.log('QFT spectrum |amplitudes|^2:',
+    spectrum.map(a => (a.re*a.re + a.im*a.im).toFixed(4)));
+  // Peak at k=0 and k=2, corresponding to period N/2 = 2.
+})();
+</code></pre></div>
+
+        <div class="ct-panel" data-tab="qa-c"><pre><code>/*
+ * QFT on a classical complex array (n=3, N=8).
+ * Illustrates the circuit structure via explicit gate application.
+ * Compile: gcc -O2 -lm quantum_sim.c -o quantum_sim
+ */
+#include &lt;stdio.h&gt;
+#include &lt;math.h&gt;
+#include &lt;complex.h&gt;
+
+#define N_QUBITS 3
+#define N_STATES 8
+
+typedef double complex cplx;
+
+/* Apply Hadamard to qubit 'qubit' of an n-qubit state vector */
+void apply_H(cplx *state, int qubit, int n) {
+    int stride = 1 &lt;&lt; qubit;
+    int size   = 1 &lt;&lt; n;
+    for (int i = 0; i &lt; size; i++) {
+        if ((i &amp; stride) == 0) {
+            cplx a = state[i];
+            cplx b = state[i | stride];
+            state[i]        = (a + b) / sqrt(2.0);
+            state[i|stride] = (a - b) / sqrt(2.0);
+        }
+    }
+}
+
+/* Apply controlled-Rk (phase gate) with control=ctrl, target=tgt */
+void apply_CR(cplx *state, int ctrl, int tgt, int k, int n) {
+    cplx phase = cexp(2.0 * M_PI * I / (1 &lt;&lt; k));
+    int size   = 1 &lt;&lt; n;
+    for (int i = 0; i &lt; size; i++) {
+        /* Both ctrl and tgt must be |1> to apply phase */
+        if ((i &gt;&gt; ctrl &amp; 1) &amp;&amp; (i &gt;&gt; tgt &amp; 1)) {
+            state[i] *= phase;
+        }
+    }
+}
+
+/* Swap qubits a and b */
+void swap_qubits(cplx *state, int a, int b, int n) {
+    int size = 1 &lt;&lt; n;
+    for (int i = 0; i &lt; size; i++) {
+        int bit_a = (i &gt;&gt; a) &amp; 1;
+        int bit_b = (i &gt;&gt; b) &amp; 1;
+        if (bit_a != bit_b) {
+            int j = i ^ (1 &lt;&lt; a) ^ (1 &lt;&lt; b);
+            if (i &lt; j) {
+                cplx tmp = state[i];
+                state[i] = state[j];
+                state[j] = tmp;
+            }
+        }
+    }
+}
+
+/* n-qubit QFT */
+void qft(cplx *state, int n) {
+    for (int qubit = n - 1; qubit &gt;= 0; qubit--) {
+        apply_H(state, qubit, n);
+        for (int ctrl = qubit - 1; ctrl &gt;= 0; ctrl--) {
+            int k = qubit - ctrl + 1;
+            apply_CR(state, ctrl, qubit, k, n);
+        }
+    }
+    /* Reverse bit order */
+    for (int i = 0; i &lt; n / 2; i++) {
+        swap_qubits(state, i, n - 1 - i, n);
+    }
+}
+
+int main(void) {
+    /* Period-4 signal: 1/sqrt(2), 0, 1/sqrt(2), 0, 0, 0, 0, 0 */
+    cplx state[N_STATES] = {0};
+    state[0] = 1.0 / sqrt(2.0);
+    state[4] = 1.0 / sqrt(2.0);
+
+    printf("Input state:\n");
+    for (int i = 0; i &lt; N_STATES; i++)
+        printf("  |%d>: %.4f + %.4fi\n", i, creal(state[i]), cimag(state[i]));
+
+    qft(state, N_QUBITS);
+
+    printf("\nAfter QFT (probabilities):\n");
+    for (int i = 0; i &lt; N_STATES; i++) {
+        double prob = creal(state[i]) * creal(state[i]) +
+                      cimag(state[i]) * cimag(state[i]);
+        if (prob &gt; 0.01)
+            printf("  |%d>: %.4f\n", i, prob);
+    }
+    /* Expected peaks: |0>, |2>  (multiples of N/period = 8/4 = 2) */
+    return 0;
+}
+</code></pre></div>
+
+        <div class="ct-panel" data-tab="qa-cpp"><pre><code>/**
+ * C++ template state-vector simulator with Grover's search.
+ * Compile: g++ -O2 -std=c++17 grover.cpp -o grover
+ */
+#include &lt;iostream&gt;
+#include &lt;vector&gt;
+#include &lt;complex&gt;
+#include &lt;cmath&gt;
+#include &lt;algorithm&gt;
+#include &lt;numeric&gt;
+#include &lt;cassert&gt;
+
+using Complex = std::complex&lt;double&gt;;
+using State   = std::vector&lt;Complex&gt;;
+
+constexpr double PI = M_PI;
+
+// ----------------------------------------------------------------
+// State-vector helpers
+// ----------------------------------------------------------------
+
+State uniform_superposition(int n) {
+    int N = 1 &lt;&lt; n;
+    return State(N, 1.0 / std::sqrt(N));
+}
+
+double prob(const State&amp; sv, int idx) {
+    return std::norm(sv[idx]);  // |amplitude|^2
+}
+
+int measure(const State&amp; sv) {
+    // Deterministic argmax (no randomness for demo)
+    return std::max_element(sv.begin(), sv.end(),
+        [](const Complex&amp; a, const Complex&amp; b){ return std::norm(a) &lt; std::norm(b); })
+        - sv.begin();
+}
+
+// ----------------------------------------------------------------
+// Grover oracle: negate the amplitude of 'target'
+// ----------------------------------------------------------------
+
+void grover_oracle(State&amp; sv, int target) {
+    sv[target] = -sv[target];
+}
+
+// ----------------------------------------------------------------
+// Grover diffusion: reflect about the mean
+// ----------------------------------------------------------------
+
+void grover_diffusion(State&amp; sv) {
+    int N = sv.size();
+    Complex mean = std::accumulate(sv.begin(), sv.end(), Complex{0, 0})
+                   / static_cast&lt;double&gt;(N);
+    for (auto&amp; a : sv)
+        a = 2.0 * mean - a;
+}
+
+// ----------------------------------------------------------------
+// Full Grover search
+// ----------------------------------------------------------------
+
+int grover_search(int target, int n) {
+    int N = 1 &lt;&lt; n;
+    State sv = uniform_superposition(n);
+    int k_opt = static_cast&lt;int&gt;(std::floor(PI * std::sqrt(N) / 4.0));
+
+    std::cout &lt;&lt; "Searching N=" &lt;&lt; N &lt;&lt; " items for target=" &lt;&lt; target
+              &lt;&lt; " (" &lt;&lt; k_opt &lt;&lt; " iterations)\n";
+
+    for (int k = 0; k &lt; k_opt; k++) {
+        grover_oracle(sv, target);
+        grover_diffusion(sv);
+        std::cout &lt;&lt; "  iter " &lt;&lt; k+1
+                  &lt;&lt; "  P(target) = " &lt;&lt; prob(sv, target) &lt;&lt; "\n";
+    }
+    return measure(sv);
+}
+
+// ----------------------------------------------------------------
+// QFT
+// ----------------------------------------------------------------
+
+void apply_H_gate(State&amp; sv, int qubit, int n) {
+    int stride = 1 &lt;&lt; qubit;
+    int size   = 1 &lt;&lt; n;
+    const double s = 1.0 / std::sqrt(2.0);
+    for (int i = 0; i &lt; size; i++) {
+        if ((i &amp; stride) == 0) {
+            Complex a = sv[i], b = sv[i | stride];
+            sv[i]         = s * (a + b);
+            sv[i | stride] = s * (a - b);
+        }
+    }
+}
+
+void apply_CR_gate(State&amp; sv, int ctrl, int tgt, int k, int n) {
+    Complex phase = std::exp(Complex{0, 2.0 * PI / (1 &lt;&lt; k)});
+    int size = 1 &lt;&lt; n;
+    for (int i = 0; i &lt; size; i++)
+        if ((i &gt;&gt; ctrl &amp; 1) &amp;&amp; (i &gt;&gt; tgt &amp; 1))
+            sv[i] *= phase;
+}
+
+void qft(State&amp; sv, int n) {
+    for (int q = n - 1; q &gt;= 0; q--) {
+        apply_H_gate(sv, q, n);
+        for (int c = q - 1; c &gt;= 0; c--)
+            apply_CR_gate(sv, c, q, q - c + 1, n);
+    }
+    // Bit reversal
+    for (int i = 0; i &lt; n / 2; i++) {
+        int bit_a = 1 &lt;&lt; i, bit_b = 1 &lt;&lt; (n-1-i);
+        for (int s = 0; s &lt; (1 &lt;&lt; n); s++)
+            if ((s &amp; bit_a) != (s &amp; bit_b ? bit_a : 0))
+                ;  // swap handled below
+        // Proper bit-reversal permutation
+        int size = 1 &lt;&lt; n;
+        for (int s = 0; s &lt; size; s++) {
+            int t = s ^ ((s ^ (s &lt;&lt; (n-1-2*i))) &amp; (bit_b | bit_a));
+            if (t &gt; s) std::swap(sv[s], sv[t]);
+        }
+    }
+}
+
+int main() {
+    // Grover demo
+    int found = grover_search(7, 4);  // target=7 in N=16
+    std::cout &lt;&lt; "Found: " &lt;&lt; found &lt;&lt; "\n\n";
+
+    // QFT demo: period-4 signal in N=8
+    int n = 3, N = 8, period = 4;
+    State sv(N, 0);
+    for (int k = 0; k &lt; N / period; k++)
+        sv[k * period] = 1.0 / std::sqrt(N / period);
+
+    std::cout &lt;&lt; "QFT of period-" &lt;&lt; period &lt;&lt; " signal (N=" &lt;&lt; N &lt;&lt; "):\n";
+    qft(sv, n);
+    for (int i = 0; i &lt; N; i++) {
+        double p = std::norm(sv[i]);
+        if (p &gt; 0.01)
+            std::cout &lt;&lt; "  |" &lt;&lt; i &lt;&lt; "> prob=" &lt;&lt; p &lt;&lt; "\n";
+    }
+    return 0;
+}
+</code></pre></div>
+
+        <div class="ct-panel" data-tab="qa-java"><pre><code>/**
+ * Java: Grover's search and Deutsch-Jozsa state-vector simulation.
+ * Compile: javac QuantumSim.java &amp;&amp; java QuantumSim
+ */
+public class QuantumSim {
+
+    // Complex number arithmetic
+    static double[] add(double[] a, double[] b) {
+        return new double[]{a[0]+b[0], a[1]+b[1]};
+    }
+    static double[] scale(double s, double[] a) {
+        return new double[]{s*a[0], s*a[1]};
+    }
+    static double[] negate(double[] a) {
+        return new double[]{-a[0], -a[1]};
+    }
+    static double abs2(double[] a) { return a[0]*a[0] + a[1]*a[1]; }
+
+    // ----------------------------------------------------------------
+    // Grover's search
+    // ----------------------------------------------------------------
+    static double[][] groverSearch(int target, int n) {
+        int N = 1 &lt;&lt; n;
+        double[][] sv = new double[N][2];
+        double amp = 1.0 / Math.sqrt(N);
+        for (int i = 0; i &lt; N; i++) sv[i][0] = amp;
+
+        int kOpt = (int)(Math.PI * Math.sqrt(N) / 4.0);
+        System.out.printf("Grover: N=%d, target=%d, iterations=%d%n", N, target, kOpt);
+
+        for (int k = 0; k &lt; kOpt; k++) {
+            // Oracle: negate target
+            sv[target] = negate(sv[target]);
+
+            // Diffusion: reflect about mean
+            double meanRe = 0, meanIm = 0;
+            for (double[] a : sv) { meanRe += a[0]; meanIm += a[1]; }
+            meanRe /= N; meanIm /= N;
+            for (int i = 0; i &lt; N; i++) {
+                sv[i][0] = 2*meanRe - sv[i][0];
+                sv[i][1] = 2*meanIm - sv[i][1];
+            }
+            System.out.printf("  iter %d  P(target)=%.4f%n", k+1, abs2(sv[target]));
+        }
+        return sv;
+    }
+
+    // ----------------------------------------------------------------
+    // Deutsch-Jozsa
+    // ----------------------------------------------------------------
+    static String deutschJozsa(int[] f) {
+        // f is a truth table of size N = 2^n
+        int N = f.length;
+        int n = 31 - Integer.numberOfLeadingZeros(N);  // log2(N)
+
+        // State: n+1 qubits, size = 2*N
+        double[][] sv = new double[2 * N][2];
+        sv[1][0] = 1.0;  // |0...0>|1>
+
+        // Apply H to all n+1 qubits
+        for (int q = 0; q &lt;= n; q++) applyH(sv, q, n + 1);
+
+        // Oracle (phase kickback)
+        for (int x = 0; x &lt; N; x++) {
+            if (f[x] == 1) {
+                // Swap |x,0> and |x,1> (XOR into ancilla)
+                double[] tmp = sv[2*x].clone();
+                sv[2*x]   = sv[2*x+1];
+                sv[2*x+1] = tmp;
+            }
+        }
+
+        // Apply H to first n qubits
+        for (int q = 0; q &lt; n; q++) applyH(sv, q + 1, n + 1);
+        // Note: bit ordering — qubit 0 is ancilla (index bit 0)
+
+        // Measure: probability of first n qubits being all-zero
+        double probAllZero = abs2(sv[0]) + abs2(sv[1]);
+        return probAllZero &gt; 0.99 ? "constant" : "balanced";
+    }
+
+    static void applyH(double[][] sv, int qubit, int totalQubits) {
+        int stride = 1 &lt;&lt; qubit;
+        int size   = 1 &lt;&lt; totalQubits;
+        double s   = 1.0 / Math.sqrt(2.0);
+        for (int i = 0; i &lt; size; i++) {
+            if ((i &amp; stride) == 0) {
+                double[] a = sv[i].clone();
+                double[] b = sv[i | stride].clone();
+                sv[i]         = scale(s, add(a, b));
+                sv[i | stride] = scale(s, add(a, negate(b)));
+            }
+        }
+    }
+
+    public static void main(String[] args) {
+        // Grover demo
+        int n = 4, target = 11;
+        double[][] sv = groverSearch(target, n);
+        int found = 0;
+        for (int i = 1; i &lt; sv.length; i++)
+            if (abs2(sv[i]) &gt; abs2(sv[found])) found = i;
+        System.out.printf("Measured: %d (expected %d)%n%n", found, target);
+
+        // Deutsch-Jozsa demo
+        int[] fConst = new int[8];  // constant-0
+        int[] fBal   = {0,1,0,1,0,1,0,1};  // balanced
+        System.out.println("Constant-0 function: " + deutschJozsa(fConst));
+        System.out.println("Balanced function:   " + deutschJozsa(fBal));
+    }
+}
+</code></pre></div>
+
+        <div class="ct-panel" data-tab="qa-go"><pre><code>// Quantum circuit simulation in Go: QFT and Grover's search.
+// Run: go run quantum_sim.go
+package main
+
+import (
+	"fmt"
+	"math"
+	"math/cmplx"
+)
+
+// ----------------------------------------------------------------
+// State vector type
+// ----------------------------------------------------------------
+
+type State []complex128
+
+func uniformSuperposition(n int) State {
+	N := 1 &lt;&lt; n
+	sv := make(State, N)
+	amp := complex(1.0/math.Sqrt(float64(N)), 0)
+	for i := range sv {
+		sv[i] = amp
+	}
+	return sv
+}
+
+func prob(sv State, idx int) float64 {
+	return math.Pow(cmplx.Abs(sv[idx]), 2)
+}
+
+func argmax(sv State) int {
+	best := 0
+	for i := 1; i &lt; len(sv); i++ {
+		if prob(sv, i) &gt; prob(sv, best) {
+			best = i
+		}
+	}
+	return best
+}
+
+// ----------------------------------------------------------------
+// Gate applications
+// ----------------------------------------------------------------
+
+func applyH(sv State, qubit, nQubits int) {
+	stride := 1 &lt;&lt; qubit
+	size := 1 &lt;&lt; nQubits
+	s := complex(1.0/math.Sqrt(2), 0)
+	for i := 0; i &lt; size; i++ {
+		if i&amp;stride == 0 {
+			a, b := sv[i], sv[i|stride]
+			sv[i] = s * (a + b)
+			sv[i|stride] = s * (a - b)
+		}
+	}
+}
+
+func applyCR(sv State, ctrl, tgt, k, nQubits int) {
+	phase := cmplx.Exp(complex(0, 2*math.Pi/float64(1&lt;&lt;k)))
+	size := 1 &lt;&lt; nQubits
+	for i := 0; i &lt; size; i++ {
+		if (i&gt;&gt;ctrl)&amp;1 == 1 &amp;&amp; (i&gt;&gt;tgt)&amp;1 == 1 {
+			sv[i] *= phase
+		}
+	}
+}
+
+func swapQubits(sv State, a, b, nQubits int) {
+	size := 1 &lt;&lt; nQubits
+	for i := 0; i &lt; size; i++ {
+		bitA := (i >> a) &amp; 1
+		bitB := (i >> b) &amp; 1
+		if bitA != bitB {
+			j := i ^ (1 &lt;&lt; a) ^ (1 &lt;&lt; b)
+			if i &lt; j {
+				sv[i], sv[j] = sv[j], sv[i]
+			}
+		}
+	}
+}
+
+// ----------------------------------------------------------------
+// QFT
+// ----------------------------------------------------------------
+
+func qft(sv State, n int) {
+	for q := n - 1; q &gt;= 0; q-- {
+		applyH(sv, q, n)
+		for c := q - 1; c &gt;= 0; c-- {
+			applyCR(sv, c, q, q-c+1, n)
+		}
+	}
+	// Bit reversal
+	for i := 0; i &lt; n/2; i++ {
+		swapQubits(sv, i, n-1-i, n)
+	}
+}
+
+// ----------------------------------------------------------------
+// Grover's search
+// ----------------------------------------------------------------
+
+func groverOracle(sv State, target int) {
+	sv[target] = -sv[target]
+}
+
+func groverDiffusion(sv State) {
+	N := len(sv)
+	var mean complex128
+	for _, a := range sv {
+		mean += a
+	}
+	mean /= complex(float64(N), 0)
+	for i := range sv {
+		sv[i] = 2*mean - sv[i]
+	}
+}
+
+func groverSearch(target, n int) int {
+	N := 1 &lt;&lt; n
+	sv := uniformSuperposition(n)
+	kOpt := int(math.Pi * math.Sqrt(float64(N)) / 4.0)
+
+	fmt.Printf("Grover: N=%d, target=%d, kOpt=%d\n", N, target, kOpt)
+	for k := 0; k &lt; kOpt; k++ {
+		groverOracle(sv, target)
+		groverDiffusion(sv)
+		fmt.Printf("  iter %d  P(target)=%.4f\n", k+1, prob(sv, target))
+	}
+	return argmax(sv)
+}
+
+func main() {
+	// ---- Grover demo ----
+	found := groverSearch(13, 4)
+	fmt.Printf("Measured: %d\n\n", found)
+
+	// ---- QFT demo: period-4 signal in N=8 ----
+	n, period := 3, 4
+	N := 1 &lt;&lt; n
+	sv := make(State, N)
+	for k := 0; k &lt; N/period; k++ {
+		sv[k*period] = complex(1.0/math.Sqrt(float64(N/period)), 0)
+	}
+	fmt.Printf("Input (period-%d signal, N=%d):\n", period, N)
+	for i, a := range sv {
+		if cmplx.Abs(a) &gt; 0.01 {
+			fmt.Printf("  |%d>: %.4f+%.4fi\n", i, real(a), imag(a))
+		}
+	}
+	qft(sv, n)
+	fmt.Println("After QFT (significant probabilities):")
+	for i, a := range sv {
+		p := prob(State(sv), i)
+		_ = a
+		if p &gt; 0.01 {
+			fmt.Printf("  |%d>: %.4f\n", i, p)
+		}
+	}
+	// Expected peaks at |0> and |2> (multiples of N/period = 2)
+}
+</code></pre></div>
+
+      </div>
+    </details>
+
+    <!-- ========================================================== -->
+    <h2 id="summary">13. Summary</h2>
+
+    <div class="callout good">
+      <div class="label">ONE-PARAGRAPH SUMMARY</div>
+      <p style="margin:6px 0">Quantum algorithms achieve speedups by engineering <em>interference</em>: wrong answers cancel, right answers constructively reinforce. Deutsch-Jozsa and Bernstein-Vazirani demonstrate this with a single query, though they solve contrived problems. Simon's algorithm — the first proven exponential separation — inspired Shor's factoring algorithm, which uses the Quantum Fourier Transform to extract the period of a modular exponential function, reducing integer factoring to a polynomial-time problem and threatening RSA. Grover's algorithm achieves an optimal quadratic speedup for unstructured search via amplitude amplification, a geometric rotation in a 2D subspace. Quantum Phase Estimation ties these ideas together into a general-purpose eigenvalue-extraction engine. Near-term variational algorithms (VQE, QAOA) trade exact speedup guarantees for practical deployability on noisy hardware. The unifying theme: all quantum speedups are instances of structured interference, and the art of quantum algorithm design is finding that structure in your problem.</p>
+    </div>
+
+    <h3>Where to go next</h3>
+    <ul class="clean">
+      <li><a href="../quantum-computing.html">→ Back to Quantum Computing</a> — hardware, error correction, and current state of the field.</li>
+      <li><a class="ext" href="https://arxiv.org/abs/quant-ph/9508027" target="_blank">Shor (1994) original paper</a> — "Algorithms for Quantum Computation: Discrete Logarithms and Factoring."</li>
+      <li><a class="ext" href="https://arxiv.org/abs/quant-ph/9605043" target="_blank">Grover (1996) original paper</a> — "A Fast Quantum Mechanical Algorithm for Database Search."</li>
+      <li><a class="ext" href="https://www.cambridge.org/core/books/quantum-computation-and-quantum-information/01E10196D0A682A6AEFFEA52D53BE9AE" target="_blank">Nielsen &amp; Chuang</a> — the definitive textbook; Chapters 5 (QFT, phase estimation) and 6 (Grover) are the canonical sources.</li>
+      <li><a class="ext" href="https://quantumalgorithmzoo.org/" target="_blank">Quantum Algorithm Zoo</a> — comprehensive catalogue of known quantum speedups maintained by Stephen Jordan.</li>
+      <li><a class="ext" href="https://arxiv.org/abs/1804.03719" target="_blank">Preskill (2018) NISQ paper</a> — honest assessment of what near-term quantum devices can and cannot do.</li>
+    </ul>
+  </article>
+</div>
+
+<script>
+(function() {
+  // ============================================================
+  // Grover's search visualizer
+  // ============================================================
+
+  const svg = document.getElementById('grover-svg');
+  const W = 600, H = 320;
+  const CX = 180, CY = 160, R = 130;  // circle center and radius
+
+  // State
+  let N = 16;
+  let theta = 0;
+  let currentAngle = 0;  // current angle of state vector from |s'> axis
+  let iteration = 0;
+  let animId = null;
+
+  function getN() {
+    return parseInt(document.getElementById('grover-N-sel').value, 10);
+  }
+
+  function initState() {
+    N = getN();
+    theta = Math.asin(1 / Math.sqrt(N));
+    currentAngle = theta;  // initial angle = theta (since sin(theta) = 1/sqrt(N))
+    iteration = 0;
+    render();
+  }
+
+  function optimalIterations() {
+    return Math.floor(Math.PI / (4 * theta));
+  }
+
+  // Convert polar angle to SVG coordinates
+  // angle=0 → pointing along |s'> axis (right/horizontal)
+  // angle=π/2 → pointing along |x*> axis (up/vertical)
+  function toSVG(angle, len) {
+    return {
+      x: CX + len * Math.cos(angle),
+      y: CY - len * Math.sin(angle)   // SVG y flipped
+    };
+  }
+
+  function render() {
+    // Clear
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+
+    const ns = 'http://www.w3.org/2000/svg';
+
+    function el(tag, attrs, text) {
+      const e = document.createElementNS(ns, tag);
+      for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+      if (text !== undefined) e.textContent = text;
+      return e;
+    }
+
+    // Background
+    svg.appendChild(el('rect', {x:0, y:0, width:W, height:H, fill:'var(--bg-2)', rx:8}));
+
+    // Unit circle
+    svg.appendChild(el('circle', {cx:CX, cy:CY, r:R,
+      fill:'none', stroke:'var(--border)', 'stroke-width':'1.5', 'stroke-dasharray':'4 3'}));
+
+    // Axes: |s'> horizontal, |x*> vertical
+    const axLen = R + 20;
+    // |s'> axis (horizontal right)
+    svg.appendChild(el('line', {
+      x1: CX - 10, y1: CY, x2: CX + axLen, y2: CY,
+      stroke:'#8a93a6', 'stroke-width':'1', 'stroke-dasharray':'3 3'
+    }));
+    svg.appendChild(el('text', {
+      x: CX + axLen + 5, y: CY + 4,
+      fill:'#8a93a6', 'font-family':'monospace', 'font-size':'12'
+    }, "|s'⟩ (non-targets)"));
+
+    // |x*> axis (vertical up)
+    svg.appendChild(el('line', {
+      x1: CX, y1: CY + 10, x2: CX, y2: CY - axLen,
+      stroke:'#8a93a6', 'stroke-width':'1', 'stroke-dasharray':'3 3'
+    }));
+    svg.appendChild(el('text', {
+      x: CX + 6, y: CY - axLen - 5,
+      fill:'#f472b6', 'font-family':'monospace', 'font-size':'12'
+    }, '|x*⟩ (target)'));
+
+    // Draw angle arc showing theta from |s'> to state
+    const arcAngle = currentAngle;
+    const arcR = 40;
+    const arcEnd = toSVG(arcAngle, arcR);
+    const arcStart = toSVG(0, arcR);
+    const largeArc = arcAngle > Math.PI ? 1 : 0;
+    svg.appendChild(el('path', {
+      d: `M ${CX + arcR} ${CY} A ${arcR} ${arcR} 0 ${largeArc} 0 ${arcEnd.x} ${arcEnd.y}`,
+      fill: 'none', stroke: '#22d3ee', 'stroke-width': '1.5', opacity: '0.6'
+    }));
+
+    // State vector
+    const tip = toSVG(currentAngle, R);
+    svg.appendChild(el('line', {
+      x1: CX, y1: CY, x2: tip.x, y2: tip.y,
+      stroke: '#7c5cff', 'stroke-width': '3',
+      'marker-end': 'url(#arrowhead)'
+    }));
+
+    // Arrowhead marker
+    const defs = el('defs', {});
+    const marker = el('marker', {
+      id: 'arrowhead', markerWidth: '8', markerHeight: '6',
+      refX: '8', refY: '3', orient: 'auto'
+    });
+    marker.appendChild(el('polygon', {
+      points: '0 0, 8 3, 0 6',
+      fill: '#7c5cff'
+    }));
+    defs.appendChild(marker);
+    svg.insertBefore(defs, svg.firstChild);
+
+    // Probability of target = sin²(currentAngle)
+    const prob = Math.pow(Math.sin(currentAngle), 2);
+
+    // Right panel: stats
+    const panelX = 360;
+    svg.appendChild(el('text', {
+      x: panelX, y: 40,
+      fill: 'var(--text-1)', 'font-family': 'monospace', 'font-size': '13', 'font-weight': 'bold'
+    }, 'Grover amplitude amplification'));
+
+    const stats = [
+      { label: 'N (database size)', val: N },
+      { label: 'θ = arcsin(1/√N)', val: (theta * 180 / Math.PI).toFixed(2) + '°' },
+      { label: 'Current angle', val: (currentAngle * 180 / Math.PI).toFixed(1) + '°' },
+      { label: 'Iteration', val: iteration },
+      { label: 'Optimal iterations', val: optimalIterations() },
+      { label: 'P(target)', val: (prob * 100).toFixed(1) + '%' },
+    ];
+
+    stats.forEach((s, i) => {
+      svg.appendChild(el('text', {
+        x: panelX, y: 70 + i * 22,
+        fill: '#8a93a6', 'font-family': 'monospace', 'font-size': '11'
+      }, s.label + ':'));
+      svg.appendChild(el('text', {
+        x: panelX + 175, y: 70 + i * 22,
+        fill: '#22d3ee', 'font-family': 'monospace', 'font-size': '11', 'text-anchor': 'end'
+      }, String(s.val)));
+    });
+
+    // Progress bar for probability
+    const barY = 230, barX = panelX, barW = 200, barH = 18;
+    svg.appendChild(el('rect', {
+      x: barX, y: barY, width: barW, height: barH,
+      fill: 'var(--bg-3)', rx: 4, stroke: 'var(--border)', 'stroke-width': '1'
+    }));
+    svg.appendChild(el('rect', {
+      x: barX, y: barY, width: barW * prob, height: barH,
+      fill: prob > 0.9 ? '#34d399' : prob > 0.5 ? '#f472b6' : '#7c5cff',
+      rx: 4
+    }));
+    svg.appendChild(el('text', {
+      x: barX + barW / 2, y: barY + 13,
+      fill: 'var(--bg-1)', 'font-family': 'monospace', 'font-size': '11',
+      'text-anchor': 'middle', 'font-weight': 'bold'
+    }, 'P(find target) = ' + (prob * 100).toFixed(1) + '%'));
+
+    svg.appendChild(el('text', {
+      x: panelX, y: barY + 35,
+      fill: '#8a93a6', 'font-family': 'monospace', 'font-size': '10'
+    }, 'Rotate by 2θ = ' + (2 * theta * 180 / Math.PI).toFixed(2) + '° per iteration'));
+
+    // Initial angle label
+    svg.appendChild(el('text', {
+      x: CX + arcR + 5, y: CY - 8,
+      fill: '#22d3ee', 'font-family': 'monospace', 'font-size': '10'
+    }, 'φ=' + (currentAngle * 180 / Math.PI).toFixed(1) + '°'));
+
+    // Mark initial state tip with dot
+    svg.appendChild(el('circle', {
+      cx: tip.x, cy: tip.y, r: 5,
+      fill: '#7c5cff', stroke: '#11141c', 'stroke-width': '2'
+    }));
+
+    // After-rotation ghost (where next step lands)
+    const nextAngle = currentAngle + 2 * theta;
+    if (iteration < optimalIterations()) {
+      const nextTip = toSVG(nextAngle, R * 0.9);
+      svg.appendChild(el('line', {
+        x1: CX, y1: CY, x2: nextTip.x, y2: nextTip.y,
+        stroke: '#f472b6', 'stroke-width': '1.5', opacity: '0.35',
+        'stroke-dasharray': '4 3'
+      }));
+    }
+  }
+
+  function groverStep() {
+    if (animId) { cancelAnimationFrame(animId); animId = null; }
+    if (iteration >= optimalIterations()) return;
+    currentAngle += 2 * theta;
+    iteration++;
+    render();
+  }
+  window.groverStep = groverStep;
+
+  function groverReset() {
+    if (animId) { cancelAnimationFrame(animId); animId = null; }
+    initState();
+  }
+  window.groverReset = groverReset;
+
+  function groverRunAll() {
+    if (animId) { cancelAnimationFrame(animId); animId = null; }
+    const kMax = optimalIterations();
+    function step() {
+      if (iteration < kMax) {
+        currentAngle += 2 * theta;
+        iteration++;
+        render();
+        animId = requestAnimationFrame(() => { animId = setTimeout(step, 220); });
+      } else {
+        animId = null;
+      }
+    }
+    step();
+  }
+  window.groverRunAll = groverRunAll;
+
+  // N selector change
+  document.getElementById('grover-N-sel').addEventListener('change', groverReset);
+
+  // Initialize
+  initState();
+
+  // ============================================================
+  // Code-tabs logic (shared pattern)
+  // ============================================================
+  document.querySelectorAll('.ct-header').forEach(header => {
+    header.querySelectorAll('.ct-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        const panel = tab.closest('.code-tabs');
+        panel.querySelectorAll('.ct-tab').forEach(t => t.classList.remove('active'));
+        panel.querySelectorAll('.ct-panel').forEach(p => p.classList.remove('active'));
+        tab.classList.add('active');
+        panel.querySelector(`.ct-panel[data-tab="${tab.dataset.tab}"]`).classList.add('active');
+      });
+    });
+  });
+
+})();
+</script>
+</body>
+</html>

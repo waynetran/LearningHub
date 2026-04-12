@@ -1,0 +1,1374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quantum Entanglement — Deep Dive</title>
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError: false});"></script>
+</head>
+<body>
+<div id="tooltip"></div>
+
+<nav class="topic-nav">
+  <a class="back" href="../quantum-computing.html">← Back to Quantum Computing</a>
+  <div class="crumb">Deep Dives / <span class="topic-name">Quantum Entanglement</span></div>
+</nav>
+
+<div class="topic-layout">
+  <aside class="topic-toc">
+    <h4>ON THIS PAGE</h4>
+    <ul>
+      <li><a href="#what-is-entanglement">1. What is entanglement?</a></li>
+      <li><a href="#bell-states">2. Bell states</a></li>
+      <li><a href="#epr-bell">3. EPR paradox &amp; Bell inequalities</a></li>
+      <li><a href="#teleportation">4. Quantum teleportation</a></li>
+      <li><a href="#superdense">5. Superdense coding</a></li>
+      <li><a href="#entropy">6. Entanglement entropy</a></li>
+      <li><a href="#multipartite">7. Multipartite entanglement</a></li>
+      <li><a href="#resource">8. Entanglement as a resource</a></li>
+      <li><a href="#bell-game">9. Interactive: Bell inequality game</a></li>
+      <li><a href="#source-code">10. Source code</a></li>
+      <li><a href="#summary">11. Summary</a></li>
+    </ul>
+  </aside>
+
+  <article class="topic-content">
+    <h1>Quantum Entanglement</h1>
+    <p class="subtitle">Spooky action at a distance, decoded — from Bell's theorem and the EPR paradox to teleportation, superdense coding, and why entanglement is the fuel behind quantum computational advantage.</p>
+    <div class="meta-tags">
+      <span>Prereq: qubits, superposition, basic linear algebra</span>
+      <span>Time to read: ~35 min</span>
+      <span>Interactive figures: 1</span>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="what-is-entanglement">1. What is entanglement?</h2>
+
+    <p>A classical system of two bits has four possible states: 00, 01, 10, 11. A quantum system of two qubits lives in a four-dimensional complex vector space spanned by $|00\rangle, |01\rangle, |10\rangle, |11\rangle$. The general two-qubit state is a superposition:</p>
+
+    <div class="math-display">$$|\psi\rangle = \alpha_{00}|00\rangle + \alpha_{01}|01\rangle + \alpha_{10}|10\rangle + \alpha_{11}|11\rangle$$</div>
+
+    <p>with $|\alpha_{00}|^2 + |\alpha_{01}|^2 + |\alpha_{10}|^2 + |\alpha_{11}|^2 = 1$. Such a state is called a <strong>product state</strong> (or separable) if it can be written as a tensor product of single-qubit states:</p>
+
+    <div class="math-display">$$|\psi\rangle = |\psi_A\rangle \otimes |\psi_B\rangle = (\alpha|0\rangle + \beta|1\rangle) \otimes (\gamma|0\rangle + \delta|1\rangle)$$</div>
+
+    <p>If no such factorisation exists, the state is <strong>entangled</strong>. Entanglement is not a rare edge case — most states in a two-qubit Hilbert space are entangled.</p>
+
+    <div class="callout">
+      <div class="label">THE KEY EXAMPLE</div>
+      <p style="margin:6px 0">$|\Phi^+\rangle = \frac{1}{\sqrt{2}}(|00\rangle + |11\rangle)$ is entangled. If Alice measures qubit A and gets 0, Bob's qubit instantly collapses to $|0\rangle$. If she gets 1, Bob's qubit collapses to $|1\rangle$. The correlation is perfect — and holds no matter how far apart Alice and Bob are. Einstein called it <em>spooky action at a distance</em> and believed it meant quantum mechanics was incomplete. Bell (1964) proved him wrong.</p>
+    </div>
+
+    <h3>Why it is not magic or faster-than-light</h3>
+    <p>Alice's measurement result is genuinely random — she cannot force herself to get 0 or 1. To verify the correlation, Alice and Bob must compare notes via a classical channel. Until they do, neither knows whether any correlation exists. No information has travelled faster than light.</p>
+
+    <p>More formally: Bob's <em>local</em> reduced density matrix $\rho_B = \text{tr}_A(|\Phi^+\rangle\langle\Phi^+|) = \frac{1}{2}I$ is a completely mixed state regardless of whether Alice has measured. From Bob's local perspective, his qubit is maximally random before and after Alice's measurement. The correlations are real but only accessible by comparing classical records.</p>
+
+    <h3>Product vs entangled: a quick test</h3>
+    <p>For a two-qubit pure state with amplitudes written as a $2\times 2$ matrix $M$ (where $M_{ij} = \alpha_{ij}$), the state is a product state if and only if $\det(M) = 0$. For $|\Phi^+\rangle$:</p>
+    <div class="math-display">$$M = \frac{1}{\sqrt{2}}\begin{pmatrix}1 & 0 \\ 0 & 1\end{pmatrix}, \quad \det(M) = \frac{1}{2} \neq 0$$</div>
+    <p>Entangled. For $|01\rangle$: $M = \begin{pmatrix}0 & 1 \\ 0 & 0\end{pmatrix}$, $\det(M) = 0$. Product state.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="bell-states">2. Bell states</h2>
+
+    <p>The four <strong>Bell states</strong> (also called EPR pairs or maximally entangled states) form an orthonormal basis for the two-qubit Hilbert space:</p>
+
+    <div class="math-display">$$|\Phi^\pm\rangle = \frac{1}{\sqrt{2}}(|00\rangle \pm |11\rangle)$$</div>
+    <div class="math-display">$$|\Psi^\pm\rangle = \frac{1}{\sqrt{2}}(|01\rangle \pm |10\rangle)$$</div>
+
+    <p>Each is "maximally entangled": measuring either qubit in any basis gives 50/50 outcomes, yet the two outcomes are perfectly correlated (or anti-correlated). The entanglement entropy of each Bell state is exactly 1 ebit — the maximum possible for a two-qubit system.</p>
+
+    <h3>Preparing $|\Phi^+\rangle$ from $|00\rangle$</h3>
+    <p>The circuit is two gates:</p>
+    <ol>
+      <li>Apply the Hadamard gate $H$ to qubit 1: $|00\rangle \to \frac{1}{\sqrt{2}}(|0\rangle + |1\rangle)|0\rangle = \frac{1}{\sqrt{2}}(|00\rangle + |10\rangle)$</li>
+      <li>Apply CNOT with qubit 1 as control, qubit 2 as target: $|00\rangle \to |00\rangle$, $|10\rangle \to |11\rangle$, giving $\frac{1}{\sqrt{2}}(|00\rangle + |11\rangle) = |\Phi^+\rangle$</li>
+    </ol>
+
+    <figure>
+      <svg viewBox="0 0 480 160" width="100%" style="max-width:480px; background:var(--bg-2); border:1px solid var(--border); border-radius:8px; padding:12px">
+        <!-- qubit rails -->
+        <line x1="60" y1="60" x2="420" y2="60" stroke="#242a3a" stroke-width="2"/>
+        <line x1="60" y1="110" x2="420" y2="110" stroke="#242a3a" stroke-width="2"/>
+        <!-- labels -->
+        <text x="20" y="64" fill="#8a93a6" font-family="monospace" font-size="13">q1</text>
+        <text x="20" y="114" fill="#8a93a6" font-family="monospace" font-size="13">q2</text>
+        <!-- input states -->
+        <text x="48" y="55" text-anchor="end" fill="#dbe1ec" font-family="monospace" font-size="12">|0⟩</text>
+        <text x="48" y="105" text-anchor="end" fill="#dbe1ec" font-family="monospace" font-size="12">|0⟩</text>
+        <!-- H gate -->
+        <rect x="120" y="44" width="40" height="32" rx="4" fill="#171b26" stroke="#22d3ee" stroke-width="2"/>
+        <text x="140" y="65" text-anchor="middle" fill="#22d3ee" font-family="monospace" font-size="14" font-weight="bold">H</text>
+        <!-- CNOT -->
+        <line x1="260" y1="60" x2="260" y2="110" stroke="#7c5cff" stroke-width="2"/>
+        <circle cx="260" cy="60" r="7" fill="#7c5cff"/>
+        <circle cx="260" cy="110" r="14" fill="none" stroke="#7c5cff" stroke-width="2"/>
+        <line x1="246" y1="110" x2="274" y2="110" stroke="#7c5cff" stroke-width="1.5"/>
+        <line x1="260" y1="96" x2="260" y2="124" stroke="#7c5cff" stroke-width="1.5"/>
+        <!-- output label -->
+        <text x="360" y="64" fill="#f472b6" font-family="monospace" font-size="11">|Φ⁺⟩</text>
+        <!-- step labels -->
+        <text x="140" y="140" text-anchor="middle" fill="#8a93a6" font-family="monospace" font-size="10">H gate</text>
+        <text x="260" y="140" text-anchor="middle" fill="#8a93a6" font-family="monospace" font-size="10">CNOT</text>
+      </svg>
+      <figcaption>Bell-pair circuit: Hadamard on q1, then CNOT (q1 control, q2 target). Two gates — that's all it takes to create maximal entanglement.</figcaption>
+    </figure>
+
+    <h3>All four Bell states from $|00\rangle$</h3>
+
+    <table class="rank-table">
+      <thead>
+        <tr>
+          <th>Bell state</th>
+          <th>Circuit (after H on q1, CNOT)</th>
+          <th>Bell measurement outcome (q1, q2)</th>
+          <th>Correlation</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>$|\Phi^+\rangle = \frac{1}{\sqrt{2}}(|00\rangle+|11\rangle)$</td>
+          <td>Start from $|00\rangle$ — no extra gates</td>
+          <td>00</td>
+          <td>Same parity, same sign</td>
+        </tr>
+        <tr>
+          <td>$|\Phi^-\rangle = \frac{1}{\sqrt{2}}(|00\rangle-|11\rangle)$</td>
+          <td>Apply $Z$ to q1 before H+CNOT</td>
+          <td>10</td>
+          <td>Same parity, flipped sign</td>
+        </tr>
+        <tr>
+          <td>$|\Psi^+\rangle = \frac{1}{\sqrt{2}}(|01\rangle+|10\rangle)$</td>
+          <td>Apply $X$ to q2 after CNOT</td>
+          <td>01</td>
+          <td>Opposite parity, same sign</td>
+        </tr>
+        <tr>
+          <td>$|\Psi^-\rangle = \frac{1}{\sqrt{2}}(|01\rangle-|10\rangle)$</td>
+          <td>Apply $Z$ to q1 and $X$ to q2</td>
+          <td>11</td>
+          <td>Opposite parity, flipped sign</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p>The Bell measurement (used in teleportation and superdense coding) distinguishes the four Bell states perfectly. Protocol: apply CNOT (q1 control, q2 target), then H to q1, then measure both in the computational basis. The 2-bit outcome uniquely identifies which Bell state you had.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="epr-bell">3. The EPR paradox and Bell inequalities</h2>
+
+    <h3>Einstein-Podolsky-Rosen (1935)</h3>
+    <p>Einstein, Podolsky, and Rosen published a famous thought experiment arguing that quantum mechanics is incomplete. Their logic: if two particles are entangled and we measure one, the other instantly "knows" its correlated value — even if they are light-years apart. They called this a violation of "local realism":</p>
+    <ul>
+      <li><strong>Realism:</strong> physical properties exist before and independent of measurement.</li>
+      <li><strong>Locality:</strong> measuring one particle cannot instantly affect a distant particle.</li>
+    </ul>
+    <p>Their conclusion: quantum mechanics must be missing something — <em>hidden variables</em> that predetermine the outcomes. The particles secretly carry their correlated values all along; quantum mechanics just doesn't have access to them.</p>
+
+    <h3>Bell's theorem (1964)</h3>
+    <p>John Bell turned the EPR philosophical argument into a testable prediction. He showed that <strong>any</strong> local hidden variable (LHV) theory must satisfy a specific mathematical constraint — the CHSH inequality:</p>
+
+    <div class="math-display">$$S = |E(a,b) - E(a,b') + E(a',b) + E(a',b')| \leq 2$$</div>
+
+    <p>where $E(a,b)$ is the <em>correlation function</em> — the expected value of the product of Alice's and Bob's measurement outcomes ($\pm 1$) when Alice measures along axis $a$ and Bob along axis $b$.</p>
+
+    <p>For two qubits in the state $|\Phi^+\rangle$, the quantum correlation function at measurement angles $a$ and $b$ (in the $xz$-plane of the Bloch sphere) is:</p>
+
+    <div class="math-display">$$E(a,b) = \langle\Phi^+|\sigma_a \otimes \sigma_b|\Phi^+\rangle = -\cos(a - b)$$</div>
+
+    <p>where $\sigma_a = \cos(a)\,\sigma_z + \sin(a)\,\sigma_x$. For the optimal measurement angles $a = 0°$, $a' = 90°$, $b = 45°$, $b' = 135°$:</p>
+
+    <div class="math-display">$$S = |{-\cos(0°-45°) - (-\cos(0°-135°)) + (-\cos(90°-45°)) + (-\cos(90°-135°))}|$$</div>
+    <div class="math-display">$$= |{-\cos 45° + \cos 135° - \cos 45° - \cos 45°}| = \left|-\frac{4}{\sqrt{2}}\right| = 2\sqrt{2} \approx 2.828$$</div>
+
+    <p>$2\sqrt{2} > 2$. Quantum mechanics <strong>violates</strong> the Bell inequality. This is the Tsirelson bound — the maximum quantum violation of CHSH.</p>
+
+    <div class="callout">
+      <div class="label">EXPERIMENTS</div>
+      <p style="margin:6px 0"><strong>Aspect (1982):</strong> First loophole-free-ish Bell test with polarised photons. Measured $S \approx 2.697$, violating the classical bound. <strong>Hensen et al. (2015):</strong> First truly loophole-free Bell test (both locality and detection loopholes closed simultaneously) using nitrogen-vacancy centres in diamond, separated by 1.3 km. Measured $S = 2.42 \pm 0.20$. Conclusion: local hidden variables are ruled out. The universe is non-local in its correlations — though not in its signalling.</p>
+    </div>
+
+    <h3>What Bell's theorem actually says</h3>
+    <p>Bell's result does not say that information travels faster than light. It says that the correlations between distant measurements cannot be explained by any pre-agreed strategy the particles could have set up before they separated. The correlations are genuinely "more correlated" than anything classical probability allows — but they still cannot be used to send a message.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="teleportation">4. Quantum teleportation</h2>
+
+    <p>Teleportation transmits an <em>unknown</em> qubit state $|\psi\rangle = \alpha|0\rangle + \beta|1\rangle$ from Alice to Bob using a pre-shared Bell pair and 2 classical bits. It does <em>not</em> transmit matter or energy; it transmits quantum information.</p>
+
+    <p><strong>Resources:</strong> 1 ebit (one shared $|\Phi^+\rangle$ pair) + 2 classical bits.</p>
+
+    <h3>The protocol, step by step</h3>
+
+    <p>Label the qubits: Alice holds qubit 1 (the unknown state $|\psi\rangle$) and qubit 2 (her half of the Bell pair). Bob holds qubit 3 (his half of the Bell pair).</p>
+
+    <p><strong>Initial state:</strong></p>
+    <div class="math-display">$$|\psi\rangle_1|\Phi^+\rangle_{23} = (\alpha|0\rangle+\beta|1\rangle)_1 \cdot \tfrac{1}{\sqrt{2}}(|00\rangle+|11\rangle)_{23}$$</div>
+    <div class="math-display">$$= \tfrac{1}{\sqrt{2}}\bigl(\alpha|000\rangle + \alpha|011\rangle + \beta|100\rangle + \beta|111\rangle\bigr)_{123}$$</div>
+
+    <p><strong>Step 1 — Alice applies CNOT (q1 control, q2 target):</strong></p>
+    <div class="math-display">$$\to \tfrac{1}{\sqrt{2}}\bigl(\alpha|000\rangle + \alpha|011\rangle + \beta|110\rangle + \beta|101\rangle\bigr)$$</div>
+
+    <p><strong>Step 2 — Alice applies H to qubit 1:</strong></p>
+    <div class="math-display">$$H|0\rangle = \tfrac{1}{\sqrt{2}}(|0\rangle+|1\rangle), \quad H|1\rangle = \tfrac{1}{\sqrt{2}}(|0\rangle-|1\rangle)$$</div>
+    <div class="math-display">$$\to \tfrac{1}{2}\bigl[|00\rangle(\alpha|0\rangle+\beta|1\rangle) + |01\rangle(\alpha|1\rangle+\beta|0\rangle) + |10\rangle(\alpha|0\rangle-\beta|1\rangle) + |11\rangle(\alpha|1\rangle-\beta|0\rangle)\bigr]$$</div>
+
+    <p>Regrouping by Alice's 2-bit outcome (qubits 1,2) and Bob's qubit 3:</p>
+
+    <div class="math-display">$$= \tfrac{1}{2}\bigl[|00\rangle_{\!A}\!\underbrace{(\alpha|0\rangle+\beta|1\rangle)}_{\text{Bob gets }|\psi\rangle} + |01\rangle_{\!A}\!\underbrace{(\beta|0\rangle+\alpha|1\rangle)}_{\text{Bob gets }X|\psi\rangle} + |10\rangle_{\!A}\!\underbrace{(\alpha|0\rangle-\beta|1\rangle)}_{\text{Bob gets }Z|\psi\rangle} + |11\rangle_{\!A}\!\underbrace{(-\beta|0\rangle+\alpha|1\rangle)}_{\text{Bob gets }ZX|\psi\rangle}\bigr]$$</div>
+
+    <p><strong>Step 3 — Alice measures qubits 1 and 2</strong>, getting one of $\{00, 01, 10, 11\}$ with equal probability $1/4$.</p>
+
+    <p><strong>Step 4 — Alice sends 2 classical bits</strong> to Bob (this takes time; no FTL).</p>
+
+    <p><strong>Step 5 — Bob applies a correction:</strong></p>
+
+    <table class="rank-table">
+      <thead>
+        <tr><th>Alice's result</th><th>Bob's qubit state</th><th>Bob applies</th><th>Final state</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>00</td><td>$\alpha|0\rangle + \beta|1\rangle$</td><td>$I$ (nothing)</td><td>$|\psi\rangle$</td></tr>
+        <tr><td>01</td><td>$\beta|0\rangle + \alpha|1\rangle$</td><td>$X$</td><td>$|\psi\rangle$</td></tr>
+        <tr><td>10</td><td>$\alpha|0\rangle - \beta|1\rangle$</td><td>$Z$</td><td>$|\psi\rangle$</td></tr>
+        <tr><td>11</td><td>$-\beta|0\rangle + \alpha|1\rangle$</td><td>$ZX$</td><td>$|\psi\rangle$</td></tr>
+      </tbody>
+    </table>
+
+    <p>After the correction, Bob's qubit is in state $|\psi\rangle = \alpha|0\rangle + \beta|1\rangle$ — exactly Alice's original state. The unknown state has been "teleported". Alice's qubit has been destroyed in the process (she measured it), as required by the no-cloning theorem.</p>
+
+    <div class="callout">
+      <div class="label">NO FASTER-THAN-LIGHT</div>
+      <p style="margin:6px 0">Until Bob receives Alice's 2 classical bits, his qubit is in a completely mixed state — all four outcomes are equally likely and he cannot extract $\alpha$ or $\beta$ from it alone. The classical communication is not optional. The protocol uses both quantum (the ebit) and classical (2 bits) resources.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="superdense">5. Superdense coding</h2>
+
+    <p>Superdense coding is the <em>dual</em> of teleportation. Where teleportation uses 1 ebit + 2 classical bits to send 1 qubit of quantum information, superdense coding uses 1 ebit + 1 qubit to send 2 classical bits.</p>
+
+    <h3>Protocol</h3>
+    <p>Alice and Bob share the Bell state $|\Phi^+\rangle = \frac{1}{\sqrt{2}}(|00\rangle + |11\rangle)$. Alice holds qubit A, Bob holds qubit B.</p>
+
+    <p>Alice wants to send two classical bits $b_1 b_2$. She applies a single-qubit gate to her qubit A based on the 2-bit message:</p>
+
+    <table class="rank-table">
+      <thead>
+        <tr><th>Message $b_1 b_2$</th><th>Alice applies to qubit A</th><th>Joint state after Alice's gate</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>00</td><td>$I$ (identity)</td><td>$|\Phi^+\rangle = \frac{1}{\sqrt{2}}(|00\rangle+|11\rangle)$</td></tr>
+        <tr><td>01</td><td>$X$ (bit-flip)</td><td>$|\Psi^+\rangle = \frac{1}{\sqrt{2}}(|01\rangle+|10\rangle)$</td></tr>
+        <tr><td>10</td><td>$Z$ (phase-flip)</td><td>$|\Phi^-\rangle = \frac{1}{\sqrt{2}}(|00\rangle-|11\rangle)$</td></tr>
+        <tr><td>11</td><td>$ZX$</td><td>$|\Psi^-\rangle = \frac{1}{\sqrt{2}}(|01\rangle-|10\rangle)$</td></tr>
+      </tbody>
+    </table>
+
+    <p>Alice sends her qubit A to Bob (one qubit transmission). Bob now holds both qubits and performs a <strong>Bell measurement</strong> (CNOT then H on qubit A, then measure both). The four Bell states are orthogonal, so Bob perfectly distinguishes them and recovers $b_1 b_2$.</p>
+
+    <h3>Why this beats the classical bound</h3>
+    <p>Holevo's theorem says that $n$ qubits can encode at most $n$ classical bits reliably. One qubit alone, without the pre-shared ebit, cannot reliably convey more than 1 bit. The ebit "unlocks" the extra bit — it effectively doubles the classical capacity of the quantum channel. The pre-shared entanglement is the resource being consumed; Alice encodes her 2 bits by choosing which Bell state the pair is in.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="entropy">6. Entanglement entropy</h2>
+
+    <p>How do we quantify <em>how much</em> a state is entangled? For a bipartite pure state $|\psi\rangle_{AB}$, the answer is the <strong>entanglement entropy</strong> (also called von Neumann entropy of the reduced state):</p>
+
+    <div class="math-display">$$S(A) = -\operatorname{tr}(\rho_A \log_2 \rho_A)$$</div>
+
+    <p>where the <strong>reduced density matrix</strong> $\rho_A$ is obtained by tracing out subsystem B:</p>
+
+    <div class="math-display">$$\rho_A = \operatorname{tr}_B(|\psi\rangle\langle\psi|)$$</div>
+
+    <h3>Properties</h3>
+    <ul>
+      <li>$S(A) = 0$ if and only if $|\psi\rangle$ is a product state (no entanglement).</li>
+      <li>$S(A) = \log_2 d_A$ (maximum) if and only if $\rho_A \propto I$ (maximally mixed) — maximal entanglement.</li>
+      <li>For a two-qubit system, $d_A = 2$ so the maximum entanglement entropy is 1 ebit.</li>
+      <li>$S(A) = S(B)$ for any pure bipartite state.</li>
+    </ul>
+
+    <h3>Example: $|\Phi^+\rangle$</h3>
+    <div class="math-display">$$\rho_A = \operatorname{tr}_B\!\left(\tfrac{1}{2}(|00\rangle+|11\rangle)(\langle 00|+\langle 11|)\right) = \tfrac{1}{2}|0\rangle\langle 0| + \tfrac{1}{2}|1\rangle\langle 1| = \tfrac{1}{2}I$$</div>
+    <div class="math-display">$$S(A) = -\tfrac{1}{2}\log_2\tfrac{1}{2} - \tfrac{1}{2}\log_2\tfrac{1}{2} = 1 \text{ ebit}$$</div>
+
+    <h3>Schmidt decomposition</h3>
+    <p>Every bipartite pure state $|\psi\rangle_{AB}$ can be written in the <strong>Schmidt form</strong>:</p>
+    <div class="math-display">$$|\psi\rangle = \sum_{i=1}^{r} \lambda_i |i_A\rangle|i_B\rangle$$</div>
+    <p>where the $\lambda_i > 0$ are called <strong>Schmidt coefficients</strong> (with $\sum_i \lambda_i^2 = 1$), $\{|i_A\rangle\}$ and $\{|i_B\rangle\}$ are orthonormal bases for A and B respectively, and $r$ is the <strong>Schmidt rank</strong>. The entanglement entropy equals $S(A) = -\sum_i \lambda_i^2 \log_2 \lambda_i^2$.</p>
+
+    <div class="math-glossary">
+      <p class="mg-title">Entanglement entropy — every symbol decoded</p>
+      <dl>
+        <dt>$\rho_A$</dt>
+        <dd>Reduced density matrix of subsystem A, obtained by tracing out B. Encodes all local statistics accessible to Alice alone.</dd>
+        <dt>$\operatorname{tr}_B$</dt>
+        <dd>Partial trace over subsystem B. Sums over Bob's basis states, yielding a matrix that acts only on Alice's Hilbert space.</dd>
+        <dt>$S(A)$</dt>
+        <dd>Von Neumann entropy of $\rho_A$, measured in <em>ebits</em>. Zero for product states, one for maximally entangled two-qubit states.
+          <span class="mg-why">For classical probability distributions, this reduces to Shannon entropy. The quantum version generalises this to density matrices.</span>
+        </dd>
+        <dt>$\lambda_i$</dt>
+        <dd>Schmidt coefficients. Their squares are the eigenvalues of $\rho_A$ (and also of $\rho_B$).
+          <span class="mg-why">Computing the Schmidt decomposition is equivalent to doing an SVD on the coefficient matrix $M_{ij} = \alpha_{ij}$.</span>
+        </dd>
+        <dt>Schmidt rank $r$</dt>
+        <dd>Number of non-zero Schmidt coefficients. Schmidt rank 1 means product state. Rank $> 1$ means entangled.
+          <span class="mg-why">A state that is "a little entangled" has one dominant Schmidt coefficient and several small ones. Tensor network methods exploit small Schmidt rank to compress quantum states.</span>
+        </dd>
+        <dt>ebit</dt>
+        <dd>Unit of entanglement. One ebit is the entanglement in one Bell pair. Entanglement entropy in ebits quantifies how many Bell pairs could be distilled from many copies of the state.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Analogy</strong> Think of entanglement entropy as measuring "how much the two subsystems have fused together." A Schmidt rank-1 state is like two separate books on a shelf — you can describe each one independently. A maximally entangled state is like a book where every page in volume A is a cipher whose meaning depends on the corresponding page in volume B. Entanglement entropy counts how many cipher-page pairs there are (in bits).</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="multipartite">7. Multipartite entanglement</h2>
+
+    <p>For three or more qubits, entanglement becomes richer — there are qualitatively different ways for multiple particles to be entangled, and not all of them can be converted into each other by local operations and classical communication (LOCC).</p>
+
+    <h3>GHZ states</h3>
+    <p>The <strong>Greenberger-Horne-Zeilinger state</strong> generalises the Bell pair to three qubits:</p>
+    <div class="math-display">$$|GHZ\rangle = \frac{1}{\sqrt{2}}(|000\rangle + |111\rangle)$$</div>
+
+    <p><strong>Circuit:</strong> H on q1, CNOT(q1, q2), CNOT(q1, q3).</p>
+
+    <p>The GHZ state has a striking "all-or-nothing" property: measuring any single qubit in the $Z$ basis instantly determines all the others. If qubit 1 collapses to $|0\rangle$, then qubits 2 and 3 also collapse to $|0\rangle$; if it collapses to $|1\rangle$, all three are $|1\rangle$. The three-qubit correlations violate local realism more dramatically than Bell pairs, making GHZ states useful for <strong>quantum secret sharing</strong> (a classical secret split into three shares, recoverable only with all three).</p>
+
+    <p>However, GHZ states are fragile: tracing out any single qubit leaves the remaining two <em>separable</em> (classically correlated, not entangled). Losing one qubit destroys all quantum correlations.</p>
+
+    <h3>W states</h3>
+    <p>The <strong>W state</strong> represents a fundamentally different type of three-qubit entanglement:</p>
+    <div class="math-display">$$|W\rangle = \frac{1}{\sqrt{3}}(|100\rangle + |010\rangle + |001\rangle)$$</div>
+
+    <p>It encodes a single excitation distributed equally among three qubits. If one qubit is traced out (or lost), the remaining two are still entangled — the W state is <strong>robust to particle loss</strong>. This makes W states preferable for quantum networks where qubit loss is likely.</p>
+
+    <h3>GHZ vs W — two inequivalent classes</h3>
+
+    <table class="rank-table">
+      <thead>
+        <tr><th>Property</th><th>GHZ state</th><th>W state</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Entanglement after losing one qubit</td><td>Zero (separable remainder)</td><td>Still entangled (Bell pair remains)</td></tr>
+        <tr><td>Max violation of Mermin inequality</td><td>$2^{(n-1)/2}$ (exponential)</td><td>Lower</td></tr>
+        <tr><td>Convertible by LOCC?</td><td colspan="2" style="text-align:center">No — they are inequivalent LOCC classes</td></tr>
+        <tr><td>Applications</td><td>Quantum secret sharing, GHZ tests of local realism</td><td>Quantum networks, quantum memory</td></tr>
+        <tr><td>Preparation complexity</td><td>$n-1$ CNOT gates</td><td>$O(n)$ gates with ancilla tricks</td></tr>
+      </tbody>
+    </table>
+
+    <p>The LOCC-inequivalence means no sequence of local operations (operations on individual qubits) plus classical communication can convert a GHZ state into a W state or vice versa with certainty, even probabilistically. They are fundamentally different resources.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="resource">8. Entanglement as a computational resource</h2>
+
+    <p>Entanglement is necessary but not sufficient for quantum advantage. Understanding exactly what role it plays requires separating two related but distinct questions: what makes a quantum circuit simulatable classically, and what produces quantum speedup?</p>
+
+    <h3>Gottesman-Knill theorem</h3>
+    <p>Clifford circuits — those built from $H$, $S$, $CNOT$, and Pauli gates — can be <strong>efficiently simulated classically</strong> using the stabiliser formalism, even though these circuits can create Bell pairs and GHZ states. Entanglement alone does not confer computational advantage over classical computers.</p>
+
+    <p>Adding a single non-Clifford gate — specifically the $T = \text{diag}(1, e^{i\pi/4})$ gate — makes the gate set universal for quantum computation. $T$ gates produce "magic states" that cannot be simulated by the stabiliser formalism. The combination of entanglement <em>and</em> magic states is what drives quantum speedup.</p>
+
+    <h3>Entanglement entropy and classical simulation cost</h3>
+    <p>For a quantum circuit acting on $n$ qubits, the cost of simulating it classically using <strong>tensor network methods</strong> (MPS / DMRG) scales exponentially with the maximum entanglement entropy produced. Specifically, simulating a state with Schmidt rank $r$ across any bipartition requires storing $O(r^2)$ numbers, and the bond dimension $\chi$ (related to Schmidt rank) determines the computational cost as $O(n \chi^3)$.</p>
+
+    <ul>
+      <li><strong>Low entanglement circuits</strong> (bounded entanglement entropy, as in 1D local circuits near the ground state) are efficiently simulatable classically.</li>
+      <li><strong>Random quantum circuits</strong> generate entanglement that grows as $O(n)$ after $O(n)$ layers — requiring exponentially large tensor networks to simulate. This is the regime where quantum computers beat classical computers on sampling tasks (quantum supremacy experiments).</li>
+    </ul>
+
+    <div class="callout">
+      <div class="label">THE RESOURCE PICTURE</div>
+      <p style="margin:6px 0">In the resource theory of entanglement, Bell pairs are the "gold standard" unit of entanglement. Any entangled state can be characterised by how many Bell pairs it is equivalent to (entanglement of formation), and many quantum information tasks have precise ebit costs. Quantum teleportation costs 1 ebit + 2 classical bits. Superdense coding earns back 2 classical bits from 1 ebit + 1 qubit. The accounting is exact.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="bell-game">9. Interactive: Bell inequality game</h2>
+
+    <p>The CHSH game makes Bell's theorem concrete. Two players — Alice and Bob — are separated and cannot communicate. A referee sends each player a random input bit ($x$ to Alice, $y$ to Bob). Each player must return an output bit ($a$ from Alice, $b$ from Bob). They win the round if their outputs satisfy:</p>
+
+    <div class="math-display">$$a \oplus b = x \wedge y$$</div>
+
+    <p>That is, their outputs XOR to 1 if and only if both inputs are 1. Any classical strategy wins at most <strong>75%</strong> of rounds. A quantum strategy using a shared Bell pair wins approximately <strong>85.4%</strong> ($\cos^2(\pi/8)$) of rounds — a quantum advantage that directly mirrors the Bell inequality violation.</p>
+
+    <div class="viz-3d" id="bell-game-viz">
+      <div style="display:flex; gap:24px; flex-wrap:wrap; align-items:flex-start; margin-bottom:16px">
+        <div style="flex:1; min-width:200px">
+          <h4 style="margin:0 0 8px; color:var(--accent)">Game Controls</h4>
+          <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px">
+            <select id="bg-strategy" style="background:var(--bg-3); color:var(--text); border:1px solid var(--border); border-radius:6px; padding:6px 10px; font-family:monospace; font-size:13px">
+              <option value="classical">Classical strategy</option>
+              <option value="quantum">Quantum strategy</option>
+            </select>
+            <button id="bg-run" style="background:var(--accent); color:#fff; border:none; border-radius:6px; padding:6px 16px; font-family:monospace; font-size:13px; cursor:pointer">Run 100 rounds</button>
+            <button id="bg-reset" style="background:var(--bg-3); color:var(--text); border:1px solid var(--border); border-radius:6px; padding:6px 12px; font-family:monospace; font-size:13px; cursor:pointer">Reset</button>
+          </div>
+          <div id="bg-stats" style="font-family:monospace; font-size:13px; line-height:1.8; color:var(--text-muted)">
+            <div>Rounds played: <span id="bg-rounds" style="color:var(--text)">0</span></div>
+            <div>Wins: <span id="bg-wins" style="color:#22d3ee">0</span></div>
+            <div>Win rate: <span id="bg-rate" style="color:#f472b6; font-weight:bold">—</span></div>
+          </div>
+        </div>
+        <div style="flex:2; min-width:280px">
+          <h4 style="margin:0 0 8px; color:var(--accent)">Win Rate Comparison</h4>
+          <div style="position:relative; height:80px; background:var(--bg-3); border-radius:8px; overflow:hidden; border:1px solid var(--border)">
+            <!-- classical bar -->
+            <div style="position:absolute; bottom:0; left:0; width:75%; height:33%; background:#4b5563; display:flex; align-items:center; padding-left:8px">
+              <span style="font-family:monospace; font-size:11px; color:#9ca3af">Classical max: 75%</span>
+            </div>
+            <!-- quantum bar -->
+            <div style="position:absolute; bottom:0; left:0; width:85.4%; height:66%; background:#1e3a5f; display:flex; align-items:center; padding-left:8px">
+              <span style="font-family:monospace; font-size:11px; color:#60a5fa">Quantum max: 85.4%</span>
+            </div>
+            <!-- current bar -->
+            <div id="bg-bar" style="position:absolute; bottom:0; left:0; width:0%; height:100%; background:rgba(244,114,182,0.3); transition:width 0.4s ease; display:flex; align-items:center; justify-content:flex-end; padding-right:6px">
+              <span id="bg-bar-label" style="font-family:monospace; font-size:12px; color:#f472b6; font-weight:bold"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Animation area -->
+      <div id="bg-animation" style="background:var(--bg-3); border-radius:8px; border:1px solid var(--border); padding:16px; min-height:120px; font-family:monospace; font-size:13px">
+        <div style="display:flex; justify-content:space-around; align-items:center; height:100%">
+          <div style="text-align:center; min-width:100px">
+            <div style="color:#22d3ee; font-weight:bold; margin-bottom:4px">ALICE</div>
+            <div>Input: <span id="bg-ax" style="color:#fbbf24">—</span></div>
+            <div>Output: <span id="bg-aa" style="color:#f472b6">—</span></div>
+          </div>
+          <div style="text-align:center">
+            <div style="color:#8a93a6; font-size:11px; margin-bottom:4px">REFEREE</div>
+            <div id="bg-result" style="font-size:16px; font-weight:bold; color:#dbe1ec">—</div>
+            <div id="bg-reason" style="color:#8a93a6; font-size:11px; margin-top:4px; max-width:160px; text-align:center">Press "Run 100 rounds"</div>
+          </div>
+          <div style="text-align:center; min-width:100px">
+            <div style="color:#22d3ee; font-weight:bold; margin-bottom:4px">BOB</div>
+            <div>Input: <span id="bg-by" style="color:#fbbf24">—</span></div>
+            <div>Output: <span id="bg-bb" style="color:#f472b6">—</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="bg-log" style="margin-top:12px; font-family:monospace; font-size:11px; color:#8a93a6; max-height:80px; overflow-y:auto; line-height:1.6"></div>
+    </div>
+
+    <script>(function() {
+      var totalRounds = 0, totalWins = 0;
+
+      function classicalStrategy(x) {
+        // Best classical: always output 0
+        return 0;
+      }
+
+      function quantumStrategy(x, y) {
+        // Quantum strategy: Alice measures at angle 0 or pi/4, Bob at pi/8 or -pi/8
+        // Win probability per case: cos^2(pi/8) for (x,y)!=(1,1), cos^2(pi/8) for all
+        // Simulate: win with probability cos^2(pi/8) ~ 0.854 except...
+        // Actually: for optimal quantum strategy, P(win) = cos^2(pi/8) for all inputs.
+        // We simulate by drawing from the correct conditional distributions.
+        var theta_a = x === 0 ? 0 : Math.PI / 4;
+        var theta_b = y === 0 ? Math.PI / 8 : -Math.PI / 8;
+        // Simulate measurement of |Phi+> at angles theta_a, theta_b
+        // P(a=0,b=0) = cos^2((theta_a - theta_b)/2)
+        // P(a=0,b=1) = sin^2((theta_a - theta_b)/2)
+        // etc.
+        var diff = theta_a - theta_b;
+        var p00 = Math.cos(diff / 2) * Math.cos(diff / 2);
+        var r = Math.random();
+        var a, b;
+        if (r < p00) { a = 0; b = 0; }
+        else if (r < p00 + (1 - p00) / 2) { a = 0; b = 1; }
+        else if (r < p00 + (1 - p00) / 2 * 2) { a = 1; b = 0; }
+        else { a = 1; b = 1; }
+        return [a, b];
+      }
+
+      function runRound(strategy, animate) {
+        var x = Math.random() < 0.5 ? 0 : 1;
+        var y = Math.random() < 0.5 ? 0 : 1;
+        var a, b;
+        if (strategy === 'classical') {
+          a = classicalStrategy(x);
+          b = classicalStrategy(y);
+        } else {
+          var res = quantumStrategy(x, y);
+          a = res[0]; b = res[1];
+        }
+        var win = ((a ^ b) === (x & y));
+        if (animate) {
+          document.getElementById('bg-ax').textContent = x;
+          document.getElementById('bg-by').textContent = y;
+          document.getElementById('bg-aa').textContent = a;
+          document.getElementById('bg-bb').textContent = b;
+          document.getElementById('bg-result').textContent = win ? 'WIN' : 'LOSE';
+          document.getElementById('bg-result').style.color = win ? '#22d3ee' : '#f87171';
+          document.getElementById('bg-reason').textContent =
+            'a\u2295b=' + (a^b) + ', x\u2227y=' + (x&y) + (win ? ' \u2713' : ' \u2717');
+        }
+        return win;
+      }
+
+      function updateDisplay() {
+        var rate = totalRounds > 0 ? (totalWins / totalRounds * 100).toFixed(1) : '—';
+        document.getElementById('bg-rounds').textContent = totalRounds;
+        document.getElementById('bg-wins').textContent = totalWins;
+        document.getElementById('bg-rate').textContent = totalRounds > 0 ? rate + '%' : '—';
+        if (totalRounds > 0) {
+          var pct = parseFloat(rate);
+          document.getElementById('bg-bar').style.width = pct + '%';
+          document.getElementById('bg-bar-label').textContent = rate + '%';
+        }
+      }
+
+      function runBatch() {
+        var strategy = document.getElementById('bg-strategy').value;
+        var log = document.getElementById('bg-log');
+        log.textContent = '';
+        for (var i = 0; i < 100; i++) {
+          var win = runRound(strategy, i === 99);
+          if (win) totalWins++;
+          totalRounds++;
+          if (i >= 94) {
+            log.textContent += (win ? '\u2714' : '\u2718') + ' ';
+          }
+        }
+        log.textContent = 'Last 6 rounds: ' + log.textContent;
+        updateDisplay();
+      }
+
+      document.getElementById('bg-run').addEventListener('click', runBatch);
+      document.getElementById('bg-reset').addEventListener('click', function() {
+        totalRounds = 0; totalWins = 0;
+        document.getElementById('bg-ax').textContent = '—';
+        document.getElementById('bg-by').textContent = '—';
+        document.getElementById('bg-aa').textContent = '—';
+        document.getElementById('bg-bb').textContent = '—';
+        document.getElementById('bg-result').textContent = '—';
+        document.getElementById('bg-result').style.color = '#dbe1ec';
+        document.getElementById('bg-reason').textContent = 'Press "Run 100 rounds"';
+        document.getElementById('bg-bar').style.width = '0%';
+        document.getElementById('bg-bar-label').textContent = '';
+        document.getElementById('bg-log').textContent = '';
+        updateDisplay();
+      });
+    })();</script>
+
+    <!-- ========================================================== -->
+    <h2 id="source-code">10. Source code</h2>
+
+    <details class="algo-code">
+      <summary>Bell state preparation, teleportation, superdense coding, CHSH, and entanglement entropy</summary>
+      <div class="code-tabs">
+        <div class="ct-header">
+          <button class="ct-tab active" data-tab="qe-pseudo">Pseudocode</button>
+          <button class="ct-tab" data-tab="qe-py">Python</button>
+          <button class="ct-tab" data-tab="qe-js">JavaScript</button>
+          <button class="ct-tab" data-tab="qe-c">C</button>
+          <button class="ct-tab" data-tab="qe-cpp">C++</button>
+          <button class="ct-tab" data-tab="qe-java">Java</button>
+          <button class="ct-tab" data-tab="qe-go">Go</button>
+        </div>
+
+        <div class="ct-panel active" data-tab="qe-pseudo"><pre><code>// ──── Bell state preparation ────
+function prepareBellPhi(q1, q2):
+    H(q1)                 // Hadamard on qubit 1
+    CNOT(q1, q2)          // CNOT: q1=control, q2=target
+    return (q1, q2)       // now in |Φ+⟩ = (|00⟩+|11⟩)/√2
+
+// ──── Bell measurement ────
+function bellMeasure(q1, q2):
+    CNOT(q1, q2)
+    H(q1)
+    m1 = measure(q1)     // classical bit
+    m2 = measure(q2)     // classical bit
+    return (m1, m2)      // 00→Φ+, 01→Ψ+, 10→Φ-, 11→Ψ-
+
+// ──── Quantum teleportation ────
+function teleport(psi, q2, q3):
+    // psi = α|0⟩+β|1⟩, q2 and q3 in |Φ+⟩_{23}
+    CNOT(psi, q2)         // psi is control
+    H(psi)
+    (m1, m2) = measure(psi, q2)
+    send_classical(m1, m2) to Bob
+    // Bob applies corrections:
+    if m2 == 1: X(q3)
+    if m1 == 1: Z(q3)
+    // q3 is now in state α|0⟩+β|1⟩
+
+// ──── Superdense coding ────
+function superdense_send(b1, b2, qubit_A):
+    if b2 == 1: X(qubit_A)
+    if b1 == 1: Z(qubit_A)
+    send_qubit(qubit_A) to Bob
+
+function superdense_receive(qubit_A, qubit_B):
+    (b1, b2) = bellMeasure(qubit_A, qubit_B)
+    return (b1, b2)
+
+// ──── Entanglement entropy ────
+function entanglement_entropy(state_vector, dim_A, dim_B):
+    M = reshape(state_vector, (dim_A, dim_B))
+    (_, singular_vals, _) = svd(M)
+    lambdas_sq = singular_vals^2
+    return -sum(l * log2(l) for l in lambdas_sq if l > 0)</code></pre></div>
+
+        <div class="ct-panel" data-tab="qe-py"><pre><code>import numpy as np
+from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
+from qiskit.quantum_info import Statevector
+
+# ──── Bell state preparation (Qiskit) ────
+def make_bell_phi_plus():
+    qc = QuantumCircuit(2)
+    qc.h(0)
+    qc.cx(0, 1)
+    return qc
+
+# ──── Quantum teleportation circuit (Qiskit) ────
+def teleportation_circuit(alpha, beta):
+    """Teleport |psi⟩ = alpha|0⟩ + beta|1⟩ from q0 to q2."""
+    q = QuantumRegister(3, 'q')
+    c = ClassicalRegister(2, 'c')
+    qc = QuantumCircuit(q, c)
+
+    # Prepare the state to teleport on q0
+    qc.initialize([alpha, beta], 0)
+
+    # Create Bell pair between q1 and q2
+    qc.h(1)
+    qc.cx(1, 2)
+
+    # Alice's Bell measurement
+    qc.cx(0, 1)
+    qc.h(0)
+    qc.measure([0, 1], [0, 1])
+
+    # Bob's corrections (classically controlled)
+    with qc.if_test((c[0], 1)):
+        qc.z(2)
+    with qc.if_test((c[1], 1)):
+        qc.x(2)
+
+    return qc
+
+# ──── Entanglement entropy from density matrix (numpy) ────
+def entanglement_entropy(state_vec, dim_a, dim_b):
+    """
+    state_vec: (dim_a * dim_b,) complex array
+    Returns entanglement entropy S(A) in ebits.
+    """
+    M = state_vec.reshape(dim_a, dim_b)
+    _, singular_vals, _ = np.linalg.svd(M)
+    lambdas_sq = singular_vals**2
+    lambdas_sq = lambdas_sq[lambdas_sq > 1e-12]  # drop numerical zeros
+    return -np.sum(lambdas_sq * np.log2(lambdas_sq))
+
+# ──── Example: compute entropy of |Φ+⟩ ────
+phi_plus = np.array([1, 0, 0, 1]) / np.sqrt(2)
+S = entanglement_entropy(phi_plus, 2, 2)
+print(f"Entanglement entropy of |Φ+⟩: {S:.4f} ebit")  # → 1.0000
+
+# ──── CHSH expectation value ────
+def chsh_expectation(rho, a, a_prime, b, b_prime):
+    """
+    Compute S = E(a,b) - E(a,b') + E(a',b) + E(a',b')
+    for a density matrix rho on C^2 ⊗ C^2.
+    Measurement axes given as angles (radians) in the xz-plane.
+    """
+    def observable(angle):
+        return np.array([[np.cos(angle), np.sin(angle)],
+                         [np.sin(angle), -np.cos(angle)]])
+
+    def E(theta_a, theta_b):
+        A = observable(theta_a)
+        B = observable(theta_b)
+        op = np.kron(A, B)
+        return np.real(np.trace(rho @ op))
+
+    S = abs(E(a, b) - E(a, b_prime) + E(a_prime, b) + E(a_prime, b_prime))
+    return S
+
+# Optimal angles for |Φ+⟩: a=0, a'=π/2, b=π/4, b'=3π/4
+rho_phi_plus = np.outer(phi_plus, phi_plus.conj())
+S = chsh_expectation(rho_phi_plus, 0, np.pi/2, np.pi/4, 3*np.pi/4)
+print(f"CHSH value for |Φ+⟩: {S:.4f} (theoretical 2√2 ≈ {2*np.sqrt(2):.4f})")</code></pre></div>
+
+        <div class="ct-panel" data-tab="qe-js"><pre><code>// ──── Statevector simulator (4-qubit max) ────
+// Represent quantum state as array of Complex numbers.
+// Complex number: {re, im}
+
+const C = {
+  add: (a, b) => ({ re: a.re + b.re, im: a.im + b.im }),
+  mul: (a, b) => ({ re: a.re*b.re - a.im*b.im, im: a.re*b.im + a.im*b.re }),
+  scale: (a, s) => ({ re: a.re*s, im: a.im*s }),
+  norm2: (a) => a.re*a.re + a.im*a.im,
+};
+
+function zero(n) { return Array.from({length: n}, () => ({re:0, im:0})); }
+
+// ──── Two-qubit statevector teleportation ────
+// State vector for 3 qubits: 8 amplitudes, index = q0 q1 q2 (big-endian)
+function teleport(alpha, beta) {
+  // Initial: |psi⟩_0 ⊗ |00⟩_{12}
+  // |psi⟩ = alpha|0⟩ + beta|1⟩
+  let sv = zero(8);
+  sv[0b000] = { re: alpha.re, im: alpha.im };  // alpha|000⟩
+  sv[0b100] = { re: beta.re, im: beta.im };   // beta|100⟩
+
+  // Apply H to q1 (index 1): |0⟩ → (|0⟩+|1⟩)/√2
+  sv = applyH(sv, 1, 3);
+  // Apply CNOT q1→q2
+  sv = applyCNOT(sv, 1, 2, 3);
+  // Bell pair created on q1,q2
+
+  // Alice: CNOT q0→q1
+  sv = applyCNOT(sv, 0, 1, 3);
+  // Alice: H on q0
+  sv = applyH(sv, 0, 3);
+
+  // Measure q0 and q1, get outcomes m0, m1
+  const [m0, sv1] = measure(sv, 0, 3);
+  const [m1, sv2] = measure(sv1, 1, 3);
+
+  // Bob applies corrections
+  let svFinal = sv2;
+  if (m1 === 1) svFinal = applyX(svFinal, 2, 3);
+  if (m0 === 1) svFinal = applyZ(svFinal, 2, 3);
+
+  // Extract q2 state (|0⟩ and |1⟩ amplitudes)
+  const amp0 = svFinal[0b000];  // q2=0 outcome (q0=q1=0)
+  const amp1 = svFinal[0b001];  // q2=1 outcome
+  return { amp0, amp1 };  // should equal { alpha, beta }
+}
+
+function applyH(sv, qubit, nQubits) {
+  const out = zero(sv.length);
+  const s = 1 / Math.sqrt(2);
+  for (let i = 0; i < sv.length; i++) {
+    const bit = (i >> (nQubits - 1 - qubit)) & 1;
+    const j = i ^ (1 << (nQubits - 1 - qubit));
+    if (bit === 0) {
+      out[i] = C.add(out[i], C.scale(sv[i], s));
+      out[j] = C.add(out[j], C.scale(sv[i], s));
+    } else {
+      out[i] = C.add(out[i], C.scale(sv[j], -s));
+    }
+  }
+  return out;
+}
+
+function applyCNOT(sv, ctrl, tgt, nQubits) {
+  const out = zero(sv.length);
+  for (let i = 0; i < sv.length; i++) {
+    const ctrlBit = (i >> (nQubits - 1 - ctrl)) & 1;
+    if (ctrlBit === 1) {
+      const j = i ^ (1 << (nQubits - 1 - tgt));
+      out[j] = C.add(out[j], sv[i]);
+    } else {
+      out[i] = C.add(out[i], sv[i]);
+    }
+  }
+  return out;
+}
+
+function measure(sv, qubit, nQubits) {
+  let p0 = 0;
+  for (let i = 0; i < sv.length; i++) {
+    if (((i >> (nQubits - 1 - qubit)) & 1) === 0) p0 += C.norm2(sv[i]);
+  }
+  const outcome = Math.random() < p0 ? 0 : 1;
+  const norm = Math.sqrt(outcome === 0 ? p0 : 1 - p0);
+  const out = zero(sv.length);
+  for (let i = 0; i < sv.length; i++) {
+    if (((i >> (nQubits - 1 - qubit)) & 1) === outcome) {
+      out[i] = C.scale(sv[i], 1 / norm);
+    }
+  }
+  return [outcome, out];
+}
+
+function applyX(sv, qubit, nQubits) {
+  const out = zero(sv.length);
+  for (let i = 0; i < sv.length; i++) {
+    const j = i ^ (1 << (nQubits - 1 - qubit));
+    out[j] = C.add(out[j], sv[i]);
+  }
+  return out;
+}
+
+function applyZ(sv, qubit, nQubits) {
+  const out = sv.slice();
+  for (let i = 0; i < sv.length; i++) {
+    if (((i >> (nQubits - 1 - qubit)) & 1) === 1) {
+      out[i] = C.scale(sv[i], -1);
+    }
+  }
+  return out;
+}
+
+// ──── Entanglement entropy ────
+function entanglementEntropy(sv, dimA) {
+  const dimB = sv.length / dimA;
+  // Build matrix M[i][j] = sv[i*dimB + j]
+  const M = Array.from({length: dimA}, (_, i) =>
+    Array.from({length: dimB}, (_, j) => sv[i * dimB + j]));
+  // Compute singular values via SVD approximation (power iteration for 2x2)
+  if (dimA === 2 && dimB === 2) {
+    const a = M[0][0], b = M[0][1], c = M[1][0], d = M[1][1];
+    const det = Math.sqrt(
+      Math.pow(C.norm2(a) + C.norm2(b) - C.norm2(c) - C.norm2(d), 2) / 4 +
+      C.norm2(C.add(C.mul(a, {re:c.re,im:-c.im}), C.mul(b, {re:d.re,im:-d.im})))
+    );
+    const trace = (C.norm2(a) + C.norm2(b) + C.norm2(c) + C.norm2(d)) / 2;
+    const s1sq = trace + det, s2sq = trace - det;
+    const lambdas = [s1sq, s2sq].filter(l => l > 1e-12);
+    return -lambdas.reduce((s, l) => s + l * Math.log2(l), 0);
+  }
+  return NaN;
+}
+
+// Example
+const phiPlus = [{re:1/Math.sqrt(2),im:0},{re:0,im:0},{re:0,im:0},{re:1/Math.sqrt(2),im:0}];
+console.log("Entanglement entropy of |Φ+⟩:", entanglementEntropy(phiPlus, 2));</code></pre></div>
+
+        <div class="ct-panel" data-tab="qe-c"><pre><code>#include &lt;stdio.h&gt;
+#include &lt;math.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;complex.h&gt;
+
+#define N_QUBITS 3
+#define DIM (1 << N_QUBITS)  /* 8 */
+
+typedef double complex cx;
+
+static cx sv[DIM];
+
+static void apply_h(int qubit) {
+    const double s = 1.0 / sqrt(2.0);
+    cx tmp[DIM] = {0};
+    for (int i = 0; i < DIM; i++) {
+        int bit = (i >> (N_QUBITS - 1 - qubit)) & 1;
+        int j   =  i ^ (1 << (N_QUBITS - 1 - qubit));
+        if (bit == 0) { tmp[i] += s * sv[i]; tmp[j] += s * sv[i]; }
+        else          { tmp[i] -= s * sv[j]; }
+    }
+    for (int i = 0; i < DIM; i++) sv[i] = tmp[i];
+}
+
+static void apply_cnot(int ctrl, int tgt) {
+    cx tmp[DIM] = {0};
+    for (int i = 0; i < DIM; i++) {
+        int cb = (i >> (N_QUBITS - 1 - ctrl)) & 1;
+        if (cb) {
+            int j = i ^ (1 << (N_QUBITS - 1 - tgt));
+            tmp[j] += sv[i];
+        } else {
+            tmp[i] += sv[i];
+        }
+    }
+    for (int i = 0; i < DIM; i++) sv[i] = tmp[i];
+}
+
+static void apply_x(int qubit) {
+    cx tmp[DIM] = {0};
+    for (int i = 0; i < DIM; i++) {
+        int j = i ^ (1 << (N_QUBITS - 1 - qubit));
+        tmp[j] += sv[i];
+    }
+    for (int i = 0; i < DIM; i++) sv[i] = tmp[i];
+}
+
+static void apply_z(int qubit) {
+    for (int i = 0; i < DIM; i++) {
+        int bit = (i >> (N_QUBITS - 1 - qubit)) & 1;
+        if (bit) sv[i] = -sv[i];
+    }
+}
+
+/* Measure qubit; return 0 or 1; collapse state */
+static int measure_qubit(int qubit) {
+    double p0 = 0.0;
+    for (int i = 0; i < DIM; i++) {
+        int bit = (i >> (N_QUBITS - 1 - qubit)) & 1;
+        if (bit == 0) p0 += creal(sv[i]) * creal(sv[i]) + cimag(sv[i]) * cimag(sv[i]);
+    }
+    int outcome = ((double)rand() / RAND_MAX) < p0 ? 0 : 1;
+    double norm = sqrt(outcome == 0 ? p0 : 1.0 - p0);
+    for (int i = 0; i < DIM; i++) {
+        int bit = (i >> (N_QUBITS - 1 - qubit)) & 1;
+        if (bit != outcome) sv[i] = 0.0;
+        else                sv[i] /= norm;
+    }
+    return outcome;
+}
+
+/* Teleport |psi⟩ = alpha|0⟩ + beta|1⟩ encoded in qubit 0.
+   Bell pair pre-shared on qubits 1 and 2. */
+void teleport(cx alpha, cx beta) {
+    for (int i = 0; i < DIM; i++) sv[i] = 0.0;
+    sv[0b000] = alpha;
+    sv[0b100] = beta;
+
+    /* Create Bell pair on q1,q2 */
+    apply_h(1);
+    apply_cnot(1, 2);
+
+    /* Alice: Bell measurement on q0,q1 */
+    apply_cnot(0, 1);
+    apply_h(0);
+    int m0 = measure_qubit(0);
+    int m1 = measure_qubit(1);
+
+    /* Bob: apply corrections */
+    if (m1) apply_x(2);
+    if (m0) apply_z(2);
+
+    /* Print Bob's qubit amplitudes */
+    printf("Bob |0⟩ amp: (%.4f, %.4f)\n", creal(sv[0b000]), cimag(sv[0b000]));
+    printf("Bob |1⟩ amp: (%.4f, %.4f)\n", creal(sv[0b001]), cimag(sv[0b001]));
+    printf("Expected alpha=(%.4f,%.4f) beta=(%.4f,%.4f)\n",
+           creal(alpha), cimag(alpha), creal(beta), cimag(beta));
+}
+
+int main(void) {
+    srand(42);
+    cx alpha = 0.6 + 0.0 * I;
+    cx beta  = 0.8 + 0.0 * I;
+    teleport(alpha, beta);
+    return 0;
+}</code></pre></div>
+
+        <div class="ct-panel" data-tab="qe-cpp"><pre><code>#include &lt;iostream&gt;
+#include &lt;vector&gt;
+#include &lt;complex&gt;
+#include &lt;cmath&gt;
+#include &lt;cstdlib&gt;
+#include &lt;numeric&gt;
+#include &lt;algorithm&gt;
+
+using cx = std::complex&lt;double&gt;;
+
+class QuantumState {
+public:
+    int nQubits;
+    int dim;
+    std::vector&lt;cx&gt; sv;
+
+    explicit QuantumState(int n) : nQubits(n), dim(1 &lt;&lt; n), sv(1 &lt;&lt; n, cx(0, 0)) {}
+
+    void setBasis(int idx, cx amp) { sv[idx] = amp; }
+
+    void applyH(int q) {
+        const double s = 1.0 / std::sqrt(2.0);
+        std::vector&lt;cx&gt; tmp(dim, cx(0, 0));
+        for (int i = 0; i &lt; dim; ++i) {
+            int bit = (i &gt;&gt; (nQubits - 1 - q)) &amp; 1;
+            int j   =  i ^ (1 &lt;&lt; (nQubits - 1 - q));
+            if (bit == 0) { tmp[i] += s * sv[i]; tmp[j] += s * sv[i]; }
+            else          { tmp[i] -= s * sv[j]; }
+        }
+        sv = tmp;
+    }
+
+    void applyCNOT(int ctrl, int tgt) {
+        std::vector&lt;cx&gt; tmp(dim, cx(0, 0));
+        for (int i = 0; i &lt; dim; ++i) {
+            int cb = (i &gt;&gt; (nQubits - 1 - ctrl)) &amp; 1;
+            if (cb) tmp[i ^ (1 &lt;&lt; (nQubits - 1 - tgt))] += sv[i];
+            else    tmp[i] += sv[i];
+        }
+        sv = tmp;
+    }
+
+    void applyX(int q) {
+        std::vector&lt;cx&gt; tmp(dim, cx(0, 0));
+        for (int i = 0; i &lt; dim; ++i)
+            tmp[i ^ (1 &lt;&lt; (nQubits - 1 - q))] += sv[i];
+        sv = tmp;
+    }
+
+    void applyZ(int q) {
+        for (int i = 0; i &lt; dim; ++i)
+            if ((i &gt;&gt; (nQubits - 1 - q)) &amp; 1) sv[i] = -sv[i];
+    }
+
+    int measure(int q) {
+        double p0 = 0.0;
+        for (int i = 0; i &lt; dim; ++i)
+            if (!((i &gt;&gt; (nQubits - 1 - q)) &amp; 1)) p0 += std::norm(sv[i]);
+        int outcome = (static_cast&lt;double&gt;(rand()) / RAND_MAX) &lt; p0 ? 0 : 1;
+        double norm = std::sqrt(outcome == 0 ? p0 : 1.0 - p0);
+        for (int i = 0; i &lt; dim; ++i) {
+            if (((i &gt;&gt; (nQubits - 1 - q)) &amp; 1) != outcome) sv[i] = 0.0;
+            else sv[i] /= norm;
+        }
+        return outcome;
+    }
+
+    // Entanglement entropy via SVD on 2-qubit (4-dim) state
+    double entanglementEntropy(int dimA) const {
+        int dimB = dim / dimA;
+        // Build dimA x dimB matrix
+        std::vector&lt;std::vector&lt;cx&gt;&gt; M(dimA, std::vector&lt;cx&gt;(dimB));
+        for (int i = 0; i &lt; dimA; ++i)
+            for (int j = 0; j &lt; dimB; ++j)
+                M[i][j] = sv[i * dimB + j];
+        // For 2x2 case: SVD analytically
+        if (dimA == 2 &amp;&amp; dimB == 2) {
+            double a2 = std::norm(M[0][0]), b2 = std::norm(M[0][1]);
+            double c2 = std::norm(M[1][0]), d2 = std::norm(M[1][1]);
+            cx ab_cd = M[0][0] * std::conj(M[1][0]) + M[0][1] * std::conj(M[1][1]);
+            double trace = (a2 + b2 + c2 + d2) / 2;
+            double det = std::sqrt(std::pow((a2 + b2 - c2 - d2) / 2, 2) + std::norm(ab_cd));
+            double s1sq = trace + det, s2sq = trace - det;
+            double S = 0;
+            for (double l : {s1sq, s2sq})
+                if (l &gt; 1e-12) S -= l * std::log2(l);
+            return S;
+        }
+        return -1.0; // general case not implemented
+    }
+};
+
+int main() {
+    srand(42);
+    QuantumState qs(3);
+    cx alpha(0.6, 0.0), beta(0.8, 0.0);
+    qs.setBasis(0b000, alpha);
+    qs.setBasis(0b100, beta);
+
+    qs.applyH(1);
+    qs.applyCNOT(1, 2);
+    qs.applyCNOT(0, 1);
+    qs.applyH(0);
+
+    int m0 = qs.measure(0);
+    int m1 = qs.measure(1);
+
+    if (m1) qs.applyX(2);
+    if (m0) qs.applyZ(2);
+
+    std::cout &lt;&lt; "Teleportation result:" &lt;&lt; std::endl;
+    std::cout &lt;&lt; "  Bob |0⟩ amp: " &lt;&lt; qs.sv[0] &lt;&lt; std::endl;
+    std::cout &lt;&lt; "  Bob |1⟩ amp: " &lt;&lt; qs.sv[1] &lt;&lt; std::endl;
+    std::cout &lt;&lt; "  Expected alpha=" &lt;&lt; alpha &lt;&lt; " beta=" &lt;&lt; beta &lt;&lt; std::endl;
+
+    // Entanglement entropy of |Φ+⟩
+    QuantumState bell(2);
+    bell.setBasis(0b00, cx(1.0/std::sqrt(2.0), 0));
+    bell.setBasis(0b11, cx(1.0/std::sqrt(2.0), 0));
+    std::cout &lt;&lt; "Entanglement entropy of |Φ+⟩: " &lt;&lt; bell.entanglementEntropy(2) &lt;&lt; " ebit" &lt;&lt; std::endl;
+    return 0;
+}</code></pre></div>
+
+        <div class="ct-panel" data-tab="qe-java"><pre><code>import java.util.Arrays;
+import java.util.Random;
+
+public class QuantumEntanglement {
+
+    static final int N = 3;       // number of qubits
+    static final int DIM = 1 << N; // 8
+    static final double[] re = new double[DIM];
+    static final double[] im = new double[DIM];
+    static final Random rng = new Random(42);
+
+    static void applyH(int q) {
+        double s = 1.0 / Math.sqrt(2.0);
+        double[] tmpRe = new double[DIM], tmpIm = new double[DIM];
+        for (int i = 0; i < DIM; i++) {
+            int bit = (i >> (N - 1 - q)) & 1;
+            int j = i ^ (1 << (N - 1 - q));
+            if (bit == 0) {
+                tmpRe[i] += s * re[i]; tmpIm[i] += s * im[i];
+                tmpRe[j] += s * re[i]; tmpIm[j] += s * im[i];
+            } else {
+                tmpRe[i] -= s * re[j]; tmpIm[i] -= s * im[j];
+            }
+        }
+        System.arraycopy(tmpRe, 0, re, 0, DIM);
+        System.arraycopy(tmpIm, 0, im, 0, DIM);
+    }
+
+    static void applyCNOT(int ctrl, int tgt) {
+        double[] tmpRe = new double[DIM], tmpIm = new double[DIM];
+        for (int i = 0; i < DIM; i++) {
+            int cb = (i >> (N - 1 - ctrl)) & 1;
+            if (cb == 1) {
+                int j = i ^ (1 << (N - 1 - tgt));
+                tmpRe[j] += re[i]; tmpIm[j] += im[i];
+            } else {
+                tmpRe[i] += re[i]; tmpIm[i] += im[i];
+            }
+        }
+        System.arraycopy(tmpRe, 0, re, 0, DIM);
+        System.arraycopy(tmpIm, 0, im, 0, DIM);
+    }
+
+    static void applyX(int q) {
+        double[] tmpRe = new double[DIM], tmpIm = new double[DIM];
+        for (int i = 0; i < DIM; i++) {
+            int j = i ^ (1 << (N - 1 - q));
+            tmpRe[j] += re[i]; tmpIm[j] += im[i];
+        }
+        System.arraycopy(tmpRe, 0, re, 0, DIM);
+        System.arraycopy(tmpIm, 0, im, 0, DIM);
+    }
+
+    static void applyZ(int q) {
+        for (int i = 0; i < DIM; i++)
+            if (((i >> (N - 1 - q)) & 1) == 1) { re[i] = -re[i]; im[i] = -im[i]; }
+    }
+
+    static int measure(int q) {
+        double p0 = 0.0;
+        for (int i = 0; i < DIM; i++)
+            if (((i >> (N - 1 - q)) & 1) == 0) p0 += re[i]*re[i] + im[i]*im[i];
+        int outcome = rng.nextDouble() < p0 ? 0 : 1;
+        double norm = Math.sqrt(outcome == 0 ? p0 : 1.0 - p0);
+        for (int i = 0; i < DIM; i++) {
+            if (((i >> (N - 1 - q)) & 1) != outcome) { re[i] = 0; im[i] = 0; }
+            else { re[i] /= norm; im[i] /= norm; }
+        }
+        return outcome;
+    }
+
+    public static void main(String[] args) {
+        double alpha = 0.6, beta = 0.8;
+        Arrays.fill(re, 0.0); Arrays.fill(im, 0.0);
+        re[0b000] = alpha; re[0b100] = beta;
+
+        applyH(1); applyCNOT(1, 2);  // Bell pair on q1,q2
+        applyCNOT(0, 1); applyH(0);  // Alice's Bell measurement
+        int m0 = measure(0), m1 = measure(1);
+
+        if (m1 == 1) applyX(2);
+        if (m0 == 1) applyZ(2);
+
+        System.out.printf("Bob |0⟩: (%.4f, %.4f)  expected alpha=%.4f%n",
+                          re[0b000], im[0b000], alpha);
+        System.out.printf("Bob |1⟩: (%.4f, %.4f)  expected beta=%.4f%n",
+                          re[0b001], im[0b001], beta);
+    }
+}</code></pre></div>
+
+        <div class="ct-panel" data-tab="qe-go"><pre><code>package main
+
+import (
+	"fmt"
+	"math"
+	"math/cmplx"
+	"math/rand"
+)
+
+const nQubits = 3
+const dim = 1 &lt;&lt; nQubits // 8
+
+var sv [dim]complex128
+
+func applyH(q int) {
+	s := 1.0 / math.Sqrt(2.0)
+	var tmp [dim]complex128
+	for i := 0; i &lt; dim; i++ {
+		bit := (i &gt;&gt; (nQubits - 1 - q)) &amp; 1
+		j := i ^ (1 &lt;&lt; (nQubits - 1 - q))
+		if bit == 0 {
+			tmp[i] += complex(s, 0) * sv[i]
+			tmp[j] += complex(s, 0) * sv[i]
+		} else {
+			tmp[i] -= complex(s, 0) * sv[j]
+		}
+	}
+	sv = tmp
+}
+
+func applyCNOT(ctrl, tgt int) {
+	var tmp [dim]complex128
+	for i := 0; i &lt; dim; i++ {
+		cb := (i &gt;&gt; (nQubits - 1 - ctrl)) &amp; 1
+		if cb == 1 {
+			j := i ^ (1 &lt;&lt; (nQubits - 1 - tgt))
+			tmp[j] += sv[i]
+		} else {
+			tmp[i] += sv[i]
+		}
+	}
+	sv = tmp
+}
+
+func applyX(q int) {
+	var tmp [dim]complex128
+	for i := 0; i &lt; dim; i++ {
+		j := i ^ (1 &lt;&lt; (nQubits - 1 - q))
+		tmp[j] += sv[i]
+	}
+	sv = tmp
+}
+
+func applyZ(q int) {
+	for i := 0; i &lt; dim; i++ {
+		if (i&gt;&gt;(nQubits-1-q))&amp;1 == 1 {
+			sv[i] = -sv[i]
+		}
+	}
+}
+
+func measureQubit(q int) int {
+	p0 := 0.0
+	for i := 0; i &lt; dim; i++ {
+		if (i&gt;&gt;(nQubits-1-q))&amp;1 == 0 {
+			p0 += math.Pow(real(sv[i]), 2) + math.Pow(imag(sv[i]), 2)
+		}
+	}
+	outcome := 0
+	if rand.Float64() &gt;= p0 {
+		outcome = 1
+	}
+	norm := math.Sqrt(map[int]float64{0: p0, 1: 1.0 - p0}[outcome])
+	for i := 0; i &lt; dim; i++ {
+		if (i&gt;&gt;(nQubits-1-q))&amp;1 != outcome {
+			sv[i] = 0
+		} else {
+			sv[i] /= complex(norm, 0)
+		}
+	}
+	return outcome
+}
+
+// entanglementEntropy computes S(A) for a 2-qubit state (dim=4).
+func entanglementEntropy(state [4]complex128) float64 {
+	// M = [[m00, m01],[m10, m11]]
+	a, b, c, d := state[0], state[1], state[2], state[3]
+	trace := (cmplx.Abs(a)*cmplx.Abs(a) + cmplx.Abs(b)*cmplx.Abs(b) +
+		cmplx.Abs(c)*cmplx.Abs(c) + cmplx.Abs(d)*cmplx.Abs(d)) / 2
+	ab_cd := a*cmplx.Conj(c) + b*cmplx.Conj(d)
+	offDiag := real(ab_cd)*real(ab_cd) + imag(ab_cd)*imag(ab_cd)
+	rowDiff := (cmplx.Abs(a)*cmplx.Abs(a) + cmplx.Abs(b)*cmplx.Abs(b) -
+		cmplx.Abs(c)*cmplx.Abs(c) - cmplx.Abs(d)*cmplx.Abs(d)) / 2
+	det := math.Sqrt(rowDiff*rowDiff + offDiag)
+	S := 0.0
+	for _, lsq := range []float64{trace + det, trace - det} {
+		if lsq &gt; 1e-12 {
+			S -= lsq * math.Log2(lsq)
+		}
+	}
+	return S
+}
+
+func main() {
+	rand.Seed(42)
+	alpha := complex(0.6, 0)
+	beta := complex(0.8, 0)
+
+	for i := range sv {
+		sv[i] = 0
+	}
+	sv[0b000] = alpha
+	sv[0b100] = beta
+
+	applyH(1)
+	applyCNOT(1, 2)
+	applyCNOT(0, 1)
+	applyH(0)
+
+	m0 := measureQubit(0)
+	m1 := measureQubit(1)
+
+	if m1 == 1 {
+		applyX(2)
+	}
+	if m0 == 1 {
+		applyZ(2)
+	}
+
+	fmt.Printf("Bob |0⟩ amp: (%.4f, %.4f)  expected alpha=(%.4f, 0)\n",
+		real(sv[0b000]), imag(sv[0b000]), real(alpha))
+	fmt.Printf("Bob |1⟩ amp: (%.4f, %.4f)  expected beta=(%.4f, 0)\n",
+		real(sv[0b001]), imag(sv[0b001]), real(beta))
+
+	bellState := [4]complex128{1 / complex(math.Sqrt(2), 0), 0, 0, 1 / complex(math.Sqrt(2), 0)}
+	fmt.Printf("Entanglement entropy of |Φ+⟩: %.4f ebit\n", entanglementEntropy(bellState))
+}</code></pre></div>
+      </div>
+    </details>
+
+    <script>(function() {
+      document.querySelectorAll('.ct-header .ct-tab').forEach(function(tab) {
+        tab.addEventListener('click', function() {
+          var panel = this.closest('.code-tabs');
+          var id = this.dataset.tab;
+          panel.querySelectorAll('.ct-tab').forEach(function(t) { t.classList.remove('active'); });
+          panel.querySelectorAll('.ct-panel').forEach(function(p) { p.classList.remove('active'); });
+          this.classList.add('active');
+          panel.querySelector('.ct-panel[data-tab="' + id + '"]').classList.add('active');
+        });
+      });
+    })();</script>
+
+    <!-- ========================================================== -->
+    <h2 id="summary">11. Summary</h2>
+
+    <p>Quantum entanglement is not a curiosity or a philosophical puzzle — it is the core resource that makes quantum information processing qualitatively different from its classical counterpart. Here is what to carry forward:</p>
+
+    <table class="rank-table">
+      <thead>
+        <tr><th>Concept</th><th>Key result</th><th>Why it matters</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Entanglement definition</td>
+          <td>$|\psi\rangle \neq |\psi_A\rangle \otimes |\psi_B\rangle$; Schmidt rank $> 1$</td>
+          <td>Foundation — knowing when states are entangled</td>
+        </tr>
+        <tr>
+          <td>Bell states</td>
+          <td>Four maximally entangled 2-qubit states; 1 ebit each</td>
+          <td>The "hydrogen atom" of quantum information: minimal, maximally useful</td>
+        </tr>
+        <tr>
+          <td>Bell's theorem / CHSH</td>
+          <td>$S_{\text{quantum}} = 2\sqrt{2} > 2 = S_{\text{LHV}}$</td>
+          <td>Rules out local hidden variables; entanglement is real and non-classical</td>
+        </tr>
+        <tr>
+          <td>Quantum teleportation</td>
+          <td>1 ebit + 2 cbits → transfer of 1 qubit state</td>
+          <td>Shows entanglement is a fungible resource; underpins quantum networking</td>
+        </tr>
+        <tr>
+          <td>Superdense coding</td>
+          <td>1 ebit + 1 qubit → 2 classical bits</td>
+          <td>Dual of teleportation; doubles classical channel capacity with shared entanglement</td>
+        </tr>
+        <tr>
+          <td>Entanglement entropy</td>
+          <td>$S(A) = -\operatorname{tr}(\rho_A \log_2 \rho_A)$; equals Schmidt entropy</td>
+          <td>Quantifies entanglement; determines classical simulation hardness</td>
+        </tr>
+        <tr>
+          <td>GHZ vs W states</td>
+          <td>Inequivalent LOCC classes for 3+ qubits</td>
+          <td>Demonstrates richness of multipartite entanglement; different practical uses</td>
+        </tr>
+        <tr>
+          <td>Resource theory</td>
+          <td>Entanglement + magic (T gates) = universal QC; entanglement alone ≠ speedup</td>
+          <td>Explains why Clifford circuits, which create entanglement, are still classically simulatable</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="callout">
+      <div class="label">THE BIG PICTURE</div>
+      <p style="margin:6px 0">Entanglement is the quantum analogue of classical correlation, but it is strictly stronger: it cannot be created by any local operations (not even probabilistically), it cannot be explained by any pre-agreed strategy, and it enables tasks — teleportation, superdense coding, quantum key distribution — that are classically impossible. It is the fuel in the quantum advantage engine. The practical challenge for quantum computing is not creating entanglement (two gates suffice) but <em>preserving</em> it: decoherence destroys entanglement on microsecond timescales in current hardware, and scaling to the entanglement depths needed for useful computation is the central engineering challenge of the decade.</p>
+    </div>
+
+  </article>
+</div>
+</body>
+</html>

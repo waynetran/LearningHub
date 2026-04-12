@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Blockchain — Distributed Ledgers, Consensus, and Programmable Money</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+  /* tb-chain orange accent overrides */
+  .hero { border-bottom-color: #f97316; }
+  .hero .chip { background: rgba(249,115,22,0.15); color: #f97316; border-color: rgba(249,115,22,0.35); }
+  aside.sidebar .brand h2 { color: #f97316; }
+  aside.sidebar nav a:hover,
+  aside.sidebar nav a.active { color: #f97316; }
+  .cat-toggle:hover .cat-icon,
+  .cat-group.is-active > .cat-toggle .cat-icon { color: #f97316; }
+  .section-content h2 { border-left-color: #f97316; }
+  a.deep-dive { color: #f97316; }
+  a.deep-dive:hover { color: #fb923c; }
+  .tag.hot { background: rgba(249,115,22,0.18); color: #f97316; }
+  .callout { border-left-color: #f97316; }
+  .callout.good { border-left-color: #22c55e; }
+  .callout.warn { border-left-color: #facc15; }
+  /* hash avalanche SVG */
+  .avalanche-svg { display: block; width: 100%; max-width: 640px; margin: 1.2rem auto; }
+  /* amm interactive */
+  .amm-wrap { background: #0e1117; border: 1px solid #222c3a; border-radius: 8px; padding: 1.2rem; margin: 1.4rem 0; }
+  .amm-controls { display: flex; gap: 1.5rem; flex-wrap: wrap; margin-bottom: 1rem; }
+  .amm-ctrl-row { display: flex; flex-direction: column; gap: 4px; min-width: 180px; }
+  .amm-ctrl-row label { font-family: var(--mono, monospace); font-size: 11px; color: #8a93a6; text-transform: uppercase; letter-spacing: 0.07em; }
+  .amm-ctrl-row input[type=range] { width: 100%; accent-color: #f97316; }
+  .amm-stats { font-family: var(--mono, monospace); font-size: 13px; color: #e2e8f0; margin-top: 8px; display: flex; gap: 2rem; flex-wrap: wrap; }
+  .amm-stats span strong { color: #f97316; }
+  .timeline { list-style: none; padding: 0; margin: 1.2rem 0; border-left: 2px solid rgba(249,115,22,0.3); }
+  .timeline li { padding: 0.6rem 0 0.6rem 1.2rem; position: relative; font-size: 0.95rem; }
+  .timeline li::before { content: '●'; position: absolute; left: -0.55em; color: #f97316; font-size: 0.85rem; top: 0.7rem; }
+  .timeline li strong { color: #f97316; font-family: var(--mono, monospace); font-size: 0.9rem; }
+  table.props { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.9rem; }
+  table.props th { text-align: left; padding: 7px 10px; background: rgba(249,115,22,0.12); color: #f97316; font-family: var(--mono, monospace); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.06em; }
+  table.props td { padding: 7px 10px; border-bottom: 1px solid #1e2535; color: #c8d0de; vertical-align: top; }
+  table.props tr:last-child td { border-bottom: none; }
+  table.props td:first-child { font-weight: 600; color: #e2e8f0; white-space: nowrap; }
+</style>
+</head>
+<body>
+<div id="tooltip"></div>
+
+<!-- Mobile menu toggle -->
+<button class="mobile-menu-toggle" id="mobile-menu-toggle" aria-label="Toggle navigation">☰</button>
+<div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+
+<!-- ============================================================ -->
+<!-- Top bar -->
+<!-- ============================================================ -->
+<div class="topbar">
+  <a class="topbar-back" href="index.html">← Learning Hub</a>
+  <span class="topbar-crumb">Blockchain Track</span>
+  <span class="topbar-tracks">
+    <a href="ai-ml.html">AI / ML</a>
+    <a href="cs/index.html">CS</a>
+  </span>
+</div>
+
+<!-- ============================================================ -->
+<!-- HERO -->
+<!-- ============================================================ -->
+<div class="hero">
+  <div class="hero-inner">
+    <span class="chip">UPDATED Apr 11 2026 18:45</span>
+    <h1>Blockchain — Distributed Ledgers, Consensus, and Programmable Money</h1>
+    <p class="lede">A pragmatic tour of blockchain technology: what the cryptographic primitives actually are, how distributed consensus works without a trusted centre, what smart contracts can and cannot do, and where DeFi, ZK proofs, and layer-2 scaling fit into the picture. Hover any <span class="term" data-label="Term" data-def="Words with a dotted underline carry hover definitions. Try one throughout the page.">dotted term</span> for a definition. Poke at the interactive figures. Each section is self-contained — skip what you know.</p>
+  </div>
+</div>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div class="brand">
+      <h2>Blockchain</h2>
+      <p>// distributed trust</p>
+    </div>
+    <nav id="sidenav">
+
+      <div class="cat-group" data-group="start">
+        <button class="cat cat-toggle" aria-expanded="true">
+          <span class="cat-icon">01</span><span class="cat-title">Start here</span><span class="cat-chev">▾</span>
+        </button>
+        <ul class="cat-body">
+          <li><a href="#overview">What blockchain is</a></li>
+          <li><a href="#history">Brief history</a></li>
+        </ul>
+      </div>
+
+      <div class="cat-group" data-group="crypto">
+        <button class="cat cat-toggle" aria-expanded="false">
+          <span class="cat-icon">02</span><span class="cat-title">Cryptographic foundations</span><span class="cat-chev">▾</span>
+        </button>
+        <ul class="cat-body">
+          <li><a href="#crypto">Cryptography overview</a>
+            <ul>
+              <li><a href="#hash">Hash functions</a></li>
+              <li><a href="#signatures">Digital signatures</a></li>
+              <li><a href="#merkle">Merkle trees</a></li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+
+      <div class="cat-group" data-group="consensus">
+        <button class="cat cat-toggle" aria-expanded="false">
+          <span class="cat-icon">03</span><span class="cat-title">Distributed consensus</span><span class="cat-chev">▾</span>
+        </button>
+        <ul class="cat-body">
+          <li><a href="#consensus">Consensus overview</a>
+            <ul>
+              <li><a href="#pow">Proof of Work</a></li>
+              <li><a href="#pos">Proof of Stake</a></li>
+              <li><a href="#bft">BFT variants</a></li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+
+      <div class="cat-group" data-group="smart">
+        <button class="cat cat-toggle" aria-expanded="false">
+          <span class="cat-icon">04</span><span class="cat-title">Smart contracts</span><span class="cat-chev">▾</span>
+        </button>
+        <ul class="cat-body">
+          <li><a href="#smart-contracts">Smart contracts overview</a>
+            <ul>
+              <li><a href="#evm">EVM</a></li>
+              <li><a href="#solidity">Solidity patterns</a></li>
+              <li><a href="#security">Security</a></li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+
+      <div class="cat-group" data-group="defi">
+        <button class="cat cat-toggle" aria-expanded="false">
+          <span class="cat-icon">05</span><span class="cat-title">DeFi &amp; tokens</span><span class="cat-chev">▾</span>
+        </button>
+        <ul class="cat-body">
+          <li><a href="#defi">DeFi overview</a>
+            <ul>
+              <li><a href="#amm">AMMs</a></li>
+              <li><a href="#tokens">Token standards</a></li>
+              <li><a href="#nft">NFTs</a></li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+
+      <div class="cat-group" data-group="scaling">
+        <button class="cat cat-toggle" aria-expanded="false">
+          <span class="cat-icon">06</span><span class="cat-title">Scaling &amp; privacy</span><span class="cat-chev">▾</span>
+        </button>
+        <ul class="cat-body">
+          <li><a href="#scaling">Scaling overview</a>
+            <ul>
+              <li><a href="#layer2">Layer 2</a></li>
+              <li><a href="#zkp">ZK proofs</a></li>
+              <li><a href="#bridges">Bridges</a></li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+
+      <div class="cat-group" data-group="applied">
+        <button class="cat cat-toggle" aria-expanded="false">
+          <span class="cat-icon">07</span><span class="cat-title">Applied</span><span class="cat-chev">▾</span>
+        </button>
+        <ul class="cat-body">
+          <li><a href="#applications">Applications</a></li>
+        </ul>
+      </div>
+
+    </nav>
+  </aside>
+
+  <main>
+    <div class="container">
+
+      <!-- ============================================================ -->
+      <section id="overview">
+        <h2>What blockchain is <span class="era">// core innovation</span></h2>
+        <p>A blockchain is a <span class="term" data-label="Distributed ledger" data-def="A database replicated across many nodes with no single owner. Each participant holds a copy and must agree on its contents through a consensus protocol.">distributed ledger</span> — a database that is replicated across thousands of independent computers with no single owner. What makes it different from earlier replicated databases is the combination of two ideas: <span class="term" data-label="Byzantine fault tolerance" data-def="The ability of a distributed system to reach agreement even when some participants behave arbitrarily or maliciously — named after the Byzantine Generals Problem formalized by Lamport, Shostak, and Pease (1982).">Byzantine fault tolerance</span> and economic incentives. The first guarantees that the network can still converge on a single version of truth even when some participants lie or crash. The second makes it expensive to attack. Neither idea is new on its own; the achievement of Bitcoin in 2008 was to combine them with cryptographic hash functions in a way that requires no registration, no identity verification, and no trusted authority to bootstrap.</p>
+
+        <p>The core data structure is simple: each block contains a batch of transactions plus the hash of the previous block. Because each hash is a short fingerprint of the previous block's contents, altering any past block would change its hash, which would invalidate the next block's hash, which would cascade forward. Replacing history therefore requires recomputing all subsequent blocks faster than the honest network builds new ones — an impractical task once the chain is long enough. This is <span class="term" data-label="Immutability" data-def="The property that recorded data is computationally infeasible to alter retroactively. In blockchain, ensured by the chained-hash structure and the cost of redoing proof-of-work or slashing validators.">immutability</span> by design, not by policy.</p>
+
+        <p>Beyond simple currency transfers, Ethereum (2015) added a general-purpose virtual machine to the chain. This made it possible to deploy <span class="term" data-label="Smart contract" data-def="A program stored on a blockchain that executes automatically when its conditions are met. Code and state live on-chain; no human can alter them after deployment without a transaction.">smart contracts</span> — programs that live on-chain and execute deterministically across every full node. The same consensus that secures transfers now secures arbitrary computation, enabling decentralized exchanges, lending protocols, and programmable assets — collectively called <span class="term" data-label="DeFi" data-def="Decentralised Finance. Financial primitives — lending, trading, derivatives — implemented as smart contracts on public blockchains, with no custodian or intermediary.">DeFi</span>.</p>
+
+        <table class="props">
+          <thead>
+            <tr><th>Property</th><th>What it means</th><th>Achieved by</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Decentralisation</td><td>No single entity controls the ledger</td><td>Open peer-to-peer network; permissionless node operation</td></tr>
+            <tr><td>Immutability</td><td>Past records cannot be altered without redoing all subsequent work</td><td>Chained hashes; PoW / PoS economic cost of rewriting</td></tr>
+            <tr><td>Transparency</td><td>All transactions and contract code are publicly readable</td><td>Open state; block explorers; source verification</td></tr>
+            <tr><td>Programmability</td><td>Arbitrary logic can run trustlessly on-chain</td><td>EVM or equivalent smart-contract VM</td></tr>
+            <tr><td>Censorship resistance</td><td>No gatekeeper can block a valid transaction</td><td>Economic incentives for miners/validators to include transactions</td></tr>
+          </tbody>
+        </table>
+
+        <div class="callout">
+          <div class="label">The core insight</div>
+          <p style="margin:6px 0">Blockchain does not eliminate the need for trust — it <em>redistributes</em> it from institutions to mathematics and economic incentives. You trust the SHA-256 hash function (vetted by the cryptography community), the game theory of PoW or PoS (you'd need enormous resources to attack), and open-source code (auditable by anyone). You no longer need to trust any particular bank, government, or corporation.</p>
+        </div>
+
+        <p>It is equally important to understand what blockchain does <em>not</em> provide. It does not make data accurate — garbage in, garbage out still applies. It does not make computation cheap — on-chain compute is typically 10,000× more expensive than equivalent cloud compute. It does not eliminate legal risk or solve oracle problems (connecting on-chain contracts to off-chain reality). Blockchain is a useful tool for specific problems; treating it as a universal solution is the most common mistake in the space.</p>
+      </section>
+
+      <!-- ============================================================ -->
+      <section id="history">
+        <h2>A brief history <span class="era">// 1997 – present</span></h2>
+        <p>The ideas behind blockchain did not appear from nowhere in 2008. They assembled gradually over a decade of academic cryptography and cypherpunk activism. Understanding the lineage makes it easier to understand why each design choice exists.</p>
+
+        <ul class="timeline">
+          <li><strong>1997</strong> — Adam Back proposes <em>Hashcash</em>, a proof-of-work scheme for spam prevention. The sender must find a hash with N leading zero bits before the email is accepted. Bitcoin's mining puzzle is Hashcash applied to blocks.</li>
+          <li><strong>1998</strong> — Wei Dai publishes <em>b-money</em>, an anonymous distributed electronic cash proposal requiring PoW and a broadcast ledger. Never implemented, but clearly an ancestor of Bitcoin.</li>
+          <li><strong>2004</strong> — Hal Finney extends Hashcash into <em>RPOW</em> (Reusable Proofs of Work), a precursor to digital cash tokens.</li>
+          <li><strong>2008</strong> — Satoshi Nakamoto publishes the <em>Bitcoin: A Peer-to-Peer Electronic Cash System</em> whitepaper. The key novelty: using a chain of PoW blocks to solve the double-spend problem without a trusted third party.</li>
+          <li><strong>2009</strong> — The Bitcoin genesis block is mined on January 3rd. The coinbase text reads: "The Times 03/Jan/2009 Chancellor on brink of second bailout for banks."</li>
+          <li><strong>2013</strong> — Vitalik Buterin publishes the Ethereum whitepaper, proposing a blockchain with a Turing-complete scripting language. The key insight: generalise Bitcoin's UTXO script into a full VM.</li>
+          <li><strong>2015</strong> — Ethereum mainnet launches. The first smart contracts go live. Cryptokitties (2017) would later congest it spectacularly.</li>
+          <li><strong>2017</strong> — The ICO boom. ERC-20 tokens make it trivial to issue new assets. Most projects raise capital and deliver nothing.</li>
+          <li><strong>2020</strong> — "DeFi Summer." Compound, Uniswap, Aave, and Curve collectively lock billions in on-chain liquidity. Yield farming and automated market makers go mainstream.</li>
+          <li><strong>2021</strong> — NFT mania peaks. Bored Apes, CryptoPunks, and OpenSea trade billions per month. Ethereum gas fees reach hundreds of dollars.</li>
+          <li><strong>2022</strong> — Ethereum completes "The Merge," switching from PoW to PoS and cutting energy use by ~99.95%. ZK rollups (StarkNet, zkSync, Polygon zkEVM) begin mainnet deployment.</li>
+          <li><strong>2023–2026</strong> — ZK proof generation times drop orders of magnitude. Layer-2 transaction costs reach sub-cent levels. Institutional CBDCs pilot globally. ZK-SNARKs enter the mainstream developer toolkit.</li>
+        </ul>
+
+        <div class="callout good">
+          <div class="label">Pattern to notice</div>
+          <p style="margin:6px 0">Each major wave — digital cash → programmable contracts → DeFi → ZK scaling — was enabled by a specific cryptographic or systems advance, not just market enthusiasm. Understanding the technology predicts which "next wave" claims are credible and which are marketing.</p>
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <section id="crypto">
+        <h2>Cryptographic foundations <span class="era">// the bedrock</span></h2>
+        <p>Blockchain rests on three cryptographic primitives that have been studied for decades and are considered secure under standard assumptions: hash functions, digital signatures, and Merkle trees. None of them were invented for blockchain, but their combination is what makes a trustless ledger possible. This section gives you a working understanding of each.</p>
+
+        <h3 id="hash">Hash functions</h3>
+        <p>A <span class="term" data-label="Cryptographic hash function" data-def="A deterministic function that maps arbitrary-length input to a fixed-length digest such that it is computationally infeasible to invert, find collisions, or predict how changes in input affect the output.">cryptographic hash function</span> maps an input of any length to a fixed-length digest. Bitcoin uses <strong>SHA-256</strong>, which always outputs 256 bits (32 bytes, displayed as 64 hex characters). The five security properties that matter for blockchain are:</p>
+        <ul>
+          <li><strong>Deterministic.</strong> Same input always produces the same output. Essential for all nodes independently verifying block hashes.</li>
+          <li><strong>Fast to compute.</strong> You can hash millions of inputs per second — critical for mining throughput.</li>
+          <li><strong>Preimage resistance.</strong> Given a hash <code>h</code>, it is computationally infeasible to find <em>any</em> input <code>m</code> such that <code>SHA256(m) = h</code>. This protects the mining puzzle.</li>
+          <li><strong>Collision resistance.</strong> It is computationally infeasible to find two different inputs with the same hash. This protects transaction integrity.</li>
+          <li><strong>Avalanche effect.</strong> Changing even one bit of input completely changes the output — roughly half the bits flip. This is why chained block hashes are tamper-evident.</li>
+        </ul>
+
+        <p>The avalanche effect is the key property for blockchain's tamper-evidence. The figure below illustrates it — two messages that differ by one character produce completely unrecognisable hashes:</p>
+
+        <!-- Avalanche effect SVG -->
+        <svg class="avalanche-svg" viewBox="0 0 620 170" xmlns="http://www.w3.org/2000/svg" aria-label="Avalanche effect diagram">
+          <rect width="620" height="170" fill="#0a0d12" rx="8"/>
+          <!-- Labels -->
+          <text x="16" y="30" fill="#8a93a6" font-family="monospace" font-size="11">Input A</text>
+          <rect x="16" y="38" width="220" height="28" rx="4" fill="#131b26" stroke="#2a3548" stroke-width="1"/>
+          <text x="24" y="57" fill="#e2e8f0" font-family="monospace" font-size="11">"Hello, blockchain!"</text>
+          <text x="16" y="110" fill="#8a93a6" font-family="monospace" font-size="11">Input B (one char diff)</text>
+          <rect x="16" y="118" width="220" height="28" rx="4" fill="#131b26" stroke="#2a3548" stroke-width="1"/>
+          <text x="24" y="137" fill="#e2e8f0" font-family="monospace" font-size="11">"Hello, Blockchain!"</text>
+          <!-- SHA-256 boxes -->
+          <rect x="276" y="44" width="80" height="22" rx="4" fill="rgba(249,115,22,0.15)" stroke="#f97316" stroke-width="1"/>
+          <text x="316" y="59" fill="#f97316" font-family="monospace" font-size="10" text-anchor="middle">SHA-256</text>
+          <rect x="276" y="124" width="80" height="22" rx="4" fill="rgba(249,115,22,0.15)" stroke="#f97316" stroke-width="1"/>
+          <text x="316" y="139" fill="#f97316" font-family="monospace" font-size="10" text-anchor="middle">SHA-256</text>
+          <!-- Arrows -->
+          <line x1="236" y1="52" x2="274" y2="55" stroke="#384050" stroke-width="1.5" marker-end="url(#arr)"/>
+          <line x1="236" y1="132" x2="274" y2="135" stroke="#384050" stroke-width="1.5" marker-end="url(#arr)"/>
+          <line x1="356" y1="55" x2="374" y2="55" stroke="#384050" stroke-width="1.5" marker-end="url(#arr)"/>
+          <line x1="356" y1="135" x2="374" y2="135" stroke="#384050" stroke-width="1.5" marker-end="url(#arr)"/>
+          <defs>
+            <marker id="arr" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
+              <path d="M0,0 L6,3 L0,6 Z" fill="#384050"/>
+            </marker>
+          </defs>
+          <!-- Hash outputs -->
+          <rect x="376" y="38" width="228" height="28" rx="4" fill="#0d1520" stroke="#2a3548" stroke-width="1"/>
+          <text x="382" y="51" fill="#22c55e" font-family="monospace" font-size="9">a8b4f2e1c7d093</text>
+          <text x="382" y="63" fill="#22c55e" font-family="monospace" font-size="9">5f2091c4b3a87d</text>
+          <rect x="376" y="118" width="228" height="28" rx="4" fill="#0d1520" stroke="#2a3548" stroke-width="1"/>
+          <text x="382" y="131" fill="#f472b6" font-family="monospace" font-size="9">3d9c71a4f08e52</text>
+          <text x="382" y="143" fill="#f472b6" font-family="monospace" font-size="9">b6714d2c9f038a</text>
+          <!-- Diff label -->
+          <text x="316" y="100" fill="#facc15" font-family="monospace" font-size="9" text-anchor="middle">↕ 1 char different</text>
+          <text x="490" y="100" fill="#facc15" font-family="monospace" font-size="9" text-anchor="middle">↕ ~50% of bits flipped</text>
+        </svg>
+
+        <p>In Bitcoin's mining puzzle, nodes must find a <span class="term" data-label="Nonce" data-def="A 'number used once' — an arbitrary value miners adjust until the block header hashes to a value below the current difficulty target.">nonce</span> such that <code>SHA256(SHA256(block_header))</code> is below a difficulty target (a number with many leading zeros). There is no shortcut: the only strategy is to try nonces sequentially. This is what makes PoW a lottery proportional to hash rate.</p>
+
+        <div class="callout">
+          <div class="label">Worked example</div>
+          <p style="margin:6px 0"><code>SHA256("") = e3b0c44298fc1c149afb...</code><br>
+          <code>SHA256("a") = ca978112ca1bbdcafac2...</code><br>
+          These 64-character hex strings look nothing alike despite the inputs being nearly identical (empty string vs. single letter). That's the avalanche effect in action. A block explorer showing block hashes relies on exactly this property to detect any tampering.</p>
+        </div>
+
+        <h3 id="signatures">Digital signatures</h3>
+        <p>Digital signatures solve a different problem: how do you prove that a transaction was authorised by the owner of an account, without revealing the owner's secret? Bitcoin and Ethereum both use <span class="term" data-label="ECDSA" data-def="Elliptic Curve Digital Signature Algorithm. A public-key signature scheme based on the algebraic structure of elliptic curves over finite fields. Faster and smaller-key than RSA at equivalent security levels.">ECDSA</span> (Elliptic Curve Digital Signature Algorithm) on the <strong>secp256k1</strong> curve. The mathematics rests on the fact that scalar multiplication on an elliptic curve is a one-way function: computing <code>Q = k·G</code> (where G is the generator point) is fast, but recovering <code>k</code> from <code>Q</code> is computationally infeasible.</p>
+
+        <p>Key relationships: a <strong>private key</strong> is a random 256-bit integer <code>k</code>. The <strong>public key</strong> is the point <code>Q = k·G</code> on the curve. An Ethereum address is the last 20 bytes of the Keccak-256 hash of the public key. To sign a transaction, you compute a signature <code>(r, s)</code> using the private key and a random nonce. Anyone can verify the signature is valid using only the public key — they never see the private key. This is what a <strong>wallet</strong> fundamentally is: software that stores private keys and constructs valid signatures.</p>
+
+        <p>Lose your private key and you lose access permanently — there is no password reset, no bank to call. Share your private key (or approve a malicious smart contract) and an attacker can drain your wallet instantly. The custodial risk of self-custody is real; it is the price of removing the trusted third party.</p>
+
+        <div class="callout warn">
+          <div class="label">Security note</div>
+          <p style="margin:6px 0">ECDSA's secp256k1 is secure against classical computers. A sufficiently powerful quantum computer running Shor's algorithm could break it. The cryptography community is actively standardising post-quantum signature schemes (NIST PQC). Most blockchain projects have migration plans but have not deployed them yet.</p>
+        </div>
+
+        <h3 id="merkle">Merkle trees</h3>
+        <p>A <span class="term" data-label="Merkle tree" data-def="A binary hash tree where every leaf is the hash of a data item, and every interior node is the hash of its two children. The root hash commits to the entire dataset; any single item can be proven with only O(log n) hashes.">Merkle tree</span> is a binary tree of hashes. Each leaf is the hash of a transaction. Each parent node is the hash of its two children's hashes. The root — the <em>Merkle root</em> — commits to the entire set of transactions in a block with a single 32-byte value. Bitcoin stores this root in the block header.</p>
+
+        <p>The power is in <strong>Merkle proofs</strong>. To prove that transaction T is included in a block, you need only the hashes of the sibling nodes along the path from the leaf to the root — <code>O(log n)</code> hashes for a tree of <code>n</code> transactions. A block with 4,096 transactions needs only 12 hashes (512 bytes) for a proof of inclusion. This enables <strong>SPV (Simplified Payment Verification)</strong> — lightweight clients like mobile wallets that download only block headers (80 bytes each) yet can still verify that their specific transactions were included, without running a full node.</p>
+
+        <p>Ethereum extends the concept with <span class="term" data-label="Merkle-Patricia Trie" data-def="A combination of a Merkle tree and a Patricia (radix) trie used in Ethereum to store the world state. Allows efficient proofs of account balances, contract storage, and receipts.">Merkle-Patricia Tries</span> for its world state, transaction, and receipt trees. The state trie maps account addresses to their balance, nonce, code hash, and storage root. Any account's state can be proven with a compact witness, enabling stateless clients and, eventually, validity proofs over the entire Ethereum state.</p>
+      </section>
+
+      <!-- ============================================================ -->
+      <section id="consensus">
+        <h2>Distributed consensus <span class="era">// agreeing without a boss</span></h2>
+        <p>The <span class="term" data-label="Byzantine Generals Problem" data-def="A thought experiment: can distributed actors reach consensus when some may be traitors (sending conflicting messages)? Proved to require 2f+1 nodes to tolerate f Byzantine faults in classic BFT.">Byzantine Generals Problem</span>, formalised by Lamport, Shostak, and Pease in 1982, asks: how can a distributed network of independent actors agree on a single value when some participants may be faulty or malicious? This is the central problem blockchain consensus solves. The three dominant approaches are Proof of Work, Proof of Stake, and classical BFT protocols — each with different tradeoffs in security, decentralisation, and finality.</p>
+
+        <h3 id="pow">Proof of Work</h3>
+        <p>In <span class="term" data-label="Proof of Work" data-def="A consensus mechanism requiring participants to expend computational effort (solve a hash puzzle) to propose a block. The correct chain is the one with the most accumulated work.">PoW</span>, nodes (miners) compete to find a nonce such that the block header's double-SHA-256 hash is below a target value. The target is adjusted every 2,016 blocks (≈2 weeks) so that blocks arrive roughly every 10 minutes regardless of total network hash rate. Finding a valid nonce requires on average <code>2^d</code> hash computations where <code>d</code> is the current difficulty. Verifying a solution is a single hash — asymmetric in the honest party's favour.</p>
+
+        <p>The <strong>longest chain rule</strong> (or more precisely, the <em>most-work chain</em>) is the fork-choice rule: if you receive two valid blocks at the same height, extend the chain you received first and switch if you later see a longer one. In equilibrium, the honest majority's chain grows fastest. A <strong>51% attack</strong> — controlling more than half the network's hash rate — would let an attacker rewrite recent history by mining a competing chain in secret and then publishing it. In Bitcoin, the total network hash rate (measured in exa-hashes per second) makes this enormously expensive; the hardware and electricity cost of a sustained attack exceeds the potential profit from double-spending.</p>
+
+        <p>PoW is <em>probabilistically final</em>: the deeper a block, the more work required to rewrite it, but there is no absolute finality at any given block. The convention of waiting for 6 confirmations (≈1 hour) for large Bitcoin transactions reflects the probability that 6 blocks of the honest chain would be orphaned is negligibly small.</p>
+
+        <div class="callout">
+          <div class="label">The mining puzzle in one line</div>
+          <p style="margin:6px 0">Find <code>nonce</code> such that <code>SHA256(SHA256(version ‖ prev_hash ‖ merkle_root ‖ time ‖ bits ‖ nonce)) &lt; target</code>. There is no smarter strategy than random search — the hash function ensures this.</p>
+        </div>
+
+        <h3 id="pos">Proof of Stake</h3>
+        <p><span class="term" data-label="Proof of Stake" data-def="A consensus mechanism where validators are chosen to propose and attest to blocks in proportion to the cryptocurrency they lock up (stake) as collateral. Security comes from economic incentives, not physical computation.">Proof of Stake</span> replaces physical computation with economic collateral. Validators lock up (stake) ETH or the chain's native token. The protocol randomly selects a validator to propose the next block, weighted by stake. Other validators <em>attest</em> to the block's validity. If a validator tries to double-vote or equivocate, the protocol detects it and destroys (slashes) a portion of their stake. Security comes from the financial cost of misbehaviour, not the cost of hardware.</p>
+
+        <p>Ethereum's PoS consensus is called <strong>Gasper</strong>, combining Casper FFG (a BFT-style finality gadget) with LMD-GHOST (a fork-choice rule). Under normal conditions, blocks finalise in two epochs (≈12.8 minutes). A finalised block requires a supermajority (2/3) of staked ETH to attest — reversing it would require slashing at least 1/3 of the total stake, making attacks astronomically expensive (hundreds of billions of dollars at current ETH prices).</p>
+
+        <p>PoS is significantly more capital-efficient than PoW. There is no ongoing hardware arms race; validators need only a standard server to run. The downside is a more complex security model — wealth concentration, MEV (maximal extractable value), and long-range attacks all require careful protocol design.</p>
+
+        <h3 id="bft">Classical BFT protocols</h3>
+        <p><span class="term" data-label="PBFT" data-def="Practical Byzantine Fault Tolerance (Castro & Liskov, 1999). A three-phase protocol (pre-prepare, prepare, commit) for reaching BFT consensus in O(n²) message complexity. Scales to tens of nodes, not thousands.">PBFT</span> (Practical Byzantine Fault Tolerance, 1999) was the first practically deployable BFT protocol. A leader broadcasts a proposal; two rounds of voting (prepare and commit) ensure that if 2f+1 out of 3f+1 nodes agree, the value is decided with instant finality. The cost is O(n²) message complexity — PBFT works for tens of validators but chokes at hundreds.</p>
+
+        <p><strong>Tendermint</strong> (used in Cosmos) and <strong>HotStuff</strong> (used in Libra/Diem and Flow) are modern BFT protocols with O(n) message complexity through clever use of threshold signatures or leader aggregation. They offer <em>deterministic finality</em> — once a block is committed, it cannot be reverted, ever, as long as less than 1/3 of validators are Byzantine. This is a stronger guarantee than PoW's probabilistic finality, but it requires a known, permissioned validator set.</p>
+
+        <p>The tradeoff is fundamental: classical BFT requires knowing who the participants are, which is feasible for a consortium chain with 100 validators but incompatible with Bitcoin's open-access ethos. PoW and PoS allow anyone to join; BFT requires permission. Many enterprise blockchains (Hyperledger Fabric, R3 Corda) choose BFT for this reason — they can tolerate a permissioned model in exchange for instant finality and no mining waste.</p>
+      </section>
+
+      <!-- ============================================================ -->
+      <section id="smart-contracts">
+        <h2>Smart contracts <span class="era">// programmable trust</span></h2>
+        <p>Nick Szabo coined the term "smart contract" in 1994, describing it as a digital version of a vending machine: insert the right inputs (coins) and the contract automatically produces the right outputs (soda) without needing a human to supervise the exchange. Ethereum realised this vision in 2015 by embedding a general-purpose virtual machine in the blockchain. Any code deployed to Ethereum runs identically on every full node; the output of a function call is as certain as the validity of a hash.</p>
+
+        <h3 id="evm">The Ethereum Virtual Machine</h3>
+        <p>The <span class="term" data-label="EVM" data-def="Ethereum Virtual Machine. A 256-bit word, stack-based, big-endian virtual machine that executes Ethereum bytecode. Every full node runs it identically; consensus ensures all agree on the resulting state.">EVM</span> is a 256-bit word, stack-based virtual machine. Programs are compiled to <strong>EVM bytecode</strong> — a sequence of opcodes like <code>PUSH1</code>, <code>ADD</code>, <code>MLOAD</code>, <code>CALL</code>. The EVM has no floating-point arithmetic (intentionally — floating-point is non-deterministic across platforms). Arithmetic is 256-bit integer, wrapping on overflow.</p>
+
+        <p><strong>Gas</strong> is the metering mechanism. Every opcode has a fixed gas cost (e.g., <code>ADD</code> costs 3 gas, <code>SSTORE</code> — writing to persistent storage — costs 20,000 gas). The transaction sender specifies a <code>gas limit</code> and <code>max fee per gas</code>. If execution runs out of gas, it reverts with no state change but the gas is still consumed (preventing free denial-of-service). This makes the halting problem irrelevant: every computation terminates, either completing or running out of gas.</p>
+
+        <p>The EVM distinguishes two kinds of accounts: <strong>externally owned accounts</strong> (EOAs) controlled by private keys, and <strong>contract accounts</strong> with code and storage. Calling a contract is a transaction that runs its bytecode. Contracts can call other contracts, but re-entering the same contract during a call is where the infamous reentrancy bug lives (see <a href="#security">Security</a>).</p>
+
+        <h3 id="solidity">Solidity patterns: ERC-20 walkthrough</h3>
+        <p>Solidity is the dominant high-level language for Ethereum smart contracts. It compiles to EVM bytecode and looks superficially like JavaScript with types. The <strong>ERC-20 standard</strong> defines the interface that any fungible token must implement, enabling wallets and exchanges to integrate any token without bespoke integration work.</p>
+
+        <pre><code>// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+contract SimpleToken {
+    string public name = "SimpleToken";
+    string public symbol = "SIMP";
+    uint8  public decimals = 18;
+    uint256 public totalSupply;
+
+    mapping(address => uint256) public balanceOf;
+    mapping(address => mapping(address => uint256)) public allowance;
+
+    event Transfer(address indexed from, address indexed to, uint256 value);
+    event Approval(address indexed owner, address indexed spender, uint256 value);
+
+    constructor(uint256 _supply) {
+        totalSupply = _supply * 10**decimals;
+        balanceOf[msg.sender] = totalSupply;
+        emit Transfer(address(0), msg.sender, totalSupply);
+    }
+
+    function transfer(address to, uint256 amount) external returns (bool) {
+        require(balanceOf[msg.sender] >= amount, "insufficient balance");
+        balanceOf[msg.sender] -= amount;
+        balanceOf[to] += amount;
+        emit Transfer(msg.sender, to, amount);
+        return true;
+    }
+
+    function approve(address spender, uint256 amount) external returns (bool) {
+        allowance[msg.sender][spender] = amount;
+        emit Approval(msg.sender, spender, amount);
+        return true;
+    }
+
+    function transferFrom(address from, address to, uint256 amount) external returns (bool) {
+        require(balanceOf[from] >= amount, "insufficient balance");
+        require(allowance[from][msg.sender] >= amount, "insufficient allowance");
+        allowance[from][msg.sender] -= amount;
+        balanceOf[from] -= amount;
+        balanceOf[to] += amount;
+        emit Transfer(from, to, amount);
+        return true;
+    }
+}</code></pre>
+
+        <p>Notice the patterns: <code>mapping(address =&gt; uint256)</code> is EVM persistent storage. <code>msg.sender</code> is the authenticated caller — the EVM guarantees this is the address that signed the transaction, so the contract does not need to verify identity separately. <code>emit Transfer</code> writes an event log — cheaper than storage, readable off-chain by indexers like The Graph. Real-world ERC-20 contracts add <code>mint</code>, <code>burn</code>, and access-control modifiers, but the core logic is this simple.</p>
+
+        <h3 id="security">Security: reentrancy, overflows, and the DAO hack</h3>
+        <p>Smart contracts are immutable once deployed. A bug in a deployed contract is permanent unless the contract was designed with an upgrade mechanism. This makes security auditing critical before deployment. Three vulnerability classes have caused the most damage:</p>
+
+        <p><strong>Reentrancy</strong> is the most famous. The pattern: contract A sends ETH to contract B, which calls back into A before A updates its internal balance. In 2016, an attacker exploited this in "The DAO," a decentralised fund with 150M USD of ETH. The attack drained 60M USD. The code flaw was a recursive external call before a balance update:</p>
+
+        <pre><code>// VULNERABLE — do not use
+function withdraw(uint256 amount) external {
+    require(balance[msg.sender] >= amount);
+    (bool ok, ) = msg.sender.call{value: amount}(""); // attacker re-enters here
+    require(ok);
+    balance[msg.sender] -= amount; // too late — already called back
+}
+
+// FIX: update state BEFORE external calls (Checks-Effects-Interactions pattern)
+function withdraw(uint256 amount) external {
+    require(balance[msg.sender] >= amount);
+    balance[msg.sender] -= amount; // update first
+    (bool ok, ) = msg.sender.call{value: amount}("");
+    require(ok);
+}</code></pre>
+
+        <p><strong>Integer overflow/underflow</strong> in Solidity <code>&lt;0.8.0</code> was silent — <code>uint256(0) - 1</code> wrapped to 2²⁵⁶−1. Solidity 0.8+ added automatic overflow checks. Older contracts should use <code>SafeMath</code>. <strong>Access control failures</strong> — missing or incorrect <code>onlyOwner</code> modifiers — have drained hundreds of millions from bridges and protocols. The rule is simple: every state-changing function must verify who is calling it.</p>
+
+        <div class="callout warn">
+          <div class="label">The DAO aftermath</div>
+          <p style="margin:6px 0">The Ethereum community chose to hard-fork the chain to return stolen funds, creating two chains: Ethereum (ETH) and Ethereum Classic (ETC). This remains the most contentious event in blockchain history — was it a principled intervention or a proof that "code is law" was an empty slogan?</p>
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <section id="defi">
+        <h2>DeFi &amp; Tokens <span class="era">// programmable finance</span></h2>
+        <p>Decentralised Finance is the ecosystem of financial primitives — trading, lending, derivatives, stablecoins — implemented as smart contracts on public blockchains. Unlike traditional finance, there are no KYC forms, no business hours, no custodian holding your assets, and (in theory) no single point of failure. The tradeoffs: you are fully responsible for your own security, gas costs can be prohibitive during high-demand periods, and smart contract bugs can lead to total loss.</p>
+
+        <h3 id="amm">Automated Market Makers</h3>
+        <p>Traditional exchanges use an order book — buyers post bids, sellers post asks, and a matching engine pairs them. This requires liquidity providers to actively manage positions and is hard to operate permissionlessly on-chain. Uniswap (2018) popularised a radically simpler model: the <span class="term" data-label="Constant Product AMM" data-def="An automated market maker using the invariant x·y = k, where x and y are the reserves of two tokens. Price is determined by the ratio y/x; trades move along the curve.">constant product AMM</span> with the invariant <code>x · y = k</code>.</p>
+
+        <p>In a Uniswap pool with reserves <code>x</code> of token A and <code>y</code> of token B, the product <code>k = x · y</code> must remain constant after every trade (ignoring fees). If a trader buys <code>Δy</code> of token B, they must deposit <code>Δx</code> of token A such that <code>(x + Δx)(y − Δy) = k</code>. Solving: <code>Δx = k/(y − Δy) − x</code>. The instantaneous price is always <code>p = y/x</code> — the ratio of reserves. Large trades move the price along the hyperbola, causing <span class="term" data-label="Price impact" data-def="The change in a token's price caused by a trade. Larger trades relative to pool liquidity cause greater price impact (slippage).">price impact</span> (slippage).</p>
+
+        <!-- Interactive AMM figure -->
+        <div class="amm-wrap">
+          <div style="font-family:var(--mono,monospace);font-size:11px;color:#8a93a6;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:10px;">Interactive — x·y = k curve</div>
+          <div class="amm-controls">
+            <div class="amm-ctrl-row">
+              <label>Reserve X (token A)</label>
+              <input type="range" id="amm-x" min="10" max="200" value="100" step="1">
+            </div>
+            <div class="amm-ctrl-row">
+              <label>Reserve Y (token B)</label>
+              <input type="range" id="amm-y" min="10" max="200" value="100" step="1">
+            </div>
+          </div>
+          <svg id="amm-svg" viewBox="0 0 480 280" width="100%" style="display:block;max-width:480px;background:#0a0d12;border-radius:6px;border:1px solid #1e2535;">
+            <g id="amm-grid"></g>
+            <path id="amm-curve" fill="none" stroke="#f97316" stroke-width="2"/>
+            <circle id="amm-point" r="6" fill="#f97316" stroke="#0a0d12" stroke-width="2"/>
+            <text id="amm-xlabel" x="450" y="268" fill="#8a93a6" font-family="monospace" font-size="10" text-anchor="end">x</text>
+            <text id="amm-ylabel" x="26" y="16" fill="#8a93a6" font-family="monospace" font-size="10">y</text>
+          </svg>
+          <div class="amm-stats">
+            <span>k = <strong id="amm-k">10000</strong></span>
+            <span>Price (y/x) = <strong id="amm-price">1.000</strong></span>
+            <span>Reserves: x = <strong id="amm-xval">100</strong>, y = <strong id="amm-yval">100</strong></span>
+          </div>
+        </div>
+
+        <p><span class="term" data-label="Impermanent loss" data-def="The difference in value between holding tokens in a liquidity pool vs. holding them outright, caused by the AMM rebalancing as prices change. It becomes permanent when the LP withdraws.">Impermanent loss</span> is the hidden cost of providing liquidity. If the price of token A doubles relative to token B, the AMM automatically sells A and buys B to stay on the curve. An LP who withdraws at this point ends up with fewer A tokens than if they had simply held. The loss is "impermanent" only if the price returns to the initial ratio. At a 2× price move, impermanent loss is about 5.7%; at 5×, it's 25.5%. Uniswap V3's concentrated liquidity allows LPs to select a price range, earning more fees for the same capital but with greater impermanent loss risk.</p>
+
+        <h3 id="tokens">Token standards</h3>
+        <p>The Ethereum token ecosystem is built on three ERC standards. <strong>ERC-20</strong> (2015) defines fungible tokens — every unit is interchangeable, like currency. It specifies <code>transfer</code>, <code>approve</code>, <code>transferFrom</code>, <code>balanceOf</code>, and <code>allowance</code>. Almost every DeFi protocol accepts any ERC-20. <strong>ERC-721</strong> (2018) defines non-fungible tokens — each token has a unique <code>tokenId</code> and the standard tracks ownership per ID. ERC-721 enabled CryptoKitties, Bored Apes, and digital art provenance. <strong>ERC-1155</strong> (2019) is a multi-token standard that lets a single contract manage both fungible and non-fungible tokens in one efficient interface — widely used in gaming for item inventories.</p>
+
+        <h3 id="nft">NFTs — what they are and aren't</h3>
+        <p>An <span class="term" data-label="NFT" data-def="Non-Fungible Token. An ERC-721 token with a unique ID. The token represents ownership as recorded on-chain. The associated media (image, video) is typically stored off-chain on IPFS or centralised servers.">NFT</span> is a unique on-chain record of ownership — the token itself is 32 bytes on Ethereum's state trie. What the NFT "represents" is entirely off-chain: typically a URL pointing to a JSON metadata file, which in turn points to an image. The crucial and frequently misunderstood point: <em>the blockchain does not store the image</em>. If the server hosting the image goes down, the NFT still exists but its visual representation is gone. IPFS (content-addressed storage) provides better persistence guarantees than a centralised server, but does not guarantee perpetual availability.</p>
+
+        <p>What NFTs do provide: provable scarcity (there can only ever be N tokens in a given contract), provable ownership history (the full transfer log is on-chain), and composability (other smart contracts can query ownership without any central authority approving). What they do not provide: copyright transfer (unless the terms of sale explicitly grant it), copy protection (anyone can right-click-save the image), or any guarantee that the issuer won't create another collection.</p>
+      </section>
+
+      <!-- ============================================================ -->
+      <section id="scaling">
+        <h2>Scaling &amp; Privacy <span class="era">// the throughput problem</span></h2>
+        <p>Ethereum mainnet processes roughly 15–30 transactions per second. Visa processes ≈24,000 TPS at peak. Blockchain's bottleneck is deliberate: every full node must process every transaction to maintain decentralised verification. The <span class="term" data-label="Blockchain trilemma" data-def="The observation (Buterin, 2017) that it appears difficult to simultaneously achieve all three of decentralisation, security, and scalability in a single blockchain layer. Most scaling approaches make explicit tradeoffs.">blockchain trilemma</span> (Buterin, 2017) captures the tension: decentralisation, security, and scalability are hard to maximise simultaneously. Layer 2 solutions decouple transaction throughput from Layer 1 security by doing computation off-chain and settling proofs on-chain.</p>
+
+        <h3 id="layer2">Layer 2: rollups and state channels</h3>
+        <p><span class="term" data-label="Optimistic rollup" data-def="A Layer 2 protocol that posts compressed transaction batches to L1 and assumes them valid by default. Fraud proofs allow anyone to challenge an invalid batch within a 7-day challenge window.">Optimistic rollups</span> (Optimism, Arbitrum) process transactions off-chain, post compressed calldata to Ethereum, and assume validity optimistically. If someone posts a fraudulent state transition, any honest observer can submit a <strong>fraud proof</strong> during a 7-day challenge window to revert it. The 7-day withdrawal window is the main UX cost: funds can only be bridged back to mainnet after the challenge period expires (though liquidity networks like Across solve this with fast bridges).</p>
+
+        <p><span class="term" data-label="ZK rollup" data-def="A Layer 2 protocol that posts compressed transactions plus a cryptographic validity proof (ZK-SNARK or STARK) to L1. The proof mathematically guarantees the batch is correct; no challenge period needed.">ZK rollups</span> (zkSync, StarkNet, Polygon zkEVM, Scroll) execute transactions off-chain and post a <em>validity proof</em> — a ZK-SNARK or STARK that mathematically proves the batch was executed correctly — alongside the compressed transaction data to L1. Ethereum verifies the proof in O(1) time regardless of how many transactions are in the batch. No challenge period; withdrawals to mainnet take minutes. The cost is the proof generation time and circuit complexity, both of which are dropping rapidly as ZK proving technology matures.</p>
+
+        <p><strong>State channels</strong> (Lightning Network for Bitcoin, Payment Channels) lock funds in a 2-of-2 multisig on-chain, then exchange signed off-chain messages updating the balance. As long as both parties sign, the channel state updates instantly and for free. Only the final settlement (or a dispute) hits the blockchain. Channels are ideal for high-frequency bilateral payments but awkward for multi-party interactions — the reason Lightning is powerful for micropayments but unsuitable as a general smart-contract platform.</p>
+
+        <div class="callout good">
+          <div class="label">ZK vs Optimistic: the practical tradeoff</div>
+          <p style="margin:6px 0">Optimistic rollups are easier to make EVM-equivalent (same bytecode, same tooling) and have been in production longer. ZK rollups have faster finality and better long-term scaling potential but require custom circuit development or a zkEVM. As of 2026, both approaches are in production; most new DeFi deployment is on ZK rollups due to dramatically lower fees.</p>
+        </div>
+
+        <h3 id="zkp">Zero-knowledge proofs</h3>
+        <p>A <span class="term" data-label="Zero-knowledge proof" data-def="A cryptographic protocol where a prover can convince a verifier that a statement is true without revealing any information beyond the truth of the statement itself. Key properties: completeness, soundness, zero-knowledge.">zero-knowledge proof</span> lets a prover convince a verifier that a statement is true without revealing why. The three formal properties: <strong>completeness</strong> (an honest prover with a valid witness always convinces the verifier), <strong>soundness</strong> (a cheating prover cannot convince the verifier of a false statement except with negligible probability), and <strong>zero-knowledge</strong> (the verifier learns nothing beyond the truth of the statement).</p>
+
+        <p><strong>ZK-SNARKs</strong> (Succinct Non-interactive ARguments of Knowledge) produce proofs of constant size (a few hundred bytes) that verify in milliseconds regardless of computation size. The tradeoff: they require a <em>trusted setup</em> ceremony — a multi-party computation that generates public parameters. If the ceremony is compromised, fake proofs can be constructed. Groth16 and PLONK are the dominant SNARK systems. <strong>ZK-STARKs</strong> (Scalable Transparent ARguments of Knowledge) require no trusted setup (the "T" is for transparent) and are post-quantum secure, but produce larger proofs (tens to hundreds of kilobytes). STARKs underpin StarkNet and StarkEx. The prover performance difference between SNARKs and STARKs has narrowed dramatically; hardware acceleration (FPGAs, ASICs for ZK proofs) is a rapidly growing field.</p>
+
+        <p>Beyond rollups, ZK proofs enable <strong>private transactions</strong> (Zcash's shielded pool, Tornado Cash's architecture), <strong>identity proofs</strong> (prove you are over 18 without revealing your birthdate), <strong>voting systems</strong> (prove you voted without revealing how), and <strong>verifiable computation</strong> (outsource computation to an untrusted cloud and verify the result cheaply). The applications are broad; ZK is likely to be the most consequential cryptographic primitive of the next decade.</p>
+
+        <h3 id="bridges">Cross-chain bridges</h3>
+        <p>A <span class="term" data-label="Bridge" data-def="A protocol for transferring assets between two blockchains with different trust models. Security depends on the bridge's trust assumptions — from fully trusted custodians to trustless validity proofs.">bridge</span> connects two blockchains so that assets can move between them. The trust models vary enormously and determine the risk profile. <strong>Centralised/custodial bridges</strong> hold assets in a multisig or single-operator custody — simple, fast, but introduce a counterparty risk. Most exchange-native bridges work this way. <strong>Optimistic bridges</strong> use fraud proofs, inheriting the 7-day delay. <strong>ZK validity-proof bridges</strong> (like StarkGate, zkBridge) submit on-chain proofs that the source chain state is correct — the most trustless model but requires an on-chain proof verifier.</p>
+
+        <p>Bridges have been the primary target of large hacks: Ronin Bridge ($625M, 2022), Wormhole ($320M, 2022), Nomad ($190M, 2022). The attack surface is large — bridges must trust the security of both chains, plus the bridge contract itself. The rule of thumb: the more a bridge offers unconditional trust and speed, the more centralized and risky it is. For large value transfers, ZK-based bridges or waiting for native L1 settlement is significantly safer than custodial alternatives.</p>
+      </section>
+
+      <!-- ============================================================ -->
+      <section id="applications">
+        <h2>Applications <span class="era">// beyond cryptocurrency</span></h2>
+        <p>Most blockchain applications outside of financial speculation are still early-stage, but several have moved from whitepaper to production deployment. Understanding which properties of blockchain (immutability, transparency, programmability, censorship resistance) each application actually relies on helps separate genuine value from hype.</p>
+
+        <div class="grid">
+          <div class="card">
+            <h4>Supply chain provenance</h4>
+            <p>Recording product origin, custody transfers, and certifications on-chain. De Beers (diamonds), Walmart (food safety), and Maersk (shipping) have deployed enterprise chains. The genuine value: an immutable audit trail that all parties can read without a centralised database operator to trust. The honest caveat: the "oracle problem" — blockchain cannot guarantee the real-world object matches its on-chain record. A dishonest supplier can hash a false certification just as easily as a true one.</p>
+            <span class="tag">production</span>
+          </div>
+          <div class="card">
+            <h4>Digital identity &amp; credentials</h4>
+            <p><span class="term" data-label="DID" data-def="Decentralised Identifier. A W3C standard for self-sovereign identifiers that resolve to DID documents on a blockchain or distributed ledger, without a centralised registry.">DIDs</span> (Decentralised Identifiers) and <span class="term" data-label="Verifiable Credential" data-def="A W3C standard for tamper-evident credential documents (like diplomas or licenses) cryptographically signed by an issuer, held by a holder, and verifiable by anyone.">Verifiable Credentials</span> allow individuals to hold digitally signed credentials (degrees, licenses, age attestations) and present them selectively without a centralised identity provider. ZK proofs allow proving claims derived from credentials (you are over 21) without revealing the underlying document. The EU's eIDAS 2.0 and several national digital-wallet programs are building on this stack.</p>
+            <span class="tag hot">growing</span>
+          </div>
+          <div class="card">
+            <h4>Central Bank Digital Currencies</h4>
+            <p><span class="term" data-label="CBDC" data-def="Central Bank Digital Currency. A digital form of a country's fiat currency, issued and backed by the central bank. Distinct from cryptocurrency in that it is centralised and state-controlled.">CBDCs</span> are digital fiat currencies issued by central banks. Over 130 countries are researching or piloting them (BIS, 2025). Most use <em>permissioned</em> blockchains (Hyperledger, R3 Corda, or bespoke) — not public chains. The design tradeoffs are political as much as technical: programmable money (automatic tax withholding, expiry dates on stimulus payments) is powerful and dystopian simultaneously. The Bahamas' Sand Dollar, Nigeria's eNaira, and the EU's digital euro pilot are live examples.</p>
+            <span class="tag">live pilots</span>
+          </div>
+          <div class="card">
+            <h4>DeSci — Decentralised Science</h4>
+            <p>Using blockchain for open-access research funding, reproducibility, IP management, and data provenance. Molecule Protocol funds early-stage biotech research via NFT-based IP licences; VitaDAO focuses on longevity research. The genuine value: transparent peer review, immutable publication timestamps, and programmable royalties. The current limitation: on-chain storage is expensive, so most systems store only metadata or hashes on-chain while keeping full datasets on IPFS or centralised repos.</p>
+            <span class="tag">early</span>
+          </div>
+        </div>
+
+        <div class="callout">
+          <div class="label">Evaluating a blockchain application</div>
+          <p style="margin:6px 0">Ask four questions: (1) Does this <em>need</em> immutability, or is a normal database with access controls sufficient? (2) Does it need <em>public verifiability</em>, or is internal audit enough? (3) Does it need <em>censorship resistance</em> — no single party should be able to block transactions? (4) Does it need <em>programmability without a trusted administrator</em>? If the answer to all four is no, a traditional database is almost certainly better: cheaper, faster, more private, and easier to fix when bugs appear.</p>
+        </div>
+
+        <p>The most durable applications are those where all four properties are genuinely required: international currency transfers across jurisdictions with no banking relationship, censorship-resistant publishing in authoritarian states, permissionless financial access for the unbanked, and credibly-neutral infrastructure that competing institutions can use without trusting one another. The applications most likely to overpromise are those where "blockchain" provides transparency theater without real benefit — logging data that a single company controls, on a chain that company runs.</p>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<script>
+// ============================================================
+// MOBILE MENU
+// ============================================================
+const mobileToggle = document.getElementById('mobile-menu-toggle');
+const sidebarEl = document.querySelector('aside.sidebar');
+const sidebarBackdrop = document.getElementById('sidebar-backdrop');
+function closeMobileMenu() {
+  sidebarEl.classList.remove('open');
+  sidebarBackdrop.classList.remove('show');
+  mobileToggle.textContent = '☰';
+}
+function openMobileMenu() {
+  sidebarEl.classList.add('open');
+  sidebarBackdrop.classList.add('show');
+  mobileToggle.textContent = '✕';
+}
+mobileToggle.addEventListener('click', () => {
+  if (sidebarEl.classList.contains('open')) closeMobileMenu();
+  else openMobileMenu();
+});
+sidebarBackdrop.addEventListener('click', closeMobileMenu);
+document.querySelectorAll('aside.sidebar nav a').forEach(a => {
+  a.addEventListener('click', () => {
+    if (window.innerWidth <= 900) closeMobileMenu();
+  });
+});
+
+// ============================================================
+// TOOLTIPS
+// ============================================================
+const tooltip = document.getElementById('tooltip');
+document.addEventListener('mouseover', (e) => {
+  const t = e.target.closest('.term');
+  if (!t) return;
+  const def = t.getAttribute('data-def');
+  const label = t.getAttribute('data-label') || 'Definition';
+  if (!def) return;
+  tooltip.innerHTML = `<div style="font-family: var(--mono); font-size: 10px; color: #f97316; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px;">${label}</div>${def}`;
+  tooltip.classList.add('show');
+});
+document.addEventListener('mousemove', (e) => {
+  if (!tooltip.classList.contains('show')) return;
+  let x = e.clientX + 16, y = e.clientY + 16;
+  const tw = tooltip.offsetWidth, th = tooltip.offsetHeight;
+  if (x + tw > window.innerWidth - 10) x = e.clientX - tw - 16;
+  if (y + th > window.innerHeight - 10) y = e.clientY - th - 16;
+  tooltip.style.left = x + 'px';
+  tooltip.style.top = y + 'px';
+});
+document.addEventListener('mouseout', (e) => {
+  if (e.target.closest && e.target.closest('.term')) tooltip.classList.remove('show');
+});
+
+// ============================================================
+// COLLAPSIBLE SIDEBAR + SCROLL SPY
+// ============================================================
+const sections = document.querySelectorAll('main section[id]');
+const navLinks = document.querySelectorAll('aside nav a');
+const catGroups = document.querySelectorAll('.cat-group');
+const catToggles = document.querySelectorAll('.cat-toggle');
+
+catToggles.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const expanded = btn.getAttribute('aria-expanded') === 'true';
+    btn.setAttribute('aria-expanded', expanded ? 'false' : 'true');
+    try {
+      const group = btn.closest('.cat-group')?.dataset.group;
+      if (group) {
+        const key = 'sidenav-chain:' + group;
+        localStorage.setItem(key, expanded ? 'closed' : 'open');
+      }
+    } catch (e) { /* ignore */ }
+  });
+});
+
+catGroups.forEach(group => {
+  try {
+    const key = 'sidenav-chain:' + group.dataset.group;
+    const saved = localStorage.getItem(key);
+    if (saved === 'open' || saved === 'closed') {
+      const btn = group.querySelector('.cat-toggle');
+      if (btn) btn.setAttribute('aria-expanded', saved === 'open' ? 'true' : 'false');
+    }
+  } catch (e) { /* ignore */ }
+});
+
+let lastActiveGroup = null;
+function updateActiveNav() {
+  let active = null;
+  sections.forEach(sec => {
+    const rect = sec.getBoundingClientRect();
+    if (rect.top < 240) active = sec.id;
+  });
+  navLinks.forEach(a => {
+    const href = a.getAttribute('href');
+    a.classList.toggle('active', href === '#' + active);
+  });
+  if (active) {
+    const activeLink = document.querySelector('aside nav a.active');
+    const activeGroup = activeLink ? activeLink.closest('.cat-group') : null;
+    catGroups.forEach(g => g.classList.toggle('is-active', g === activeGroup));
+    if (activeGroup && activeGroup !== lastActiveGroup) {
+      const btn = activeGroup.querySelector('.cat-toggle');
+      if (btn && btn.getAttribute('aria-expanded') !== 'true') {
+        btn.setAttribute('aria-expanded', 'true');
+      }
+      lastActiveGroup = activeGroup;
+    }
+  }
+}
+window.addEventListener('scroll', updateActiveNav, { passive: true });
+updateActiveNav();
+
+// ============================================================
+// AMM INTERACTIVE FIGURE
+// ============================================================
+(function () {
+  const xSlider = document.getElementById('amm-x');
+  const ySlider = document.getElementById('amm-y');
+  const kEl = document.getElementById('amm-k');
+  const priceEl = document.getElementById('amm-price');
+  const xvalEl = document.getElementById('amm-xval');
+  const yvalEl = document.getElementById('amm-yval');
+  const svg = document.getElementById('amm-svg');
+  const curvePath = document.getElementById('amm-curve');
+  const pointEl = document.getElementById('amm-point');
+
+  const PAD = 36, W = 480, H = 280;
+  const MAX_VAL = 210;
+
+  function toSvgX(v) { return PAD + (v / MAX_VAL) * (W - PAD * 2); }
+  function toSvgY(v) { return H - PAD - (v / MAX_VAL) * (H - PAD * 2); }
+
+  function drawAxes() {
+    // draw inside the SVG once
+    let g = document.getElementById('amm-axes');
+    if (g) return;
+    g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    g.id = 'amm-axes';
+    // x axis
+    const xa = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    xa.setAttribute('x1', PAD); xa.setAttribute('y1', H - PAD);
+    xa.setAttribute('x2', W - PAD + 10); xa.setAttribute('y2', H - PAD);
+    xa.setAttribute('stroke', '#384050'); xa.setAttribute('stroke-width', '1');
+    g.appendChild(xa);
+    // y axis
+    const ya = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    ya.setAttribute('x1', PAD); ya.setAttribute('y1', PAD - 10);
+    ya.setAttribute('x2', PAD); ya.setAttribute('y2', H - PAD);
+    ya.setAttribute('stroke', '#384050'); ya.setAttribute('stroke-width', '1');
+    g.appendChild(ya);
+    svg.insertBefore(g, curvePath);
+  }
+
+  function render() {
+    drawAxes();
+    const rx = parseFloat(xSlider.value);
+    const ry = parseFloat(ySlider.value);
+    const k = rx * ry;
+
+    kEl.textContent = k.toFixed(0);
+    priceEl.textContent = (ry / rx).toFixed(3);
+    xvalEl.textContent = rx.toFixed(0);
+    yvalEl.textContent = ry.toFixed(0);
+
+    // Draw hyperbola y = k/x for x from small to MAX_VAL
+    const pts = [];
+    for (let xi = 3; xi <= MAX_VAL; xi += 2) {
+      const yi = k / xi;
+      if (yi > MAX_VAL) continue;
+      pts.push(`${toSvgX(xi).toFixed(1)},${toSvgY(yi).toFixed(1)}`);
+    }
+    curvePath.setAttribute('d', pts.length > 1 ? 'M' + pts.join('L') : '');
+
+    // Current point
+    pointEl.setAttribute('cx', toSvgX(rx).toFixed(1));
+    pointEl.setAttribute('cy', toSvgY(ry).toFixed(1));
+  }
+
+  xSlider.addEventListener('input', render);
+  ySlider.addEventListener('input', render);
+  render();
+})();
+</script>
+</body>
+</html>

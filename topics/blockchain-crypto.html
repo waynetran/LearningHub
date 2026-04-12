@@ -1,0 +1,1594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cryptographic Foundations of Blockchain — Deep Dive</title>
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError: false});"></script>
+</head>
+<body>
+<div id="tooltip"></div>
+
+<nav class="topic-nav">
+  <a class="back" href="../blockchain.html">← Back to Blockchain</a>
+  <div class="crumb">Deep Dives / <span class="topic-name">Cryptographic Foundations</span></div>
+</nav>
+
+<div class="topic-layout">
+  <aside class="topic-toc">
+    <h4>ON THIS PAGE</h4>
+    <ul>
+      <li><a href="#why-crypto">1. Why cryptography is the foundation</a></li>
+      <li><a href="#hash-functions">2. Hash functions (SHA-256, Keccak-256)</a></li>
+      <li><a href="#merkle-trees">3. Merkle trees</a></li>
+      <li><a href="#ecdsa">4. Public-key cryptography (ECDSA)</a></li>
+      <li><a href="#wallets">5. Wallets and addresses</a></li>
+      <li><a href="#signatures">6. Digital signatures in transactions</a></li>
+      <li><a href="#hash-pointers">7. Hash pointers and the chain</a></li>
+      <li><a href="#avalanche-viz">8. Interactive: avalanche effect</a></li>
+      <li><a href="#source-code">9. Source code</a></li>
+      <li><a href="#summary">10. Summary</a></li>
+    </ul>
+  </aside>
+
+  <article class="topic-content">
+    <h1>Cryptographic Foundations of Blockchain</h1>
+    <p class="subtitle">Hash functions, digital signatures, and Merkle trees — the three primitives that let strangers agree on truth without trusting each other. Built from first principles with real math, concrete examples, and interactive visualizations.</p>
+    <div class="meta-tags">
+      <span>Prereq: basic number theory, modular arithmetic</span>
+      <span>Time to read: ~35 min</span>
+      <span>Interactive figures: 1</span>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="why-crypto">1. Why cryptography is the foundation</h2>
+
+    <p>A distributed ledger sounds deceptively simple: a list of transactions that everyone can read and no one can alter. But without a trusted central authority, how do you stop participants from lying? If Alice claims she sent 1 BTC to Bob, why should any stranger believe her? And how can 10,000 nodes around the world agree on the <em>same</em> history of events without ever talking to a central server?</p>
+
+    <p>The answer is cryptography. Three primitives do all the heavy lifting:</p>
+
+    <ul>
+      <li><strong>Hash functions</strong> — take any data (a transaction, a block, a public key) and produce a fixed-size fingerprint. Any modification to the input changes the fingerprint completely. This makes tampering detectable without sharing the original data.</li>
+      <li><strong>Digital signatures</strong> — let Alice prove she authorized a transaction without ever revealing her secret key. Only Alice could have produced the signature, but anyone can verify it with her public key.</li>
+      <li><strong>Merkle trees</strong> — let you verify that a single transaction is included in a block containing thousands of transactions by checking only $O(\log n)$ hashes, not the whole block.</li>
+    </ul>
+
+    <div class="callout">
+      <div class="label">THE CORE INSIGHT</div>
+      <p style="margin:6px 0">Bitcoin and Ethereum do not eliminate trust — they <em>encode</em> it in mathematics. Every node independently verifies every claim using the same deterministic rules. Disagreement is impossible because math has no politics. There is no committee deciding whether a transaction is valid; there is only computation.</p>
+    </div>
+
+    <p>Strip these three primitives out and what remains is just a replicated database that any participant can corrupt. The cryptography is not a feature added on top — it is the entire reason a decentralized ledger can exist.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="hash-functions">2. Hash functions (SHA-256 and Keccak-256)</h2>
+
+    <p>A cryptographic hash function maps an arbitrary-length bit string to a fixed-length digest:</p>
+
+    <div class="math-display">$$H : \{0,1\}^* \;\to\; \{0,1\}^{256}$$</div>
+
+    <p>Any input, no matter how long, is compressed to exactly 256 bits. The function must satisfy five properties to be cryptographically useful:</p>
+
+    <table class="rank-table">
+      <thead>
+        <tr><th>Property</th><th>Informal meaning</th><th>Security level</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>Deterministic</strong></td><td>Same input always gives same output</td><td>Required by definition</td></tr>
+        <tr><td><strong>Efficient</strong></td><td>Computing $H(x)$ takes nanoseconds</td><td>—</td></tr>
+        <tr><td><strong>Preimage resistance</strong></td><td>Given $h$, finding any $x$ with $H(x)=h$ is infeasible</td><td>$2^{256}$ operations</td></tr>
+        <tr><td><strong>Second preimage resistance</strong></td><td>Given $x$, finding $x' \neq x$ with $H(x')=H(x)$ is infeasible</td><td>$2^{256}$ operations</td></tr>
+        <tr><td><strong>Collision resistance</strong></td><td>Finding <em>any</em> pair $x \neq x'$ with $H(x)=H(x')$ is infeasible</td><td>$2^{128}$ operations (birthday bound)</td></tr>
+        <tr><td><strong>Avalanche effect</strong></td><td>Flipping 1 bit of input flips ~50% of output bits</td><td>Essential for security</td></tr>
+      </tbody>
+    </table>
+
+    <p>Note the asymmetry between preimage resistance ($2^{256}$) and collision resistance ($2^{128}$). The birthday paradox guarantees that collisions exist with $2^{128}$ trials even for a perfect 256-bit hash — but $2^{128}$ is still absurdly large. At $10^{18}$ hashes per second (an impossibly fast hypothetical computer), finding a collision would take $\sim 10^{20}$ years.</p>
+
+    <h3>SHA-256: the Merkle-Damgård construction</h3>
+
+    <p>SHA-256 processes input in 512-bit blocks using the <em>Merkle-Damgård</em> construction. The message is padded to a multiple of 512 bits (the padding always starts with a 1 bit followed by zeros and ends with the 64-bit message length). Each block is fed into a compression function $f$ together with the current state:</p>
+
+    <figure>
+      <svg viewBox="0 0 640 140" width="100%" style="max-width:640px; background:var(--bg-2); border:1px solid var(--border); border-radius:8px; padding:16px">
+        <!-- IV box -->
+        <rect x="10" y="50" width="80" height="36" rx="6" fill="#171b26" stroke="#22d3ee" stroke-width="1.5"/>
+        <text x="50" y="73" text-anchor="middle" fill="#22d3ee" font-family="monospace" font-size="11">IV (256 b)</text>
+        <!-- Arrow 1 -->
+        <line x1="90" y1="68" x2="120" y2="68" stroke="#8a93a6" stroke-width="1.5" marker-end="url(#arr)"/>
+        <!-- Block 1 -->
+        <rect x="120" y="30" width="100" height="76" rx="6" fill="#171b26" stroke="#7c5cff" stroke-width="1.5"/>
+        <text x="170" y="60" text-anchor="middle" fill="#8a93a6" font-family="monospace" font-size="10">M₀ (512 b)</text>
+        <text x="170" y="78" text-anchor="middle" fill="#c5b5ff" font-family="monospace" font-size="12">f()</text>
+        <text x="170" y="95" text-anchor="middle" fill="#8a93a6" font-family="monospace" font-size="10">compression</text>
+        <!-- Arrow 2 -->
+        <line x1="220" y1="68" x2="250" y2="68" stroke="#8a93a6" stroke-width="1.5" marker-end="url(#arr)"/>
+        <!-- State box -->
+        <rect x="250" y="50" width="70" height="36" rx="6" fill="#171b26" stroke="#f59e0b" stroke-width="1.5"/>
+        <text x="285" y="73" text-anchor="middle" fill="#f59e0b" font-family="monospace" font-size="11">H₁</text>
+        <!-- Arrow 3 -->
+        <line x1="320" y1="68" x2="350" y2="68" stroke="#8a93a6" stroke-width="1.5" marker-end="url(#arr)"/>
+        <!-- Block 2 -->
+        <rect x="350" y="30" width="100" height="76" rx="6" fill="#171b26" stroke="#7c5cff" stroke-width="1.5"/>
+        <text x="400" y="60" text-anchor="middle" fill="#8a93a6" font-family="monospace" font-size="10">M₁ (512 b)</text>
+        <text x="400" y="78" text-anchor="middle" fill="#c5b5ff" font-family="monospace" font-size="12">f()</text>
+        <text x="400" y="95" text-anchor="middle" fill="#8a93a6" font-family="monospace" font-size="10">compression</text>
+        <!-- Arrow 4 -->
+        <line x1="450" y1="68" x2="480" y2="68" stroke="#8a93a6" stroke-width="1.5" marker-end="url(#arr)"/>
+        <!-- dots -->
+        <text x="500" y="73" text-anchor="middle" fill="#8a93a6" font-family="monospace" font-size="20">…</text>
+        <!-- Arrow 5 -->
+        <line x1="520" y1="68" x2="550" y2="68" stroke="#8a93a6" stroke-width="1.5" marker-end="url(#arr)"/>
+        <!-- Final hash -->
+        <rect x="550" y="50" width="80" height="36" rx="6" fill="#171b26" stroke="#f472b6" stroke-width="1.5"/>
+        <text x="590" y="68" text-anchor="middle" fill="#f472b6" font-family="monospace" font-size="11">Hash</text>
+        <text x="590" y="82" text-anchor="middle" fill="#f472b6" font-family="monospace" font-size="11">(256 b)</text>
+        <!-- Labels below -->
+        <text x="50" y="118" text-anchor="middle" fill="#8a93a6" font-family="monospace" font-size="9">initial value</text>
+        <text x="170" y="118" text-anchor="middle" fill="#8a93a6" font-family="monospace" font-size="9">block 0</text>
+        <text x="400" y="118" text-anchor="middle" fill="#8a93a6" font-family="monospace" font-size="9">block 1</text>
+        <defs>
+          <marker id="arr" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
+            <path d="M0,0 L6,3 L0,6 Z" fill="#8a93a6"/>
+          </marker>
+        </defs>
+      </svg>
+      <figcaption>Merkle-Damgård construction. The initial value (IV) is a fixed constant. Each 512-bit message block is mixed with the current 256-bit state by the compression function <code>f</code>. The final state is the hash output.</figcaption>
+    </figure>
+
+    <p>Inside the compression function, SHA-256 runs 64 rounds of bit mixing using rotations, XORs, bitwise AND/OR, and modular addition — specifically designed to maximize diffusion so every output bit depends on every input bit.</p>
+
+    <h3>Bitcoin vs. Ethereum: SHA-256 vs. Keccak-256</h3>
+
+    <p>Bitcoin uses <strong>double-SHA-256</strong> everywhere — the hash of a hash:</p>
+    <div class="math-display">$$\text{HASH256}(x) = \text{SHA256}(\text{SHA256}(x))$$</div>
+    <p>The double application eliminates a theoretical length-extension attack against Merkle-Damgård hashes.</p>
+
+    <p>Ethereum uses <strong>Keccak-256</strong> — the original SHA-3 submission by the Keccak team. Note carefully: Keccak-256 is <em>not</em> NIST SHA-3. When NIST standardized SHA-3 in 2015 they changed the padding. Ethereum uses the pre-NIST variant. This trips up many developers using standard SHA-3 libraries.</p>
+
+    <h3>Avalanche effect: a concrete example</h3>
+
+    <p>The table below shows SHA-256 outputs for three nearly identical inputs. Notice that changing a single character or capitalizing the first letter produces a completely different digest — on average ~128 out of 256 bits flip:</p>
+
+    <table class="rank-table">
+      <thead>
+        <tr><th>Input</th><th>SHA-256 hex (first 32 chars shown)</th><th>Bits different from "hello"</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>"hello"</code></td>
+          <td><code>2cf24dba5fb0a30e26e83b2ac5b9e29e…</code></td>
+          <td>— (reference)</td>
+        </tr>
+        <tr>
+          <td><code>"hello!"</code></td>
+          <td><code>334d016f755cd6dc58c53a86e183882f…</code></td>
+          <td>~130 bits (~51%)</td>
+        </tr>
+        <tr>
+          <td><code>"Hello"</code></td>
+          <td><code>185f8db32921bd46d35c0984c81b7e6b…</code></td>
+          <td>~127 bits (~50%)</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p>This is the avalanche effect in action. The compression function is specifically designed so that any single-bit input change propagates through all 64 rounds and flips roughly half the output bits.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="merkle-trees">3. Merkle trees</h2>
+
+    <p>A <strong>Merkle tree</strong> is a binary hash tree that lets you prove the inclusion of a single item in a large set by sharing only $O(\log n)$ hashes. Every block header in Bitcoin and Ethereum stores a single 32-byte Merkle root that <em>commits</em> to all transactions in that block.</p>
+
+    <h3>Construction</h3>
+
+    <p>Given $n$ transactions $\text{tx}_0, \ldots, \text{tx}_{n-1}$:</p>
+    <ul>
+      <li><strong>Leaf nodes:</strong> $L_i = H(\text{tx}_i)$</li>
+      <li><strong>Internal nodes:</strong> $N = H(N_\text{left} \| N_\text{right})$ where $\|$ denotes concatenation</li>
+      <li><strong>Root:</strong> the single hash at the apex — this is what goes in the block header</li>
+    </ul>
+
+    <p>If $n$ is odd, the last leaf is duplicated to form a pair. The tree has depth $\lceil \log_2 n \rceil$, so for a block with 2000 transactions the depth is 11.</p>
+
+    <figure>
+      <svg viewBox="0 0 560 280" width="100%" style="max-width:560px; background:var(--bg-2); border:1px solid var(--border); border-radius:8px; padding:16px">
+        <!-- Root -->
+        <rect x="205" y="10" width="150" height="36" rx="6" fill="#171b26" stroke="#f472b6" stroke-width="2"/>
+        <text x="280" y="27" text-anchor="middle" fill="#f472b6" font-family="monospace" font-size="11">Merkle Root</text>
+        <text x="280" y="41" text-anchor="middle" fill="#8a93a6" font-family="monospace" font-size="9">H(H01 ‖ H23)</text>
+
+        <!-- Level 1 left -->
+        <rect x="70" y="80" width="130" height="36" rx="6" fill="#171b26" stroke="#7c5cff" stroke-width="1.5"/>
+        <text x="135" y="97" text-anchor="middle" fill="#c5b5ff" font-family="monospace" font-size="11">H01</text>
+        <text x="135" y="111" text-anchor="middle" fill="#8a93a6" font-family="monospace" font-size="9">H(L0 ‖ L1)</text>
+
+        <!-- Level 1 right — highlighted (proof path) -->
+        <rect x="360" y="80" width="130" height="36" rx="6" fill="#2a1f0e" stroke="#f59e0b" stroke-width="2"/>
+        <text x="425" y="97" text-anchor="middle" fill="#f59e0b" font-family="monospace" font-size="11">H23</text>
+        <text x="425" y="111" text-anchor="middle" fill="#8a93a6" font-family="monospace" font-size="9">H(L2 ‖ L3)</text>
+
+        <!-- Leaves -->
+        <rect x="10" y="180" width="100" height="36" rx="6" fill="#171b26" stroke="#22d3ee" stroke-width="1.5"/>
+        <text x="60" y="197" text-anchor="middle" fill="#22d3ee" font-family="monospace" font-size="11">L0</text>
+        <text x="60" y="211" text-anchor="middle" fill="#8a93a6" font-family="monospace" font-size="9">H(tx₀)</text>
+
+        <rect x="130" y="180" width="100" height="36" rx="6" fill="#171b26" stroke="#22d3ee" stroke-width="1.5"/>
+        <text x="180" y="197" text-anchor="middle" fill="#22d3ee" font-family="monospace" font-size="11">L1</text>
+        <text x="180" y="211" text-anchor="middle" fill="#8a93a6" font-family="monospace" font-size="9">H(tx₁)</text>
+
+        <!-- Leaf 2 highlighted — this is tx being proved -->
+        <rect x="310" y="180" width="100" height="36" rx="6" fill="#0f2a1a" stroke="#4ade80" stroke-width="2"/>
+        <text x="360" y="197" text-anchor="middle" fill="#4ade80" font-family="monospace" font-size="11">L2 ★</text>
+        <text x="360" y="211" text-anchor="middle" fill="#8a93a6" font-family="monospace" font-size="9">H(tx₂)</text>
+
+        <!-- Leaf 3 highlighted (sibling in proof) -->
+        <rect x="430" y="180" width="100" height="36" rx="6" fill="#2a1f0e" stroke="#f59e0b" stroke-width="2"/>
+        <text x="480" y="197" text-anchor="middle" fill="#f59e0b" font-family="monospace" font-size="11">L3</text>
+        <text x="480" y="211" text-anchor="middle" fill="#8a93a6" font-family="monospace" font-size="9">H(tx₃)</text>
+
+        <!-- Connecting lines root to L1 -->
+        <line x1="240" y1="46" x2="175" y2="80" stroke="#7c5cff" stroke-width="1.5"/>
+        <line x1="320" y1="46" x2="385" y2="80" stroke="#f59e0b" stroke-width="2" stroke-dasharray="5,3"/>
+
+        <!-- L0, L1 to H01 -->
+        <line x1="100" y1="116" x2="85" y2="180" stroke="#22d3ee" stroke-width="1.5"/>
+        <line x1="170" y1="116" x2="175" y2="180" stroke="#22d3ee" stroke-width="1.5"/>
+
+        <!-- L2, L3 to H23 -->
+        <line x1="390" y1="116" x2="365" y2="180" stroke="#f59e0b" stroke-width="2" stroke-dasharray="5,3"/>
+        <line x1="460" y1="116" x2="475" y2="180" stroke="#f59e0b" stroke-width="2" stroke-dasharray="5,3"/>
+
+        <!-- Tx labels below -->
+        <text x="60"  y="250" text-anchor="middle" fill="#8a93a6" font-family="monospace" font-size="9">tx₀</text>
+        <text x="180" y="250" text-anchor="middle" fill="#8a93a6" font-family="monospace" font-size="9">tx₁</text>
+        <text x="360" y="250" text-anchor="middle" fill="#4ade80" font-family="monospace" font-size="9">tx₂ (proving)</text>
+        <text x="480" y="250" text-anchor="middle" fill="#8a93a6" font-family="monospace" font-size="9">tx₃</text>
+
+        <!-- Legend -->
+        <rect x="10" y="262" width="12" height="10" fill="#4ade80" rx="2"/>
+        <text x="26" y="271" fill="#8a93a6" font-family="monospace" font-size="8">transaction being proved</text>
+        <rect x="180" y="262" width="12" height="10" fill="#f59e0b" rx="2"/>
+        <text x="196" y="271" fill="#8a93a6" font-family="monospace" font-size="8">proof path (sibling hashes)</text>
+      </svg>
+      <figcaption>A 4-leaf Merkle tree. To prove tx₂ is in the tree, the prover supplies L3 and H01 (2 hashes). The verifier computes H(L2 ‖ L3) = H23, then H(H01 ‖ H23) and checks it equals the known Merkle root.</figcaption>
+    </figure>
+
+    <h3>Merkle proofs (SPV proofs)</h3>
+
+    <p>A <em>Merkle proof</em> for transaction $\text{tx}_i$ in a tree of $n$ transactions consists of $\lceil \log_2 n \rceil$ sibling hashes — one per level of the tree. The verifier:</p>
+    <ol>
+      <li>Computes $L_i = H(\text{tx}_i)$</li>
+      <li>At each level, hashes the current value with its sibling (from the proof)</li>
+      <li>Checks that the computed root matches the block header's Merkle root</li>
+    </ol>
+
+    <p>For Bitcoin's largest blocks (~4000 transactions), a Merkle proof is only 12 hashes = 384 bytes. A lightweight wallet (SPV client) can verify any transaction without downloading the whole block.</p>
+
+    <div class="callout">
+      <div class="label">SECURITY NOTE</div>
+      <p style="margin:6px 0">The Merkle root is cryptographically bound to all transactions in the block. If an attacker modifies even one byte of any transaction, every hash on the path from that leaf to the root changes — and the root no longer matches the block header that miners have committed to via proof-of-work.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="ecdsa">4. Public-key cryptography (ECDSA)</h2>
+
+    <p>Bitcoin and Ethereum use the <strong>Elliptic Curve Digital Signature Algorithm</strong> (ECDSA) over the <strong>secp256k1</strong> curve. Understanding it requires a brief look at elliptic curve arithmetic.</p>
+
+    <h3>The secp256k1 curve</h3>
+
+    <p>The curve is defined over a large prime field $\mathbb{F}_p$:</p>
+
+    <div class="math-display">$$y^2 \equiv x^3 + 7 \pmod{p}$$</div>
+
+    <p>where $p = 2^{256} - 2^{32} - 977$, a 256-bit prime. "Points" on the curve are pairs $(x, y)$ satisfying this equation, plus a special "point at infinity" $\mathcal{O}$ that acts as the identity element.</p>
+
+    <p>Elliptic curves form a group under a geometrically defined addition law: adding two points $P$ and $Q$ gives a third point $R = P + Q$. Scalar multiplication $k \cdot P$ means adding $P$ to itself $k$ times. The secp256k1 generator point $G$ is a fixed public constant with prime order:</p>
+
+    <div class="math-display">$$n \approx 1.158 \times 10^{77} \approx 2^{256}$$</div>
+
+    <h3>Key generation</h3>
+
+    <div class="math-glossary">
+      <div class="mg-row">
+        <div class="mg-sym">$d$</div>
+        <div class="mg-def">Private key — a random integer in $[1, n-1]$, generated from a cryptographically secure random number generator. 256 bits = 32 bytes.</div>
+      </div>
+      <div class="mg-row">
+        <div class="mg-sym">$Q$</div>
+        <div class="mg-def">Public key — the curve point $Q = d \cdot G$. 64 bytes (uncompressed) or 33 bytes (compressed). Shared publicly.</div>
+      </div>
+    </div>
+
+    <div class="callout">
+      <div class="label">ONE-WAY FUNCTION: ECDLP</div>
+      <p style="margin:6px 0">Computing $Q = d \cdot G$ is fast (double-and-add algorithm, $O(\log d)$ point additions). But recovering $d$ from $Q$ — the <strong>Elliptic Curve Discrete Logarithm Problem</strong> (ECDLP) — has no known polynomial-time algorithm on classical computers. The best known attack (Pollard's rho) requires $O(\sqrt{n}) \approx 2^{128}$ operations. This asymmetry is the entire basis of elliptic curve cryptography.</p>
+    </div>
+
+    <h3>ECDSA signing</h3>
+
+    <p>Given a message hash $z$ (a 256-bit integer) and private key $d$:</p>
+
+    <ol>
+      <li>Pick a cryptographically random nonce $k \in [1, n-1]$</li>
+      <li>Compute the curve point $R = k \cdot G$; let $r = R_x \bmod n$ (the x-coordinate mod $n$). If $r = 0$, pick a new $k$.</li>
+      <li>Compute $s = k^{-1}(z + r \cdot d) \bmod n$. If $s = 0$, pick a new $k$.</li>
+      <li>The signature is the pair $(r,\, s)$</li>
+    </ol>
+
+    <div class="math-display">$$s = k^{-1}(z + r \cdot d) \pmod{n}$$</div>
+
+    <div class="callout">
+      <div class="label">CRITICAL: NONCE REUSE IS CATASTROPHIC</div>
+      <p style="margin:6px 0">If the same nonce $k$ is used for two different messages $z_1$ and $z_2$, an attacker can recover the private key $d$. This is how Sony's PS3 signing key was extracted in 2010 — they used a constant "random" nonce. Always use a CSPRNG or RFC 6979 deterministic nonce derivation.</p>
+    </div>
+
+    <h3>ECDSA verification</h3>
+
+    <p>Given message hash $z$, signature $(r, s)$, and public key $Q$:</p>
+
+    <ol>
+      <li>Compute $u_1 = s^{-1} z \bmod n$ and $u_2 = s^{-1} r \bmod n$</li>
+      <li>Compute the curve point $P = u_1 G + u_2 Q$</li>
+      <li>The signature is valid if and only if $P_x \equiv r \pmod{n}$</li>
+    </ol>
+
+    <div class="math-display">$$P = u_1 G + u_2 Q = s^{-1}z \cdot G + s^{-1}r \cdot Q$$</div>
+
+    <p>Substituting $Q = d \cdot G$ and $s = k^{-1}(z + rd)$:</p>
+
+    <div class="math-display no-center">$$\begin{aligned}
+P &= s^{-1}(z + rd) \cdot G \\
+  &= k \cdot G \quad\text{(by definition of }s\text{)} \\
+  &= R
+\end{aligned}$$</div>
+
+    <p>So $P_x = R_x = r$, which is exactly the check. The verification is a proof that whoever produced the signature knew $d$ (without revealing it), because only knowing $d$ allows computing an $s$ that causes $P_x = r$.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="wallets">5. Wallets and addresses</h2>
+
+    <h3>Ethereum address derivation</h3>
+
+    <p>An Ethereum address is derived deterministically from a private key in four steps:</p>
+
+    <ol>
+      <li><strong>Generate private key</strong> $d$: 32 random bytes from a CSPRNG</li>
+      <li><strong>Compute public key</strong> $Q = d \cdot G$: the uncompressed secp256k1 point, represented as two 256-bit integers $(x, y)$ concatenated — 64 bytes total (the 0x04 prefix byte is dropped)</li>
+      <li><strong>Hash the public key</strong>: $h = \text{Keccak256}(Q)$ — a 32-byte digest</li>
+      <li><strong>Take the last 20 bytes</strong> of $h$, prefix with <code>0x</code></li>
+    </ol>
+
+    <div class="math-display no-center">$$\text{address} = \texttt{0x} \| \text{last20bytes}(\text{Keccak256}(Q))$$</div>
+
+    <p>Addresses are case-insensitive on-chain, but EIP-55 defines a checksum encoding using mixed case that encodes 4 bits of error-detection per character: the $i$-th hex character is uppercased if the $i$-th nibble of the Keccak hash of the lowercase address is $\geq 8$.</p>
+
+    <h3>Bitcoin address derivation</h3>
+
+    <p>Bitcoin uses a slightly different pipeline. For the most common format (P2PKH):</p>
+
+    <ol>
+      <li>Generate private key $d$ (random 32 bytes)</li>
+      <li>Compute compressed public key: $(x,\, \text{sign}(y))$ — 33 bytes</li>
+      <li>Compute $h_1 = \text{SHA256}(Q_\text{compressed})$</li>
+      <li>Compute $h_2 = \text{RIPEMD160}(h_1)$ — 20-byte "public key hash"</li>
+      <li>Add version byte (0x00 for mainnet), compute double-SHA256 checksum (4 bytes), encode as Base58Check</li>
+    </ol>
+
+    <h3>BIP-32: Hierarchical Deterministic (HD) wallets</h3>
+
+    <p>A seed phrase (12 or 24 BIP-39 mnemonic words) encodes 128 or 256 bits of entropy. From the seed, BIP-32 derives a tree of key pairs using <strong>HMAC-SHA512</strong>:</p>
+
+    <div class="math-display">$$\text{CKD}(k_\text{parent},\, c_\text{parent},\, i) = \text{HMAC-SHA512}(c_\text{parent},\; k_\text{parent} \| i)$$</div>
+
+    <p>The 64-byte output is split: the left 32 bytes are added to the parent key (mod $n$) to derive the child private key; the right 32 bytes become the child chain code. The path notation <code>m/44'/60'/0'/0/0</code> describes the BIP-44 derivation path for the first Ethereum address. A single seed phrase controls the entire hierarchy — back it up and you recover every derived account.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="signatures">6. Digital signatures in transactions</h2>
+
+    <h3>Bitcoin UTXO model</h3>
+
+    <p>Bitcoin uses an <em>Unspent Transaction Output</em> (UTXO) model. Every transaction:</p>
+    <ul>
+      <li><strong>Consumes</strong> one or more UTXOs (inputs) — each input references a previous output by its transaction ID and output index, and provides an <em>unlocking script</em> (<code>scriptSig</code>)</li>
+      <li><strong>Creates</strong> one or more new UTXOs (outputs) — each output specifies an amount and a <em>locking script</em> (<code>scriptPubKey</code>)</li>
+    </ul>
+
+    <p>For the most common output type, P2PKH (Pay-to-Public-Key-Hash), validation proceeds as follows:</p>
+
+    <table class="rank-table">
+      <thead><tr><th>Script</th><th>Contents</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code>scriptPubKey</code></td>
+          <td><code>OP_DUP OP_HASH160 &lt;pubKeyHash&gt; OP_EQUALVERIFY OP_CHECKSIG</code></td>
+          <td>Locks funds to a public key hash</td>
+        </tr>
+        <tr>
+          <td><code>scriptSig</code></td>
+          <td><code>&lt;sig&gt; &lt;pubKey&gt;</code></td>
+          <td>Provides signature and public key</td>
+        </tr>
+        <tr>
+          <td>Combined execution</td>
+          <td>Stack machine evaluates both together</td>
+          <td>Succeeds iff pubKey hashes to pubKeyHash AND sig verifies</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p>The Bitcoin Script stack machine concatenates <code>scriptSig</code> and <code>scriptPubKey</code> and executes them. <code>OP_CHECKSIG</code> pops a signature and public key, hashes the current transaction (with the output being spent), and verifies the ECDSA signature. If it returns 1, the UTXO is validly spent.</p>
+
+    <p>The transaction hash that is signed (<code>SIGHASH_ALL</code> mode) covers: version, inputs (prev txid + index + sequence), outputs (value + script), and locktime. Crucially it does <em>not</em> include the <code>scriptSig</code> being constructed — otherwise the signature would need to sign itself.</p>
+
+    <h3>Ethereum account model</h3>
+
+    <p>Ethereum uses an account-based model instead of UTXOs. An Externally Owned Account (EOA) transaction contains:</p>
+
+    <div class="math-glossary">
+      <div class="mg-row"><div class="mg-sym"><code>nonce</code></div><div class="mg-def">Transaction counter for this account — prevents replay attacks</div></div>
+      <div class="mg-row"><div class="mg-sym"><code>gasPrice</code></div><div class="mg-def">Wei per gas unit the sender is willing to pay (legacy) or maxFeePerGas/maxPriorityFeePerGas (EIP-1559)</div></div>
+      <div class="mg-row"><div class="mg-sym"><code>gasLimit</code></div><div class="mg-def">Maximum gas units this transaction may consume</div></div>
+      <div class="mg-row"><div class="mg-sym"><code>to</code></div><div class="mg-def">Recipient address (20 bytes); empty for contract creation</div></div>
+      <div class="mg-row"><div class="mg-sym"><code>value</code></div><div class="mg-def">Wei to transfer</div></div>
+      <div class="mg-row"><div class="mg-sym"><code>data</code></div><div class="mg-def">ABI-encoded function call for contract interactions; empty for simple transfers</div></div>
+      <div class="mg-row"><div class="mg-sym"><code>v, r, s</code></div><div class="mg-def">ECDSA signature components. <code>v</code> encodes the recovery ID (allows recovering the public key from the signature alone)</div></div>
+    </div>
+
+    <p>The signing hash for a legacy Ethereum transaction is:</p>
+
+    <div class="math-display">$$z = \text{Keccak256}(\text{RLP}(\text{nonce},\, \text{gasPrice},\, \text{gasLimit},\, \text{to},\, \text{value},\, \text{data},\, \text{chainId},\, 0,\, 0))$$</div>
+
+    <p>The <code>chainId</code> was introduced by EIP-155 to prevent replay attacks across networks (e.g., the Ethereum / Ethereum Classic split). Without it, a transaction valid on mainnet is also valid on any test network using the same address.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="hash-pointers">7. Hash pointers and the chain structure</h2>
+
+    <p>The "chain" in blockchain comes from a specific data structure: each block header contains the hash of the previous block header. This creates a chain of hash pointers stretching back to the genesis block.</p>
+
+    <h3>Block header structure</h3>
+
+    <p>A Bitcoin block header is exactly 80 bytes:</p>
+
+    <table class="rank-table">
+      <thead><tr><th>Field</th><th>Size</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>Version</td><td>4 bytes</td><td>Block version number</td></tr>
+        <tr><td>Previous block hash</td><td>32 bytes</td><td>SHA256d of the previous block header — the chain link</td></tr>
+        <tr><td>Merkle root</td><td>32 bytes</td><td>Commits to all transactions in this block</td></tr>
+        <tr><td>Timestamp</td><td>4 bytes</td><td>Unix timestamp of block creation</td></tr>
+        <tr><td>Bits</td><td>4 bytes</td><td>Compact encoding of the current difficulty target</td></tr>
+        <tr><td>Nonce</td><td>4 bytes</td><td>Value miners iterate over to find a valid proof-of-work</td></tr>
+      </tbody>
+    </table>
+
+    <p>Proof-of-work requires that the block header hash satisfy:</p>
+
+    <div class="math-display">$$\text{SHA256}(\text{SHA256}(\text{header})) < \text{target}$$</div>
+
+    <p>where the target is a 256-bit number encoding the required number of leading zero bits. Miners increment the nonce (and occasionally the timestamp and coinbase extra nonce) until they find a header that hashes below the target.</p>
+
+    <figure>
+      <svg viewBox="0 0 600 200" width="100%" style="max-width:600px; background:var(--bg-2); border:1px solid var(--border); border-radius:8px; padding:16px">
+        <!-- Block N-1 -->
+        <rect x="10" y="30" width="160" height="130" rx="8" fill="#171b26" stroke="#7c5cff" stroke-width="1.5"/>
+        <text x="90" y="52" text-anchor="middle" fill="#c5b5ff" font-family="monospace" font-size="11" font-weight="bold">Block N-1</text>
+        <rect x="22" y="60" width="136" height="18" rx="3" fill="#0d1117" stroke="#333"/>
+        <text x="90" y="73" text-anchor="middle" fill="#8a93a6" font-family="monospace" font-size="9">prev_hash: 0x0000…ab3f</text>
+        <rect x="22" y="84" width="136" height="18" rx="3" fill="#0d1117" stroke="#22d3ee" stroke-width="1"/>
+        <text x="90" y="97" text-anchor="middle" fill="#22d3ee" font-family="monospace" font-size="9">merkle_root: 0xd4e8…</text>
+        <rect x="22" y="108" width="136" height="18" rx="3" fill="#0d1117" stroke="#333"/>
+        <text x="90" y="121" text-anchor="middle" fill="#8a93a6" font-family="monospace" font-size="9">timestamp / nonce</text>
+        <text x="90" y="148" text-anchor="middle" fill="#f59e0b" font-family="monospace" font-size="9">hash: 0x0000…c7f2</text>
+
+        <!-- Arrow N-1 to N -->
+        <defs>
+          <marker id="arr2" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto">
+            <path d="M0,0 L8,4 L0,8 Z" fill="#f472b6"/>
+          </marker>
+        </defs>
+        <line x1="172" y1="95" x2="218" y2="95" stroke="#f472b6" stroke-width="2" marker-end="url(#arr2)"/>
+        <text x="195" y="88" text-anchor="middle" fill="#f472b6" font-family="monospace" font-size="8">hash ptr</text>
+
+        <!-- Block N -->
+        <rect x="220" y="30" width="160" height="130" rx="8" fill="#171b26" stroke="#7c5cff" stroke-width="1.5"/>
+        <text x="300" y="52" text-anchor="middle" fill="#c5b5ff" font-family="monospace" font-size="11" font-weight="bold">Block N</text>
+        <rect x="232" y="60" width="136" height="18" rx="3" fill="#0d1117" stroke="#f472b6" stroke-width="1.5"/>
+        <text x="300" y="73" text-anchor="middle" fill="#f472b6" font-family="monospace" font-size="9">prev_hash: 0x0000…c7f2</text>
+        <rect x="232" y="84" width="136" height="18" rx="3" fill="#0d1117" stroke="#22d3ee" stroke-width="1"/>
+        <text x="300" y="97" text-anchor="middle" fill="#22d3ee" font-family="monospace" font-size="9">merkle_root: 0xa91c…</text>
+        <rect x="232" y="108" width="136" height="18" rx="3" fill="#0d1117" stroke="#333"/>
+        <text x="300" y="121" text-anchor="middle" fill="#8a93a6" font-family="monospace" font-size="9">timestamp / nonce</text>
+        <text x="300" y="148" text-anchor="middle" fill="#f59e0b" font-family="monospace" font-size="9">hash: 0x0000…8a11</text>
+
+        <!-- Arrow N to N+1 -->
+        <line x1="382" y1="95" x2="428" y2="95" stroke="#f472b6" stroke-width="2" marker-end="url(#arr2)"/>
+        <text x="405" y="88" text-anchor="middle" fill="#f472b6" font-family="monospace" font-size="8">hash ptr</text>
+
+        <!-- Block N+1 -->
+        <rect x="430" y="30" width="160" height="130" rx="8" fill="#171b26" stroke="#7c5cff" stroke-width="1.5"/>
+        <text x="510" y="52" text-anchor="middle" fill="#c5b5ff" font-family="monospace" font-size="11" font-weight="bold">Block N+1</text>
+        <rect x="442" y="60" width="136" height="18" rx="3" fill="#0d1117" stroke="#f472b6" stroke-width="1.5"/>
+        <text x="510" y="73" text-anchor="middle" fill="#f472b6" font-family="monospace" font-size="9">prev_hash: 0x0000…8a11</text>
+        <rect x="442" y="84" width="136" height="18" rx="3" fill="#0d1117" stroke="#22d3ee" stroke-width="1"/>
+        <text x="510" y="97" text-anchor="middle" fill="#22d3ee" font-family="monospace" font-size="9">merkle_root: 0x3bc0…</text>
+        <rect x="442" y="108" width="136" height="18" rx="3" fill="#0d1117" stroke="#333"/>
+        <text x="510" y="121" text-anchor="middle" fill="#8a93a6" font-family="monospace" font-size="9">timestamp / nonce</text>
+        <text x="510" y="148" text-anchor="middle" fill="#f59e0b" font-family="monospace" font-size="9">hash: 0x0000…1d4a</text>
+      </svg>
+      <figcaption>Three consecutive blocks. Each block's <code>prev_hash</code> field (pink) contains the exact SHA256d hash of the previous block header. The Merkle root (cyan) commits to all transactions. The block hash (yellow) must satisfy the proof-of-work difficulty target.</figcaption>
+    </figure>
+
+    <h3>Why the chain is immutable</h3>
+
+    <p>Suppose an attacker wants to change a transaction in block $N$. They must:</p>
+    <ol>
+      <li>Modify the transaction, which changes that block's Merkle root</li>
+      <li>Re-mine block $N$ to find a new nonce satisfying proof-of-work (expected cost: $\sim 10^{20}$ hashes at current difficulty)</li>
+      <li>Block $N+1$ references the <em>old</em> hash of block $N$, so it's now orphaned — re-mine block $N+1$ too</li>
+      <li>Repeat for every subsequent block</li>
+    </ol>
+    <p>Meanwhile, honest miners continue extending the real chain. The attacker must outpace the entire honest hash rate — and keep doing so indefinitely. This is the 51% attack threshold. The hash chain converts computational work into historical immutability.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="avalanche-viz">8. Interactive: avalanche effect visualizer</h2>
+
+    <p>The widget below demonstrates the avalanche property — a small change to the input produces a completely different hash output. Because we cannot run SHA-256 natively in the browser without a library, this uses a simulated hash (djb2 applied four times to produce a 128-bit output). The behavior is qualitatively identical to SHA-256's avalanche effect.</p>
+
+    <div class="viz-3d" id="avalanche-viz">
+      <div style="padding:20px">
+        <p style="margin:0 0 12px; font-size:12px; color:var(--text-muted); font-family:monospace; text-align:center">
+          Simulated hash (djb2×4) — for illustration only, not SHA-256
+        </p>
+
+        <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:14px; align-items:center">
+          <label style="font-family:monospace; font-size:12px; color:var(--text-muted); flex:1; min-width:200px">
+            Input message:
+            <input type="text" id="av-input" value="hello, blockchain"
+              style="width:100%; margin-top:4px; padding:8px; background:var(--bg-1); border:1px solid var(--border); color:var(--text-main); border-radius:4px; font-family:monospace; font-size:13px; box-sizing:border-box">
+          </label>
+          <button id="av-flip-btn" class="btn primary" style="align-self:flex-end; white-space:nowrap">Flip a bit</button>
+          <button id="av-reset-btn" class="btn" style="align-self:flex-end">Reset</button>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:14px">
+          <div>
+            <div style="font-family:monospace; font-size:10px; color:var(--text-muted); margin-bottom:4px">ORIGINAL INPUT</div>
+            <div id="av-orig-msg" style="font-family:monospace; font-size:11px; color:#22d3ee; background:var(--bg-1); padding:8px; border-radius:4px; word-break:break-all; min-height:24px"></div>
+            <div style="font-family:monospace; font-size:10px; color:var(--text-muted); margin:8px 0 4px">HASH (128-bit hex)</div>
+            <div id="av-orig-hash" style="font-family:monospace; font-size:11px; background:var(--bg-1); padding:8px; border-radius:4px; word-break:break-all; letter-spacing:1px"></div>
+          </div>
+          <div>
+            <div style="font-family:monospace; font-size:10px; color:var(--text-muted); margin-bottom:4px">MODIFIED INPUT (1 bit flipped)</div>
+            <div id="av-flip-msg" style="font-family:monospace; font-size:11px; color:#f59e0b; background:var(--bg-1); padding:8px; border-radius:4px; word-break:break-all; min-height:24px">—</div>
+            <div style="font-family:monospace; font-size:10px; color:var(--text-muted); margin:8px 0 4px">HASH (128-bit hex)</div>
+            <div id="av-flip-hash" style="font-family:monospace; font-size:11px; background:var(--bg-1); padding:8px; border-radius:4px; word-break:break-all; letter-spacing:1px">—</div>
+          </div>
+        </div>
+
+        <div id="av-stats" style="font-family:monospace; font-size:12px; color:var(--text-muted); text-align:center; padding:10px; background:var(--bg-1); border-radius:4px; border:1px solid var(--border)">
+          Click "Flip a bit" to see the avalanche effect
+        </div>
+      </div>
+    </div>
+
+    <script>
+    (function() {
+      // djb2 hash — returns a 32-bit unsigned integer
+      function djb2(str) {
+        var h = 5381;
+        for (var i = 0; i < str.length; i++) {
+          h = ((h << 5) + h) ^ str.charCodeAt(i);
+          h = h >>> 0; // keep as unsigned 32-bit
+        }
+        return h >>> 0;
+      }
+
+      // Produce a 128-bit (32 hex char) hash by running djb2 four times
+      // with different seeds mixed in
+      function hash128(str) {
+        var a = djb2(str);
+        var b = djb2(str + '\x01' + a.toString(16));
+        var c = djb2(str + '\x02' + b.toString(16));
+        var d = djb2(str + '\x03' + c.toString(16));
+        function pad8(n) { return ('00000000' + (n >>> 0).toString(16)).slice(-8); }
+        return pad8(a) + pad8(b) + pad8(c) + pad8(d);
+      }
+
+      function toBytes(str) {
+        var arr = [];
+        for (var i = 0; i < str.length; i++) arr.push(str.charCodeAt(i));
+        return arr;
+      }
+
+      function fromBytes(arr) {
+        return arr.map(function(b) { return String.fromCharCode(b); }).join('');
+      }
+
+      function flipBit(str, byteIdx, bitIdx) {
+        var bytes = toBytes(str);
+        bytes[byteIdx] = bytes[byteIdx] ^ (1 << bitIdx);
+        return fromBytes(bytes);
+      }
+
+      function hammingNibbles(h1, h2) {
+        var diff = 0;
+        for (var i = 0; i < h1.length; i++) {
+          if (h1[i] !== h2[i]) diff++;
+        }
+        return diff;
+      }
+
+      function hammingBits(h1, h2) {
+        var diff = 0;
+        for (var i = 0; i < h1.length; i++) {
+          var x = parseInt(h1[i], 16) ^ parseInt(h2[i], 16);
+          while (x) { diff += x & 1; x >>= 1; }
+        }
+        return diff;
+      }
+
+      function renderHash(containerId, h1, h2) {
+        var el = document.getElementById(containerId);
+        if (!h2) { el.textContent = h1; el.style.color = ''; return; }
+        var html = '';
+        for (var i = 0; i < h1.length; i++) {
+          if (h2 && h1[i] !== h2[i]) {
+            html += '<span style="color:#f97316;background:rgba(249,115,22,0.15);border-radius:2px">' + h1[i] + '</span>';
+          } else {
+            html += '<span style="color:#4ade80">' + h1[i] + '</span>';
+          }
+        }
+        el.innerHTML = html;
+      }
+
+      var origMsg = document.getElementById('av-input').value;
+      var flippedMsg = null;
+      var lastByteIdx = 0, lastBitIdx = 3;
+
+      function updateOrig() {
+        origMsg = document.getElementById('av-input').value;
+        flippedMsg = null;
+        document.getElementById('av-orig-msg').textContent = origMsg;
+        var h = hash128(origMsg);
+        document.getElementById('av-orig-hash').textContent = h;
+        document.getElementById('av-orig-hash').style.color = '#4ade80';
+        document.getElementById('av-flip-msg').textContent = '—';
+        document.getElementById('av-flip-hash').textContent = '—';
+        document.getElementById('av-flip-hash').style.color = '';
+        document.getElementById('av-stats').textContent = 'Click "Flip a bit" to see the avalanche effect';
+      }
+
+      function doFlip() {
+        origMsg = document.getElementById('av-input').value;
+        if (!origMsg.length) return;
+        // pick a byte/bit to flip
+        lastByteIdx = (lastByteIdx + 1) % origMsg.length;
+        lastBitIdx  = (lastBitIdx  + 3) % 8;
+        flippedMsg  = flipBit(origMsg, lastByteIdx, lastBitIdx);
+
+        var h1 = hash128(origMsg);
+        var h2 = hash128(flippedMsg);
+        var nb = hammingNibbles(h1, h2);
+        var bits = hammingBits(h1, h2);
+        var pct = (bits / 128 * 100).toFixed(1);
+
+        document.getElementById('av-orig-msg').textContent  = origMsg;
+        document.getElementById('av-flip-msg').textContent  = flippedMsg;
+
+        renderHash('av-orig-hash', h1, h2);
+        renderHash('av-flip-hash', h2, h1);
+
+        document.getElementById('av-stats').innerHTML =
+          '<strong style="color:#f97316">' + nb + ' / 32 nibbles differ</strong> &nbsp;|&nbsp; ' +
+          '<strong style="color:#f97316">' + bits + ' / 128 bits differ</strong> &nbsp;|&nbsp; ' +
+          'Hamming distance: <strong style="color:#f97316">' + pct + '%</strong> of output bits flipped' +
+          ' &nbsp;|&nbsp; bit flipped: byte ' + lastByteIdx + ', bit ' + lastBitIdx;
+      }
+
+      function doReset() {
+        document.getElementById('av-input').value = 'hello, blockchain';
+        updateOrig();
+      }
+
+      document.getElementById('av-input').addEventListener('input', updateOrig);
+      document.getElementById('av-flip-btn').addEventListener('click', doFlip);
+      document.getElementById('av-reset-btn').addEventListener('click', doReset);
+      updateOrig();
+    })();
+    </script>
+
+    <!-- ========================================================== -->
+    <h2 id="source-code">9. Source code</h2>
+
+    <details class="algo-code">
+      <summary>Source code — Blockchain Cryptography (Pseudocode · Python · JavaScript · C · C++ · Java · Go)</summary>
+      <div class="code-tabs">
+        <div class="ct-header">
+          <button class="ct-tab active" data-tab="bc-pseudo">Pseudocode</button>
+          <button class="ct-tab" data-tab="bc-py">Python</button>
+          <button class="ct-tab" data-tab="bc-js">JavaScript</button>
+          <button class="ct-tab" data-tab="bc-c">C</button>
+          <button class="ct-tab" data-tab="bc-cpp">C++</button>
+          <button class="ct-tab" data-tab="bc-java">Java</button>
+          <button class="ct-tab" data-tab="bc-go">Go</button>
+        </div>
+
+        <!-- PSEUDOCODE -->
+        <div class="ct-panel active" data-tab="bc-pseudo"><pre><code>========== SHA-256 STRUCTURE ==========
+
+function SHA256(message):
+    # 1. Pre-processing: padding
+    padded = message ++ bit(1) ++ zeros ++ length_64bit
+    # padded length is a multiple of 512 bits
+
+    # 2. Initialize hash values (first 32 bits of sqrt of first 8 primes)
+    H = [H0, H1, H2, H3, H4, H5, H6, H7]
+
+    # 3. Process each 512-bit (64-byte) block
+    for each 512-bit block B in padded:
+        W = message_schedule(B)   # 64 × 32-bit words
+        a, b, c, d, e, f, g, h = H
+
+        for i in 0..63:
+            S1  = ROTR(e,6) XOR ROTR(e,11) XOR ROTR(e,25)
+            ch  = (e AND f) XOR ((NOT e) AND g)
+            T1  = h + S1 + ch + K[i] + W[i]      (mod 2^32)
+            S0  = ROTR(a,2) XOR ROTR(a,13) XOR ROTR(a,22)
+            maj = (a AND b) XOR (a AND c) XOR (b AND c)
+            T2  = S0 + maj                         (mod 2^32)
+            h=g; g=f; f=e; e=d+T1
+            d=c; c=b; b=a; a=T1+T2
+
+        H = H + [a,b,c,d,e,f,g,h]  (component-wise mod 2^32)
+
+    return concat(H)
+
+========== MERKLE TREE ==========
+
+function build_merkle_tree(transactions):
+    leaves = [SHA256d(tx) for tx in transactions]
+    if len(leaves) is odd: leaves.append(leaves[-1])  # duplicate last
+    tree = [leaves]
+    current = leaves
+    while len(current) > 1:
+        next_level = []
+        for i in 0, 2, 4, ..., len(current)-2:
+            next_level.append(SHA256d(current[i] ++ current[i+1]))
+        if len(next_level) is odd: next_level.append(next_level[-1])
+        tree.append(next_level)
+        current = next_level
+    return tree[-1][0]  # Merkle root
+
+function merkle_proof(tree, leaf_index):
+    proof = []
+    idx = leaf_index
+    for level in tree[:-1]:           # skip root level
+        sibling = idx XOR 1           # 0->1, 1->0, 2->3, 3->2, …
+        proof.append((level[sibling], position: LEFT if sibling<idx else RIGHT))
+        idx = idx // 2
+    return proof
+
+function verify_merkle_proof(tx, proof, root):
+    h = SHA256d(tx)
+    for (sibling_hash, position) in proof:
+        if position == LEFT:
+            h = SHA256d(sibling_hash ++ h)
+        else:
+            h = SHA256d(h ++ sibling_hash)
+    return h == root
+
+========== ECDSA ==========
+
+function ecdsa_sign(message_hash z, private_key d):
+    loop:
+        k = random_in_range(1, n-1)
+        R = k * G                          # scalar mult on secp256k1
+        r = R.x mod n
+        if r == 0: continue
+        s = modular_inverse(k, n) * (z + r*d) mod n
+        if s == 0: continue
+        return (r, s)
+
+function ecdsa_verify(z, signature (r,s), public_key Q):
+    assert 1 <= r,s < n
+    w  = modular_inverse(s, n)
+    u1 = w * z mod n
+    u2 = w * r mod n
+    P  = u1*G + u2*Q                      # two scalar mults + point add
+    return P.x mod n == r</code></pre></div>
+
+        <!-- PYTHON -->
+        <div class="ct-panel" data-tab="bc-py"><pre><code>"""
+Blockchain Cryptography — Python examples
+Requires: pip install ecdsa web3 eth-account
+"""
+import hashlib, hmac, struct
+from ecdsa import SigningKey, SECP256k1, util
+from eth_account import Account
+from web3 import Web3
+
+# ── SHA-256 ─────────────────────────────────────────────────────────
+def sha256(data: bytes) -> bytes:
+    return hashlib.sha256(data).digest()
+
+def sha256d(data: bytes) -> bytes:
+    """Bitcoin-style double SHA-256"""
+    return hashlib.sha256(hashlib.sha256(data).digest()).digest()
+
+def keccak256(data: bytes) -> bytes:
+    """Ethereum Keccak-256 (NOT the same as NIST SHA-3!)"""
+    from Crypto.Hash import keccak
+    k = keccak.new(digest_bits=256)
+    k.update(data)
+    return k.digest()
+
+# Avalanche example
+for msg in [b"hello", b"hello!", b"Hello"]:
+    print(f"{msg!r:12s} -> {sha256(msg).hex()}")
+
+# ── Merkle Tree ──────────────────────────────────────────────────────
+class MerkleTree:
+    def __init__(self, transactions: list[bytes]):
+        self.leaves = [sha256d(tx) for tx in transactions]
+        if len(self.leaves) % 2 == 1:
+            self.leaves.append(self.leaves[-1])
+        self.tree = self._build(self.leaves)
+
+    def _build(self, level):
+        if len(level) == 1:
+            return [level]
+        next_level = []
+        for i in range(0, len(level), 2):
+            next_level.append(sha256d(level[i] + level[i+1]))
+        if len(next_level) % 2 == 1:
+            next_level.append(next_level[-1])
+        return [level] + self._build(next_level)
+
+    @property
+    def root(self) -> bytes:
+        return self.tree[-1][0]
+
+    def proof(self, leaf_index: int) -> list[tuple[bytes, str]]:
+        """Returns list of (sibling_hash, 'left'|'right')"""
+        proof = []
+        idx = leaf_index
+        for level in self.tree[:-1]:
+            sib = idx ^ 1
+            if sib < len(level):
+                side = 'left' if sib < idx else 'right'
+                proof.append((level[sib], side))
+            idx //= 2
+        return proof
+
+    def verify(self, tx: bytes, proof: list, root: bytes) -> bool:
+        h = sha256d(tx)
+        for sibling, side in proof:
+            if side == 'left':
+                h = sha256d(sibling + h)
+            else:
+                h = sha256d(h + sibling)
+        return h == root
+
+txs = [b"tx0: Alice->Bob 1 BTC", b"tx1: Bob->Carol 0.5 BTC",
+       b"tx2: Carol->Dave 0.3 BTC", b"tx3: Dave->Eve 0.1 BTC"]
+mt = MerkleTree(txs)
+print("Merkle root:", mt.root.hex())
+proof = mt.proof(2)
+assert mt.verify(txs[2], proof, mt.root), "proof failed!"
+print("Proof for tx2 verified in", len(proof), "hashes")
+
+# ── ECDSA with secp256k1 ─────────────────────────────────────────────
+sk = SigningKey.generate(curve=SECP256k1)
+vk = sk.get_verifying_key()
+
+message = b"Transfer 1 BTC to Bob"
+msg_hash = sha256d(message)
+
+# Sign
+sig = sk.sign_digest(msg_hash, sigencode=util.sigencode_der)
+print("DER signature:", sig.hex())
+
+# Verify
+assert vk.verify_digest(sig, msg_hash, sigdecode=util.sigdecode_der)
+print("Signature verified!")
+
+# ── Ethereum address derivation ──────────────────────────────────────
+# Using eth-account (which uses Keccak-256 correctly)
+acct = Account.create()
+print("Private key:", acct.key.hex())
+print("Address:    ", acct.address)
+
+# Manual derivation for illustration
+import os
+from eth_keys import keys
+
+private_key_bytes = os.urandom(32)
+pk = keys.PrivateKey(private_key_bytes)
+pub = pk.public_key
+pub_bytes = pub.to_bytes()        # 64 bytes, no 0x04 prefix
+keccak_hash = Web3.keccak(pub_bytes)
+address = "0x" + keccak_hash[-20:].hex()
+print("Derived address:", address)</code></pre></div>
+
+        <!-- JAVASCRIPT -->
+        <div class="ct-panel" data-tab="bc-js"><pre><code>/**
+ * Blockchain Cryptography — JavaScript examples
+ * Uses the Web Crypto API (browser / Node >=15) and ethers.js
+ */
+
+// ── SHA-256 via Web Crypto ───────────────────────────────────────────
+async function sha256(data) {
+  // data: string or Uint8Array
+  const bytes = typeof data === 'string'
+    ? new TextEncoder().encode(data)
+    : data;
+  const buf = await crypto.subtle.digest('SHA-256', bytes);
+  return new Uint8Array(buf);
+}
+
+async function sha256hex(str) {
+  const hash = await sha256(str);
+  return Array.from(hash).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+// Avalanche demo
+(async () => {
+  for (const msg of ['hello', 'hello!', 'Hello']) {
+    console.log(msg.padEnd(8), '->', await sha256hex(msg));
+  }
+})();
+
+// ── Merkle Tree ──────────────────────────────────────────────────────
+class MerkleTree {
+  constructor(txHashes) {
+    // txHashes: array of Uint8Array (already hashed leaves)
+    let level = [...txHashes];
+    if (level.length % 2 === 1) level.push(level[level.length - 1]);
+    this.levels = [level];
+    this._buildSync = false; // async build required
+  }
+
+  static async fromTransactions(txStrings) {
+    const leaves = await Promise.all(
+      txStrings.map(tx => sha256(tx))
+    );
+    return MerkleTree._build(leaves);
+  }
+
+  static async _build(leaves) {
+    const tree = new MerkleTree(leaves);
+    let current = tree.levels[0];
+    while (current.length > 1) {
+      const next = [];
+      for (let i = 0; i < current.length; i += 2) {
+        const pair = new Uint8Array([...current[i], ...current[i+1]]);
+        next.push(await sha256(pair));
+      }
+      if (next.length % 2 === 1) next.push(next[next.length - 1]);
+      tree.levels.push(next);
+      current = next;
+    }
+    return tree;
+  }
+
+  get root() {
+    return this.levels[this.levels.length - 1][0];
+  }
+
+  proof(leafIndex) {
+    const proof = [];
+    let idx = leafIndex;
+    for (const level of this.levels.slice(0, -1)) {
+      const sib = idx ^ 1;
+      if (sib < level.length) {
+        proof.push({ hash: level[sib], side: sib < idx ? 'left' : 'right' });
+      }
+      idx = Math.floor(idx / 2);
+    }
+    return proof;
+  }
+
+  static async verify(txBytes, proof, root) {
+    let h = await sha256(txBytes);
+    for (const { hash, side } of proof) {
+      const pair = side === 'left'
+        ? new Uint8Array([...hash, ...h])
+        : new Uint8Array([...h, ...hash]);
+      h = await sha256(pair);
+    }
+    return h.every((b, i) => b === root[i]);
+  }
+}
+
+// ── Ethers.js wallet ─────────────────────────────────────────────────
+// npm install ethers
+import { ethers } from 'ethers';
+
+// Create a random wallet
+const wallet = ethers.Wallet.createRandom();
+console.log('Mnemonic:    ', wallet.mnemonic.phrase);
+console.log('Private key: ', wallet.privateKey);
+console.log('Address:     ', wallet.address);
+
+// Sign a message
+const sig = await wallet.signMessage('Hello, blockchain!');
+console.log('Signature:', sig);
+
+// Recover address from signature
+const recovered = ethers.verifyMessage('Hello, blockchain!', sig);
+console.log('Recovered:', recovered); // should equal wallet.address
+
+// HD wallet derivation (BIP-44 Ethereum)
+const hdNode = ethers.HDNodeWallet.fromMnemonic(wallet.mnemonic);
+const child = hdNode.derivePath("m/44'/60'/0'/0/0");
+console.log('Child address:', child.address);</code></pre></div>
+
+        <!-- C -->
+        <div class="ct-panel" data-tab="bc-c"><pre><code>/*
+ * Blockchain Cryptography — C examples
+ * Compile: gcc -o blockchain_crypto blockchain_crypto.c -lssl -lcrypto
+ */
+#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;string.h&gt;
+#include &lt;openssl/sha.h&gt;
+#include &lt;openssl/evp.h&gt;
+#include &lt;openssl/ec.h&gt;
+#include &lt;openssl/ecdsa.h&gt;
+#include &lt;openssl/obj_mac.h&gt;
+
+/* ── SHA-256 ──────────────────────────────────────────────────────── */
+void sha256(const unsigned char *data, size_t len, unsigned char *out) {
+    SHA256(data, len, out);
+}
+
+void sha256d(const unsigned char *data, size_t len, unsigned char *out) {
+    unsigned char tmp[32];
+    SHA256(data, len, tmp);
+    SHA256(tmp, 32, out);
+}
+
+void print_hex(const unsigned char *data, size_t len) {
+    for (size_t i = 0; i &lt; len; i++) printf("%02x", data[i]);
+    printf("\n");
+}
+
+/* ── Merkle Tree (4-leaf example) ────────────────────────────────── */
+#define HASH_LEN 32
+
+typedef struct {
+    unsigned char hash[HASH_LEN];
+} HashNode;
+
+void merkle_parent(const HashNode *left, const HashNode *right, HashNode *out) {
+    unsigned char combined[HASH_LEN * 2];
+    memcpy(combined,           left->hash,  HASH_LEN);
+    memcpy(combined + HASH_LEN, right->hash, HASH_LEN);
+    sha256d(combined, HASH_LEN * 2, out->hash);
+}
+
+void compute_merkle_root(HashNode *leaves, int n, unsigned char *root_out) {
+    if (n == 0) return;
+    /* Copy to working array; duplicate last if odd */
+    int sz = n + (n % 2);
+    HashNode *level = calloc(sz, sizeof(HashNode));
+    memcpy(level, leaves, n * sizeof(HashNode));
+    if (n % 2) memcpy(&level[n], &level[n-1], sizeof(HashNode));
+
+    while (sz > 1) {
+        int next_sz = (sz + 1) / 2;
+        HashNode *next = calloc(next_sz, sizeof(HashNode));
+        for (int i = 0; i &lt; sz; i += 2)
+            merkle_parent(&level[i], &level[i+1], &next[i/2]);
+        free(level);
+        level = next;
+        sz = next_sz;
+    }
+    memcpy(root_out, level[0].hash, HASH_LEN);
+    free(level);
+}
+
+/* ── ECDSA (secp256k1) ───────────────────────────────────────────── */
+void ecdsa_example(void) {
+    /* Generate key pair on secp256k1 */
+    EC_KEY *key = EC_KEY_new_by_curve_name(NID_secp256k1);
+    if (!EC_KEY_generate_key(key)) { perror("keygen"); return; }
+
+    const char *msg = "Transfer 1 BTC";
+    unsigned char digest[32];
+    sha256d((unsigned char*)msg, strlen(msg), digest);
+
+    /* Sign */
+    ECDSA_SIG *sig = ECDSA_do_sign(digest, 32, key);
+    if (!sig) { perror("sign"); goto cleanup; }
+
+    /* Verify */
+    int ok = ECDSA_do_verify(digest, 32, sig, key);
+    printf("ECDSA verify: %s\n", ok == 1 ? "VALID" : "INVALID");
+
+    /* Print r and s */
+    const BIGNUM *r, *s;
+    ECDSA_SIG_get0(sig, &r, &s);
+    printf("r = %s\n", BN_bn2hex(r));
+    printf("s = %s\n", BN_bn2hex(s));
+
+    ECDSA_SIG_free(sig);
+cleanup:
+    EC_KEY_free(key);
+}
+
+int main(void) {
+    /* SHA-256 avalanche */
+    const char *msgs[] = {"hello", "hello!", "Hello"};
+    for (int i = 0; i &lt; 3; i++) {
+        unsigned char h[32];
+        sha256((unsigned char*)msgs[i], strlen(msgs[i]), h);
+        printf("%-8s -> ", msgs[i]);
+        print_hex(h, 32);
+    }
+    /* Merkle root of 4 transactions */
+    const char *txs[] = {"tx0", "tx1", "tx2", "tx3"};
+    HashNode leaves[4];
+    for (int i = 0; i &lt; 4; i++)
+        sha256d((unsigned char*)txs[i], strlen(txs[i]), leaves[i].hash);
+    unsigned char root[32];
+    compute_merkle_root(leaves, 4, root);
+    printf("Merkle root -> "); print_hex(root, 32);
+
+    ecdsa_example();
+    return 0;
+}</code></pre></div>
+
+        <!-- C++ -->
+        <div class="ct-panel" data-tab="bc-cpp"><pre><code>/*
+ * Blockchain Cryptography — C++ examples
+ * Compile: g++ -std=c++17 -o blockchain_crypto blockchain_crypto.cpp -lssl -lcrypto -lsecp256k1
+ */
+#include &lt;iostream&gt;
+#include &lt;vector&gt;
+#include &lt;string&gt;
+#include &lt;array&gt;
+#include &lt;iomanip&gt;
+#include &lt;sstream&gt;
+#include &lt;openssl/sha.h&gt;
+#include &lt;openssl/evp.h&gt;
+#include &lt;secp256k1.h&gt;
+
+using Hash = std::array&lt;uint8_t, 32&gt;;
+
+// ── SHA-256 ──────────────────────────────────────────────────────────
+Hash sha256(const std::vector&lt;uint8_t&gt;&amp; data) {
+    Hash out;
+    SHA256(data.data(), data.size(), out.data());
+    return out;
+}
+
+Hash sha256d(const std::vector&lt;uint8_t&gt;&amp; data) {
+    auto h1 = sha256(data);
+    std::vector&lt;uint8_t&gt; h1v(h1.begin(), h1.end());
+    return sha256(h1v);
+}
+
+std::string toHex(const Hash&amp; h) {
+    std::ostringstream ss;
+    for (auto b : h) ss &lt;&lt; std::hex &lt;&lt; std::setw(2) &lt;&lt; std::setfill('0') &lt;&lt; (int)b;
+    return ss.str();
+}
+
+// ── Merkle Tree ──────────────────────────────────────────────────────
+class MerkleTree {
+public:
+    explicit MerkleTree(const std::vector&lt;std::string&gt;&amp; transactions) {
+        std::vector&lt;Hash&gt; level;
+        for (auto&amp; tx : transactions) {
+            std::vector&lt;uint8_t&gt; bytes(tx.begin(), tx.end());
+            level.push_back(sha256d(bytes));
+        }
+        if (level.size() % 2 == 1) level.push_back(level.back());
+        tree_.push_back(level);
+        while (level.size() &gt; 1) {
+            std::vector&lt;Hash&gt; next;
+            for (size_t i = 0; i &lt; level.size(); i += 2) {
+                std::vector&lt;uint8_t&gt; combined;
+                combined.insert(combined.end(), level[i].begin(),   level[i].end());
+                combined.insert(combined.end(), level[i+1].begin(), level[i+1].end());
+                next.push_back(sha256d(combined));
+            }
+            if (next.size() % 2 == 1) next.push_back(next.back());
+            tree_.push_back(next);
+            level = next;
+        }
+    }
+
+    Hash root() const { return tree_.back()[0]; }
+
+    // proof: vector of (sibling_hash, is_right_sibling)
+    std::vector&lt;std::pair&lt;Hash, bool&gt;&gt; proof(size_t idx) const {
+        std::vector&lt;std::pair&lt;Hash, bool&gt;&gt; pf;
+        for (size_t lvl = 0; lvl + 1 &lt; tree_.size(); ++lvl) {
+            size_t sib = idx ^ 1;
+            if (sib &lt; tree_[lvl].size())
+                pf.push_back({tree_[lvl][sib], sib &gt; idx});
+            idx /= 2;
+        }
+        return pf;
+    }
+
+private:
+    std::vector&lt;std::vector&lt;Hash&gt;&gt; tree_;
+};
+
+// ── secp256k1 ECDSA ──────────────────────────────────────────────────
+void ecdsaExample() {
+    secp256k1_context* ctx = secp256k1_context_create(SECP256K1_CONTEXT_SIGN | SECP256K1_CONTEXT_VERIFY);
+
+    // Generate private key (in production: use /dev/urandom)
+    uint8_t privkey[32] = {0};
+    FILE* urandom = fopen("/dev/urandom", "rb");
+    fread(privkey, 1, 32, urandom); fclose(urandom);
+
+    // Derive public key
+    secp256k1_pubkey pubkey;
+    secp256k1_ec_pubkey_create(ctx, &amp;pubkey, privkey);
+
+    // Message hash
+    std::string msg = "Transfer 1 BTC to Bob";
+    std::vector&lt;uint8_t&gt; msgBytes(msg.begin(), msg.end());
+    Hash msgHash = sha256d(msgBytes);
+
+    // Sign
+    secp256k1_ecdsa_signature sig;
+    secp256k1_ecdsa_sign(ctx, &amp;sig, msgHash.data(), privkey, nullptr, nullptr);
+
+    // Verify
+    int ok = secp256k1_ecdsa_verify(ctx, &amp;sig, msgHash.data(), &amp;pubkey);
+    std::cout &lt;&lt; "ECDSA verify: " &lt;&lt; (ok ? "VALID" : "INVALID") &lt;&lt; "\n";
+
+    secp256k1_context_destroy(ctx);
+}
+
+int main() {
+    // Avalanche
+    for (auto msg : {"hello", "hello!", "Hello"}) {
+        std::vector&lt;uint8_t&gt; b(msg, msg + strlen(msg));
+        std::cout &lt;&lt; std::setw(8) &lt;&lt; std::left &lt;&lt; msg &lt;&lt; " -&gt; " &lt;&lt; toHex(sha256(b)) &lt;&lt; "\n";
+    }
+    // Merkle tree
+    MerkleTree mt({"tx0", "tx1", "tx2", "tx3"});
+    std::cout &lt;&lt; "Merkle root: " &lt;&lt; toHex(mt.root()) &lt;&lt; "\n";
+    // ECDSA
+    ecdsaExample();
+    return 0;
+}</code></pre></div>
+
+        <!-- JAVA -->
+        <div class="ct-panel" data-tab="bc-java"><pre><code>/**
+ * Blockchain Cryptography — Java examples
+ * Dependencies: Bouncy Castle (bcprov-jdk18on)
+ * Build: javac -cp bcprov-jdk18on-1.77.jar BlockchainCrypto.java
+ */
+import java.security.*;
+import java.security.spec.*;
+import java.util.*;
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.bouncycastle.jce.ECNamedCurveTable;
+import org.bouncycastle.jce.spec.ECNamedCurveParameterSpec;
+import org.bouncycastle.crypto.params.*;
+import org.bouncycastle.crypto.generators.ECKeyPairGenerator;
+import org.bouncycastle.crypto.signers.ECDSASigner;
+import org.bouncycastle.math.ec.ECPoint;
+import java.math.BigInteger;
+
+public class BlockchainCrypto {
+
+    static { Security.addProvider(new BouncyCastleProvider()); }
+
+    // ── SHA-256 ──────────────────────────────────────────────────────
+    public static byte[] sha256(byte[] data) throws Exception {
+        return MessageDigest.getInstance("SHA-256").digest(data);
+    }
+
+    public static byte[] sha256d(byte[] data) throws Exception {
+        return sha256(sha256(data));
+    }
+
+    public static String toHex(byte[] bytes) {
+        StringBuilder sb = new StringBuilder();
+        for (byte b : bytes) sb.append(String.format("%02x", b));
+        return sb.toString();
+    }
+
+    // ── Merkle Tree ──────────────────────────────────────────────────
+    static class MerkleTree {
+        private final List&lt;List&lt;byte[]&gt;&gt; levels = new ArrayList&lt;&gt;();
+
+        public MerkleTree(List&lt;byte[]&gt; transactions) throws Exception {
+            List&lt;byte[]&gt; leaves = new ArrayList&lt;&gt;();
+            for (byte[] tx : transactions) leaves.add(sha256d(tx));
+            if (leaves.size() % 2 == 1) leaves.add(leaves.get(leaves.size()-1));
+            levels.add(leaves);
+            List&lt;byte[]&gt; current = leaves;
+            while (current.size() &gt; 1) {
+                List&lt;byte[]&gt; next = new ArrayList&lt;&gt;();
+                for (int i = 0; i &lt; current.size(); i += 2) {
+                    byte[] combined = new byte[64];
+                    System.arraycopy(current.get(i),   0, combined,  0, 32);
+                    System.arraycopy(current.get(i+1), 0, combined, 32, 32);
+                    next.add(sha256d(combined));
+                }
+                if (next.size() % 2 == 1) next.add(next.get(next.size()-1));
+                levels.add(next);
+                current = next;
+            }
+        }
+
+        public byte[] root() { return levels.get(levels.size()-1).get(0); }
+
+        public List&lt;byte[]&gt; proof(int leafIndex) {
+            List&lt;byte[]&gt; pf = new ArrayList&lt;&gt;();
+            int idx = leafIndex;
+            for (int lvl = 0; lvl &lt; levels.size()-1; lvl++) {
+                int sib = idx ^ 1;
+                List&lt;byte[]&gt; level = levels.get(lvl);
+                if (sib &lt; level.size()) pf.add(level.get(sib));
+                idx /= 2;
+            }
+            return pf;
+        }
+    }
+
+    // ── ECDSA with BouncyCastle ──────────────────────────────────────
+    public static void ecdsaDemo() throws Exception {
+        ECNamedCurveParameterSpec params = ECNamedCurveTable.getParameterSpec("secp256k1");
+        ECDomainParameters domain = new ECDomainParameters(
+            params.getCurve(), params.getG(), params.getN(), params.getH());
+
+        // Generate key pair
+        ECKeyPairGenerator gen = new ECKeyPairGenerator();
+        gen.init(new ECKeyGenerationParameters(domain, new SecureRandom()));
+        org.bouncycastle.crypto.AsymmetricCipherKeyPair kp = gen.generateKeyPair();
+        ECPrivateKeyParameters privKey = (ECPrivateKeyParameters) kp.getPrivate();
+        ECPublicKeyParameters  pubKey  = (ECPublicKeyParameters)  kp.getPublic();
+
+        // Hash message
+        byte[] msgHash = sha256d("Transfer 1 BTC to Bob".getBytes());
+
+        // Sign
+        ECDSASigner signer = new ECDSASigner();
+        signer.init(true, privKey);
+        BigInteger[] sig = signer.generateSignature(msgHash);
+        System.out.println("r = " + sig[0].toString(16));
+        System.out.println("s = " + sig[1].toString(16));
+
+        // Verify
+        signer.init(false, pubKey);
+        boolean ok = signer.verifySignature(msgHash, sig[0], sig[1]);
+        System.out.println("Verified: " + ok);
+    }
+
+    public static void main(String[] args) throws Exception {
+        // Avalanche
+        for (String msg : new String[]{"hello", "hello!", "Hello"}) {
+            System.out.printf("%-8s -> %s%n", msg, toHex(sha256(msg.getBytes())));
+        }
+        // Merkle tree
+        List&lt;byte[]&gt; txs = Arrays.asList(
+            "tx0".getBytes(), "tx1".getBytes(), "tx2".getBytes(), "tx3".getBytes());
+        MerkleTree mt = new MerkleTree(txs);
+        System.out.println("Merkle root: " + toHex(mt.root()));
+        System.out.println("Proof length for tx2: " + mt.proof(2).size() + " hashes");
+        // ECDSA
+        ecdsaDemo();
+    }
+}</code></pre></div>
+
+        <!-- GO -->
+        <div class="ct-panel" data-tab="bc-go"><pre><code>// Blockchain Cryptography — Go examples
+// go get github.com/ethereum/go-ethereum
+package main
+
+import (
+	"crypto/ecdsa"
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/hex"
+	"fmt"
+	"math/big"
+
+	gocrypto "github.com/ethereum/go-ethereum/crypto"
+)
+
+// ── SHA-256 ───────────────────────────────────────────────────────────
+func Sha256(data []byte) []byte {
+	h := sha256.Sum256(data)
+	return h[:]
+}
+
+func Sha256d(data []byte) []byte {
+	h := sha256.Sum256(data)
+	h2 := sha256.Sum256(h[:])
+	return h2[:]
+}
+
+// ── Merkle Tree ───────────────────────────────────────────────────────
+type MerkleTree struct {
+	Levels [][][]byte
+}
+
+func NewMerkleTree(txs [][]byte) *MerkleTree {
+	leaves := make([][]byte, len(txs))
+	for i, tx := range txs {
+		leaves[i] = Sha256d(tx)
+	}
+	if len(leaves)%2 == 1 {
+		leaves = append(leaves, leaves[len(leaves)-1])
+	}
+	tree := &MerkleTree{Levels: [][][]byte{leaves}}
+	current := leaves
+	for len(current) > 1 {
+		var next [][]byte
+		for i := 0; i+1 < len(current); i += 2 {
+			combined := append(current[i], current[i+1]...)
+			next = append(next, Sha256d(combined))
+		}
+		if len(next)%2 == 1 {
+			next = append(next, next[len(next)-1])
+		}
+		tree.Levels = append(tree.Levels, next)
+		current = next
+	}
+	return tree
+}
+
+func (m *MerkleTree) Root() []byte {
+	return m.Levels[len(m.Levels)-1][0]
+}
+
+type ProofStep struct {
+	Hash  []byte
+	Right bool // true if sibling is to the right
+}
+
+func (m *MerkleTree) Proof(leafIdx int) []ProofStep {
+	var proof []ProofStep
+	idx := leafIdx
+	for lvl := 0; lvl+1 < len(m.Levels); lvl++ {
+		sib := idx ^ 1
+		level := m.Levels[lvl]
+		if sib < len(level) {
+			proof = append(proof, ProofStep{Hash: level[sib], Right: sib > idx})
+		}
+		idx /= 2
+	}
+	return proof
+}
+
+func VerifyProof(tx []byte, proof []ProofStep, root []byte) bool {
+	h := Sha256d(tx)
+	for _, step := range proof {
+		var combined []byte
+		if step.Right {
+			combined = append(h, step.Hash...)
+		} else {
+			combined = append(step.Hash, h...)
+		}
+		h = Sha256d(combined)
+	}
+	for i := range h {
+		if h[i] != root[i] {
+			return false
+		}
+	}
+	return true
+}
+
+// ── ECDSA (go-ethereum) ───────────────────────────────────────────────
+func ecdsaDemo() {
+	// Generate private key on secp256k1
+	privKey, err := gocrypto.GenerateKey()
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("Private key: %x\n", privKey.D.Bytes())
+
+	// Ethereum address = last 20 bytes of Keccak256(pubKey)
+	addr := gocrypto.PubkeyToAddress(privKey.PublicKey)
+	fmt.Printf("Address:     %s\n", addr.Hex())
+
+	// Sign a message hash (must be 32 bytes)
+	msgHash := gocrypto.Keccak256([]byte("Transfer 1 ETH to Bob"))
+	sig, err := gocrypto.Sign(msgHash, privKey)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("Signature:   %x\n", sig)
+
+	// Recover public key from signature (Ethereum-style)
+	recoveredPub, err := gocrypto.SigToPub(msgHash, sig)
+	if err != nil {
+		panic(err)
+	}
+	recoveredAddr := gocrypto.PubkeyToAddress(*recoveredPub)
+	fmt.Printf("Recovered:   %s\n", recoveredAddr.Hex())
+	fmt.Printf("Match: %v\n", addr == recoveredAddr)
+}
+
+// ── secp256k1 ECDSA (stdlib, for illustration) ────────────────────────
+func stdlibECDSA() {
+	// Note: stdlib uses P-256 (not secp256k1); for secp256k1 use go-ethereum
+	curve := gocrypto.S256() // secp256k1 via go-ethereum
+	privKey, _ := ecdsa.GenerateKey(curve, rand.Reader)
+	digest := Sha256d([]byte("hello blockchain"))
+	r, s, _ := ecdsa.Sign(rand.Reader, privKey, digest)
+	ok := ecdsa.Verify(&privKey.PublicKey, digest, r, s)
+	fmt.Printf("stdlib ECDSA (secp256k1) verify: %v  r=%s\n",
+		ok, hex.EncodeToString(r.Bytes()[:8]))
+	_ = s
+}
+
+func main() {
+	// Avalanche demo
+	for _, msg := range []string{"hello", "hello!", "Hello"} {
+		h := Sha256([]byte(msg))
+		fmt.Printf("%-8s -> %s\n", msg, hex.EncodeToString(h))
+	}
+
+	// Merkle tree
+	txs := [][]byte{[]byte("tx0"), []byte("tx1"), []byte("tx2"), []byte("tx3")}
+	mt := NewMerkleTree(txs)
+	fmt.Printf("Merkle root: %s\n", hex.EncodeToString(mt.Root()))
+	proof := mt.Proof(2)
+	ok := VerifyProof(txs[2], proof, mt.Root())
+	fmt.Printf("Proof for tx2 verified: %v (len=%d)\n", ok, len(proof))
+
+	// ECDSA
+	ecdsaDemo()
+	stdlibECDSA()
+}</code></pre></div>
+      </div>
+    </details>
+
+    <!-- ========================================================== -->
+    <h2 id="summary">10. Summary</h2>
+
+    <ul>
+      <li><strong>Hash functions</strong> map arbitrary data to a fixed 256-bit digest. SHA-256 (Bitcoin) and Keccak-256 (Ethereum) provide preimage resistance ($2^{256}$), collision resistance ($2^{128}$), and the avalanche effect — flipping one input bit flips ~50% of output bits.</li>
+      <li><strong>The Merkle-Damgård construction</strong> processes messages in 512-bit blocks through a compression function, chaining outputs. Bitcoin uses double-SHA-256; Ethereum uses the pre-NIST Keccak-256 variant.</li>
+      <li><strong>Merkle trees</strong> commit to all transactions in a block via a single 32-byte root hash stored in the block header. A Merkle proof verifies a single transaction's inclusion in $O(\log n)$ hashes — enabling lightweight SPV clients.</li>
+      <li><strong>secp256k1 ECDSA</strong> uses a 256-bit elliptic curve over a prime field. Key generation: pick random $d$, compute $Q = d \cdot G$ (one-way due to ECDLP hardness). Signing: $(r, s) = (R_x, k^{-1}(z + rd))$. Verification: recompute $R$ from the signature and check $R_x = r$.</li>
+      <li><strong>Ethereum addresses</strong> are the last 20 bytes of the Keccak-256 hash of the 64-byte uncompressed public key. Bitcoin uses RIPEMD160(SHA256(compressed pubkey)) encoded as Base58Check.</li>
+      <li><strong>BIP-32 HD wallets</strong> derive an entire hierarchy of key pairs from a single seed using HMAC-SHA512. One mnemonic phrase controls all accounts.</li>
+      <li><strong>Transaction authorization</strong>: Bitcoin uses a stack-based script engine (scriptSig + scriptPubKey) where OP_CHECKSIG verifies an ECDSA signature over the transaction hash. Ethereum signs the RLP-encoded transaction fields (including chainId per EIP-155) and includes the recovery parameter $v$ so verifiers can recover the sender's public key without storing it.</li>
+      <li><strong>Hash pointers</strong> chain blocks together: each block header's <code>prev_hash</code> field is the SHA256d of the previous header. Modifying any historical block invalidates all subsequent hashes and requires re-mining the entire suffix — computationally infeasible against an honest majority.</li>
+      <li><strong>Nonce secrecy</strong> in ECDSA is critical: reusing the same nonce $k$ for two signatures immediately leaks the private key. Use RFC 6979 deterministic nonce derivation in production.</li>
+    </ul>
+
+  </article>
+</div>
+
+<script>
+// ── Code tab switcher ─────────────────────────────────────────────────
+(function () {
+  document.querySelectorAll('.ct-header').forEach(function (header) {
+    header.querySelectorAll('.ct-tab').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var panel = btn.closest('.code-tabs');
+        var tab   = btn.dataset.tab;
+        panel.querySelectorAll('.ct-tab').forEach(function (t) { t.classList.remove('active'); });
+        panel.querySelectorAll('.ct-panel').forEach(function (p) { p.classList.remove('active'); });
+        btn.classList.add('active');
+        panel.querySelector('.ct-panel[data-tab="' + tab + '"]').classList.add('active');
+      });
+    });
+  });
+})();
+</script>
+</body>
+</html>

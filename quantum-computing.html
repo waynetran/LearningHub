@@ -1,0 +1,1055 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quantum Computing — Harnessing Superposition, Entanglement, and Interference</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+  /* Quantum Computing violet accent overrides */
+  :root {
+    --qc: #a855f7;
+    --qc-dim: rgba(168,85,247,0.15);
+    --qc-border: rgba(168,85,247,0.4);
+  }
+  .callout.qc {
+    border-left-color: var(--qc);
+    background: linear-gradient(90deg, rgba(168,85,247,0.08), transparent);
+  }
+  .callout.qc .label { color: var(--qc); }
+
+  /* Bloch sphere interactive */
+  #bloch-sphere-container {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+    margin: 18px 0;
+  }
+  #bloch-sphere-container h5 {
+    margin: 0 0 12px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--qc);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+  .bloch-layout {
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  #bloch-svg-wrap { flex: 0 0 auto; }
+  .bloch-controls {
+    flex: 1;
+    min-width: 200px;
+  }
+  .bloch-controls label {
+    display: block;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-dim);
+    margin: 12px 0 4px;
+  }
+  .bloch-controls input[type=range] {
+    width: 100%;
+    accent-color: var(--qc);
+  }
+  #bloch-state-display {
+    margin-top: 16px;
+    background: var(--bg-3);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px 14px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text);
+    line-height: 1.7;
+  }
+  #bloch-state-display .ket { color: var(--qc); }
+
+  /* Gate matrix tables */
+  .gate-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    font-size: 13px;
+    background: var(--panel);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .gate-table th {
+    background: var(--bg-3);
+    padding: 9px 12px;
+    text-align: left;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-dim);
+    font-family: var(--mono);
+    border-bottom: 1px solid var(--border);
+  }
+  .gate-table td {
+    padding: 9px 12px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  .gate-table tr:last-child td { border-bottom: none; }
+  .gate-table tr:hover td { background: rgba(168,85,247,0.05); }
+  .gate-table .gate-name {
+    font-family: var(--mono);
+    font-weight: 700;
+    color: var(--qc);
+    white-space: nowrap;
+  }
+  .gate-table .matrix {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent-2);
+    white-space: pre;
+    line-height: 1.45;
+  }
+
+  /* ASCII circuit */
+  .circuit-ascii {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--qc);
+    border-radius: 0 6px 6px 0;
+    padding: 16px 20px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--accent-2);
+    overflow-x: auto;
+    margin: 16px 0;
+    white-space: pre;
+    line-height: 1.6;
+  }
+
+  /* Hardware comparison table */
+  .hw-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    font-size: 12.5px;
+    background: var(--panel);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .hw-table th {
+    background: var(--bg-3);
+    padding: 9px 12px;
+    text-align: left;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-dim);
+    font-family: var(--mono);
+    border-bottom: 1px solid var(--border);
+  }
+  .hw-table td {
+    padding: 9px 12px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+    color: var(--text);
+  }
+  .hw-table tr:last-child td { border-bottom: none; }
+  .hw-table tr:hover td { background: rgba(168,85,247,0.05); }
+  .hw-table .platform {
+    font-family: var(--mono);
+    font-weight: 700;
+    color: var(--qc);
+  }
+
+  /* Resource comparison callout table */
+  .compare-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 18px 0;
+    font-size: 13px;
+    background: var(--panel);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .compare-table th {
+    background: var(--bg-3);
+    padding: 10px 14px;
+    text-align: left;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-dim);
+    font-family: var(--mono);
+    border-bottom: 1px solid var(--border);
+  }
+  .compare-table td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .compare-table tr:last-child td { border-bottom: none; }
+  .compare-table .classical { color: var(--accent-2); font-family: var(--mono); font-size: 12px; }
+  .compare-table .quantum { color: var(--qc); font-family: var(--mono); font-size: 12px; }
+</style>
+</head>
+<body>
+<div id="tooltip"></div>
+
+<!-- Mobile menu toggle -->
+<button class="mobile-menu-toggle" id="mobile-menu-toggle" aria-label="Toggle navigation">☰</button>
+<div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+
+<!-- ============================================================ -->
+<!-- Top bar -->
+<!-- ============================================================ -->
+<div class="topbar">
+  <a class="topbar-back" href="index.html">← Learning Hub</a>
+  <span class="topbar-crumb">Quantum Computing Track</span>
+  <span class="topbar-tracks">
+    <a href="ai-ml.html">AI / ML</a>
+    <a href="cs/index.html">CS</a>
+  </span>
+</div>
+
+<!-- ============================================================ -->
+<!-- HERO -->
+<!-- ============================================================ -->
+<div class="hero">
+  <div class="hero-inner">
+    <span class="chip">UPDATED Apr 11 2026 18:45</span>
+    <h1>Quantum Computing — Harnessing Superposition, Entanglement, and Interference</h1>
+    <p class="lede">A rigorous tour of quantum computation: from the postulates of quantum mechanics to qubits, gates, and circuits; through landmark algorithms that outrun every classical machine; to the hardware realities of 2026 and what's hype vs. what's real. Hover any <span class="term" data-label="Qubit" data-def="A quantum bit — the fundamental unit of quantum information. Unlike a classical bit (0 or 1), a qubit can exist in a superposition of both simultaneously until measured.">dotted term</span> for a quick definition. Poke at the interactive Bloch sphere.</p>
+  </div>
+</div>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div class="brand">
+      <h2 style="color: #a855f7;">Quantum Computing</h2>
+      <p>// superposition · entanglement · interference</p>
+    </div>
+    <nav id="sidenav">
+
+      <div class="cat-group" data-group="start">
+        <button class="cat cat-toggle" aria-expanded="true">
+          <span class="cat-icon">01</span><span class="cat-title">Start here</span><span class="cat-chev">▾</span>
+        </button>
+        <ul class="cat-body">
+          <li><a href="#overview">Overview</a></li>
+          <li><a href="#why-quantum">Why quantum?</a></li>
+        </ul>
+      </div>
+
+      <div class="cat-group" data-group="classical">
+        <button class="cat cat-toggle" aria-expanded="false">
+          <span class="cat-icon">02</span><span class="cat-title">QM review</span><span class="cat-chev">▾</span>
+        </button>
+        <ul class="cat-body">
+          <li><a href="#qm-review">Quantum mechanics</a>
+            <ul>
+              <li><a href="#superposition">Superposition</a></li>
+              <li><a href="#measurement">Measurement</a></li>
+              <li><a href="#dirac">Dirac notation</a></li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+
+      <div class="cat-group" data-group="neural">
+        <button class="cat cat-toggle" aria-expanded="false">
+          <span class="cat-icon">03</span><span class="cat-title">Qubits &amp; gates</span><span class="cat-chev">▾</span>
+        </button>
+        <ul class="cat-body">
+          <li><a href="#qubits">Qubits &amp; gates</a>
+            <ul>
+              <li><a href="#bloch">Bloch sphere</a></li>
+              <li><a href="#single-gates">Single-qubit gates</a></li>
+              <li><a href="#two-gates">Two-qubit gates</a></li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+
+      <div class="cat-group" data-group="transformer">
+        <button class="cat cat-toggle" aria-expanded="false">
+          <span class="cat-icon">04</span><span class="cat-title">Quantum circuits</span><span class="cat-chev">▾</span>
+        </button>
+        <ul class="cat-body">
+          <li><a href="#circuits">Circuits</a>
+            <ul>
+              <li><a href="#circuit-model">Circuit model</a></li>
+              <li><a href="#universality">Universality</a></li>
+              <li><a href="#depth">Depth &amp; width</a></li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+
+      <div class="cat-group" data-group="emerging">
+        <button class="cat cat-toggle" aria-expanded="false">
+          <span class="cat-icon">05</span><span class="cat-title">Core algorithms</span><span class="cat-chev">▾</span>
+        </button>
+        <ul class="cat-body">
+          <li><a href="#algorithms">Algorithms</a>
+            <ul>
+              <li><a href="#deutsch">Deutsch-Jozsa</a></li>
+              <li><a href="#grover">Grover's search</a></li>
+              <li><a href="#shor">Shor's algorithm</a></li>
+              <li><a href="#qft">QFT</a></li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+
+      <div class="cat-group" data-group="agi">
+        <button class="cat cat-toggle" aria-expanded="false">
+          <span class="cat-icon">06</span><span class="cat-title">Entanglement</span><span class="cat-chev">▾</span>
+        </button>
+        <ul class="cat-body">
+          <li><a href="#entanglement">Entanglement</a>
+            <ul>
+              <li><a href="#bell">Bell states</a></li>
+              <li><a href="#teleportation">Teleportation</a></li>
+              <li><a href="#superdense">Superdense coding</a></li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+
+      <div class="cat-group" data-group="production">
+        <button class="cat cat-toggle" aria-expanded="false">
+          <span class="cat-icon">07</span><span class="cat-title">Error correction</span><span class="cat-chev">▾</span>
+        </button>
+        <ul class="cat-body">
+          <li><a href="#error-correction">Error correction</a>
+            <ul>
+              <li><a href="#noise">Sources of noise</a></li>
+              <li><a href="#shor-code">Shor's 9-qubit code</a></li>
+              <li><a href="#surface">Surface codes</a></li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+
+      <div class="cat-group" data-group="classical">
+        <button class="cat cat-toggle" aria-expanded="false">
+          <span class="cat-icon">08</span><span class="cat-title">Hardware</span><span class="cat-chev">▾</span>
+        </button>
+        <ul class="cat-body">
+          <li><a href="#hardware">Hardware platforms</a>
+            <ul>
+              <li><a href="#superconducting">Superconducting</a></li>
+              <li><a href="#trapped-ion">Trapped ion</a></li>
+              <li><a href="#photonic">Photonic &amp; neutral atom</a></li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+
+      <div class="cat-group" data-group="neural">
+        <button class="cat cat-toggle" aria-expanded="false">
+          <span class="cat-icon">09</span><span class="cat-title">Near-term (NISQ)</span><span class="cat-chev">▾</span>
+        </button>
+        <ul class="cat-body">
+          <li><a href="#nisq">NISQ era</a>
+            <ul>
+              <li><a href="#vqe">VQE</a></li>
+              <li><a href="#qaoa">QAOA</a></li>
+              <li><a href="#quantum-ml">Quantum ML</a></li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+
+    </nav>
+  </aside>
+
+  <main>
+    <div class="container">
+
+      <!-- ============================================================ -->
+      <section id="overview">
+        <h2>Overview <span class="era">// what quantum computers actually do</span></h2>
+        <p class="lede">A quantum computer is not a faster classical computer. It is a fundamentally different kind of machine that exploits the physical laws of quantum mechanics to perform certain computations that would take the age of the universe on classical hardware.</p>
+
+        <p>Classical computers manipulate bits — each a definite 0 or 1. They run deterministic or probabilistic algorithms using logic gates. Quantum computers manipulate <span class="term" data-label="Qubit" data-def="A quantum bit: a two-level quantum system that can exist in a superposition of |0⟩ and |1⟩ simultaneously. Measurement collapses it to a definite value.">qubits</span> using reversible unitary operations. The magic lies in three resources unavailable classically: <strong>superposition</strong> (a qubit encodes 0 and 1 simultaneously), <strong>entanglement</strong> (correlations between qubits with no classical analogue), and <strong>interference</strong> (paths to wrong answers cancel; paths to right answers reinforce). Used together, these resources allow exponential or polynomial speedups on specific problem classes.</p>
+
+        <p>The three killer applications are well-established: <strong>factoring large integers</strong> (Shor's algorithm, polynomial time vs. sub-exponential classical); <strong>unstructured search</strong> (Grover's algorithm, O(√N) vs. O(N) classical); and <strong>simulating quantum systems</strong> (molecules, materials, quantum field theories — problems that are exponentially hard classically by the nature of Hilbert space). Everything else is an open research question.</p>
+
+        <table class="compare-table">
+          <thead>
+            <tr>
+              <th>Attribute</th>
+              <th>Classical Computer</th>
+              <th>Quantum Computer</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Basic unit</td>
+              <td class="classical">Bit: 0 or 1</td>
+              <td class="quantum">Qubit: α|0⟩ + β|1⟩</td>
+            </tr>
+            <tr>
+              <td>Operations</td>
+              <td class="classical">Logic gates (AND, OR, NOT…)</td>
+              <td class="quantum">Unitary transforms (H, CNOT, T…)</td>
+            </tr>
+            <tr>
+              <td>Parallelism</td>
+              <td class="classical">Explicit, deterministic</td>
+              <td class="quantum">Quantum superposition over 2ⁿ states</td>
+            </tr>
+            <tr>
+              <td>Readout</td>
+              <td class="classical">Deterministic</td>
+              <td class="quantum">Probabilistic (Born rule)</td>
+            </tr>
+            <tr>
+              <td>Primary limits</td>
+              <td class="classical">Clock speed, memory, energy</td>
+              <td class="quantum">Decoherence, gate noise, limited qubits</td>
+            </tr>
+            <tr>
+              <td>State of the art (2026)</td>
+              <td class="classical">Trillion-transistor CPUs/GPUs</td>
+              <td class="quantum">IBM 1000+ qubit processors; Google Willow; IonQ Forte</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="callout qc">
+          <div class="label">Where we are in 2026</div>
+          <p style="margin:6px 0">IBM's Heron and Condor processors have crossed the 1000-qubit mark. Google's Willow chip demonstrated below-threshold error correction in 2024, a landmark result. IonQ's Forte system targets 35 algorithmic qubits. None of these can yet run Shor's algorithm against RSA-2048 (that requires ~4000 fault-tolerant logical qubits) but the trajectory is clear: fault-tolerant quantum computing is an engineering challenge, not a physics impossibility.</p>
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <section id="why-quantum">
+        <h2>Why quantum? <span class="era">// the speedup story</span></h2>
+        <p class="lede">Quantum computers don't speed up everything. They offer proven exponential or polynomial advantages on a specific set of problems — and those problems happen to include the foundations of modern cryptography.</p>
+
+        <h3>The three established speedups</h3>
+        <ul class="checked">
+          <li><strong>Factoring (Shor's algorithm).</strong> The best classical algorithm for factoring an n-bit integer (the General Number Field Sieve) runs in sub-exponential time — roughly exp(n^{1/3}). Shor's quantum algorithm factors in polynomial time, O(n³). RSA-2048 encryption rests entirely on the assumption that factoring is hard. A large fault-tolerant quantum computer would break it. Post-quantum cryptography (NIST's CRYSTALS-Kyber, Dilithium) exists for this reason.</li>
+          <li><strong>Unstructured search (Grover's algorithm).</strong> Searching an unsorted database of N items classically requires O(N) queries in the worst case. Grover's algorithm finds the target in O(√N) queries — a provably optimal quadratic speedup. For N = 10¹⁸ entries, that's a billion times fewer queries.</li>
+          <li><strong>Quantum simulation.</strong> Simulating a quantum system of n particles requires Hilbert space dimension 2ⁿ on a classical computer — exponential. A quantum computer can simulate quantum dynamics in polynomial time (Feynman's original insight, 1982). Applications: drug discovery, catalyst design, materials science, battery chemistry. This is considered the most commercially valuable near-term application.</li>
+        </ul>
+
+        <h3>The catch</h3>
+        <p>Quantum computers are not general-purpose speedups. They require near-absolute-zero temperatures (superconducting qubits need ~15 millikelvin — colder than outer space), exquisitely low-noise environments, and complex control electronics. Most classical tasks — web servers, databases, video encoding, machine learning inference — have no known quantum speedup. The quantum advantage is narrow but profound where it exists.</p>
+
+        <div class="callout warn">
+          <div class="label">Common misconception</div>
+          <p style="margin:6px 0">Quantum computers do not try all answers simultaneously in a brute-force way. They use <em>interference</em> — precisely engineered cancellation of wrong-answer probability amplitudes — to amplify correct answers. Without a clever algorithm exploiting interference, a quantum computer gives you nothing useful except a random sample.</p>
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <section id="qm-review">
+        <h2>Quantum mechanics review <span class="era">// the physics underneath</span></h2>
+        <p class="lede">Quantum computing rests on three postulates of quantum mechanics. You don't need to derive them from first principles, but you do need to feel comfortable with them.</p>
+
+        <h3 id="superposition">Superposition</h3>
+        <p>A qubit is a two-level quantum system. Its state lives in a two-dimensional complex vector space (a Hilbert space). The two <span class="term" data-label="Computational basis" data-def="The standard orthonormal basis for a qubit: |0⟩ and |1⟩, analogous to classical 0 and 1. Every qubit state is a complex linear combination of these two vectors.">computational basis states</span> are |0⟩ and |1⟩ (pronounced "ket zero" and "ket one"). The most general single-qubit state is:</p>
+
+        <div class="math-display">|ψ⟩ = α|0⟩ + β|1⟩ &nbsp;&nbsp; where α, β ∈ ℂ and |α|² + |β|² = 1</div>
+        <div class="math-glossary">
+          <p class="mg-title">The superposition state</p>
+          <dl>
+            <dt>α, β</dt><dd>Complex amplitudes. Their magnitudes squared give measurement probabilities. They are not directly observable.</dd>
+            <dt>|0⟩, |1⟩</dt><dd>Computational basis vectors. |0⟩ = (1, 0)ᵀ and |1⟩ = (0, 1)ᵀ as column vectors.</dd>
+            <dt>|α|²+|β|²=1</dt><dd>The normalization constraint. Total probability must equal 1.</dd>
+          </dl>
+        </div>
+
+        <p>Before measurement, the qubit is genuinely in both states simultaneously — this is not an epistemic statement about our ignorance. It is the physical reality described by quantum mechanics. Superposition is not classical probability: the amplitudes are complex numbers that can interfere.</p>
+
+        <h3 id="measurement">Measurement</h3>
+        <p>When you measure a qubit in state α|0⟩ + β|1⟩ in the computational basis, the <span class="term" data-label="Born rule" data-def="The postulate of quantum mechanics that the probability of measuring outcome |x⟩ is |⟨x|ψ⟩|² — the squared magnitude of the amplitude.">Born rule</span> gives the outcome: you observe |0⟩ with probability |α|² and |1⟩ with probability |β|². The measurement is <strong>irreversible</strong> — after measuring, the state collapses to the observed outcome and all other information is destroyed. This is why quantum algorithms must be designed carefully: you can't "peek" at intermediate results without destroying the computation.</p>
+
+        <div class="callout math">
+          <div class="label">Key consequence</div>
+          <p style="margin:6px 0">You can never copy an unknown quantum state (No-Cloning Theorem). You can never learn α and β exactly from a single measurement — only a statistical distribution from many measurements. Quantum information is fundamentally different from classical information.</p>
+        </div>
+
+        <h3 id="dirac">Dirac notation</h3>
+        <p>Paul Dirac invented a compact notation for quantum mechanics that quantum computing inherits. A <strong>ket</strong> |ψ⟩ is a column vector representing a quantum state. A <strong>bra</strong> ⟨ψ| is the conjugate transpose (row vector). Their products:</p>
+
+        <div class="math-display">
+Inner product:  ⟨φ|ψ⟩ = φ†ψ  (a complex number — probability amplitude)
+Outer product:  |ψ⟩⟨φ| = ψφ†  (a matrix — acts as a projection operator)
+Expectation:    ⟨O⟩ = ⟨ψ|O|ψ⟩  (expected measurement outcome of observable O)</div>
+
+        <p>The inner product ⟨φ|ψ⟩ measures overlap: if |φ⟩ and |ψ⟩ are orthogonal (e.g., |0⟩ and |1⟩), their inner product is 0. Orthogonal states are perfectly distinguishable. All of quantum circuit theory can be written in this notation — gates are unitary matrices acting on ket vectors.</p>
+      </section>
+
+      <!-- ============================================================ -->
+      <section id="qubits">
+        <h2>Qubits &amp; gates <span class="era">// the quantum hardware primitives</span></h2>
+        <p class="lede">A qubit's state lives on the surface of the Bloch sphere. Gates are rotations of that sphere. Two-qubit gates create entanglement — the resource that makes quantum computing powerful.</p>
+
+        <h3 id="bloch">The Bloch sphere</h3>
+        <p>Every single-qubit pure state can be written as |ψ⟩ = cos(θ/2)|0⟩ + e<sup>iφ</sup>sin(θ/2)|1⟩, where θ ∈ [0°, 180°] is the polar angle and φ ∈ [0°, 360°) is the azimuthal angle. This maps every pure qubit state to a unique point on the unit sphere — the <span class="term" data-label="Bloch sphere" data-def="A unit sphere whose surface represents all possible pure states of a single qubit. The north pole is |0⟩, south pole is |1⟩, equator is equal superpositions. Gates are rotations.">Bloch sphere</span>. The north pole (θ=0) is |0⟩; the south pole (θ=180°) is |1⟩; the equator is equal superposition. Single-qubit gates are rotations of the sphere.</p>
+
+        <div id="bloch-sphere-container">
+          <h5>Interactive Bloch Sphere</h5>
+          <div class="bloch-layout">
+            <div id="bloch-svg-wrap">
+              <svg id="bloch-svg" viewBox="0 0 260 280" width="260" height="280">
+                <!-- Sphere outline -->
+                <ellipse cx="130" cy="130" rx="100" ry="100" fill="none" stroke="#242a3a" stroke-width="1.5"/>
+                <!-- Equator ellipse -->
+                <ellipse cx="130" cy="130" rx="100" ry="28" fill="none" stroke="#242a3a" stroke-width="1" stroke-dasharray="4,3"/>
+                <!-- Vertical meridian -->
+                <line x1="130" y1="30" x2="130" y2="230" stroke="#242a3a" stroke-width="1" stroke-dasharray="4,3"/>
+                <!-- Axes -->
+                <line x1="130" y1="130" x2="240" y2="130" stroke="#384050" stroke-width="1"/>
+                <line x1="130" y1="130" x2="20" y2="130" stroke="#384050" stroke-width="1" stroke-dasharray="3,3"/>
+                <line x1="130" y1="130" x2="130" y2="22" stroke="#34d399" stroke-width="1.5"/>
+                <line x1="130" y1="130" x2="130" y2="238" stroke="#34d399" stroke-width="1" stroke-dasharray="3,3"/>
+                <!-- Axis labels -->
+                <text x="245" y="134" fill="#8a93a6" font-family="monospace" font-size="10">X</text>
+                <text x="20" y="122" fill="#8a93a6" font-family="monospace" font-size="10">Y</text>
+                <text x="134" y="18" fill="#34d399" font-family="monospace" font-size="10">|0⟩</text>
+                <text x="134" y="250" fill="#8a93a6" font-family="monospace" font-size="10">|1⟩</text>
+                <!-- State vector line -->
+                <line id="bloch-vec" x1="130" y1="130" x2="130" y2="30" stroke="#a855f7" stroke-width="2.5"/>
+                <!-- State vector dot -->
+                <circle id="bloch-dot" cx="130" cy="30" r="6" fill="#a855f7" stroke="#0b0d12" stroke-width="2"/>
+                <!-- Dashed projections -->
+                <line id="bloch-proj-z" x1="130" y1="30" x2="130" y2="130" stroke="rgba(168,85,247,0.3)" stroke-width="1" stroke-dasharray="3,3"/>
+                <line id="bloch-proj-xy" x1="130" y1="130" x2="130" y2="130" stroke="rgba(34,211,238,0.4)" stroke-width="1" stroke-dasharray="3,3"/>
+              </svg>
+            </div>
+            <div class="bloch-controls">
+              <label>θ (polar): <strong id="theta-val">0°</strong></label>
+              <input type="range" id="bloch-theta" min="0" max="180" value="0" step="1">
+              <label>φ (azimuthal): <strong id="phi-val">0°</strong></label>
+              <input type="range" id="bloch-phi" min="0" max="360" value="0" step="1">
+              <div id="bloch-state-display">
+                <span class="ket">|ψ⟩ = </span><span id="bloch-alpha">1.000</span><span class="ket">|0⟩</span> + <span id="bloch-beta">0.000</span><span class="ket">|1⟩</span><br>
+                P(|0⟩) = <span id="bloch-p0">1.000</span><br>
+                P(|1⟩) = <span id="bloch-p1">0.000</span><br>
+                X = <span id="bloch-x">0.000</span> &nbsp; Y = <span id="bloch-y">0.000</span> &nbsp; Z = <span id="bloch-z">1.000</span>
+              </div>
+              <div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;">
+                <button class="btn" onclick="blochPreset(0,0)">|0⟩</button>
+                <button class="btn" onclick="blochPreset(180,0)">|1⟩</button>
+                <button class="btn" onclick="blochPreset(90,0)">|+⟩</button>
+                <button class="btn" onclick="blochPreset(90,180)">|−⟩</button>
+                <button class="btn" onclick="blochPreset(90,90)">|i⟩</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <h3 id="single-gates">Single-qubit gates</h3>
+        <p>Single-qubit gates are 2×2 unitary matrices (U†U = I). They rotate the Bloch sphere. Every physical gate can be decomposed into three Euler-angle rotations.</p>
+
+        <table class="gate-table">
+          <thead>
+            <tr>
+              <th>Gate</th>
+              <th>Matrix</th>
+              <th>Bloch action</th>
+              <th>Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="gate-name">X (NOT)</td>
+              <td><div class="matrix">⎡0 1⎤
+⎣1 0⎦</div></td>
+              <td>180° rotation about X axis</td>
+              <td>Flips |0⟩↔|1⟩; quantum NOT gate</td>
+            </tr>
+            <tr>
+              <td class="gate-name">Y</td>
+              <td><div class="matrix">⎡0 −i⎤
+⎣i  0⎦</div></td>
+              <td>180° rotation about Y axis</td>
+              <td>Pauli-Y; combines bit and phase flip</td>
+            </tr>
+            <tr>
+              <td class="gate-name">Z</td>
+              <td><div class="matrix">⎡1  0⎤
+⎣0 −1⎦</div></td>
+              <td>180° rotation about Z axis</td>
+              <td>Phase flip; leaves |0⟩ unchanged, |1⟩ → −|1⟩</td>
+            </tr>
+            <tr>
+              <td class="gate-name">H (Hadamard)</td>
+              <td><div class="matrix">1/√2 ⎡1  1⎤
+     ⎣1 −1⎦</div></td>
+              <td>180° rotation about X+Z axis</td>
+              <td>|0⟩ → |+⟩, |1⟩ → |−⟩. Creates superposition from basis state.</td>
+            </tr>
+            <tr>
+              <td class="gate-name">S</td>
+              <td><div class="matrix">⎡1 0⎤
+⎣0 i⎦</div></td>
+              <td>90° rotation about Z axis</td>
+              <td>S = Z^{1/2}; phase gate</td>
+            </tr>
+            <tr>
+              <td class="gate-name">T</td>
+              <td><div class="matrix">⎡1   0  ⎤
+⎣0 e^{iπ/4}⎦</div></td>
+              <td>45° rotation about Z axis</td>
+              <td>T = S^{1/2}; critical for universality with H+CNOT</td>
+            </tr>
+            <tr>
+              <td class="gate-name">Rx(θ)</td>
+              <td><div class="matrix">⎡cos θ/2  −i·sin θ/2⎤
+⎣−i·sin θ/2  cos θ/2⎦</div></td>
+              <td>θ rotation about X axis</td>
+              <td>Continuous rotation; Rx(π) = −iX</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3 id="two-gates">Two-qubit gates and entanglement</h3>
+        <p>Two-qubit gates act on a 4-dimensional Hilbert space (C² ⊗ C²). The <span class="term" data-label="CNOT gate" data-def="Controlled-NOT: flips the target qubit if and only if the control qubit is |1⟩. The fundamental two-qubit entangling gate.">CNOT</span> (controlled-NOT) is the workhorse entangling gate. Its 4×4 matrix in the {|00⟩, |01⟩, |10⟩, |11⟩} basis:</p>
+
+        <div class="math-display">
+CNOT = ⎡1 0 0 0⎤      |00⟩ → |00⟩
+       ⎢0 1 0 0⎥      |01⟩ → |01⟩
+       ⎢0 0 0 1⎥      |10⟩ → |11⟩
+       ⎣0 0 1 0⎦      |11⟩ → |10⎦</div>
+
+        <p>When the control qubit is in superposition (|0⟩ + |1⟩)/√2, CNOT creates an <span class="term" data-label="Entangled state" data-def="A multi-qubit state that cannot be written as a product of individual qubit states. Measurement of one qubit instantly determines the state of the other, regardless of distance.">entangled state</span> that cannot be written as a product of two independent qubits. Other essential two-qubit gates: <strong>CZ</strong> (controlled-Z), <strong>SWAP</strong> (exchanges two qubits, equivalent to 3 CNOTs), and general <strong>controlled-U</strong> (applies unitary U to target if control is |1⟩).</p>
+
+        <div class="callout good">
+          <div class="label">Why two-qubit gates matter</div>
+          <p style="margin:6px 0">No single-qubit gate can create entanglement. Entanglement is purely a multi-qubit phenomenon. The ability to entangle qubits is what separates quantum computers from classical probabilistic computers. All quantum speedups ultimately trace back to entanglement + interference working together.</p>
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <section id="circuits">
+        <h2>Quantum circuits <span class="era">// the programming model</span></h2>
+        <p class="lede">The circuit model is the standard abstraction for quantum algorithms. It is the quantum equivalent of a logic circuit diagram.</p>
+
+        <h3 id="circuit-model">The circuit model</h3>
+        <p>In the circuit model, horizontal lines represent qubits (time flows left to right). Boxes on a line represent gates applied to that qubit. Vertical lines connecting two qubit lines represent two-qubit gates. A meter symbol at the end represents measurement. Initial states are usually |0⟩. Here is a minimal circuit creating a Bell state:</p>
+
+        <div class="circuit-ascii">q₀: ──H──●──── ◻
+         │
+q₁: ─────⊕─── ◻
+
+Result: (|00⟩ + |11⟩) / √2</div>
+
+        <p>H on q₀ creates equal superposition; CNOT (●⊕ notation) entangles q₀ and q₁. After measurement both qubits are always equal — either both 0 or both 1.</p>
+
+        <h3 id="universality">Universality</h3>
+        <p>A gate set is <span class="term" data-label="Universal gate set" data-def="A set of quantum gates that can approximate any unitary transformation to arbitrary precision. The key example is {H, T, CNOT}.">universal</span> if any n-qubit unitary can be approximated to arbitrary precision using circuits built from those gates. The Solovay-Kitaev theorem guarantees that <strong>{H, T, CNOT}</strong> is universal — any quantum algorithm can be compiled into H, T, and CNOT gates. In practice, native gate sets depend on hardware (e.g., IBM uses ECR and RZ gates; ion-trap processors use Mølmer-Sørensen gates).</p>
+
+        <h3 id="depth">Circuit depth, width, and T-count</h3>
+        <p><strong>Width</strong> = number of qubits. <strong>Depth</strong> = length of the longest path through the circuit (number of sequential gate layers). Depth × width gives a rough measure of total computational work. For fault-tolerant quantum computing, the relevant cost metric is <strong>T-gate count</strong>: T gates are expensive to implement fault-tolerantly (they require state distillation) while Clifford gates (H, S, CNOT, CZ) are "cheap." Minimizing T-count is an active compiler research area.</p>
+
+        <div class="callout math">
+          <div class="label">Clifford + T</div>
+          <p style="margin:6px 0">The Clifford group (generated by H, S, CNOT) is efficiently simulable classically (Gottesman-Knill theorem). Adding T gates makes the circuit universal and classically hard. This is the formal sense in which T gates are the source of quantum advantage.</p>
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <section id="algorithms">
+        <h2>Core algorithms <span class="era">// the quantum canon</span></h2>
+        <p class="lede">Four algorithms form the core curriculum of quantum computing. Together they illustrate superposition-based parallelism, amplitude amplification, period-finding, and the quantum Fourier transform.</p>
+
+        <h3 id="deutsch">Deutsch-Jozsa: constant vs. balanced</h3>
+        <p>The simplest quantum speedup. Given a black-box function f: {0,1}ⁿ → {0,1}, promised either constant (all inputs → same output) or balanced (exactly half inputs → 0, half → 1): determine which. Classically requires N/2 + 1 queries in the worst case. The quantum algorithm uses <strong>1 query</strong>.</p>
+
+        <div class="circuit-ascii">|0⟩ⁿ  ──H⊗ⁿ──[  Uf  ]──H⊗ⁿ──◻
+|1⟩   ──H──────[      ]─────────
+
+If all measurement bits = 0: constant.  Otherwise: balanced.</div>
+
+        <p>The trick: prepare a uniform superposition of all 2ⁿ inputs, query f once to write its value into a phase (the phase kickback trick), then interfere amplitudes. Constant functions leave all amplitudes in-phase; balanced functions cancel. One measurement decides.</p>
+
+        <h3 id="grover">Grover's search: O(√N) oracle calls</h3>
+        <p>Given an unsorted database of N items and an oracle that identifies the target, Grover's algorithm finds the target in O(√N) oracle calls — a provable quadratic speedup (proven optimal for quantum computers too). The idea is <span class="term" data-label="Amplitude amplification" data-def="The quantum technique of using interference to increase the probability amplitude of a target state while decreasing amplitudes of non-target states. The core of Grover's algorithm.">amplitude amplification</span>:</p>
+        <ul class="checked">
+          <li><strong>Oracle step:</strong> The oracle flips the phase of the target state: |x⟩ → −|x⟩ if x is the target, unchanged otherwise. This doesn't reveal which item is the target — it just marks it with a phase.</li>
+          <li><strong>Diffusion step:</strong> Apply a "reflection about the average" operator (H⊗ⁿ · (2|0⟩⟨0| − I) · H⊗ⁿ). This reflects all amplitudes about the mean, amplifying the marked state and suppressing the rest.</li>
+          <li><strong>Repeat ≈ π√N/4 times</strong>, then measure. The target appears with high probability.</li>
+        </ul>
+
+        <h3 id="shor">Shor's algorithm: factoring in polynomial time</h3>
+        <p>Shor's 1994 algorithm factors an n-bit integer N in O(n³) time — exponentially faster than the best classical algorithm. The reduction: factoring N reduces to finding the order r of a random integer a modulo N (i.e., the smallest r such that aʳ ≡ 1 mod N). The quantum subroutine uses the <strong>quantum Fourier transform</strong> to find r efficiently. Once r is found, gcd(a^{r/2} ± 1, N) gives the factors with high probability.</p>
+
+        <div class="callout warn">
+          <div class="label">Threat to RSA</div>
+          <p style="margin:6px 0">RSA-2048 requires approximately 4000 logical qubits (each protected by ~1000 physical qubits with surface codes) running for hours. No current hardware can do this, but post-quantum cryptography migration is urgent because adversaries can harvest-now-decrypt-later: record encrypted traffic today, decrypt it once quantum hardware matures.</p>
+        </div>
+
+        <h3 id="qft">Quantum Fourier Transform (QFT)</h3>
+        <p>The QFT is the quantum analogue of the Discrete Fourier Transform (DFT). Given a quantum state Σⱼ xⱼ|j⟩, the QFT produces Σₖ yₖ|k⟩ where y = DFT(x). The classical FFT requires O(N log N) operations for N = 2ⁿ inputs. The QFT circuit requires only O(n²) gates — an exponential speedup in circuit size (though reading all N output amplitudes still requires N measurements).</p>
+
+        <div class="circuit-ascii">QFT circuit on 3 qubits:
+
+q₀: ──H──R₂──R₃──────────────── SWAP
+q₁: ─────────────H──R₂──────── SWAP
+q₂: ──────────────────────H────
+
+where Rₖ = phase gate by 2π/2ᵏ
+
+O(n²) gates vs O(N log N) classical FFT  →  exponential circuit compression</div>
+
+        <p>The QFT is not by itself useful (you can't read the Fourier coefficients directly without O(N) measurements). Its power comes from using the Fourier domain structure inside a larger algorithm — as in Shor's period-finding, quantum phase estimation, and the hidden subgroup problem framework.</p>
+      </section>
+
+      <!-- ============================================================ -->
+      <section id="entanglement">
+        <h2>Entanglement <span class="era">// the quantum resource</span></h2>
+        <p class="lede">Entanglement is not magic. It is a precise mathematical property of multi-qubit states — and it is the resource that enables quantum teleportation, superdense coding, and much of quantum advantage.</p>
+
+        <h3 id="bell">Bell states</h3>
+        <p>The four Bell states are the maximally entangled two-qubit states. They form an orthonormal basis for the 4-dimensional two-qubit Hilbert space:</p>
+
+        <div class="math-display">
+|Φ⁺⟩ = (|00⟩ + |11⟩) / √2   ←── created by H on q₀ then CNOT
+|Φ⁻⟩ = (|00⟩ − |11⟩) / √2
+|Ψ⁺⟩ = (|01⟩ + |10⟩) / √2
+|Ψ⁻⟩ = (|01⟩ − |10⟩) / √2</div>
+
+        <p>If two parties (Alice and Bob) each hold one qubit of a Bell pair, measuring Alice's qubit instantly determines the distribution of outcomes for Bob's qubit — regardless of the distance between them. This is not faster-than-light signalling (the individual outcomes are still random), but it is a provably non-classical correlation, verified by Bell inequality violations (Nobel Prize 2022: Aspect, Clauser, Zeilinger).</p>
+
+        <h3 id="teleportation">Quantum teleportation</h3>
+        <p>Quantum teleportation transfers an unknown qubit state |ψ⟩ from Alice to Bob using 1 <span class="term" data-label="Ebit" data-def="A shared pair of entangled qubits in a Bell state. One ebit = one maximally entangled qubit pair. The fundamental resource unit for quantum communication.">ebit</span> (shared Bell pair) plus 2 classical bits of communication. The state is transferred perfectly — not copied (No-Cloning is not violated: Alice's original qubit is destroyed in the process).</p>
+
+        <div class="circuit-ascii">Alice has |ψ⟩ and one half of Bell pair.  Bob has the other half.
+
+|ψ⟩   ──●──H──── ◻ ──── (classical bit c₀ to Bob)
+         │
+|Φ⁺⟩₀ ──⊕───── ◻ ──── (classical bit c₁ to Bob)
+|Φ⁺⟩₁ ─────────────── Xᶜ¹ ── Zᶜ⁰ ──[Bob recovers |ψ⟩]
+
+Alice: CNOT + H, measure → 2 classical bits
+Bob:  apply X and/or Z conditioned on the 2 bits → |ψ⟩ restored</div>
+
+        <h3 id="superdense">Superdense coding</h3>
+        <p>The dual protocol: Alice can send <strong>2 classical bits</strong> to Bob by transmitting only <strong>1 qubit</strong>, provided they share a Bell pair in advance. Alice applies I, X, Z, or iY to her qubit (encoding 00, 01, 10, or 11 respectively), sends her qubit to Bob. Bob measures in the Bell basis to recover both bits. One ebit shared in advance + one qubit sent = two classical bits received. This is the Holevo bound in action: 1 qubit carries at most 1 classical bit of information without entanglement, but 2 classical bits with it.</p>
+      </section>
+
+      <!-- ============================================================ -->
+      <section id="error-correction">
+        <h2>Quantum error correction <span class="era">// fighting decoherence</span></h2>
+        <p class="lede">Quantum states are fragile. Any interaction with the environment introduces errors. Quantum error correction (QEC) encodes one logical qubit into many physical qubits, enabling detection and correction of errors without ever measuring — and thus collapsing — the logical state.</p>
+
+        <h3 id="noise">Sources of noise</h3>
+        <p>Quantum errors fall into three main classes:</p>
+        <ul class="checked">
+          <li><strong>Bit flip:</strong> |0⟩ → |1⟩ or vice versa (analogous to a classical bit flip). Caused by unwanted X-axis rotations from magnetic noise.</li>
+          <li><strong>Phase flip:</strong> |+⟩ → |−⟩ (no classical analogue). Caused by energy fluctuations that accumulate phase (dephasing). This is typically the dominant error mode in superconducting qubits.</li>
+          <li><strong>Depolarizing noise:</strong> The qubit state is replaced by the maximally mixed state I/2 with probability p. This is the catch-all model used in most theoretical analysis; it subsumes both bit and phase flips.</li>
+        </ul>
+        <p><span class="term" data-label="Decoherence" data-def="The process by which a quantum system loses its quantum properties (superposition, entanglement) through interaction with the environment. The central challenge of quantum hardware.">Decoherence</span> occurs when entanglement builds up between the qubit and its environment, effectively measuring the qubit from the outside. The characteristic timescale is T₂ (dephasing time) — from ~100μs for superconducting qubits to ~1 second for trapped ions.</p>
+
+        <h3 id="shor-code">Shor's 9-qubit code</h3>
+        <p>Peter Shor's 1995 QEC code was the first to correct <em>both</em> bit flips and phase flips — proving quantum error correction is possible in principle. The encoding:</p>
+
+        <div class="math-display">|0⟩_L = (|000⟩ + |111⟩)⊗³ / 2√2
+|1⟩_L = (|000⟩ − |111⟩)⊗³ / 2√2</div>
+
+        <p>One logical qubit → 9 physical qubits. The outer 3-qubit repetition code corrects bit flips; the inner phase-encoded structure corrects phase flips. Syndrome measurement (measuring stabilizer operators without touching the logical state) reveals which qubit — if any — suffered an error, so it can be corrected. The key insight: you can measure <em>which error occurred</em> without measuring <em>what state you're in</em>.</p>
+
+        <h3 id="surface">Surface codes</h3>
+        <p>The leading practical QEC approach as of 2026. A surface code arranges qubits on a 2D lattice; logical qubits are encoded in the global topological properties of the lattice. Key properties:</p>
+        <ul class="checked">
+          <li><strong>Threshold theorem:</strong> If the physical error rate per gate is below ~1% (the fault-tolerance threshold), encoding into a surface code suppresses logical error rates exponentially as the code distance d grows. Google's Willow result (2024) demonstrated below-threshold operation at distance 7.</li>
+          <li><strong>Overhead:</strong> A distance-d surface code uses d² physical qubits per logical qubit. Breaking RSA-2048 requires ~4000 logical qubits at distance ~30, meaning ~4 million physical qubits. Current hardware has ~1000 physical qubits.</li>
+          <li><strong>Only local gates:</strong> Surface code operations require only nearest-neighbor two-qubit gates, making them compatible with 2D superconducting qubit layouts.</li>
+        </ul>
+      </section>
+
+      <!-- ============================================================ -->
+      <section id="hardware">
+        <h2>Hardware platforms <span class="era">// building a quantum computer</span></h2>
+        <p class="lede">Multiple physical implementations compete to be the platform that scales to fault-tolerant quantum computing. Each has radically different engineering tradeoffs.</p>
+
+        <h3 id="superconducting">Superconducting qubits</h3>
+        <p>The dominant platform in 2026 (IBM, Google, Rigetti). Qubits are superconducting LC circuits that behave quantum-mechanically at ~15 millikelvin — 200× colder than outer space. Gate times: 10–100 ns. T₂: 100–500 μs. Advantages: fast gates, CMOS-compatible fabrication, straightforward to scale in 2D. Challenges: extreme cooling requirements, frequency crowding as qubit counts grow.</p>
+
+        <h3 id="trapped-ion">Trapped ion qubits</h3>
+        <p>Charged atoms (typically Yb⁺ or Ca⁺) held in electromagnetic traps and manipulated with lasers. The trap itself can sit at room temperature; only the ion's quantum state needs to be cold (laser-cooled to near absolute zero). Gate times: ~1 μs (much slower than superconducting). T₂: seconds to hours. Gate fidelity: among the best of any platform (~99.9% two-qubit). Platforms: IonQ Forte, Quantinuum H-Series. Challenge: slow gates limit circuit depth before decoherence.</p>
+
+        <h3 id="photonic">Photonic and neutral atom platforms</h3>
+        <p>Two emerging challengers:</p>
+        <ul class="checked">
+          <li><strong>Photonic (PsiQuantum, Xanadu):</strong> Qubits are photons; gates are beamsplitters and phase shifters. Can operate at room temperature. The catch: photons don't interact easily, making deterministic two-qubit gates hard. PsiQuantum's approach uses measurement-based quantum computing with probabilistic fusion gates in silicon photonics at scale.</li>
+          <li><strong>Neutral atoms (QuEra, Pasqal, Atom Computing):</strong> Individual atoms held in reconfigurable optical tweezer arrays. Can be rearranged mid-circuit. T₂: ~seconds. Two-qubit gates via Rydberg blockade (~200 ns). QuEra's Aquila processor has 256 qubits. High connectivity and mid-circuit measurement make these competitive for near-term algorithms.</li>
+        </ul>
+
+        <table class="hw-table">
+          <thead>
+            <tr>
+              <th>Platform</th>
+              <th>Key players (2026)</th>
+              <th>Gate speed</th>
+              <th>T₂ coherence</th>
+              <th>2-qubit fidelity</th>
+              <th>Temperature</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="platform">Superconducting</td>
+              <td>IBM, Google, Rigetti</td>
+              <td>10–100 ns</td>
+              <td>100–500 μs</td>
+              <td>~99.5%</td>
+              <td>~15 mK</td>
+            </tr>
+            <tr>
+              <td class="platform">Trapped ion</td>
+              <td>IonQ, Quantinuum</td>
+              <td>~1 μs</td>
+              <td>seconds–hours</td>
+              <td>~99.9%</td>
+              <td>Room temp trap, laser-cooled ions</td>
+            </tr>
+            <tr>
+              <td class="platform">Neutral atom</td>
+              <td>QuEra, Pasqal, Atom Computing</td>
+              <td>~200 ns (Rydberg)</td>
+              <td>~1–10 s</td>
+              <td>~99.5%</td>
+              <td>Room temp trap, laser-cooled atoms</td>
+            </tr>
+            <tr>
+              <td class="platform">Photonic</td>
+              <td>PsiQuantum, Xanadu</td>
+              <td>ps–ns</td>
+              <td>N/A (photons don't decohere)</td>
+              <td>~95–99% (probabilistic)</td>
+              <td>Room temp or 4K</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- ============================================================ -->
+      <section id="nisq">
+        <h2>Near-term (NISQ) <span class="era">// what works today</span></h2>
+        <p class="lede">NISQ — Noisy Intermediate-Scale Quantum — is the term John Preskill coined in 2018 for today's quantum hardware: 50–1000 qubits, no error correction, limited coherence. What, if anything, can these devices do usefully?</p>
+
+        <h3 id="vqe">VQE: Variational Quantum Eigensolver</h3>
+        <p>VQE is a hybrid quantum-classical algorithm for finding ground-state energies of molecular Hamiltonians — the #1 proposed NISQ application. A parameterized quantum circuit (the ansatz) prepares a trial state; the quantum processor evaluates the energy expectation value; a classical optimizer adjusts the parameters. Repeat until convergence. The goal: classically intractable molecules (FeMoco for nitrogen fixation, retinal for vision, battery electrolytes) that require ~100–200 error-corrected logical qubits. Current NISQ devices have too much noise to outperform classical methods on any interesting molecule, but the approach is correct in principle. The quantum advantage arrives with error correction.</p>
+
+        <h3 id="qaoa">QAOA: Quantum Approximate Optimization Algorithm</h3>
+        <p>QAOA targets combinatorial optimization problems (Max-Cut, traveling salesman, portfolio optimization). It alternates between a problem Hamiltonian (encoding the objective function) and a mixing Hamiltonian (driving transitions between states). At depth p → ∞, QAOA approaches exact optimal solutions. At low depth (NISQ-accessible), it produces approximate solutions. Whether QAOA beats the best classical heuristics (simulated annealing, branch-and-bound) on practically relevant problem instances is an open and actively disputed question. Honest assessment: no proven advantage on real problems as of 2026.</p>
+
+        <h3 id="quantum-ml">Quantum machine learning — what's real vs. hype</h3>
+        <p>Quantum machine learning (QML) proposes using quantum computers to speed up ML tasks. The reality check:</p>
+        <ul class="checked">
+          <li><strong>Real: quantum kernel methods.</strong> Quantum feature maps can express data in an exponentially large feature space. If the quantum kernel captures structure classical kernels miss, there is a provable speedup (but finding such problems is hard).</li>
+          <li><strong>Real: quantum linear algebra.</strong> HHL algorithm solves linear systems exponentially faster — but only under strong conditions (sparse, well-conditioned matrix; quantum input/output; no need to read out all solution components classically). These conditions rarely hold in practice.</li>
+          <li><strong>Hype: quantum neural networks.</strong> Parameterized quantum circuits training on classical data. No proven advantage over classical neural networks. Barren plateau problem (gradient vanishes exponentially in qubit count) makes training hard at scale.</li>
+          <li><strong>Hype: "quantum AI" chips for inference.</strong> Current classical GPUs vastly outperform quantum hardware for ML inference and training. There is no physical basis for quantum advantage on generic classical data at current hardware sizes.</li>
+        </ul>
+
+        <div class="callout qc">
+          <div class="label">The honest NISQ verdict (2026)</div>
+          <p style="margin:6px 0">No NISQ algorithm has demonstrated a practical quantum advantage over state-of-the-art classical algorithms on a problem of real-world relevance. The most credible near-term value is quantum simulation (chemistry, materials) once error-corrected qubits arrive in the ~100–1000 logical qubit range. That is likely 5–10 years away. The hype cycle has peaked and retracted; serious quantum computing work now focuses on the engineering path to fault tolerance.</p>
+        </div>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<script>
+// ============================================================
+// MOBILE MENU
+// ============================================================
+const mobileToggle = document.getElementById('mobile-menu-toggle');
+const sidebarEl = document.querySelector('aside.sidebar');
+const sidebarBackdrop = document.getElementById('sidebar-backdrop');
+function closeMobileMenu() {
+  sidebarEl.classList.remove('open');
+  sidebarBackdrop.classList.remove('show');
+  mobileToggle.textContent = '☰';
+}
+function openMobileMenu() {
+  sidebarEl.classList.add('open');
+  sidebarBackdrop.classList.add('show');
+  mobileToggle.textContent = '✕';
+}
+mobileToggle.addEventListener('click', () => {
+  if (sidebarEl.classList.contains('open')) closeMobileMenu();
+  else openMobileMenu();
+});
+sidebarBackdrop.addEventListener('click', closeMobileMenu);
+document.querySelectorAll('aside.sidebar nav a').forEach(a => {
+  a.addEventListener('click', () => {
+    if (window.innerWidth <= 900) closeMobileMenu();
+  });
+});
+
+// ============================================================
+// TOOLTIPS
+// ============================================================
+const tooltip = document.getElementById('tooltip');
+document.addEventListener('mouseover', (e) => {
+  const t = e.target.closest('.term');
+  if (!t) return;
+  const def = t.getAttribute('data-def');
+  const label = t.getAttribute('data-label') || 'Definition';
+  if (!def) return;
+  tooltip.innerHTML = `<div style="font-family: var(--mono); font-size: 10px; color: #a855f7; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px;">${label}</div>${def}`;
+  tooltip.classList.add('show');
+});
+document.addEventListener('mousemove', (e) => {
+  if (!tooltip.classList.contains('show')) return;
+  let x = e.clientX + 16, y = e.clientY + 16;
+  const tw = tooltip.offsetWidth, th = tooltip.offsetHeight;
+  if (x + tw > window.innerWidth - 10) x = e.clientX - tw - 16;
+  if (y + th > window.innerHeight - 10) y = e.clientY - th - 16;
+  tooltip.style.left = x + 'px';
+  tooltip.style.top = y + 'px';
+});
+document.addEventListener('mouseout', (e) => {
+  if (e.target.closest && e.target.closest('.term')) tooltip.classList.remove('show');
+});
+
+// ============================================================
+// COLLAPSIBLE SIDEBAR + SCROLL SPY
+// ============================================================
+const sections = document.querySelectorAll('main section[id]');
+const navLinks = document.querySelectorAll('aside nav a');
+const catGroups = document.querySelectorAll('.cat-group');
+const catToggles = document.querySelectorAll('.cat-toggle');
+
+catToggles.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const expanded = btn.getAttribute('aria-expanded') === 'true';
+    btn.setAttribute('aria-expanded', expanded ? 'false' : 'true');
+    try {
+      const group = btn.closest('.cat-group')?.dataset.group;
+      if (group) {
+        const key = 'sidenav-qc:' + group;
+        localStorage.setItem(key, expanded ? 'closed' : 'open');
+      }
+    } catch (e) { /* ignore */ }
+  });
+});
+
+catGroups.forEach(group => {
+  try {
+    const key = 'sidenav-qc:' + group.dataset.group;
+    const saved = localStorage.getItem(key);
+    if (saved === 'open' || saved === 'closed') {
+      const btn = group.querySelector('.cat-toggle');
+      if (btn) btn.setAttribute('aria-expanded', saved === 'open' ? 'true' : 'false');
+    }
+  } catch (e) { /* ignore */ }
+});
+
+let lastActiveGroup = null;
+function updateActiveNav() {
+  let active = null;
+  sections.forEach(sec => {
+    const rect = sec.getBoundingClientRect();
+    if (rect.top < 240) active = sec.id;
+  });
+  navLinks.forEach(a => {
+    const href = a.getAttribute('href');
+    a.classList.toggle('active', href === '#' + active);
+  });
+  if (active) {
+    const activeLink = document.querySelector('aside nav a.active');
+    const activeGroup = activeLink ? activeLink.closest('.cat-group') : null;
+    catGroups.forEach(g => g.classList.toggle('is-active', g === activeGroup));
+    if (activeGroup && activeGroup !== lastActiveGroup) {
+      const btn = activeGroup.querySelector('.cat-toggle');
+      if (btn && btn.getAttribute('aria-expanded') !== 'true') {
+        btn.setAttribute('aria-expanded', 'true');
+      }
+      lastActiveGroup = activeGroup;
+    }
+  }
+}
+window.addEventListener('scroll', updateActiveNav, { passive: true });
+updateActiveNav();
+
+// ============================================================
+// BLOCH SPHERE INTERACTIVE
+// ============================================================
+function updateBloch() {
+  const thetaDeg = parseFloat(document.getElementById('bloch-theta').value);
+  const phiDeg = parseFloat(document.getElementById('bloch-phi').value);
+  document.getElementById('theta-val').textContent = thetaDeg + '°';
+  document.getElementById('phi-val').textContent = phiDeg + '°';
+
+  const theta = thetaDeg * Math.PI / 180;
+  const phi = phiDeg * Math.PI / 180;
+
+  // Bloch vector components
+  const bx = Math.sin(theta) * Math.cos(phi);
+  const by = Math.sin(theta) * Math.sin(phi);
+  const bz = Math.cos(theta);
+
+  // Project onto SVG (isometric-ish: X→right, Y→right+down at angle, Z→up)
+  // SVG centre: (130, 130), radius: 100
+  const cx = 130, cy = 130, r = 100;
+  // Project 3D point: X goes right, Y goes into screen (foreshortened), Z goes up
+  const svgX = cx + r * (bx + by * 0.35);
+  const svgY = cy - r * (bz - by * 0.2);
+
+  document.getElementById('bloch-vec').setAttribute('x2', svgX.toFixed(1));
+  document.getElementById('bloch-vec').setAttribute('y2', svgY.toFixed(1));
+  document.getElementById('bloch-dot').setAttribute('cx', svgX.toFixed(1));
+  document.getElementById('bloch-dot').setAttribute('cy', svgY.toFixed(1));
+
+  // Projection lines
+  document.getElementById('bloch-proj-z').setAttribute('x1', svgX.toFixed(1));
+  document.getElementById('bloch-proj-z').setAttribute('y1', svgY.toFixed(1));
+  document.getElementById('bloch-proj-z').setAttribute('x2', svgX.toFixed(1));
+  document.getElementById('bloch-proj-z').setAttribute('y2', cy.toFixed(1));
+
+  document.getElementById('bloch-proj-xy').setAttribute('x1', cx.toFixed(1));
+  document.getElementById('bloch-proj-xy').setAttribute('y1', cy.toFixed(1));
+  document.getElementById('bloch-proj-xy').setAttribute('x2', svgX.toFixed(1));
+  document.getElementById('bloch-proj-xy').setAttribute('y2', cy.toFixed(1));
+
+  // State amplitudes: |ψ⟩ = cos(θ/2)|0⟩ + e^{iφ}sin(θ/2)|1⟩
+  const a = Math.cos(theta / 2);
+  const b_re = Math.cos(phi) * Math.sin(theta / 2);
+  const b_im = Math.sin(phi) * Math.sin(theta / 2);
+  const b_mag = Math.sqrt(b_re * b_re + b_im * b_im);
+
+  const p0 = (a * a).toFixed(3);
+  const p1 = (b_mag * b_mag).toFixed(3);
+
+  // Format beta with phase
+  let betaStr;
+  if (b_im === 0 || Math.abs(phiDeg) < 1 || Math.abs(phiDeg - 360) < 1) {
+    betaStr = b_mag.toFixed(3);
+  } else {
+    betaStr = 'e^{i' + phiDeg + '°}·' + b_mag.toFixed(3);
+  }
+
+  document.getElementById('bloch-alpha').textContent = a.toFixed(3);
+  document.getElementById('bloch-beta').textContent = betaStr;
+  document.getElementById('bloch-p0').textContent = p0;
+  document.getElementById('bloch-p1').textContent = p1;
+  document.getElementById('bloch-x').textContent = bx.toFixed(3);
+  document.getElementById('bloch-y').textContent = by.toFixed(3);
+  document.getElementById('bloch-z').textContent = bz.toFixed(3);
+}
+
+function blochPreset(theta, phi) {
+  document.getElementById('bloch-theta').value = theta;
+  document.getElementById('bloch-phi').value = phi;
+  updateBloch();
+}
+
+document.getElementById('bloch-theta').addEventListener('input', updateBloch);
+document.getElementById('bloch-phi').addEventListener('input', updateBloch);
+updateBloch();
+</script>
+</body>
+</html>

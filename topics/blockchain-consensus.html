@@ -1,0 +1,1467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Blockchain Consensus Mechanisms — Deep Dive</title>
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError: false});"></script>
+</head>
+<body>
+<div id="tooltip"></div>
+
+<nav class="topic-nav">
+  <a class="back" href="../blockchain.html">← Back to Blockchain</a>
+  <div class="crumb">Deep Dives / <span class="topic-name">Consensus Mechanisms</span></div>
+</nav>
+
+<div class="topic-layout">
+  <aside class="topic-toc">
+    <h4>ON THIS PAGE</h4>
+    <ul>
+      <li><a href="#byzantine">1. Byzantine Generals Problem</a></li>
+      <li><a href="#nakamoto">2. Nakamoto Consensus (PoW)</a></li>
+      <li><a href="#mining">3. Mining Mechanics</a>
+        <ul><li><a href="#difficulty">Difficulty Adjustment</a></li></ul>
+      </li>
+      <li><a href="#longest-chain">4. Longest-Chain Rule &amp; 51% Attacks</a></li>
+      <li><a href="#pos">5. Proof of Stake</a></li>
+      <li><a href="#bft">6. BFT-Based Consensus</a>
+        <ul>
+          <li><a href="#pbft">PBFT</a></li>
+          <li><a href="#tendermint">Tendermint</a></li>
+          <li><a href="#hotstuff">HotStuff</a></li>
+        </ul>
+      </li>
+      <li><a href="#comparison">7. Comparative Analysis</a></li>
+      <li><a href="#simulator">8. Block Mining Simulator</a></li>
+      <li><a href="#source">9. Source Code</a></li>
+      <li><a href="#summary">10. Summary</a></li>
+    </ul>
+  </aside>
+
+  <article class="topic-content">
+    <h1>Blockchain Consensus Mechanisms</h1>
+    <p class="subtitle">How distributed networks — with no central authority and potentially many malicious participants — agree on a single version of truth. From the Byzantine Generals Problem to Proof of Work, Proof of Stake, and modern BFT protocols.</p>
+    <div class="meta-tags">
+      <span>Prereq: basic cryptography, distributed systems concepts</span>
+      <span>Time to read: ~35 min</span>
+      <span>Interactive figures: 1</span>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="byzantine">1. The Byzantine Generals Problem</h2>
+
+    <p>Before blockchains existed, computer scientists had already identified the hardest version of the distributed consensus problem. In 1982, Leslie Lamport, Robert Shostak, and Marshall Pease published a paper that would become one of the most-cited in distributed systems: <em>The Byzantine Generals Problem</em>.</p>
+
+    <p>The scenario: several Byzantine army generals have surrounded an enemy city. They must agree on a coordinated attack or retreat — acting independently guarantees defeat. They communicate only by messenger. Some generals are <em>traitors</em> who will send conflicting or false messages to sabotage coordination. The question: can the loyal generals always reach agreement?</p>
+
+    <div class="callout">
+      <div class="label">FORMAL RESULT</div>
+      <p style="margin:6px 0">A distributed system can reach Byzantine fault-tolerant consensus if and only if the number of total nodes $n$ satisfies $n > 3f$, where $f$ is the maximum number of Byzantine (arbitrarily malicious) nodes. Equivalently, you need <strong>more than two-thirds of participants to be honest</strong>.</p>
+    </div>
+
+    <p>Why $3f + 1$? With only $3f$ nodes and $f$ traitors, the $f$ loyal nodes in one partition cannot distinguish the $f$ silent/lying nodes from the $f$ legitimate nodes in another partition — there aren't enough honest nodes to outvote the traitors in every scenario. The proof involves constructing scenarios where $n \le 3f$ leads to irreconcilable views.</p>
+
+    <h3>Oral vs. Signed Messages</h3>
+    <p>Lamport et al. distinguish two variants. With <strong>oral messages</strong> (unauthenticated): $n > 3f$ required. With <strong>signed messages</strong> (digital signatures): $n > f + 2$ suffices — cryptographic signatures let honest nodes prove what they received, making it much harder for traitors to lie undetected. All modern blockchain protocols use the signed-message model.</p>
+
+    <h3>The FLP Impossibility Theorem</h3>
+    <p>In 1985, Fischer, Lynch, and Paterson proved a devastating result: in a fully asynchronous network (where messages can be delayed arbitrarily), no deterministic protocol can guarantee <em>both</em> safety (all nodes agree on the same value) and liveness (the protocol eventually terminates) in the presence of even a single crash failure.</p>
+
+    <p>This is not a problem to be engineered around — it is a mathematical impossibility. Every consensus protocol must therefore make a choice:</p>
+    <ul>
+      <li><strong>Sacrifice liveness</strong>: guarantee agreement but potentially stall (BFT protocols in partition scenarios)</li>
+      <li><strong>Sacrifice safety</strong>: guarantee progress but allow temporary forks (Nakamoto consensus)</li>
+      <li><strong>Weaken the asynchrony assumption</strong>: assume partial synchrony (messages eventually arrive within some bound) — Tendermint, HotStuff</li>
+    </ul>
+
+    <p>Satoshi's insight in the Bitcoin whitepaper was elegant: sidestep identity-based voting entirely. In an open internet, identities are free — an attacker can create a billion fake accounts (<em>Sybil attack</em>). Replace identity with scarce physical resource: <em>compute power</em>. One CPU cycle = one vote. You can't fake electricity.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="nakamoto">2. Nakamoto Consensus (Proof of Work)</h2>
+
+    <p>The Bitcoin whitepaper (2008) describes a system where nodes compete to extend a shared ledger by solving a computational puzzle. The puzzle is deliberately hard to solve but trivial to verify — an asymmetry that sits at the heart of the entire design.</p>
+
+    <h3>The Hash Puzzle</h3>
+    <p>Each block contains a <em>nonce</em> $N$. Miners must find an $N$ such that the double-SHA-256 hash of the block header falls below a target $T$:</p>
+
+    <div class="math-display">$$\text{SHA256}\!\left(\text{SHA256}(\text{blockheader} \| N)\right) \;<\; T$$</div>
+
+    <p>SHA-256 produces a 256-bit output, effectively uniformly distributed. The probability that any single hash attempt satisfies the condition is:</p>
+
+    <div class="math-display">$$p = \frac{T}{2^{256}}$$</div>
+
+    <p>At Bitcoin's 2024 difficulty (~50 trillion hashes per block), $p \approx 1.4 \times 10^{-23}$, requiring on average $7 \times 10^{22}$ hashes to find one valid block. The entire network produces roughly $6 \times 10^{20}$ hashes per second (600 EH/s), so blocks arrive every ~10 minutes.</p>
+
+    <h3>Key Properties of PoW</h3>
+
+    <div class="math-glossary">
+      <div class="mg-row">
+        <div class="mg-term">Progress-free</div>
+        <div class="mg-def">Each hash attempt is independent. The number of additional attempts needed is always geometrically distributed regardless of how many you've already tried. No miner builds an "advantage" by mining longer — it's a pure lottery each attempt.</div>
+      </div>
+      <div class="mg-row">
+        <div class="mg-term">Unpredictable</div>
+        <div class="mg-def">SHA-256 is a one-way function — there is no shortcut to find a preimage. Miners must genuinely expend computation; they cannot predict or pre-compute valid nonces.</div>
+      </div>
+      <div class="mg-row">
+        <div class="mg-term">Asymmetric</div>
+        <div class="mg-def">Finding a valid nonce requires $O(1/p)$ work. Verifying a claimed nonce requires exactly two SHA-256 calls — $O(1)$. This asymmetry is what makes trustless verification cheap.</div>
+      </div>
+      <div class="mg-row">
+        <div class="mg-term">Sybil-resistant</div>
+        <div class="mg-def">Creating additional identities (nodes) does not grant additional voting power. Only real compute does. A miner with 10 machines has 10× the vote — they cannot amplify influence through fake accounts.</div>
+      </div>
+    </div>
+
+    <h3>Probabilistic Finality</h3>
+    <p>Unlike BFT protocols, Bitcoin does not produce deterministic finality. After a transaction is included in a block, it can still be reversed if an attacker mines a longer competing chain. The probability of a reversal decreases exponentially with the number of confirmations $k$ built on top. For an attacker with fraction $q$ of hash rate, the probability of catching up from $k$ blocks behind is:</p>
+
+    <div class="math-display">$$P(\text{catch up}) \approx \left(\frac{q}{1-q}\right)^k \quad \text{for } q < 0.5$$</div>
+
+    <p>For $q = 0.1$ and $k = 6$: $P \approx 0.001\%$. Six confirmations is roughly 1 hour and is considered "settled" for most purposes.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="mining">3. Mining Mechanics and Difficulty Adjustment</h2>
+
+    <h3>Block Header Structure</h3>
+    <p>A Bitcoin block header is exactly 80 bytes. The miner iterates over the nonce field trying to find a valid hash:</p>
+
+    <figure>
+      <svg viewBox="0 0 580 100" width="100%" style="max-width:580px; font-family:monospace; font-size:12px;">
+        <rect x="2" y="10" width="576" height="70" rx="6" fill="#11141c" stroke="#242a3a" stroke-width="1.5"/>
+        <!-- version -->
+        <rect x="10" y="20" width="52" height="50" rx="4" fill="#171b26" stroke="#7c5cff" stroke-width="1.5"/>
+        <text x="36" y="42" text-anchor="middle" fill="#c5b5ff" font-size="10">version</text>
+        <text x="36" y="56" text-anchor="middle" fill="#8a93a6" font-size="9">4 B</text>
+        <!-- prev_hash -->
+        <rect x="70" y="20" width="130" height="50" rx="4" fill="#171b26" stroke="#22d3ee" stroke-width="1.5"/>
+        <text x="135" y="42" text-anchor="middle" fill="#67e8f9" font-size="10">prev_hash</text>
+        <text x="135" y="56" text-anchor="middle" fill="#8a93a6" font-size="9">32 B</text>
+        <!-- merkle_root -->
+        <rect x="208" y="20" width="130" height="50" rx="4" fill="#171b26" stroke="#22d3ee" stroke-width="1.5"/>
+        <text x="273" y="42" text-anchor="middle" fill="#67e8f9" font-size="10">merkle_root</text>
+        <text x="273" y="56" text-anchor="middle" fill="#8a93a6" font-size="9">32 B</text>
+        <!-- timestamp -->
+        <rect x="346" y="20" width="52" height="50" rx="4" fill="#171b26" stroke="#f472b6" stroke-width="1.5"/>
+        <text x="372" y="42" text-anchor="middle" fill="#f9a8d4" font-size="10">time</text>
+        <text x="372" y="56" text-anchor="middle" fill="#8a93a6" font-size="9">4 B</text>
+        <!-- bits -->
+        <rect x="406" y="20" width="52" height="50" rx="4" fill="#171b26" stroke="#fbbf24" stroke-width="1.5"/>
+        <text x="432" y="42" text-anchor="middle" fill="#fde68a" font-size="10">bits</text>
+        <text x="432" y="56" text-anchor="middle" fill="#8a93a6" font-size="9">4 B</text>
+        <!-- nonce -->
+        <rect x="466" y="20" width="106" height="50" rx="4" fill="#1e1530" stroke="#a78bfa" stroke-width="2"/>
+        <text x="519" y="38" text-anchor="middle" fill="#c4b5fd" font-size="10">nonce</text>
+        <text x="519" y="52" text-anchor="middle" fill="#a78bfa" font-size="9">4 B ← iterate</text>
+        <text x="519" y="63" text-anchor="middle" fill="#6d5fad" font-size="8">(4B = 4 billion tries)</text>
+      </svg>
+      <figcaption>Bitcoin block header: 80 bytes total. The nonce is the only field miners iterate over. Once all $2^{32}$ nonces are exhausted, miners change the extraNonce in the coinbase transaction (which changes the Merkle root), effectively resetting the nonce space.</figcaption>
+    </figure>
+
+    <h3>The Nonce Exhaustion Problem</h3>
+    <p>The nonce is only 32 bits — $2^{32} \approx 4$ billion values. At modern ASIC speeds (~100 TH/s per chip), a single miner exhausts all nonces in ~0.04 milliseconds. This is far too fast. Miners therefore also modify the <em>extraNonce</em> — a field in the coinbase (first) transaction of each block. Changing the coinbase changes the Merkle root, which changes the effective search space. The real search is over (nonce, extraNonce) pairs — a $2^{64}$ space more than sufficient.</p>
+
+    <h3 id="difficulty">Difficulty Adjustment</h3>
+    <p>Bitcoin's target block time is 10 minutes. As mining hardware improves and more miners join, the network hash rate increases — blocks would arrive faster without adjustment. Every 2016 blocks (~2 weeks), the protocol recalculates the target:</p>
+
+    <div class="math-display">$$T_{\text{new}} = T_{\text{old}} \times \frac{\text{actual time for last 2016 blocks}}{2016 \times 10\ \text{min}}$$</div>
+
+    <p>The adjustment is clamped to prevent runaway changes: it cannot increase or decrease by more than a factor of 4 in a single period:</p>
+
+    <div class="math-display">$$T_{\text{new}} = \text{clamp}\!\left(T_{\text{old}} \times \frac{t_{\text{actual}}}{t_{\text{target}}},\ \frac{T_{\text{old}}}{4},\ 4 \cdot T_{\text{old}}\right)$$</div>
+
+    <div class="example">
+      <span class="label">Worked example</span>
+      <p>Suppose the last 2016 blocks took 12 days instead of the target 14 days. The network was mining 14/12 ≈ 1.167× too fast.</p>
+      <p>New difficulty = old difficulty × (14/12) ≈ old × 1.167</p>
+      <p>Equivalently, the target <em>decreases</em> by that factor (harder puzzle). If old difficulty was 50T, new difficulty = 58.3T.</p>
+      <p>The clamping ensures that a sudden 99% drop in hash rate (e.g., China mining ban) never causes more than a 4× difficulty decrease per period.</p>
+    </div>
+
+    <p>This elegant feedback loop is one of Bitcoin's most underappreciated features. It ensures block time converges to 10 minutes regardless of how much hardware joins or leaves the network — the protocol is <em>self-regulating</em>.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="longest-chain">4. The Longest-Chain Rule and 51% Attacks</h2>
+
+    <h3>Fork Resolution</h3>
+    <p>Two miners occasionally find valid blocks at nearly the same time, creating a <em>fork</em>: two valid chains of equal length. Nodes temporarily hold both chains. The fork resolves when one chain receives a new block — it is now longer (has more cumulative proof-of-work), so all honest nodes switch to it. The other chain's blocks become <em>orphans</em> and their transactions return to the mempool.</p>
+
+    <p>More precisely, Bitcoin uses <strong>total accumulated work</strong> (not just chain length) to select the canonical chain. This matters if different blocks have different difficulties. The canonical chain is the one with the highest cumulative $\sum 1/T_i$ across all its blocks.</p>
+
+    <h3>Selfish Mining</h3>
+    <p>In 2013, Eyal and Sirer showed that rational miners need not always publish blocks immediately. <strong>Selfish mining</strong>: an attacker with $\alpha > 1/3$ hash rate can earn disproportionate rewards by:</p>
+    <ol>
+      <li>Finding a block, but <em>not publishing it</em> — building a private chain</li>
+      <li>If the honest network finds a block, immediately publish the private block to create a tie, then publish a second private block to win</li>
+      <li>Orphan honest miners' blocks, wasting their work while the attacker's blocks get into the chain</li>
+    </ol>
+    <p>Selfish mining doesn't require 51% — the threshold is approximately 33% of hash rate. It's an attack on miner <em>revenue fairness</em>, not on transaction integrity. The fix requires honest nodes to propagate blocks faster (Bitcoin Core's fast-relay protocol helps).</p>
+
+    <h3>51% Attack Mechanics</h3>
+    <p>An attacker controlling a majority of the network's hash rate can:</p>
+
+    <div class="math-glossary">
+      <div class="mg-row">
+        <div class="mg-term">Double-spend</div>
+        <div class="mg-def">Send coins to a merchant on the public chain. Mine a secret chain where those coins were sent to yourself instead. After receiving goods, release the secret chain (which has more work) — honest nodes adopt it, the merchant's payment disappears.</div>
+      </div>
+      <div class="mg-row">
+        <div class="mg-term">Transaction censorship</div>
+        <div class="mg-def">Refuse to include certain addresses' transactions in any block the attacker mines, effectively freezing those funds.</div>
+      </div>
+      <div class="mg-row">
+        <div class="mg-term">NOT: coin creation</div>
+        <div class="mg-def">The attacker cannot create coins out of thin air. Block rewards are consensus rules; nodes reject blocks with invalid coinbase amounts. The attacker cannot steal funds protected by a private key — signatures are cryptographically secure.</div>
+      </div>
+    </div>
+
+    <div class="callout">
+      <div class="label">ECONOMIC DETERRENCE</div>
+      <p style="margin:6px 0">Executing a 51% attack on Bitcoin in 2024 requires renting or purchasing sufficient ASIC hardware. Estimates suggest the marginal cost exceeds $5 billion per hour of sustained attack. Even if successful, the attack would likely crash Bitcoin's price — making the attacker's own coins (and any stolen funds) worth far less. The attack is economically irrational for large, established PoW chains. It remains a real threat for smaller networks (e.g., Bitcoin Gold and Ethereum Classic have both suffered 51% attacks).</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="pos">5. Proof of Stake</h2>
+
+    <p>Proof of Stake replaces physical resource expenditure (electricity) with financial stake (locked collateral). Instead of competing on compute, validators are chosen to propose and attest to blocks in proportion to their staked tokens. Misbehavior is punished by <em>slashing</em> — destroying a portion of the validator's stake.</p>
+
+    <h3>Core Intuition</h3>
+    <p>In PoW, an attacker must acquire 51% of hash power — an external, physical resource. In PoS, an attacker must acquire 51% of staked tokens. The key insight: if you own 51% of the staked ETH, you have 51% of the chain's economic value at risk. Attacking the chain would destroy that value. Honest participation earns staking rewards; attacks cost you your stake. The system is <em>cryptoeconomically</em> secure.</p>
+
+    <h3>Ethereum's Casper FFG + LMD-GHOST</h3>
+    <p>Ethereum's consensus after "The Merge" (2022) combines two mechanisms:</p>
+
+    <div class="math-glossary">
+      <div class="mg-row">
+        <div class="mg-term">Slots &amp; Epochs</div>
+        <div class="mg-def">Time is divided into 12-second <em>slots</em>. Every 32 slots (6.4 minutes) is an <em>epoch</em>. Each slot has a designated block proposer; each epoch reshuffles validators into committees.</div>
+      </div>
+      <div class="mg-row">
+        <div class="mg-term">LMD-GHOST</div>
+        <div class="mg-def"><em>Latest Message Driven Greediest Heaviest Observed SubTree</em>. The fork-choice rule: at each branching point, choose the subtree with the most accumulated validator weight (from their latest attesting messages). This is PoS's analog of longest-chain.</div>
+      </div>
+      <div class="mg-row">
+        <div class="mg-term">Casper FFG</div>
+        <div class="mg-def"><em>Friendly Finality Gadget</em>. Overlaid on top of LMD-GHOST, Casper provides finality. A <em>checkpoint</em> (the first block of each epoch) is finalized when two-thirds of total staked ETH has voted for it in two consecutive rounds. Once finalized, it cannot be reverted without slashing at least $\frac{1}{3}$ of all staked ETH.</div>
+      </div>
+    </div>
+
+    <h3>Slashing Conditions</h3>
+    <p>Validators can be slashed for two categories of misbehavior:</p>
+    <ul>
+      <li><strong>Equivocation</strong>: signing two different blocks for the same slot (double-voting)</li>
+      <li><strong>Surround votes</strong>: casting a vote that "surrounds" a previous vote (attempting to rewrite finalized history)</li>
+    </ul>
+    <p>The slashing penalty is initially 1/32 of stake, but scales with the fraction of validators slashed simultaneously — if many validators are slashed at once (suggesting a coordinated attack), the penalty can reach 100% of stake. This <em>correlation penalty</em> specifically punishes organized attacks while being lenient on honest mistakes.</p>
+
+    <h3>Validator Economics</h3>
+    <p>As of 2024, ~$35B of ETH is staked. To disrupt finality requires controlling 33% of that; to rewrite history requires 51%. The cost of attacking is thus measured in tens of billions of dollars — comparable to the energy cost of attacking Bitcoin, but with the additional property that the attack is detectable and the attacker's stake can be burned.</p>
+
+    <div class="math-display">$$\text{Annual staking reward} \approx \frac{C}{\sqrt{N_{\text{validators}}}}$$</div>
+
+    <p>where $C$ is a constant and $N_{\text{validators}}$ is the number of active validators. As more ETH is staked, per-validator rewards decrease — a natural equilibrium mechanism.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="bft">6. BFT-Based Consensus</h2>
+
+    <p>Byzantine Fault Tolerant protocols trade decentralization for performance. They use explicit voting rounds with a known, bounded validator set, achieving <em>deterministic finality</em> — once a block is committed, it is final, no probabilistic waiting required. They are the consensus engine of choice for permissioned blockchains and modern high-performance L1s.</p>
+
+    <h3 id="pbft">PBFT (Practical Byzantine Fault Tolerance)</h3>
+    <p>Castro and Liskov's 1999 paper showed that BFT consensus is practical for small validator sets. PBFT operates in three phases per consensus round:</p>
+
+    <figure>
+      <svg viewBox="0 0 560 200" width="100%" style="max-width:560px; font-family:monospace; font-size:11px;">
+        <!-- Timeline lines -->
+        <line x1="60" y1="30" x2="60" y2="185" stroke="#7c5cff" stroke-width="1.5" stroke-dasharray="4,3"/>
+        <line x1="180" y1="30" x2="180" y2="185" stroke="#22d3ee" stroke-width="1.5" stroke-dasharray="4,3"/>
+        <line x1="300" y1="30" x2="300" y2="185" stroke="#22d3ee" stroke-width="1.5" stroke-dasharray="4,3"/>
+        <line x1="420" y1="30" x2="420" y2="185" stroke="#22d3ee" stroke-width="1.5" stroke-dasharray="4,3"/>
+        <!-- Node labels -->
+        <text x="60" y="20" text-anchor="middle" fill="#c5b5ff">Primary</text>
+        <text x="180" y="20" text-anchor="middle" fill="#67e8f9">Replica 1</text>
+        <text x="300" y="20" text-anchor="middle" fill="#67e8f9">Replica 2</text>
+        <text x="420" y="20" text-anchor="middle" fill="#67e8f9">Replica 3</text>
+        <!-- Phase 1: PRE-PREPARE -->
+        <line x1="60" y1="55" x2="180" y2="70" stroke="#7c5cff" stroke-width="1.5" marker-end="url(#arr)"/>
+        <line x1="60" y1="55" x2="300" y2="75" stroke="#7c5cff" stroke-width="1.5" marker-end="url(#arr)"/>
+        <line x1="60" y1="55" x2="420" y2="80" stroke="#7c5cff" stroke-width="1.5" marker-end="url(#arr)"/>
+        <text x="90" y="50" fill="#c5b5ff" font-size="9">PRE-PREPARE (O(n))</text>
+        <!-- Phase 2: PREPARE -->
+        <line x1="180" y1="100" x2="60" y2="110" stroke="#22d3ee" stroke-width="1" stroke-dasharray="3,2"/>
+        <line x1="180" y1="100" x2="300" y2="105" stroke="#22d3ee" stroke-width="1" stroke-dasharray="3,2"/>
+        <line x1="180" y1="100" x2="420" y2="108" stroke="#22d3ee" stroke-width="1" stroke-dasharray="3,2"/>
+        <text x="90" y="97" fill="#8a93a6" font-size="9">PREPARE (O(n²))</text>
+        <!-- Phase 3: COMMIT -->
+        <line x1="60" y1="145" x2="180" y2="148" stroke="#34d399" stroke-width="1" stroke-dasharray="3,2"/>
+        <line x1="60" y1="145" x2="300" y2="150" stroke="#34d399" stroke-width="1" stroke-dasharray="3,2"/>
+        <line x1="60" y1="145" x2="420" y2="152" stroke="#34d399" stroke-width="1" stroke-dasharray="3,2"/>
+        <text x="90" y="142" fill="#34d399" font-size="9">COMMIT (O(n²))</text>
+        <!-- Committed indicator -->
+        <text x="480" y="175" fill="#fbbf24" font-size="9">COMMITTED</text>
+        <defs>
+          <marker id="arr" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
+            <path d="M0,0 L6,3 L0,6 Z" fill="#7c5cff"/>
+          </marker>
+        </defs>
+      </svg>
+      <figcaption>PBFT three-phase protocol. The primary broadcasts a PRE-PREPARE. All replicas broadcast PREPARE messages to each other. Once a node collects 2f+1 PREPARE messages, it enters COMMIT phase. After 2f+1 COMMIT messages, the block is finalized.</figcaption>
+    </figure>
+
+    <p>The message complexity is $O(n^2)$ — each of the $n$ nodes sends messages to all other $n$ nodes in the PREPARE and COMMIT phases. This is fine for $n \le 100$ but becomes untenable at larger scales (~10,000 validators). PBFT also requires a known, static validator set, making it unsuitable for permissionless blockchains.</p>
+
+    <h3 id="tendermint">Tendermint</h3>
+    <p>Tendermint (2014, Jae Kwon) adapts PBFT for blockchain contexts. It is used by Cosmos, Binance Chain, and dozens of application-specific chains. Key differences from PBFT:</p>
+    <ul>
+      <li><strong>Round-robin proposer rotation</strong>: each round a different validator (weighted by stake) proposes a block</li>
+      <li><strong>Two voting phases</strong>: <em>Prevote</em> and <em>Precommit</em> (instead of PREPARE/COMMIT)</li>
+      <li><strong>Locking mechanism</strong>: once a validator prevotes for a block, it is "locked" on that block and cannot prevote for a different one in the same height, preventing equivocation</li>
+      <li><strong>Instant finality</strong>: a block is finalized when $\ge \frac{2}{3}$ of validators send Precommit messages</li>
+    </ul>
+
+    <p>Tendermint provides instant deterministic finality but sacrifices liveness under network partitions (it halts rather than fork). Communication is still $O(n^2)$, limiting practical validator sets to ~150 validators for reasonable latency.</p>
+
+    <h3 id="hotstuff">HotStuff</h3>
+    <p>HotStuff (2019, Yin et al., used in Facebook's Diem/Libra project and now Aptos/Sui) achieves a major breakthrough: <em>linear communication complexity</em> $O(n)$ per consensus round, using threshold signatures.</p>
+
+    <p>Instead of each validator broadcasting to all others, all validators send their votes to the current <em>leader</em>. The leader aggregates votes into a single <strong>Quorum Certificate (QC)</strong> using threshold BLS signatures — a compact proof that $\ge \frac{2}{3}$ of validators approved a block.</p>
+
+    <div class="callout">
+      <div class="label">THE 3-CHAIN COMMITMENT RULE</div>
+      <p style="margin:6px 0">HotStuff commits a block $b$ only when it is followed by a chain of 3 consecutive blocks, each carrying a QC for the previous one: $b \leftarrow b' \leftarrow b''$. Once block $b''$ with QC for $b'$ with QC for $b$ exists, block $b$ is final. This 3-round pipeline enables responsive throughput: the leader can propose a new block every round without waiting for explicit commit acknowledgment.</p>
+    </div>
+
+    <p>The pipeline means HotStuff is always working on three blocks simultaneously — propose, vote, decide — giving it throughput comparable to a non-BFT system. HotStuff-2 (2023) further reduces the number of phases, and variants like DiemBFT, Jolteon, and Bullshark extend the design.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="comparison">7. Comparative Analysis</h2>
+
+    <div class="callout">
+      <div class="label">THE BLOCKCHAIN TRILEMMA</div>
+      <p style="margin:6px 0">No consensus system perfectly achieves all three of <strong>decentralization</strong> (permissionless, many validators), <strong>security</strong> (resistant to attack), and <strong>scalability</strong> (high throughput, low latency). Every design is a tradeoff. PoW maximizes decentralization and security at the cost of scalability and energy. BFT maximizes throughput and finality at the cost of permissionlessness. PoS attempts a middle ground.</p>
+    </div>
+
+    <div style="overflow-x:auto; margin: 24px 0;">
+      <table style="width:100%; border-collapse:collapse; font-size:13px; min-width:700px;">
+        <thead>
+          <tr style="background:#171b26; border-bottom:2px solid #7c5cff;">
+            <th style="padding:10px 12px; text-align:left; color:#c5b5ff;">Property</th>
+            <th style="padding:10px 12px; text-align:left; color:#fbbf24;">Proof of Work</th>
+            <th style="padding:10px 12px; text-align:left; color:#34d399;">Proof of Stake</th>
+            <th style="padding:10px 12px; text-align:left; color:#22d3ee;">BFT (Tendermint / HotStuff)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="border-bottom:1px solid #242a3a;">
+            <td style="padding:9px 12px; color:#8a93a6;">Energy consumption</td>
+            <td style="padding:9px 12px;">Enormous (~150 TWh/yr for Bitcoin)</td>
+            <td style="padding:9px 12px; color:#34d399;">~99.95% less than PoW</td>
+            <td style="padding:9px 12px; color:#34d399;">Minimal (just CPU/network)</td>
+          </tr>
+          <tr style="border-bottom:1px solid #242a3a; background:#0f1117;">
+            <td style="padding:9px 12px; color:#8a93a6;">Finality</td>
+            <td style="padding:9px 12px; color:#fbbf24;">Probabilistic (grows with confirmations)</td>
+            <td style="padding:9px 12px; color:#fbbf24;">Probabilistic until checkpoint; then deterministic (~12 min)</td>
+            <td style="padding:9px 12px; color:#34d399;">Deterministic (single round)</td>
+          </tr>
+          <tr style="border-bottom:1px solid #242a3a;">
+            <td style="padding:9px 12px; color:#8a93a6;">Sybil resistance</td>
+            <td style="padding:9px 12px;">Hash power (physical hardware)</td>
+            <td style="padding:9px 12px;">Staked capital (economic)</td>
+            <td style="padding:9px 12px;">Identity + stake (permissioned or delegated)</td>
+          </tr>
+          <tr style="border-bottom:1px solid #242a3a; background:#0f1117;">
+            <td style="padding:9px 12px; color:#8a93a6;">Validator set</td>
+            <td style="padding:9px 12px; color:#34d399;">Fully open (anyone with hardware)</td>
+            <td style="padding:9px 12px; color:#34d399;">Open (anyone with 32 ETH for Ethereum)</td>
+            <td style="padding:9px 12px; color:#fbbf24;">Bounded set (~150 for Tendermint, ~100 for HotStuff)</td>
+          </tr>
+          <tr style="border-bottom:1px solid #242a3a;">
+            <td style="padding:9px 12px; color:#8a93a6;">Message complexity</td>
+            <td style="padding:9px 12px;">$O(1)$ per block (broadcast)</td>
+            <td style="padding:9px 12px;">$O(n)$ attestations per slot</td>
+            <td style="padding:9px 12px;">$O(n^2)$ PBFT/Tendermint; $O(n)$ HotStuff</td>
+          </tr>
+          <tr style="border-bottom:1px solid #242a3a; background:#0f1117;">
+            <td style="padding:9px 12px; color:#8a93a6;">Throughput</td>
+            <td style="padding:9px 12px; color:#f87171;">~7 TPS (Bitcoin)</td>
+            <td style="padding:9px 12px; color:#fbbf24;">~15 TPS L1 (Ethereum); 1000s with rollups</td>
+            <td style="padding:9px 12px; color:#34d399;">1,000–100,000 TPS depending on implementation</td>
+          </tr>
+          <tr style="border-bottom:1px solid #242a3a;">
+            <td style="padding:9px 12px; color:#8a93a6;">Key attack vector</td>
+            <td style="padding:9px 12px;">51% hash power, selfish mining</td>
+            <td style="padding:9px 12px;">33%/51% stake, long-range attack</td>
+            <td style="padding:9px 12px;">33% Byzantine validators, liveness failure under partition</td>
+          </tr>
+          <tr style="border-bottom:1px solid #242a3a; background:#0f1117;">
+            <td style="padding:9px 12px; color:#8a93a6;">Liveness under partition</td>
+            <td style="padding:9px 12px; color:#34d399;">Yes (always produces blocks)</td>
+            <td style="padding:9px 12px; color:#34d399;">Yes (LMD-GHOST; delayed finality)</td>
+            <td style="padding:9px 12px; color:#f87171;">No (halts rather than forks — CP not AP)</td>
+          </tr>
+          <tr>
+            <td style="padding:9px 12px; color:#8a93a6;">Examples</td>
+            <td style="padding:9px 12px;">Bitcoin, Litecoin, Monero</td>
+            <td style="padding:9px 12px;">Ethereum 2.0, Solana (PoS+PoH), Cardano</td>
+            <td style="padding:9px 12px;">Cosmos (Tendermint), Aptos/Sui (HotStuff variants)</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Long-Range Attacks on PoS</h3>
+    <p>One vulnerability unique to PoS: the <em>long-range attack</em>. An attacker who once held stake (even years ago) could use those old private keys to re-mine history from that point — since there's no computational cost to creating PoS blocks. Defenses include <em>weak subjectivity checkpoints</em> (new nodes must obtain a recent trusted checkpoint from a social source, not just the longest chain) and <em>key evolving schemes</em> (validators regularly rotate keys, invalidating old ones). Ethereum requires nodes syncing from scratch to use a checkpoint no older than the weak subjectivity period (~2 weeks).</p>
+
+    <!-- ========================================================== -->
+    <h2 id="simulator">8. Interactive: Block Mining Simulator</h2>
+    <p>This simulator demonstrates the core PoW puzzle using a simplified hash function (djb2 applied iteratively — <strong>not SHA-256</strong>, but captures the same statistical behavior). Set the difficulty (number of leading zero hex digits required), then click Mine to watch the nonce search in real time.</p>
+
+    <div class="viz-3d" id="mining-sim" style="padding:20px;">
+      <div style="display:flex; flex-wrap:wrap; gap:16px; align-items:flex-start;">
+        <!-- Controls panel -->
+        <div style="flex:0 0 220px; background:#0b0d12; border:1px solid #242a3a; border-radius:8px; padding:16px;">
+          <h5 style="margin:0 0 12px; color:#c5b5ff; font-size:12px; letter-spacing:.08em;">BLOCK HEADER</h5>
+          <div style="font-size:11px; font-family:monospace; color:#8a93a6; margin-bottom:8px;">
+            <div>prev_hash:</div>
+            <div id="sim-prev-hash" style="color:#67e8f9; word-break:break-all; font-size:10px;">0x00000abc...def1</div>
+          </div>
+          <div style="font-size:11px; font-family:monospace; color:#8a93a6; margin-bottom:8px;">
+            <div>merkle_root:</div>
+            <div id="sim-merkle" style="color:#67e8f9; word-break:break-all; font-size:10px;">0xdeadbeef...cafe</div>
+          </div>
+          <div style="font-size:11px; font-family:monospace; color:#8a93a6; margin-bottom:12px;">
+            <div>nonce:</div>
+            <div id="sim-nonce-disp" style="color:#c4b5fd; font-size:13px;">0</div>
+          </div>
+
+          <label style="display:block; font-size:11px; color:#8a93a6; margin-bottom:4px;">
+            Difficulty (leading zeros)
+          </label>
+          <div style="display:flex; align-items:center; gap:8px; margin-bottom:14px;">
+            <input type="range" id="sim-difficulty" min="1" max="4" value="2" style="flex:1;">
+            <span id="sim-diff-val" style="font-family:monospace; color:#fbbf24; font-size:13px; min-width:16px;">2</span>
+          </div>
+
+          <div style="display:flex; gap:8px;">
+            <button class="btn primary" id="sim-mine-btn" onclick="simMine()" style="flex:1;">Mine!</button>
+            <button class="btn" onclick="simReset()">↺</button>
+          </div>
+        </div>
+
+        <!-- Output panel -->
+        <div style="flex:1; min-width:280px;">
+          <svg id="sim-svg" viewBox="0 0 540 300" width="100%" style="background:#0b0d12; border:1px solid #242a3a; border-radius:8px;">
+            <!-- Header row labels -->
+            <text x="16" y="28" fill="#8a93a6" font-family="monospace" font-size="10">NONCE TRIED</text>
+            <text x="150" y="28" fill="#8a93a6" font-family="monospace" font-size="10">HASH OUTPUT (simplified djb2)</text>
+            <text x="480" y="28" fill="#8a93a6" font-family="monospace" font-size="10">PASS?</text>
+            <line x1="8" y1="35" x2="532" y2="35" stroke="#242a3a" stroke-width="1"/>
+
+            <!-- Log rows — filled by JS -->
+            <g id="sim-log-rows"></g>
+
+            <!-- Status bar at bottom -->
+            <rect x="8" y="260" width="524" height="32" rx="4" fill="#11141c" stroke="#242a3a" stroke-width="1"/>
+            <text id="sim-status" x="20" y="281" fill="#8a93a6" font-family="monospace" font-size="11">Ready. Set difficulty and click Mine!</text>
+          </svg>
+
+          <!-- Stats row -->
+          <div style="display:flex; gap:16px; margin-top:8px; font-family:monospace; font-size:12px;">
+            <div style="background:#11141c; border:1px solid #242a3a; border-radius:6px; padding:8px 14px;">
+              <div style="color:#8a93a6; font-size:10px;">ATTEMPTS</div>
+              <div id="sim-attempts" style="color:#fbbf24; font-size:16px;">0</div>
+            </div>
+            <div style="background:#11141c; border:1px solid #242a3a; border-radius:6px; padding:8px 14px;">
+              <div style="color:#8a93a6; font-size:10px;">TIME (ms)</div>
+              <div id="sim-time" style="color:#22d3ee; font-size:16px;">—</div>
+            </div>
+            <div style="background:#11141c; border:1px solid #242a3a; border-radius:6px; padding:8px 14px; flex:1;">
+              <div style="color:#8a93a6; font-size:10px;">RESULT</div>
+              <div id="sim-result" style="color:#8a93a6; font-size:11px; word-break:break-all;">—</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <p style="font-size:11px; color:#6d7485; margin-top:12px; font-family:monospace;">
+        Note: This uses djb2 hashing (not SHA-256) for browser speed. The statistical properties (random-looking output, geometric distribution of success) are identical to real PoW. At difficulty 4 (four leading zeros), expect ~65,536 average attempts.
+      </p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="source">9. Source Code</h2>
+
+    <details class="algo-code">
+      <summary>Source — Proof of Work, Difficulty Adjustment, Longest Chain, BFT Round, Merkle Validation</summary>
+      <div class="code-tabs">
+        <div class="ct-header">
+          <button class="ct-tab active" data-tab="bc-pseudo">Pseudocode</button>
+          <button class="ct-tab" data-tab="bc-py">Python</button>
+          <button class="ct-tab" data-tab="bc-js">JavaScript</button>
+          <button class="ct-tab" data-tab="bc-c">C</button>
+          <button class="ct-tab" data-tab="bc-cpp">C++</button>
+          <button class="ct-tab" data-tab="bc-java">Java</button>
+          <button class="ct-tab" data-tab="bc-go">Go</button>
+        </div>
+
+        <!-- PSEUDOCODE -->
+        <div class="ct-panel active" data-tab="bc-pseudo"><pre><code>// ── 1. PoW Mining Loop ─────────────────────────────────────────────────
+function mine(block_header, target):
+    nonce = 0
+    loop:
+        hash = SHA256(SHA256(block_header || nonce))
+        if hash < target:
+            return nonce, hash
+        nonce += 1
+        if nonce > MAX_NONCE:
+            increment extraNonce in coinbase tx   // changes merkle_root
+            nonce = 0
+
+// ── 2. Difficulty Adjustment ───────────────────────────────────────────
+function adjust_difficulty(old_target, actual_time_seconds):
+    TARGET_TIME = 2016 * 600   // 2016 blocks × 10 min each = 1,209,600 s
+    ratio = actual_time_seconds / TARGET_TIME
+    ratio = clamp(ratio, 0.25, 4.0)   // max 4x change per period
+    return old_target * ratio
+
+// ── 3. Longest-Chain Selection ─────────────────────────────────────────
+function best_chain(chains[]):
+    // chains is a list of chain tip blocks
+    best = None
+    best_work = 0
+    for tip in chains:
+        total_work = sum(1 / block.target for block in chain(tip))
+        if total_work > best_work:
+            best = tip
+            best_work = total_work
+    return best
+
+// ── 4. Simple BFT Round (Tendermint-style) ─────────────────────────────
+function bft_round(validators, proposed_block):
+    // Phase 1: Prevote
+    prevotes = collect_votes(validators, proposed_block, "PREVOTE")
+    if count_weighted(prevotes) < 2/3 * total_stake:
+        return nil   // no block this round, increment round number
+
+    // Phase 2: Precommit
+    precommits = collect_votes(validators, proposed_block, "PRECOMMIT")
+    if count_weighted(precommits) >= 2/3 * total_stake:
+        return finalize(proposed_block)
+    return nil
+
+// ── 5. Merkle Block Validation ─────────────────────────────────────────
+function verify_merkle_proof(tx_hash, proof_path, merkle_root):
+    current = tx_hash
+    for (sibling, is_right) in proof_path:
+        if is_right:
+            current = SHA256(SHA256(current || sibling))
+        else:
+            current = SHA256(SHA256(sibling || current))
+    return current == merkle_root</code></pre></div>
+
+        <!-- PYTHON -->
+        <div class="ct-panel" data-tab="bc-py"><pre><code>import hashlib
+import time
+from typing import List, Tuple, Optional
+
+
+# ── 1. PoW Mining Loop ─────────────────────────────────────────────────
+
+def double_sha256(data: bytes) -> bytes:
+    return hashlib.sha256(hashlib.sha256(data).digest()).digest()
+
+def mine_block(header_bytes: bytes, target_bits: int) -> Tuple[int, bytes]:
+    """
+    Find nonce such that double_sha256(header || nonce) has target_bits leading zero bits.
+    Returns (nonce, hash_bytes).
+    """
+    target = (1 << (256 - target_bits)) - 1
+    nonce = 0
+    while True:
+        candidate = header_bytes + nonce.to_bytes(4, 'little')
+        h = double_sha256(candidate)
+        h_int = int.from_bytes(h, 'big')
+        if h_int <= target:
+            return nonce, h
+        nonce = (nonce + 1) & 0xFFFFFFFF
+        if nonce == 0:
+            raise OverflowError("Exhausted 32-bit nonce space — change extraNonce")
+
+
+# ── 2. Difficulty Adjustment ───────────────────────────────────────────
+
+TARGET_TIMESPAN = 2016 * 600  # seconds (2 weeks)
+
+def adjust_target(old_target: int, actual_timespan: int) -> int:
+    """
+    Recalculate PoW target after 2016 blocks.
+    old_target: current target as 256-bit integer
+    actual_timespan: seconds taken for last 2016 blocks
+    Returns new target as 256-bit integer.
+    """
+    # Clamp timespan to [TARGET/4, TARGET*4]
+    actual_timespan = max(TARGET_TIMESPAN // 4, min(actual_timespan, TARGET_TIMESPAN * 4))
+    new_target = (old_target * actual_timespan) // TARGET_TIMESPAN
+    # Enforce max target (genesis difficulty)
+    MAX_TARGET = 0x00000000FFFF0000000000000000000000000000000000000000000000000000
+    return min(new_target, MAX_TARGET)
+
+
+# ── 3. Longest-Chain Selection ─────────────────────────────────────────
+
+class Block:
+    def __init__(self, height: int, prev_hash: str, work: int):
+        self.height = height
+        self.prev_hash = prev_hash
+        self.work = work  # 1 / target for this block (as integer approximation)
+        self.total_work = 0  # set when building chain
+
+def compute_chain_work(tip: Block, blocks_by_hash: dict) -> int:
+    """Walk backwards from tip summing work."""
+    total = 0
+    current = tip
+    while current is not None:
+        total += current.work
+        current = blocks_by_hash.get(current.prev_hash)
+    return total
+
+def select_best_chain(tips: List[Block], blocks_by_hash: dict) -> Block:
+    """Nakamoto consensus: pick chain with highest total work."""
+    best_tip = None
+    best_work = -1
+    for tip in tips:
+        work = compute_chain_work(tip, blocks_by_hash)
+        if work > best_work:
+            best_work = work
+            best_tip = tip
+    return best_tip
+
+
+# ── 4. Simple BFT Round (Tendermint-style) ─────────────────────────────
+
+def tendermint_round(
+    validators: List[dict],
+    proposed_block_hash: str,
+    round_number: int
+) -> Optional[str]:
+    """
+    Simplified single-round Tendermint simulation.
+    validators: list of {'id': str, 'stake': int, 'honest': bool}
+    Returns committed block hash or None if round fails.
+    """
+    total_stake = sum(v['stake'] for v in validators)
+    quorum = (2 * total_stake) // 3 + 1
+
+    # Prevote phase
+    prevote_weight = sum(
+        v['stake'] for v in validators
+        if v['honest']  # honest validators prevote for valid proposal
+    )
+    if prevote_weight < quorum:
+        print(f"Round {round_number}: Prevote failed — insufficient honest stake")
+        return None
+
+    # Precommit phase
+    precommit_weight = prevote_weight  # simplification: same honest validators precommit
+    if precommit_weight >= quorum:
+        print(f"Round {round_number}: Block {proposed_block_hash[:8]}... committed!")
+        return proposed_block_hash
+
+    return None
+
+
+# ── 5. Merkle Proof Validation ─────────────────────────────────────────
+
+def merkle_hash(a: bytes, b: bytes) -> bytes:
+    return double_sha256(a + b)
+
+def verify_merkle_proof(
+    tx_hash: bytes,
+    proof: List[Tuple[bytes, bool]],  # (sibling_hash, sibling_is_on_right)
+    merkle_root: bytes
+) -> bool:
+    """
+    Verify that tx_hash is included in the Merkle tree with given root.
+    proof: list of (sibling, is_right) pairs from leaf to root.
+    """
+    current = tx_hash
+    for sibling, sibling_is_right in proof:
+        if sibling_is_right:
+            current = merkle_hash(current, sibling)
+        else:
+            current = merkle_hash(sibling, current)
+    return current == merkle_root
+
+
+# ── Example usage ──────────────────────────────────────────────────────
+if __name__ == "__main__":
+    # Mine a toy block (difficulty 18 bits → ~262k expected hashes)
+    header = b"version=1|prev=abc|merkle=def|time=1700000000|bits=18"
+    start = time.time()
+    nonce, found_hash = mine_block(header, target_bits=18)
+    elapsed = time.time() - start
+    print(f"Found nonce={nonce}, hash={found_hash.hex()[:16]}..., time={elapsed:.3f}s")
+
+    # Difficulty adjustment example
+    old_target = 0x00000000FFFF << (256 - 32)  # toy target
+    new_target = adjust_target(old_target, actual_timespan=12 * 24 * 3600)  # 12 days
+    print(f"Target changed by factor {new_target / old_target:.4f} (expected ~1.167)")
+</code></pre></div>
+
+        <!-- JAVASCRIPT -->
+        <div class="ct-panel" data-tab="bc-js"><pre><code>// ── 1. PoW Mining (using Web Crypto SHA-256) ───────────────────────────
+
+async function doubleSHA256(data) {
+  const first  = await crypto.subtle.digest('SHA-256', data);
+  const second = await crypto.subtle.digest('SHA-256', first);
+  return new Uint8Array(second);
+}
+
+async function mineBlock(headerBytes, leadingZeroBits) {
+  const nonce = new Uint8Array(4);
+  const view  = new DataView(nonce.buffer);
+  let attempts = 0;
+
+  while (true) {
+    const candidate = new Uint8Array(headerBytes.length + 4);
+    candidate.set(headerBytes);
+    candidate.set(nonce, headerBytes.length);
+
+    const hash = await doubleSHA256(candidate);
+    if (hasLeadingZeroBits(hash, leadingZeroBits)) {
+      return { nonce: view.getUint32(0, true), hash, attempts };
+    }
+    const n = view.getUint32(0, true);
+    view.setUint32(0, (n + 1) >>> 0, true);
+    attempts++;
+  }
+}
+
+function hasLeadingZeroBits(hashBytes, bits) {
+  let remaining = bits;
+  for (const byte of hashBytes) {
+    if (remaining <= 0) break;
+    if (remaining >= 8) {
+      if (byte !== 0) return false;
+      remaining -= 8;
+    } else {
+      const mask = 0xFF << (8 - remaining);
+      if ((byte & mask) !== 0) return false;
+      remaining = 0;
+    }
+  }
+  return true;
+}
+
+
+// ── 2. Difficulty Adjustment ───────────────────────────────────────────
+
+const TARGET_TIMESPAN = 2016 * 600; // 2 weeks in seconds
+
+function adjustTarget(oldTargetHex, actualTimespanSec) {
+  const oldTarget = BigInt('0x' + oldTargetHex);
+  let timespan = BigInt(Math.max(
+    TARGET_TIMESPAN / 4,
+    Math.min(actualTimespanSec, TARGET_TIMESPAN * 4)
+  ));
+  const newTarget = (oldTarget * timespan) / BigInt(TARGET_TIMESPAN);
+  return newTarget.toString(16).padStart(64, '0');
+}
+
+
+// ── 3. Longest-Chain Selection ─────────────────────────────────────────
+
+function selectBestChain(tips, blockMap) {
+  // tips: array of block hashes; blockMap: hash -> {work, prevHash}
+  let bestTip = null, bestWork = 0n;
+
+  for (const tip of tips) {
+    let totalWork = 0n;
+    let curr = tip;
+    while (curr && blockMap[curr]) {
+      totalWork += BigInt(blockMap[curr].work);
+      curr = blockMap[curr].prevHash;
+    }
+    if (totalWork > bestWork) {
+      bestWork = totalWork;
+      bestTip = tip;
+    }
+  }
+  return bestTip;
+}
+
+
+// ── 4. BFT Round Simulation ────────────────────────────────────────────
+
+function tendermintRound(validators, proposedBlockHash) {
+  const totalStake = validators.reduce((s, v) => s + v.stake, 0);
+  const quorum = Math.floor(totalStake * 2 / 3) + 1;
+
+  // Prevote: honest validators vote for valid block
+  const prevoteWeight = validators
+    .filter(v => v.honest)
+    .reduce((s, v) => s + v.stake, 0);
+
+  if (prevoteWeight < quorum) return null;
+
+  // Precommit
+  const precommitWeight = prevoteWeight; // same set in this simulation
+  if (precommitWeight >= quorum) return proposedBlockHash;
+
+  return null;
+}
+
+
+// ── 5. Merkle Proof Verification ───────────────────────────────────────
+
+async function sha256(data) {
+  const buf = await crypto.subtle.digest('SHA-256', data);
+  return new Uint8Array(buf);
+}
+
+async function merkleHash(a, b) {
+  const combined = new Uint8Array(a.length + b.length);
+  combined.set(a); combined.set(b, a.length);
+  const first = await sha256(combined);
+  return sha256(first);
+}
+
+async function verifyMerkleProof(txHash, proof, merkleRoot) {
+  // proof: [{sibling: Uint8Array, siblingIsRight: bool}]
+  let current = txHash;
+  for (const { sibling, siblingIsRight } of proof) {
+    current = siblingIsRight
+      ? await merkleHash(current, sibling)
+      : await merkleHash(sibling, current);
+  }
+  return current.every((b, i) => b === merkleRoot[i]);
+}
+</code></pre></div>
+
+        <!-- C -->
+        <div class="ct-panel" data-tab="bc-c"><pre><code>#include &lt;stdint.h&gt;
+#include &lt;string.h&gt;
+#include &lt;stdio.h&gt;
+// Assumes sha256() writes 32 bytes to output buffer.
+// (Use OpenSSL or a standalone SHA-256 implementation)
+extern void sha256(const uint8_t *data, size_t len, uint8_t *out);
+
+void double_sha256(const uint8_t *data, size_t len, uint8_t *out) {
+    uint8_t tmp[32];
+    sha256(data, len, tmp);
+    sha256(tmp, 32, out);
+}
+
+/* ── PoW mining loop ─────────────────────────────────────────── */
+int mine_block(const uint8_t *header, size_t header_len,
+               int leading_zero_bytes, uint32_t *found_nonce)
+{
+    uint8_t buf[256], hash[32];
+    memcpy(buf, header, header_len);
+
+    for (uint32_t nonce = 0; ; nonce++) {
+        uint32_t le = __builtin_bswap32(nonce);  // little-endian nonce
+        memcpy(buf + header_len, &le, 4);
+        double_sha256(buf, header_len + 4, hash);
+
+        int ok = 1;
+        for (int i = 0; i &lt; leading_zero_bytes; i++) {
+            if (hash[i] != 0) { ok = 0; break; }
+        }
+        if (ok) { *found_nonce = nonce; return 1; }
+        if (nonce == 0xFFFFFFFF) return 0;  // exhausted
+    }
+}
+
+/* ── Difficulty adjustment ───────────────────────────────────── */
+#define TARGET_TIMESPAN (2016 * 600)  /* seconds */
+
+void adjust_target(uint8_t target[32], int32_t actual_seconds) {
+    /* clamp */
+    if (actual_seconds &lt; TARGET_TIMESPAN / 4) actual_seconds = TARGET_TIMESPAN / 4;
+    if (actual_seconds &gt; TARGET_TIMESPAN * 4) actual_seconds = TARGET_TIMESPAN * 4;
+
+    /* multiply target by ratio using 256-bit big-endian arithmetic */
+    /* (production code uses multi-precision integer library) */
+    uint64_t ratio_num = (uint64_t)actual_seconds;
+    uint64_t ratio_den = (uint64_t)TARGET_TIMESPAN;
+
+    /* Simple 64-bit approximation using most-significant 8 bytes */
+    uint64_t hi;
+    memcpy(&hi, target, 8);
+    hi = __builtin_bswap64(hi);
+    hi = hi * ratio_num / ratio_den;
+    hi = __builtin_bswap64(hi);
+    memcpy(target, &hi, 8);
+}
+
+/* ── Merkle proof verification ───────────────────────────────── */
+typedef struct { uint8_t hash[32]; int sibling_is_right; } ProofStep;
+
+int verify_merkle_proof(const uint8_t *tx_hash, const ProofStep *proof,
+                        int proof_len, const uint8_t *root)
+{
+    uint8_t current[32], combined[64], next[32];
+    memcpy(current, tx_hash, 32);
+
+    for (int i = 0; i &lt; proof_len; i++) {
+        if (proof[i].sibling_is_right) {
+            memcpy(combined,      current,         32);
+            memcpy(combined + 32, proof[i].hash,   32);
+        } else {
+            memcpy(combined,      proof[i].hash,   32);
+            memcpy(combined + 32, current,         32);
+        }
+        double_sha256(combined, 64, next);
+        memcpy(current, next, 32);
+    }
+    return memcmp(current, root, 32) == 0;
+}
+</code></pre></div>
+
+        <!-- C++ -->
+        <div class="ct-panel" data-tab="bc-cpp"><pre><code>#include &lt;array&gt;
+#include &lt;cstdint&gt;
+#include &lt;cstring&gt;
+#include &lt;optional&gt;
+#include &lt;vector&gt;
+#include &lt;iostream&gt;
+// Requires a SHA-256 implementation (e.g., OpenSSL's EVP or standalone)
+using Hash256 = std::array&lt;uint8_t, 32&gt;;
+extern Hash256 sha256(const uint8_t* data, size_t len);
+
+Hash256 double_sha256(const uint8_t* data, size_t len) {
+    auto first = sha256(data, len);
+    return sha256(first.data(), 32);
+}
+
+// ── PoW Mining ─────────────────────────────────────────────────────────
+struct MineResult { uint32_t nonce; Hash256 hash; uint64_t attempts; };
+
+std::optional&lt;MineResult&gt; mine(
+    const std::vector&lt;uint8_t&gt;&amp; header,
+    int leading_zero_bytes)
+{
+    std::vector&lt;uint8_t&gt; buf(header.size() + 4);
+    std::copy(header.begin(), header.end(), buf.begin());
+
+    for (uint32_t nonce = 0; ; nonce++) {
+        buf[header.size()    ] = nonce &amp; 0xFF;
+        buf[header.size() + 1] = (nonce &gt;&gt; 8)  &amp; 0xFF;
+        buf[header.size() + 2] = (nonce &gt;&gt; 16) &amp; 0xFF;
+        buf[header.size() + 3] = (nonce &gt;&gt; 24) &amp; 0xFF;
+
+        Hash256 h = double_sha256(buf.data(), buf.size());
+
+        bool ok = true;
+        for (int i = 0; i &lt; leading_zero_bytes &amp;&amp; ok; i++)
+            ok = (h[i] == 0);
+
+        if (ok) return MineResult{nonce, h, (uint64_t)nonce + 1};
+        if (nonce == 0xFFFFFFFF) return std::nullopt;
+    }
+}
+
+// ── Difficulty Adjustment ──────────────────────────────────────────────
+constexpr int64_t TARGET_TIMESPAN = 2016LL * 600;
+
+Hash256 adjust_target(Hash256 old_target, int64_t actual_seconds) {
+    actual_seconds = std::max(TARGET_TIMESPAN / 4,
+                     std::min(actual_seconds, TARGET_TIMESPAN * 4));
+    // Big-integer multiply (simplified to leading 8 bytes here)
+    Hash256 result = old_target;
+    uint64_t hi = 0;
+    for (int i = 0; i &lt; 8; i++) hi = (hi &lt;&lt; 8) | old_target[i];
+    hi = static_cast&lt;uint64_t&gt;((__uint128_t)hi * actual_seconds / TARGET_TIMESPAN);
+    for (int i = 7; i &gt;= 0; i--) { result[i] = hi &amp; 0xFF; hi &gt;&gt;= 8; }
+    return result;
+}
+
+// ── Merkle Proof Verification ──────────────────────────────────────────
+struct ProofStep { Hash256 sibling; bool sibling_is_right; };
+
+bool verify_merkle_proof(
+    const Hash256&amp; tx_hash,
+    const std::vector&lt;ProofStep&gt;&amp; proof,
+    const Hash256&amp; root)
+{
+    Hash256 current = tx_hash;
+    std::array&lt;uint8_t, 64&gt; combined;
+    for (const auto&amp; step : proof) {
+        if (step.sibling_is_right) {
+            std::copy(current.begin(), current.end(), combined.begin());
+            std::copy(step.sibling.begin(), step.sibling.end(), combined.begin() + 32);
+        } else {
+            std::copy(step.sibling.begin(), step.sibling.end(), combined.begin());
+            std::copy(current.begin(), current.end(), combined.begin() + 32);
+        }
+        current = double_sha256(combined.data(), 64);
+    }
+    return current == root;
+}
+</code></pre></div>
+
+        <!-- JAVA -->
+        <div class="ct-panel" data-tab="bc-java"><pre><code>import java.security.MessageDigest;
+import java.util.Arrays;
+import java.util.List;
+
+public class NakamotoConsensus {
+
+    // ── SHA-256 helpers ────────────────────────────────────────────────
+    static byte[] sha256(byte[] data) throws Exception {
+        return MessageDigest.getInstance("SHA-256").digest(data);
+    }
+
+    static byte[] doubleSha256(byte[] data) throws Exception {
+        return sha256(sha256(data));
+    }
+
+    // ── PoW Mining Loop ────────────────────────────────────────────────
+    record MineResult(int nonce, byte[] hash, long attempts) {}
+
+    static MineResult mine(byte[] header, int leadingZeroBytes) throws Exception {
+        byte[] buf = Arrays.copyOf(header, header.length + 4);
+
+        for (int nonce = 0; nonce != -1; nonce++) {
+            buf[header.length    ] = (byte)  (nonce        &amp; 0xFF);
+            buf[header.length + 1] = (byte) ((nonce &gt;&gt;  8) &amp; 0xFF);
+            buf[header.length + 2] = (byte) ((nonce &gt;&gt; 16) &amp; 0xFF);
+            buf[header.length + 3] = (byte) ((nonce &gt;&gt; 24) &amp; 0xFF);
+
+            byte[] hash = doubleSha256(buf);
+            boolean ok = true;
+            for (int i = 0; i &lt; leadingZeroBytes &amp;&amp; ok; i++)
+                ok = (hash[i] == 0);
+
+            if (ok) return new MineResult(nonce, hash, (long)nonce + 1);
+        }
+        throw new RuntimeException("Nonce space exhausted — change extraNonce");
+    }
+
+    // ── Difficulty Adjustment ──────────────────────────────────────────
+    static final long TARGET_TIMESPAN = 2016L * 600;
+
+    static double adjustDifficulty(double oldDifficulty, long actualSeconds) {
+        actualSeconds = Math.max(TARGET_TIMESPAN / 4, Math.min(actualSeconds, TARGET_TIMESPAN * 4));
+        return oldDifficulty * TARGET_TIMESPAN / actualSeconds;
+    }
+
+    // ── Longest-Chain Selection ────────────────────────────────────────
+    record BlockInfo(String hash, String prevHash, long work) {}
+
+    static String selectBestChain(List&lt;String&gt; tips, java.util.Map&lt;String, BlockInfo&gt; blockMap) {
+        String bestTip = null;
+        long bestWork = 0;
+        for (String tip : tips) {
+            long totalWork = 0;
+            String curr = tip;
+            while (curr != null &amp;&amp; blockMap.containsKey(curr)) {
+                BlockInfo b = blockMap.get(curr);
+                totalWork += b.work();
+                curr = b.prevHash();
+            }
+            if (totalWork &gt; bestWork) { bestWork = totalWork; bestTip = tip; }
+        }
+        return bestTip;
+    }
+
+    // ── Merkle Proof Verification ──────────────────────────────────────
+    record ProofStep(byte[] sibling, boolean siblingIsRight) {}
+
+    static boolean verifyMerkleProof(byte[] txHash, List&lt;ProofStep&gt; proof,
+                                     byte[] root) throws Exception {
+        byte[] current = txHash;
+        for (ProofStep step : proof) {
+            byte[] combined = new byte[64];
+            if (step.siblingIsRight()) {
+                System.arraycopy(current,       0, combined,  0, 32);
+                System.arraycopy(step.sibling(), 0, combined, 32, 32);
+            } else {
+                System.arraycopy(step.sibling(), 0, combined,  0, 32);
+                System.arraycopy(current,        0, combined, 32, 32);
+            }
+            current = doubleSha256(combined);
+        }
+        return Arrays.equals(current, root);
+    }
+
+    public static void main(String[] args) throws Exception {
+        // Toy example: mine with 2 leading zero bytes (~65k expected attempts)
+        byte[] header = "v1|prev=abc|merkle=def|time=1700000000".getBytes();
+        var result = mine(header, 2);
+        System.out.printf("Found nonce=%d after %d attempts, hash=%s%n",
+            result.nonce(), result.attempts(),
+            bytesToHex(result.hash()).substring(0, 16) + "...");
+
+        double newDiff = adjustDifficulty(50e12, 12 * 24 * 3600L);
+        System.out.printf("New difficulty after 12-day period: %.2fT%n", newDiff / 1e12);
+    }
+
+    static String bytesToHex(byte[] b) {
+        StringBuilder sb = new StringBuilder();
+        for (byte x : b) sb.append(String.format("%02x", x &amp; 0xFF));
+        return sb.toString();
+    }
+}
+</code></pre></div>
+
+        <!-- GO -->
+        <div class="ct-panel" data-tab="bc-go"><pre><code>package consensus
+
+import (
+	"crypto/sha256"
+	"encoding/binary"
+	"encoding/hex"
+	"errors"
+	"math/big"
+)
+
+// ── SHA-256 helpers ────────────────────────────────────────────────────
+
+func doubleSHA256(data []byte) [32]byte {
+	first  := sha256.Sum256(data)
+	return sha256.Sum256(first[:])
+}
+
+// ── PoW Mining ─────────────────────────────────────────────────────────
+
+type MineResult struct {
+	Nonce    uint32
+	Hash     [32]byte
+	Attempts uint64
+}
+
+func MineBlock(header []byte, leadingZeroBytes int) (MineResult, error) {
+	buf := make([]byte, len(header)+4)
+	copy(buf, header)
+
+	for nonce := uint32(0); ; nonce++ {
+		binary.LittleEndian.PutUint32(buf[len(header):], nonce)
+		h := doubleSHA256(buf)
+
+		ok := true
+		for i := range leadingZeroBytes {
+			if h[i] != 0 {
+				ok = false
+				break
+			}
+		}
+		if ok {
+			return MineResult{Nonce: nonce, Hash: h, Attempts: uint64(nonce) + 1}, nil
+		}
+		if nonce == 0xFFFFFFFF {
+			return MineResult{}, errors.New("nonce space exhausted")
+		}
+	}
+}
+
+// ── Difficulty Adjustment ──────────────────────────────────────────────
+
+const targetTimespan = int64(2016 * 600) // 2 weeks in seconds
+
+func AdjustTarget(oldTarget *big.Int, actualSeconds int64) *big.Int {
+	// Clamp
+	if actualSeconds < targetTimespan/4 {
+		actualSeconds = targetTimespan / 4
+	} else if actualSeconds > targetTimespan*4 {
+		actualSeconds = targetTimespan * 4
+	}
+
+	newTarget := new(big.Int).Mul(oldTarget, big.NewInt(actualSeconds))
+	newTarget.Div(newTarget, big.NewInt(targetTimespan))
+	return newTarget
+}
+
+// ── Longest-Chain Selection ────────────────────────────────────────────
+
+type BlockRecord struct {
+	PrevHash string
+	Work     *big.Int // proportional to 1/target
+}
+
+func SelectBestChain(tips []string, blockMap map[string]BlockRecord) string {
+	bestTip := ""
+	bestWork := new(big.Int)
+
+	for _, tip := range tips {
+		totalWork := new(big.Int)
+		curr := tip
+		for {
+			b, ok := blockMap[curr]
+			if !ok {
+				break
+			}
+			totalWork.Add(totalWork, b.Work)
+			curr = b.PrevHash
+		}
+		if totalWork.Cmp(bestWork) > 0 {
+			bestWork = totalWork
+			bestTip = tip
+		}
+	}
+	return bestTip
+}
+
+// ── Merkle Proof Verification ──────────────────────────────────────────
+
+type ProofStep struct {
+	Sibling        [32]byte
+	SiblingIsRight bool
+}
+
+func VerifyMerkleProof(txHash [32]byte, proof []ProofStep, root [32]byte) bool {
+	current := txHash
+	for _, step := range proof {
+		var combined [64]byte
+		if step.SiblingIsRight {
+			copy(combined[:32], current[:])
+			copy(combined[32:], step.Sibling[:])
+		} else {
+			copy(combined[:32], step.Sibling[:])
+			copy(combined[32:], current[:])
+		}
+		current = doubleSHA256(combined[:])
+	}
+	return current == root
+}
+
+// ── Example main (in cmd/main.go) ─────────────────────────────────────
+/*
+func main() {
+	header := []byte("v1|prev=abc|merkle=def|time=1700000000")
+	result, err := consensus.MineBlock(header, 2)
+	if err != nil { log.Fatal(err) }
+	fmt.Printf("nonce=%d hash=%s... attempts=%d\n",
+		result.Nonce, hex.EncodeToString(result.Hash[:8]), result.Attempts)
+}
+*/
+_ = hex.EncodeToString // suppress unused import warning in snippet
+</code></pre></div>
+      </div>
+    </details>
+
+    <!-- ========================================================== -->
+    <h2 id="summary">10. Summary</h2>
+
+    <p>Blockchain consensus is fundamentally the problem of agreeing on a shared history in the presence of Byzantine adversaries — participants who may actively lie, collude, or attempt to rewrite the past. The theoretical limits were established decades before Bitcoin: FLP impossibility, the 3f+1 bound, and the CAP theorem all constrain what is achievable. Every consensus protocol navigates these constraints differently.</p>
+
+    <div class="math-glossary">
+      <div class="mg-row">
+        <div class="mg-term">Nakamoto PoW</div>
+        <div class="mg-def">Sidesteps identity with proof-of-physical-work. Open, decentralized, energy-intensive. Probabilistic finality. Vulnerable to 51% attack and selfish mining above 33%. The longest-chain rule converges on truth over time but never achieves irreversibility in finite time.</div>
+      </div>
+      <div class="mg-row">
+        <div class="mg-term">Proof of Stake</div>
+        <div class="mg-def">Replaces energy with economic stake. Comparable attack cost to PoW but attacks are detectable and punishable by slashing. Deterministic finality achievable (~12 min on Ethereum) via Casper FFG. Requires defense against long-range attacks via weak subjectivity checkpoints.</div>
+      </div>
+      <div class="mg-row">
+        <div class="mg-term">BFT (PBFT / Tendermint / HotStuff)</div>
+        <div class="mg-def">Deterministic finality in a single round. Requires known, bounded validator set (limits decentralization). FLP-constrained: halts under partition rather than forking. HotStuff achieves O(n) communication via threshold signatures. The workhorse of high-performance L1 chains and enterprise blockchains.</div>
+      </div>
+    </div>
+
+    <p>The design space is not static. Current research explores:</p>
+    <ul>
+      <li><strong>DAG-based consensus</strong> (Narwhal/Bullshark, IOTA): replace linear chains with directed acyclic graphs to increase parallelism and throughput</li>
+      <li><strong>Avalanche</strong>: randomized sub-sampling gossip protocol achieving metastable consensus with $O(k \log n)$ messages</li>
+      <li><strong>Ethereum PBS (Proposer/Builder Separation)</strong>: separating block building from block proposing to reduce MEV extraction and validator centralization pressure</li>
+      <li><strong>Single-slot finality</strong>: Ethereum's long-term goal — deterministic finality within one 12-second slot rather than 12 minutes</li>
+    </ul>
+
+    <p>The Byzantine Generals Problem turns 43 years old in 2025. Satoshi solved the open-internet version not by clever protocol design alone, but by introducing a new resource — provably spent electricity — as a vote. That reframing made trustless global consensus practical. The decade since has been an exploration of the enormous design space that insight opened up.</p>
+
+    <div class="callout">
+      <div class="label">KEY TAKEAWAYS</div>
+      <ul style="margin:6px 0; padding-left:18px;">
+        <li>Honest consensus requires &gt;⅔ of nodes (by weight) to be honest — this is a mathematical lower bound, not a design choice.</li>
+        <li>No deterministic protocol can guarantee both safety and liveness in an asynchronous network (FLP). Every real system makes a trade-off.</li>
+        <li>PoW's genius: replace unverifiable identity with verifiable physical work. Cost to Sybil = cost to compute.</li>
+        <li>PoS's economics: attack cost is proportional to your own stake — rational attackers don't attack.</li>
+        <li>BFT protocols give you deterministic finality and high throughput, at the cost of permissionless participation and CAP-theorem liveness.</li>
+        <li>The blockchain trilemma (decentralization, security, scalability) is not a law but a statement about current engineering trade-offs. Layer-2 solutions, DAGs, and threshold cryptography are actively pushing the frontier.</li>
+      </ul>
+    </div>
+
+  </article>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  // ── Code tab switching ────────────────────────────────────────────────
+  document.querySelectorAll('.ct-header').forEach(header => {
+    header.querySelectorAll('.ct-tab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const panel = btn.closest('.code-tabs');
+        const tabId = btn.dataset.tab;
+        panel.querySelectorAll('.ct-tab').forEach(b => b.classList.remove('active'));
+        panel.querySelectorAll('.ct-panel').forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+        panel.querySelector(`.ct-panel[data-tab="${tabId}"]`).classList.add('active');
+      });
+    });
+  });
+
+  // ── Difficulty slider display ─────────────────────────────────────────
+  const diffSlider = document.getElementById('sim-difficulty');
+  const diffVal    = document.getElementById('sim-diff-val');
+  diffSlider.addEventListener('input', () => {
+    diffVal.textContent = diffSlider.value;
+  });
+
+  // ── djb2 hash (simplified, NOT SHA-256) ──────────────────────────────
+  function djb2(str) {
+    let h = 5381;
+    for (let i = 0; i < str.length; i++) {
+      h = Math.imul(h, 33) ^ str.charCodeAt(i);
+      h |= 0;
+    }
+    return h >>> 0;
+  }
+
+  // Apply djb2 multiple times and combine into a 32-hex-char pseudo-hash
+  function simHash(nonce, seed) {
+    let a = djb2(seed + nonce.toString());
+    let b = djb2(a.toString() + "salt1");
+    let c = djb2(b.toString() + "salt2");
+    let d = djb2(c.toString() + "salt3");
+    // Produce 32 hex chars (128 bits) for display
+    return (
+      a.toString(16).padStart(8, '0') +
+      b.toString(16).padStart(8, '0') +
+      c.toString(16).padStart(8, '0') +
+      d.toString(16).padStart(8, '0')
+    );
+  }
+
+  function hashPassesDifficulty(hashHex, zeros) {
+    for (let i = 0; i < zeros; i++) {
+      if (hashHex[i] !== '0') return false;
+    }
+    return true;
+  }
+
+  // ── Simulation state ──────────────────────────────────────────────────
+  let simRunning = false;
+  let simAnimFrame = null;
+  const LOG_ROWS = 8;
+  const SEED = "prevhash:0x00000abc|merkle:0xdeadbeef|ts:1700000000";
+
+  const logRowsEl   = document.getElementById('sim-log-rows');
+  const statusEl    = document.getElementById('sim-status');
+  const attemptsEl  = document.getElementById('sim-attempts');
+  const timeEl      = document.getElementById('sim-time');
+  const resultEl    = document.getElementById('sim-result');
+  const nonceDispEl = document.getElementById('sim-nonce-disp');
+  const mineBtn     = document.getElementById('sim-mine-btn');
+
+  let logBuffer = [];  // array of {nonce, hash, pass}
+  let totalAttempts = 0;
+  let startTime = 0;
+  let currentNonce = 0;
+  let targetZeros = 2;
+  let foundResult = null;
+
+  function renderLog() {
+    const rows = logBuffer.slice(-LOG_ROWS);
+    let svg = '';
+    rows.forEach((row, i) => {
+      const y = 52 + i * 26;
+      const passColor = row.pass ? '#34d399' : '#374151';
+      const passText  = row.pass ? '✓ YES' : '✗';
+      const hashColor = row.pass ? '#34d399' : (i === rows.length - 1 ? '#c4b5fd' : '#4b5563');
+      svg += `<text x="16"  y="${y}" fill="#8a93a6" font-family="monospace" font-size="11">${row.nonce.toString().padStart(7,' ')}</text>`;
+      svg += `<text x="150" y="${y}" fill="${hashColor}" font-family="monospace" font-size="10">${row.hash}</text>`;
+      svg += `<text x="490" y="${y}" fill="${passColor}" font-family="monospace" font-size="11" font-weight="${row.pass ? 'bold' : 'normal'}">${passText}</text>`;
+    });
+    logRowsEl.innerHTML = svg;
+  }
+
+  function simStep() {
+    if (!simRunning) return;
+    const zeros = parseInt(diffSlider.value, 10);
+
+    // Run a batch of attempts per frame for responsiveness
+    const BATCH = zeros <= 2 ? 50 : zeros === 3 ? 200 : 800;
+
+    for (let i = 0; i < BATCH && simRunning; i++) {
+      const hash = simHash(currentNonce, SEED);
+      const pass = hashPassesDifficulty(hash, zeros);
+
+      logBuffer.push({ nonce: currentNonce, hash, pass });
+      if (logBuffer.length > LOG_ROWS * 4) logBuffer.shift();
+
+      totalAttempts++;
+      nonceDispEl.textContent = currentNonce;
+
+      if (pass) {
+        foundResult = { nonce: currentNonce, hash };
+        simRunning = false;
+        const elapsed = performance.now() - startTime;
+        attemptsEl.textContent = totalAttempts.toLocaleString();
+        timeEl.textContent = elapsed.toFixed(1);
+        resultEl.textContent = `Block found! Nonce=${currentNonce}, Hash=0x${hash}`;
+        resultEl.style.color = '#34d399';
+        statusEl.setAttribute('fill', '#34d399');
+        statusEl.textContent = `Block found! Nonce=${currentNonce}  Hash=0x${hash.substring(0,16)}...`;
+        mineBtn.textContent = 'Mine!';
+        mineBtn.disabled = false;
+        renderLog();
+        return;
+      }
+      currentNonce++;
+    }
+
+    attemptsEl.textContent = totalAttempts.toLocaleString();
+    const elapsed = performance.now() - startTime;
+    timeEl.textContent = elapsed.toFixed(1);
+    statusEl.textContent = `Mining... nonce=${currentNonce}  last hash=0x${logBuffer[logBuffer.length-1]?.hash.substring(0,12) ?? ''}...`;
+    renderLog();
+
+    simAnimFrame = requestAnimationFrame(simStep);
+  }
+
+  window.simMine = function() {
+    if (simRunning) return;
+    simReset();
+    simRunning = true;
+    startTime = performance.now();
+    mineBtn.textContent = 'Mining...';
+    mineBtn.disabled = true;
+    statusEl.setAttribute('fill', '#8a93a6');
+    simAnimFrame = requestAnimationFrame(simStep);
+  };
+
+  window.simReset = function() {
+    simRunning = false;
+    if (simAnimFrame) cancelAnimationFrame(simAnimFrame);
+    simAnimFrame = null;
+    logBuffer = [];
+    totalAttempts = 0;
+    currentNonce = 0;
+    foundResult = null;
+    nonceDispEl.textContent = '0';
+    attemptsEl.textContent = '0';
+    timeEl.textContent = '—';
+    resultEl.textContent = '—';
+    resultEl.style.color = '#8a93a6';
+    statusEl.setAttribute('fill', '#8a93a6');
+    statusEl.textContent = 'Ready. Set difficulty and click Mine!';
+    mineBtn.textContent = 'Mine!';
+    mineBtn.disabled = false;
+    logRowsEl.innerHTML = '';
+  };
+
+})();
+</script>
+<script defer src="../search-index.js"></script>
+<script defer src="../search.js"></script>
+</body>
+</html>

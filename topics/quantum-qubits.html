@@ -1,0 +1,1262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Qubits and Superposition — Deep Dive</title>
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError: false});"></script>
+</head>
+<body>
+<div id="tooltip"></div>
+
+<nav class="topic-nav">
+  <a class="back" href="../quantum-computing.html">← Back to Quantum Computing</a>
+  <div class="crumb">Deep Dives / <span class="topic-name">Qubits &amp; Superposition</span></div>
+</nav>
+
+<div class="topic-layout">
+  <aside class="topic-toc">
+    <h4>ON THIS PAGE</h4>
+    <ul>
+      <li><a href="#classical-vs-qubit">1. Classical bits vs qubits</a></li>
+      <li><a href="#state-vector">2. The qubit state vector</a></li>
+      <li><a href="#dirac">3. Dirac notation</a></li>
+      <li><a href="#born-rule">4. Superposition and the Born rule</a></li>
+      <li><a href="#bloch">5. The Bloch sphere</a></li>
+      <li><a href="#multi-qubit">6. Multi-qubit systems</a></li>
+      <li><a href="#decoherence">7. Measurement and decoherence</a></li>
+      <li><a href="#implementations">8. Physical implementations</a></li>
+      <li><a href="#explorer">9. Bloch sphere explorer</a></li>
+      <li><a href="#source">10. Source code</a></li>
+      <li><a href="#summary">11. Summary</a></li>
+    </ul>
+  </aside>
+
+  <article class="topic-content">
+    <h1>Qubits and Superposition</h1>
+    <p class="subtitle">The language of quantum computing — from two-state quantum systems and complex amplitudes to the Bloch sphere, multi-qubit tensor products, decoherence, and the physical platforms fighting to keep qubits coherent long enough to compute.</p>
+    <div class="meta-tags">
+      <span>Prereq: complex numbers, linear algebra basics</span>
+      <span>Time to read: ~35 min</span>
+      <span>Interactive figures: 1</span>
+    </div>
+
+    <!-- ============================================================ -->
+    <h2 id="classical-vs-qubit">1. Classical bits vs qubits</h2>
+
+    <p>A classical bit is the simplest unit of information: it is either 0 or it is 1, no middle ground. Every computation your laptop has ever run comes down to billions of these binary switches flipping between two voltage levels.</p>
+
+    <p>A <em>qubit</em> (quantum bit) is a two-state quantum mechanical system. Before you measure it, it does not have a definite value of 0 or 1. It exists in a <strong>superposition</strong> of both — meaning its state is described by two complex numbers, called <em>probability amplitudes</em>, one for each basis state.</p>
+
+    <div class="callout">
+      <div class="label">THE KEY DISTINCTION</div>
+      <p style="margin:6px 0">A qubit is not "a bit that is 0 and 1 at the same time." It is a unit vector in a two-dimensional complex Hilbert space. The components of that vector are amplitudes. Quantum algorithms work by manipulating those amplitudes so that correct answers experience <strong>constructive interference</strong> and wrong answers experience <strong>destructive interference</strong> — the same phenomenon that makes noise-canceling headphones work, but in probability space.</p>
+    </div>
+
+    <p>Physical realizations of qubits exploit two-level quantum systems found in nature:</p>
+    <ul>
+      <li><strong>Electron spin</strong> — spin-up ($|\uparrow\rangle$) and spin-down ($|\downarrow\rangle$) along a chosen axis.</li>
+      <li><strong>Photon polarization</strong> — horizontal and vertical polarization states.</li>
+      <li><strong>Superconducting Josephson junction</strong> — Cooper-pair current flowing clockwise vs. counterclockwise (or two lowest energy levels of an anharmonic LC oscillator, the "transmon").</li>
+      <li><strong>Trapped ion energy levels</strong> — ground and first excited electronic states of an ion held in an electromagnetic trap.</li>
+      <li><strong>Neutral atom</strong> — hyperfine ground states of atoms like rubidium or cesium.</li>
+    </ul>
+
+    <p>What all these share: they are genuinely quantum mechanical, so coherent superpositions are possible in principle. The engineering challenge is keeping environmental noise from destroying that superposition before the computation finishes.</p>
+
+    <!-- ============================================================ -->
+    <h2 id="state-vector">2. The qubit state vector</h2>
+
+    <p>Quantum mechanics represents the state of a qubit as a unit vector in $\mathbb{C}^2$ — a two-dimensional complex vector space. Using the <em>computational basis</em> $\{|0\rangle, |1\rangle\}$, any qubit state is written:</p>
+
+    <div class="math-display">$$|\psi\rangle = \alpha|0\rangle + \beta|1\rangle, \quad \alpha, \beta \in \mathbb{C}, \quad |\alpha|^2 + |\beta|^2 = 1$$</div>
+
+    <p>The constraint $|\alpha|^2 + |\beta|^2 = 1$ is the <em>normalization condition</em> — it ensures that when you measure the qubit, the probabilities of the two outcomes sum to one.</p>
+
+    <p>The computational basis vectors as column vectors:</p>
+
+    <div class="math-display">$$|0\rangle = \begin{pmatrix}1\\0\end{pmatrix}, \qquad |1\rangle = \begin{pmatrix}0\\1\end{pmatrix}$$</div>
+
+    <p>So a general qubit state is just a 2-vector:</p>
+
+    <div class="math-display">$$|\psi\rangle = \begin{pmatrix}\alpha\\\beta\end{pmatrix}$$</div>
+
+    <p><strong>Operations</strong> on qubits are $2\times 2$ unitary matrices: $U U^\dagger = I$. Unitarity guarantees that a normalized state stays normalized — the total probability is always 1.</p>
+
+    <h3>Key named states</h3>
+    <p>Several states appear so often they have names:</p>
+    <ul>
+      <li>$|+\rangle = \dfrac{1}{\sqrt{2}}\begin{pmatrix}1\\1\end{pmatrix} = \dfrac{1}{\sqrt{2}}(|0\rangle + |1\rangle)$ — equal superposition, both amplitudes positive (in-phase)</li>
+      <li>$|-\rangle = \dfrac{1}{\sqrt{2}}\begin{pmatrix}1\\-1\end{pmatrix} = \dfrac{1}{\sqrt{2}}(|0\rangle - |1\rangle)$ — equal superposition, out-of-phase (destructive in $X$-basis)</li>
+      <li>$|{+i}\rangle = \dfrac{1}{\sqrt{2}}\begin{pmatrix}1\\i\end{pmatrix} = \dfrac{1}{\sqrt{2}}(|0\rangle + i|1\rangle)$ — $+Y$ eigenstate</li>
+      <li>$|{-i}\rangle = \dfrac{1}{\sqrt{2}}\begin{pmatrix}1\\-i\end{pmatrix} = \dfrac{1}{\sqrt{2}}(|0\rangle - i|1\rangle)$ — $-Y$ eigenstate</li>
+    </ul>
+
+    <div class="callout" style="border-color: var(--accent-2);">
+      <div class="label" style="color: var(--accent-2);">GLOBAL PHASE</div>
+      <p style="margin:6px 0">Two states that differ only by a global phase $e^{i\theta}$ are physically identical: $|\psi\rangle$ and $e^{i\theta}|\psi\rangle$ give the same measurement outcomes for every observable. This is why we can always choose $\alpha$ to be real and non-negative in the Bloch sphere parameterization. Only <em>relative</em> phase between $\alpha$ and $\beta$ is physically meaningful.</p>
+    </div>
+
+    <!-- ============================================================ -->
+    <h2 id="dirac">3. Dirac notation</h2>
+
+    <p>Paul Dirac invented a compact bra-ket notation that makes quantum mechanics calculations much cleaner. Here is the dictionary:</p>
+
+    <table style="width:100%; border-collapse:collapse; margin:18px 0;">
+      <thead>
+        <tr style="background:var(--bg-3); color:var(--accent-2); font-family:var(--mono); font-size:13px;">
+          <th style="padding:10px 14px; text-align:left; border-bottom:1px solid var(--border);">Symbol</th>
+          <th style="padding:10px 14px; text-align:left; border-bottom:1px solid var(--border);">Name</th>
+          <th style="padding:10px 14px; text-align:left; border-bottom:1px solid var(--border);">Meaning</th>
+        </tr>
+      </thead>
+      <tbody style="font-size:14px;">
+        <tr style="border-bottom:1px solid var(--border);">
+          <td style="padding:10px 14px; font-family:var(--mono);">$|\psi\rangle$</td>
+          <td style="padding:10px 14px; color:var(--text-dim);">ket</td>
+          <td style="padding:10px 14px;">Column vector — the quantum state</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border); background:var(--bg-2);">
+          <td style="padding:10px 14px; font-family:var(--mono);">$\langle\psi|$</td>
+          <td style="padding:10px 14px; color:var(--text-dim);">bra</td>
+          <td style="padding:10px 14px;">Row vector — the conjugate transpose of $|\psi\rangle$</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border);">
+          <td style="padding:10px 14px; font-family:var(--mono);">$\langle\phi|\psi\rangle$</td>
+          <td style="padding:10px 14px; color:var(--text-dim);">bracket / inner product</td>
+          <td style="padding:10px 14px;">Scalar overlap (probability amplitude from $|\phi\rangle$ to $|\psi\rangle$)</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border); background:var(--bg-2);">
+          <td style="padding:10px 14px; font-family:var(--mono);">$|\psi\rangle\langle\phi|$</td>
+          <td style="padding:10px 14px; color:var(--text-dim);">outer product</td>
+          <td style="padding:10px 14px;">$2\times2$ matrix (an operator)</td>
+        </tr>
+        <tr>
+          <td style="padding:10px 14px; font-family:var(--mono);">$\langle O\rangle = \langle\psi|O|\psi\rangle$</td>
+          <td style="padding:10px 14px; color:var(--text-dim);">expectation value</td>
+          <td style="padding:10px 14px;">Average measurement outcome of observable $O$ in state $|\psi\rangle$</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>The Pauli operators</h3>
+    <p>Three Hermitian unitary matrices form the foundation of single-qubit operations. Together with the identity $I$, they span the space of $2\times2$ Hermitian matrices:</p>
+
+    <div class="math-display">$$X = \begin{pmatrix}0&1\\1&0\end{pmatrix}, \qquad Y = \begin{pmatrix}0&-i\\i&0\end{pmatrix}, \qquad Z = \begin{pmatrix}1&0\\0&-1\end{pmatrix}$$</div>
+
+    <p>Their actions on the computational basis:</p>
+    <ul>
+      <li>$Z|0\rangle = |0\rangle$ (no change), $Z|1\rangle = -|1\rangle$ (phase flip — the $Z$ gate)</li>
+      <li>$X|0\rangle = |1\rangle$, $X|1\rangle = |0\rangle$ (bit flip — quantum NOT gate)</li>
+      <li>$Y|0\rangle = i|1\rangle$, $Y|1\rangle = -i|0\rangle$ (combined bit and phase flip with factor $i$)</li>
+    </ul>
+
+    <p>The Paulis satisfy $X^2 = Y^2 = Z^2 = I$, $XY = iZ$, $YZ = iX$, $ZX = iY$, and their anticommutator is $\{X,Y\} = 0$ (they anticommute). Every single-qubit unitary can be written as $e^{i\theta \hat{n}\cdot\vec{\sigma}/2}$ where $\hat{n}$ is a unit vector in $\mathbb{R}^3$ and $\vec{\sigma} = (X,Y,Z)$.</p>
+
+    <h3>The Hadamard gate</h3>
+    <p>The most important gate for creating superposition:</p>
+    <div class="math-display">$$H = \frac{1}{\sqrt{2}}\begin{pmatrix}1&1\\1&-1\end{pmatrix}$$</div>
+    <p>$H|0\rangle = |+\rangle$, $H|1\rangle = |-\rangle$, $H|+\rangle = |0\rangle$, $H|-\rangle = |1\rangle$. Notice $H^2 = I$: applying Hadamard twice returns to the original state.</p>
+
+    <!-- ============================================================ -->
+    <h2 id="born-rule">4. Superposition and the Born rule</h2>
+
+    <p>What does it mean for a qubit to be in superposition $|\psi\rangle = \alpha|0\rangle + \beta|1\rangle$? When you measure it in the computational basis, you get a random outcome governed by <strong>Max Born's rule</strong> (1926):</p>
+
+    <div class="math-display">$$P(\text{outcome} = 0) = |\alpha|^2, \qquad P(\text{outcome} = 1) = |\beta|^2$$</div>
+
+    <p>After the measurement, the state <em>collapses</em> — it becomes the eigenstate corresponding to the observed outcome. Measure 0 and the qubit is now $|0\rangle$; measure 1 and it is $|1\rangle$. The superposition is destroyed.</p>
+
+    <p><strong>Interference</strong> is the key mechanism. Because amplitudes are complex numbers, not probabilities, they can add constructively or destructively before you square them. Consider applying Hadamard twice:</p>
+
+    <div class="math-display">$$H|0\rangle = \frac{1}{\sqrt{2}}|0\rangle + \frac{1}{\sqrt{2}}|1\rangle = |+\rangle$$</div>
+    <div class="math-display">$$H|+\rangle = H\left(\frac{1}{\sqrt{2}}|0\rangle + \frac{1}{\sqrt{2}}|1\rangle\right) = \frac{1}{\sqrt{2}}H|0\rangle + \frac{1}{\sqrt{2}}H|1\rangle$$</div>
+    <div class="math-display">$$= \frac{1}{\sqrt{2}}\cdot\frac{1}{\sqrt{2}}(|0\rangle + |1\rangle) + \frac{1}{\sqrt{2}}\cdot\frac{1}{\sqrt{2}}(|0\rangle - |1\rangle) = |0\rangle$$</div>
+
+    <p>The $|1\rangle$ components cancel: $+\tfrac{1}{2}|1\rangle - \tfrac{1}{2}|1\rangle = 0$. This is destructive interference. The $|0\rangle$ components reinforce: $+\tfrac{1}{2}|0\rangle + \tfrac{1}{2}|0\rangle = |0\rangle$. Constructive interference.</p>
+
+    <div class="callout" style="border-color: var(--good);">
+      <div class="label" style="color: var(--good);">HOW QUANTUM ALGORITHMS WORK</div>
+      <p style="margin:6px 0">A quantum algorithm starts with all qubits in $|0\rangle$, creates a superposition over all possible inputs (using Hadamard or similar), applies a sequence of gates that encodes the problem, then uses interference to amplify probability amplitude on correct answers and cancel it on wrong ones. Finally, a measurement reads out an answer with high probability. The art is designing the interference pattern — that is what Shor's, Grover's, and other algorithms actually do.</p>
+    </div>
+
+    <h3>A concrete example: phase kickback</h3>
+    <p>If $|\psi\rangle = \frac{1}{\sqrt{2}}(|0\rangle + |1\rangle)$ and we apply $Z$, we get $\frac{1}{\sqrt{2}}(|0\rangle - |1\rangle) = |-\rangle$. The measurement probabilities haven't changed — both states give 50/50 — but the <em>relative phase</em> has flipped. This phase is invisible if we measure immediately, but crucially visible if we apply another Hadamard: $H|-\rangle = |1\rangle$. The phase difference has been converted to a detectable amplitude difference. This "phase kickback" trick is the engine behind quantum phase estimation.</p>
+
+    <!-- ============================================================ -->
+    <h2 id="bloch">5. The Bloch sphere</h2>
+
+    <p>Because global phase is unobservable, the physical state of a qubit is really parameterized by only two real numbers, not four (the real and imaginary parts of $\alpha$ and $\beta$). We can always write:</p>
+
+    <div class="math-display">$$|\psi\rangle = \cos\!\left(\frac{\theta}{2}\right)|0\rangle + e^{i\phi}\sin\!\left(\frac{\theta}{2}\right)|1\rangle$$</div>
+
+    <p>where $\theta \in [0, \pi]$ is the <em>polar angle</em> and $\phi \in [0, 2\pi)$ is the <em>azimuthal angle</em>. The factor of $\frac{1}{2}$ in $\theta/2$ is important: it means that antipodal points on the sphere correspond to orthogonal states, not opposite states. The north and south poles of this unit sphere in $\mathbb{R}^3$ — the <strong>Bloch sphere</strong> — represent the two basis states:</p>
+
+    <table class="rank-table" style="margin:18px 0;">
+      <thead>
+        <tr>
+          <th>$\theta$</th>
+          <th>$\phi$</th>
+          <th>State</th>
+          <th>Location</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>$0$</td><td>any</td><td>$|0\rangle$</td><td>North pole</td></tr>
+        <tr><td>$\pi$</td><td>any</td><td>$|1\rangle$</td><td>South pole</td></tr>
+        <tr><td>$\pi/2$</td><td>$0$</td><td>$|+\rangle$</td><td>$+x$ equator</td></tr>
+        <tr><td>$\pi/2$</td><td>$\pi$</td><td>$|-\rangle$</td><td>$-x$ equator</td></tr>
+        <tr><td>$\pi/2$</td><td>$\pi/2$</td><td>$|{+i}\rangle$</td><td>$+y$ equator</td></tr>
+        <tr><td>$\pi/2$</td><td>$3\pi/2$</td><td>$|{-i}\rangle$</td><td>$-y$ equator</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Gate actions as rotations</h3>
+    <p>Every single-qubit unitary $U$ acts on the Bloch sphere as a rotation of $\mathbb{R}^3$. This is a deep fact stemming from the double cover $SU(2) \to SO(3)$. The key gates:</p>
+    <ul>
+      <li><strong>$X$ (Pauli-X / quantum NOT)</strong>: $180°$ rotation around the $x$-axis. Swaps north and south poles ($|0\rangle \leftrightarrow |1\rangle$).</li>
+      <li><strong>$Y$ (Pauli-Y)</strong>: $180°$ rotation around the $y$-axis. $|0\rangle \to i|1\rangle$, $|1\rangle \to -i|0\rangle$.</li>
+      <li><strong>$Z$ (Pauli-Z / phase flip)</strong>: $180°$ rotation around the $z$-axis. $|+\rangle \leftrightarrow |-\rangle$, poles unchanged.</li>
+      <li><strong>$H$ (Hadamard)</strong>: $180°$ rotation around the $(X+Z)/\sqrt{2}$ axis (the diagonal between $x$ and $z$). Maps $|0\rangle \to |+\rangle$, $|1\rangle \to |-\rangle$, and vice versa.</li>
+      <li><strong>$R_x(\theta) = e^{-i\theta X/2}$</strong>: rotation by $\theta$ radians around the $x$-axis. Similarly $R_y, R_z$.</li>
+      <li><strong>$T$ gate</strong>: $Z$-axis rotation by $\pi/4$. Along with $H$, generates a dense subset of $SU(2)$.</li>
+    </ul>
+
+    <div class="callout">
+      <div class="label">MIXED STATES</div>
+      <p style="margin:6px 0">The Bloch sphere surface represents <em>pure states</em> — states with complete quantum information. Mixed states (statistical ensembles arising from decoherence) correspond to points strictly inside the sphere. The fully mixed state $\rho = I/2$ is the center. Decoherence moves the Bloch vector inward.</p>
+    </div>
+
+    <!-- ============================================================ -->
+    <h2 id="multi-qubit">6. Multi-qubit systems and tensor products</h2>
+
+    <p>Two qubits together live in the tensor product space $\mathbb{C}^2 \otimes \mathbb{C}^2 = \mathbb{C}^4$. The state of a two-qubit system is a unit vector in this 4-dimensional space:</p>
+
+    <div class="math-display">$$|\psi\rangle = \alpha_{00}|00\rangle + \alpha_{01}|01\rangle + \alpha_{10}|10\rangle + \alpha_{11}|11\rangle, \qquad \sum_{x \in \{0,1\}^2}|\alpha_x|^2 = 1$$</div>
+
+    <p>The computational basis for two qubits as column vectors:</p>
+    <div class="math-display">$$|00\rangle = \begin{pmatrix}1\\0\\0\\0\end{pmatrix}, \quad |01\rangle = \begin{pmatrix}0\\1\\0\\0\end{pmatrix}, \quad |10\rangle = \begin{pmatrix}0\\0\\1\\0\end{pmatrix}, \quad |11\rangle = \begin{pmatrix}0\\0\\0\\1\end{pmatrix}$$</div>
+
+    <h3>Product states vs entangled states</h3>
+    <p>A state is a <em>product state</em> if it factors:</p>
+    <div class="math-display">$$|\psi\rangle = |\psi_A\rangle \otimes |\psi_B\rangle = \begin{pmatrix}\alpha_A\\\beta_A\end{pmatrix} \otimes \begin{pmatrix}\alpha_B\\\beta_B\end{pmatrix} = \begin{pmatrix}\alpha_A\alpha_B\\\alpha_A\beta_B\\\beta_A\alpha_B\\\beta_A\beta_B\end{pmatrix}$$</div>
+
+    <p>In a product state, the two qubits are independent: measuring one tells you nothing about the other.</p>
+
+    <p>An <em>entangled state</em> cannot be written as a product. The Bell states are the maximally entangled two-qubit states:</p>
+    <div class="math-display">$$|\Phi^+\rangle = \frac{1}{\sqrt{2}}(|00\rangle + |11\rangle), \quad |\Phi^-\rangle = \frac{1}{\sqrt{2}}(|00\rangle - |11\rangle)$$</div>
+    <div class="math-display">$$|\Psi^+\rangle = \frac{1}{\sqrt{2}}(|01\rangle + |10\rangle), \quad |\Psi^-\rangle = \frac{1}{\sqrt{2}}(|01\rangle - |10\rangle)$$</div>
+
+    <p>In $|\Phi^+\rangle$: if you measure qubit A and get 0, qubit B is instantly in $|0\rangle$; if you get 1, qubit B is instantly in $|1\rangle$ — regardless of their spatial separation. This is what Einstein called "spooky action at a distance." (It cannot be used for faster-than-light communication because the measurement outcomes are random.)</p>
+
+    <h3>The exponential state space</h3>
+    <p>$n$ qubits require $2^n$ complex amplitudes. A 50-qubit system has $2^{50} \approx 10^{15}$ amplitudes — about a petabyte of complex numbers to store classically (using 16 bytes per complex number). A 300-qubit system has more amplitudes than atoms in the observable universe.</p>
+
+    <div class="callout" style="border-color: var(--warn);">
+      <div class="label" style="color: var(--warn);">THE DOUBLE-EDGED SWORD</div>
+      <p style="margin:6px 0">The exponential Hilbert space is both the source of quantum computational power and the reason classical simulation of deep quantum circuits is hard. But having $2^n$ amplitudes doesn't automatically give you $2^n$ speedup — you can only extract $n$ bits of information from $n$ qubits per measurement. The challenge is designing algorithms that squeeze useful answers out of this exponential space through interference.</p>
+    </div>
+
+    <h3>Two-qubit gates</h3>
+    <p>Two-qubit gates are $4\times4$ unitary matrices. The CNOT (controlled-NOT) gate is the canonical entangling gate:</p>
+    <div class="math-display">$$\text{CNOT} = \begin{pmatrix}1&0&0&0\\0&1&0&0\\0&0&0&1\\0&0&1&0\end{pmatrix}$$</div>
+    <p>It flips the target qubit (second) if and only if the control qubit (first) is $|1\rangle$. Together, $H$ and CNOT can create any Bell state: apply $H$ to qubit 1, then CNOT with qubit 1 as control to get $|\Phi^+\rangle$ from $|00\rangle$.</p>
+
+    <!-- ============================================================ -->
+    <h2 id="decoherence">7. Quantum measurement and decoherence</h2>
+
+    <h3>Projective measurement</h3>
+    <p>A general observable is a Hermitian operator $M = \sum_m m P_m$ where $m$ are the eigenvalues and $P_m = |m\rangle\langle m|$ are orthogonal projectors onto the corresponding eigenstates. Measuring $M$ on state $|\psi\rangle$:</p>
+    <ul>
+      <li>Outcome $m$ occurs with probability $p_m = \langle\psi|P_m|\psi\rangle = \|P_m|\psi\rangle\|^2$</li>
+      <li>Post-measurement state collapses to $\dfrac{P_m|\psi\rangle}{\sqrt{p_m}}$</li>
+      <li>Expected value: $\langle M \rangle = \langle\psi|M|\psi\rangle = \sum_m m\, p_m$</li>
+    </ul>
+
+    <h3>Partial measurement</h3>
+    <p>For a two-qubit state $|\psi\rangle = \alpha|00\rangle + \beta|01\rangle + \gamma|10\rangle + \delta|11\rangle$, measuring only qubit 1 in the $Z$ basis:</p>
+    <ul>
+      <li>Outcome 0 with probability $|\alpha|^2 + |\beta|^2$; post-measurement state of the full system: $\dfrac{\alpha|00\rangle + \beta|01\rangle}{\sqrt{|\alpha|^2+|\beta|^2}}$</li>
+      <li>Outcome 1 with probability $|\gamma|^2 + |\delta|^2$; post-measurement state: $\dfrac{\gamma|10\rangle + \delta|11\rangle}{\sqrt{|\gamma|^2+|\delta|^2}}$</li>
+    </ul>
+
+    <h3>Density matrices</h3>
+    <p>The density matrix $\rho = |\psi\rangle\langle\psi|$ is a more general description of a quantum state. For a pure state it is a rank-1 projector with $\text{tr}(\rho^2) = 1$. A <em>mixed state</em> is a statistical ensemble:</p>
+    <div class="math-display">$$\rho = \sum_i p_i |\psi_i\rangle\langle\psi_i|, \qquad \text{tr}(\rho) = 1, \qquad \text{tr}(\rho^2) \leq 1$$</div>
+
+    <p>In the Bloch representation, $\rho = \frac{1}{2}(I + \vec{r}\cdot\vec{\sigma})$ where $\vec{r}$ is the Bloch vector. Pure state: $|\vec{r}| = 1$ (surface). Mixed state: $|\vec{r}| < 1$ (interior).</p>
+
+    <h3>Decoherence</h3>
+    <p>No qubit is perfectly isolated. It couples to thermal fluctuations, stray electromagnetic fields, and surrounding atoms. These interactions entangle the qubit with its environment, effectively tracing out the environmental degrees of freedom and turning a pure state into a mixed state. The off-diagonal elements of $\rho$ in the computational basis — the <em>coherences</em> — decay to zero. The qubit's superposition is lost.</p>
+
+    <p>Two key timescales for superconducting qubits:</p>
+    <ul>
+      <li><strong>$T_1$ (energy relaxation time)</strong>: time for $|1\rangle$ to decay to $|0\rangle$. Typical: $50{-}200\,\mu\text{s}$.</li>
+      <li><strong>$T_2$ (dephasing time)</strong>: time for off-diagonal elements of $\rho$ to decay. Always $T_2 \leq 2T_1$. Typical: $30{-}100\,\mu\text{s}$.</li>
+    </ul>
+
+    <p>Single-qubit gates take $\sim 10{-}50\,\text{ns}$; two-qubit gates $\sim 50{-}300\,\text{ns}$. With $T_2 \sim 50\,\mu\text{s}$, you get on the order of $10^3 - 10^4$ gates before decoherence destroys the computation. This is why quantum error correction — which encodes one logical qubit in many physical qubits — is necessary for fault-tolerant quantum computing.</p>
+
+    <div class="math-glossary">
+      <h4>Notation Reference</h4>
+      <dl>
+        <dt>$T_1$</dt><dd>Energy relaxation time. How long a $|1\rangle$ state survives before spontaneously decaying to $|0\rangle$.</dd>
+        <dt>$T_2$</dt><dd>Dephasing (transverse relaxation) time. How long coherences (off-diagonal $\rho$ elements) survive.</dd>
+        <dt>$T_2^*$</dt><dd>Inhomogeneous dephasing time (includes slow, reversible dephasing from qubit-to-qubit frequency variation; can be refocused with spin-echo).</dd>
+        <dt>$\rho$</dt><dd>Density matrix. Generalization of the state vector to mixed states and open quantum systems.</dd>
+        <dt>POVM</dt><dd>Positive Operator-Valued Measure. Generalized measurement model for realistic (non-ideal) detectors.</dd>
+      </dl>
+    </div>
+
+    <!-- ============================================================ -->
+    <h2 id="implementations">8. Physical implementations</h2>
+
+    <p>Five main platforms compete in the race toward practical quantum computation. Each makes different engineering trade-offs between coherence time, gate speed, connectivity, and scalability.</p>
+
+    <table class="rank-table" style="margin:18px 0;">
+      <thead>
+        <tr>
+          <th>Platform</th>
+          <th>Companies</th>
+          <th>Gate time</th>
+          <th>$T_2$</th>
+          <th>Connectivity</th>
+          <th>Temperature</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Superconducting transmon</strong></td>
+          <td style="color:var(--text-dim);">IBM, Google, Rigetti</td>
+          <td>$\sim 50\,\text{ns}$</td>
+          <td>$\sim 100\,\mu\text{s}$</td>
+          <td>2D nearest-neighbor lattice</td>
+          <td>$\sim 15\,\text{mK}$</td>
+        </tr>
+        <tr>
+          <td><strong>Trapped ion</strong></td>
+          <td style="color:var(--text-dim);">IonQ, Quantinuum, AQT</td>
+          <td>$\sim 100\,\mu\text{s}$</td>
+          <td>$\sim \text{seconds}$</td>
+          <td>All-to-all (within a trap)</td>
+          <td>Room temp. (trap) / UHV</td>
+        </tr>
+        <tr>
+          <td><strong>Photonic</strong></td>
+          <td style="color:var(--text-dim);">PsiQuantum, Xanadu</td>
+          <td>$\sim \text{ps}$ (fast)</td>
+          <td>Propagation-limited</td>
+          <td>Programmable chip routing</td>
+          <td>Room temperature</td>
+        </tr>
+        <tr>
+          <td><strong>Neutral atom</strong></td>
+          <td style="color:var(--text-dim);">QuEra, Atom Computing, Pasqal</td>
+          <td>$\sim 1\,\mu\text{s}$</td>
+          <td>$\sim \text{seconds}$</td>
+          <td>Reconfigurable 2D/3D arrays</td>
+          <td>$\sim \mu\text{K}$ (tweezers)</td>
+        </tr>
+        <tr>
+          <td><strong>NV centers (diamond)</strong></td>
+          <td style="color:var(--text-dim);">Quantum Diamond Tech.</td>
+          <td>$\sim 1\,\mu\text{s}$</td>
+          <td>$\sim \text{ms}$ at room temp.</td>
+          <td>Very limited, few qubits</td>
+          <td>Room temperature</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p><strong>Superconducting qubits</strong> currently lead in total qubit count and circuit depth for digital quantum computing. IBM's roadmap targets 100,000+ qubit chips by the late 2020s through modular interconnects. The main challenge: coherence times of $\sim 100\,\mu\text{s}$ require dilution refrigerators at $15\,\text{mK}$ and 2D connectivity requires SWAP overhead for non-adjacent gate operations.</p>
+
+    <p><strong>Trapped ions</strong> boast the longest coherence times and all-to-all connectivity, but gate speeds are $\sim 1000\times$ slower. They shine for high-fidelity algorithms on small qubit counts. Quantinuum's H-series machines routinely achieve two-qubit gate fidelities above $99.9\%$.</p>
+
+    <p><strong>Neutral atoms</strong> are an exciting rising platform: atoms in optical tweezer arrays can be rearranged mid-circuit, providing both programmable connectivity and mid-circuit measurement. QuEra's Aquila machine with 256 qubits is the first to demonstrate logical qubit operations beyond classical simulation.</p>
+
+    <!-- ============================================================ -->
+    <h2 id="explorer">9. Interactive: Bloch sphere explorer</h2>
+
+    <p>Adjust the polar angle $\theta$ and azimuthal angle $\phi$ to place a qubit state anywhere on the Bloch sphere. Click the preset buttons to jump to named states.</p>
+
+    <div class="viz-3d" id="bloch-explorer" style="padding: 24px; background: var(--bg-2); border-radius: 12px; border: 1px solid var(--border);">
+      <div style="display:flex; gap:24px; flex-wrap:wrap; align-items:flex-start;">
+        <div style="flex:0 0 auto;">
+          <svg id="bloch-svg" width="340" height="340" viewBox="0 0 340 340" style="background:var(--bg-3); border-radius:8px; border:1px solid var(--border);">
+            <!-- Background: sphere circle -->
+            <ellipse id="bloch-sphere-circle" cx="170" cy="170" rx="130" ry="130" fill="none" stroke="var(--border-light)" stroke-width="1.5"/>
+            <!-- Equator ellipse -->
+            <ellipse id="bloch-equator" cx="170" cy="170" rx="130" ry="38" fill="none" stroke="var(--border-light)" stroke-width="1" stroke-dasharray="5,4"/>
+            <!-- Meridian ellipse -->
+            <ellipse id="bloch-meridian" cx="170" cy="170" rx="38" ry="130" fill="none" stroke="var(--border-light)" stroke-width="1" stroke-dasharray="5,4"/>
+            <!-- Axes -->
+            <line id="bloch-xaxis" x1="170" y1="170" x2="302" y2="208" stroke="#f87171" stroke-width="1.5" marker-end="url(#arrowX)"/>
+            <line id="bloch-yaxis" x1="170" y1="170" x2="38" y2="208" stroke="#34d399" stroke-width="1.5" marker-end="url(#arrowY)"/>
+            <line id="bloch-zaxis" x1="170" y1="170" x2="170" y2="28" stroke="#60a5fa" stroke-width="1.5" marker-end="url(#arrowZ)"/>
+            <!-- Axis negative stubs -->
+            <line x1="170" y1="170" x2="104" y2="143" stroke="#f87171" stroke-width="1" stroke-dasharray="3,3" opacity="0.5"/>
+            <line x1="170" y1="170" x2="236" y2="143" stroke="#34d399" stroke-width="1" stroke-dasharray="3,3" opacity="0.5"/>
+            <line x1="170" y1="170" x2="170" y2="312" stroke="#60a5fa" stroke-width="1" stroke-dasharray="3,3" opacity="0.5"/>
+            <!-- Axis labels -->
+            <text x="308" y="213" fill="#f87171" font-family="monospace" font-size="13">x</text>
+            <text x="28" y="213" fill="#34d399" font-family="monospace" font-size="13">y</text>
+            <text x="175" y="22" fill="#60a5fa" font-family="monospace" font-size="13">z</text>
+            <!-- Pole labels -->
+            <text x="178" y="24" fill="#8a93a6" font-family="monospace" font-size="11"> |0⟩</text>
+            <text x="178" y="320" fill="#8a93a6" font-family="monospace" font-size="11"> |1⟩</text>
+            <!-- Arrow markers -->
+            <defs>
+              <marker id="arrowX" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                <path d="M0,0 L0,6 L8,3 z" fill="#f87171"/>
+              </marker>
+              <marker id="arrowY" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                <path d="M0,0 L0,6 L8,3 z" fill="#34d399"/>
+              </marker>
+              <marker id="arrowZ" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                <path d="M0,0 L0,6 L8,3 z" fill="#60a5fa"/>
+              </marker>
+              <marker id="arrowState" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                <path d="M0,0 L0,6 L8,3 z" fill="#a78bfa"/>
+              </marker>
+            </defs>
+            <!-- State vector line and dot (updated by JS) -->
+            <line id="bloch-state-line" x1="170" y1="170" x2="170" y2="40" stroke="#a78bfa" stroke-width="2.5" marker-end="url(#arrowState)"/>
+            <circle id="bloch-state-dot" cx="170" cy="40" r="5" fill="#a78bfa"/>
+          </svg>
+        </div>
+
+        <div style="flex:1; min-width:220px; display:flex; flex-direction:column; gap:16px;">
+          <!-- Sliders -->
+          <div>
+            <label style="display:flex; flex-direction:column; gap:6px; font-size:13px; color:var(--text-dim);">
+              <span>Polar $\theta$ = <strong id="theta-label">0°</strong></span>
+              <input type="range" id="theta-slider" min="0" max="180" value="0" style="width:100%; accent-color: var(--accent);">
+            </label>
+          </div>
+          <div>
+            <label style="display:flex; flex-direction:column; gap:6px; font-size:13px; color:var(--text-dim);">
+              <span>Azimuthal $\phi$ = <strong id="phi-label">0°</strong></span>
+              <input type="range" id="phi-slider" min="0" max="360" value="0" style="width:100%; accent-color: var(--accent-2);">
+            </label>
+          </div>
+
+          <!-- Preset buttons -->
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button class="btn" onclick="BlochExplorer.preset(0,0)">|0⟩</button>
+            <button class="btn" onclick="BlochExplorer.preset(180,0)">|1⟩</button>
+            <button class="btn" onclick="BlochExplorer.preset(90,0)">|+⟩</button>
+            <button class="btn" onclick="BlochExplorer.preset(90,180)">|-⟩</button>
+            <button class="btn" onclick="BlochExplorer.preset(90,90)">|i⟩</button>
+          </div>
+
+          <!-- State display -->
+          <div style="background:var(--bg-3); border-radius:8px; padding:14px; border:1px solid var(--border); font-size:13px;">
+            <div style="color:var(--text-dim); margin-bottom:8px; font-family:var(--mono); font-size:11px; letter-spacing:0.05em;">STATE VECTOR</div>
+            <div id="bloch-state-expr" style="font-family:var(--mono); color:var(--text); line-height:1.8;">|ψ⟩ = 1.000|0⟩ + 0.000|1⟩</div>
+          </div>
+
+          <!-- Probability display -->
+          <div style="background:var(--bg-3); border-radius:8px; padding:14px; border:1px solid var(--border); font-size:13px;">
+            <div style="color:var(--text-dim); margin-bottom:10px; font-family:var(--mono); font-size:11px; letter-spacing:0.05em;">MEASUREMENT PROBABILITIES</div>
+            <div style="margin-bottom:6px; display:flex; align-items:center; gap:10px;">
+              <span style="color:var(--text-dim); width:40px;">P(0)</span>
+              <div style="flex:1; background:var(--bg-2); border-radius:4px; height:10px; overflow:hidden; border:1px solid var(--border);">
+                <div id="bloch-p0-bar" style="height:100%; width:100%; background:linear-gradient(90deg, var(--accent), var(--accent-2)); transition:width 0.1s;"></div>
+              </div>
+              <span id="bloch-p0-val" style="font-family:var(--mono); color:var(--accent-2); width:50px; text-align:right;">1.000</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:10px;">
+              <span style="color:var(--text-dim); width:40px;">P(1)</span>
+              <div style="flex:1; background:var(--bg-2); border-radius:4px; height:10px; overflow:hidden; border:1px solid var(--border);">
+                <div id="bloch-p1-bar" style="height:100%; width:0%; background:linear-gradient(90deg, var(--accent-3), var(--warn)); transition:width 0.1s;"></div>
+              </div>
+              <span id="bloch-p1-val" style="font-family:var(--mono); color:var(--accent-3); width:50px; text-align:right;">0.000</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+    (function() {
+      'use strict';
+
+      var BlochExplorer = {
+        thetaDeg: 0,
+        phiDeg: 0,
+
+        preset: function(th, ph) {
+          document.getElementById('theta-slider').value = th;
+          document.getElementById('phi-slider').value = ph;
+          this.thetaDeg = th;
+          this.phiDeg = ph;
+          this.update();
+        },
+
+        project: function(sx, sy, sz) {
+          // Isometric-style projection for Bloch sphere
+          // x → right-ish, y → left-ish (depth), z → up
+          var SCALE = 115;
+          var OX = 170, OY = 170;
+          var cos30 = Math.cos(Math.PI / 6);
+          var sin30 = Math.sin(Math.PI / 6);
+          var screenX = OX + (sx - sy) * cos30 * SCALE * 0.7;
+          var screenY = OY - sz * SCALE + (sx + sy) * sin30 * SCALE * 0.35;
+          return { x: screenX, y: screenY };
+        },
+
+        update: function() {
+          var th = this.thetaDeg * Math.PI / 180;
+          var ph = this.phiDeg * Math.PI / 180;
+
+          var sx = Math.sin(th) * Math.cos(ph);
+          var sy = Math.sin(th) * Math.sin(ph);
+          var sz = Math.cos(th);
+
+          var pt = this.project(sx, sy, sz);
+          var center = { x: 170, y: 170 };
+
+          var line = document.getElementById('bloch-state-line');
+          var dot = document.getElementById('bloch-state-dot');
+          line.setAttribute('x1', center.x);
+          line.setAttribute('y1', center.y);
+          line.setAttribute('x2', pt.x);
+          line.setAttribute('y2', pt.y);
+          dot.setAttribute('cx', pt.x);
+          dot.setAttribute('cy', pt.y);
+
+          // Labels
+          document.getElementById('theta-label').textContent = this.thetaDeg + '°';
+          document.getElementById('phi-label').textContent = this.phiDeg + '°';
+
+          // Amplitudes
+          var cosHalf = Math.cos(th / 2);
+          var sinHalf = Math.sin(th / 2);
+          var p0 = cosHalf * cosHalf;
+          var p1 = sinHalf * sinHalf;
+
+          var reB = sinHalf * Math.cos(ph);
+          var imB = sinHalf * Math.sin(ph);
+
+          function fmt(x) { return x.toFixed(3); }
+          function fmtComplex(re, im) {
+            if (Math.abs(im) < 0.001) return fmt(re);
+            if (Math.abs(re) < 0.001) {
+              return (im >= 0 ? '' : '-') + fmt(Math.abs(im)) + 'i';
+            }
+            return fmt(re) + (im >= 0 ? '+' : '') + fmt(im) + 'i';
+          }
+
+          var alpha = fmt(cosHalf);
+          var betaStr = fmtComplex(reB, imB);
+          document.getElementById('bloch-state-expr').textContent =
+            '|ψ⟩ = ' + alpha + '|0⟩ + (' + betaStr + ')|1⟩';
+
+          document.getElementById('bloch-p0-val').textContent = fmt(p0);
+          document.getElementById('bloch-p1-val').textContent = fmt(p1);
+          document.getElementById('bloch-p0-bar').style.width = (p0 * 100).toFixed(1) + '%';
+          document.getElementById('bloch-p1-bar').style.width = (p1 * 100).toFixed(1) + '%';
+        }
+      };
+
+      window.BlochExplorer = BlochExplorer;
+
+      document.getElementById('theta-slider').addEventListener('input', function() {
+        BlochExplorer.thetaDeg = parseInt(this.value);
+        BlochExplorer.update();
+      });
+      document.getElementById('phi-slider').addEventListener('input', function() {
+        BlochExplorer.phiDeg = parseInt(this.value);
+        BlochExplorer.update();
+      });
+
+      BlochExplorer.update();
+    })();
+    </script>
+
+    <!-- ============================================================ -->
+    <h2 id="source">10. Source code</h2>
+    <p>Implementation of core qubit primitives: state representation, Hadamard gate, Born-rule measurement, Bloch sphere coordinates, and two-qubit tensor product.</p>
+
+    <details class="algo-code">
+      <summary>Source — Qubit Primitives</summary>
+      <div class="code-tabs">
+        <div class="ct-header">
+          <button class="ct-tab active" data-tab="q-pseudo">Pseudocode</button>
+          <button class="ct-tab" data-tab="q-py">Python</button>
+          <button class="ct-tab" data-tab="q-js">JavaScript</button>
+          <button class="ct-tab" data-tab="q-c">C</button>
+          <button class="ct-tab" data-tab="q-cpp">C++</button>
+          <button class="ct-tab" data-tab="q-java">Java</button>
+          <button class="ct-tab" data-tab="q-go">Go</button>
+        </div>
+
+        <!-- Pseudocode -->
+        <div class="ct-panel active" data-tab="q-pseudo"><pre><code>// ── Qubit state: two complex amplitudes ──────────────────────────────
+struct Qubit { complex alpha, beta }   // |α|² + |β|² = 1
+
+function qubit(alpha, beta):
+    assert abs(alpha)² + abs(beta)² ≈ 1
+    return Qubit(alpha, beta)
+
+// ── Hadamard gate ────────────────────────────────────────────────────
+function hadamard(q):
+    // H = 1/√2 * [[1,1],[1,-1]]
+    new_alpha = (q.alpha + q.beta) / √2
+    new_beta  = (q.alpha - q.beta) / √2
+    return Qubit(new_alpha, new_beta)
+
+// ── Born-rule measurement ────────────────────────────────────────────
+function measure(q):
+    p0 = |q.alpha|²
+    r  = uniform_random(0, 1)
+    if r < p0:
+        return 0, Qubit(1, 0)   // collapse to |0⟩
+    else:
+        return 1, Qubit(0, 1)   // collapse to |1⟩
+
+// ── Bloch sphere coordinates ─────────────────────────────────────────
+function bloch_vector(q):
+    // Works for pure states only
+    theta = 2 * acos(abs(q.alpha))
+    phi   = arg(q.beta) - arg(q.alpha)
+    x = sin(theta) * cos(phi)
+    y = sin(theta) * sin(phi)
+    z = cos(theta)
+    return (x, y, z)
+
+// ── Tensor product of two qubits ─────────────────────────────────────
+function tensor(qA, qB):
+    // Result lives in ℂ⁴: |00⟩, |01⟩, |10⟩, |11⟩
+    return [qA.alpha * qB.alpha,
+            qA.alpha * qB.beta,
+            qA.beta  * qB.alpha,
+            qA.beta  * qB.beta]</code></pre></div>
+
+        <!-- Python -->
+        <div class="ct-panel" data-tab="q-py"><pre><code>import numpy as np
+from typing import Tuple
+
+# ── Qubit state ───────────────────────────────────────────────────────
+def qubit(alpha: complex, beta: complex) -> np.ndarray:
+    """Create a normalized qubit state vector [alpha, beta]."""
+    psi = np.array([alpha, beta], dtype=complex)
+    norm = np.linalg.norm(psi)
+    assert abs(norm - 1.0) < 1e-9, f"State not normalized: norm={norm}"
+    return psi
+
+# Common states
+ket0 = qubit(1, 0)
+ket1 = qubit(0, 1)
+ketPlus  = qubit(1/np.sqrt(2),  1/np.sqrt(2))
+ketMinus = qubit(1/np.sqrt(2), -1/np.sqrt(2))
+
+# ── Gates as 2×2 unitary matrices ────────────────────────────────────
+H = np.array([[1, 1], [1, -1]], dtype=complex) / np.sqrt(2)
+X = np.array([[0, 1], [1,  0]], dtype=complex)
+Y = np.array([[0,-1j],[1j, 0]], dtype=complex)
+Z = np.array([[1, 0], [0, -1]], dtype=complex)
+
+def apply_gate(U: np.ndarray, psi: np.ndarray) -> np.ndarray:
+    return U @ psi
+
+# ── Born-rule measurement ─────────────────────────────────────────────
+def measure(psi: np.ndarray) -> Tuple[int, np.ndarray]:
+    """Simulate one projective measurement in the computational basis."""
+    probs = np.abs(psi) ** 2
+    outcome = np.random.choice(len(psi), p=probs)
+    collapsed = np.zeros_like(psi)
+    collapsed[outcome] = 1.0
+    return outcome, collapsed
+
+# ── Bloch sphere coordinates ──────────────────────────────────────────
+def bloch_vector(psi: np.ndarray) -> Tuple[float, float, float]:
+    """Return (x, y, z) Bloch vector for a pure single-qubit state."""
+    # Expectation values of Pauli operators
+    x = float(np.real(psi.conj() @ X @ psi))
+    y = float(np.real(psi.conj() @ Y @ psi))
+    z = float(np.real(psi.conj() @ Z @ psi))
+    return x, y, z
+
+def bloch_angles(psi: np.ndarray) -> Tuple[float, float]:
+    """Return (theta, phi) in radians from Bloch vector."""
+    x, y, z = bloch_vector(psi)
+    theta = np.arccos(np.clip(z, -1, 1))
+    phi   = np.arctan2(y, x) % (2 * np.pi)
+    return theta, phi
+
+# ── Tensor product of two qubits ──────────────────────────────────────
+def tensor_product(psiA: np.ndarray, psiB: np.ndarray) -> np.ndarray:
+    """Two-qubit state: ℂ⁴ vector."""
+    return np.kron(psiA, psiB)
+
+# ── Demonstration ─────────────────────────────────────────────────────
+if __name__ == "__main__":
+    psi = apply_gate(H, ket0)
+    print(f"H|0⟩ = {psi}")             # [1/√2, 1/√2]
+    print(f"H|0⟩ Bloch: {bloch_vector(psi)}")   # (1, 0, 0)
+
+    psi2 = apply_gate(H, psi)
+    print(f"H H|0⟩ = {psi2}")          # [1, 0] = |0⟩
+
+    bell = tensor_product(ket0, ket0)
+    # Apply CNOT after H on first qubit to make Bell state
+    CNOT = np.array([[1,0,0,0],[0,1,0,0],[0,0,0,1],[0,0,1,0]], dtype=complex)
+    H_I = np.kron(H, np.eye(2))
+    bell = CNOT @ H_I @ bell
+    print(f"|Φ+⟩ = {bell}")            # [1/√2, 0, 0, 1/√2]
+
+    # Sample measurements
+    results = [measure(psi)[0] for _ in range(1000)]
+    print(f"H|0⟩ measurements: {results.count(0)} zeros, {results.count(1)} ones")</code></pre></div>
+
+        <!-- JavaScript -->
+        <div class="ct-panel" data-tab="q-js"><pre><code>// ── Complex number helpers ────────────────────────────────────────────
+function cx(re, im = 0) { return { re, im }; }
+function cxAdd(a, b) { return cx(a.re + b.re, a.im + b.im); }
+function cxMul(a, b) { return cx(a.re*b.re - a.im*b.im, a.re*b.im + a.im*b.re); }
+function cxScale(a, s) { return cx(a.re * s, a.im * s); }
+function cxAbs2(a) { return a.re*a.re + a.im*a.im; }
+function cxConj(a) { return cx(a.re, -a.im); }
+function cxArg(a) { return Math.atan2(a.im, a.re); }
+
+// ── Matrix-vector multiply (2×2 matrix as flat array of cx) ──────────
+function matVec2(M, v) {
+  // M = [m00, m01, m10, m11], v = [v0, v1]
+  return [
+    cxAdd(cxMul(M[0], v[0]), cxMul(M[1], v[1])),
+    cxAdd(cxMul(M[2], v[0]), cxMul(M[3], v[1]))
+  ];
+}
+
+// ── Common gates ──────────────────────────────────────────────────────
+const INV_SQRT2 = 1 / Math.sqrt(2);
+const H_gate = [cx(INV_SQRT2), cx(INV_SQRT2), cx(INV_SQRT2), cx(-INV_SQRT2)];
+const X_gate = [cx(0), cx(1), cx(1), cx(0)];
+const Y_gate = [cx(0), cx(0,-1), cx(0,1), cx(0)];
+const Z_gate = [cx(1), cx(0), cx(0), cx(-1)];
+
+// ── Qubit state ───────────────────────────────────────────────────────
+function qubit(alpha, beta) {
+  // alpha, beta can be {re, im} objects or plain numbers
+  const a = (typeof alpha === 'number') ? cx(alpha) : alpha;
+  const b = (typeof beta  === 'number') ? cx(beta)  : beta;
+  const norm = Math.sqrt(cxAbs2(a) + cxAbs2(b));
+  if (Math.abs(norm - 1) > 1e-9) throw new Error(`Not normalized: ${norm}`);
+  return [a, b];
+}
+
+const ket0    = qubit(1, 0);
+const ket1    = qubit(0, 1);
+const ketPlus = qubit(INV_SQRT2, INV_SQRT2);
+
+// ── Born-rule measurement ─────────────────────────────────────────────
+function measure(psi) {
+  const p0 = cxAbs2(psi[0]);
+  const r  = Math.random();
+  if (r < p0) return { outcome: 0, collapsed: ket0 };
+  else        return { outcome: 1, collapsed: ket1 };
+}
+
+// ── Bloch sphere angles ───────────────────────────────────────────────
+function blochAngles(psi) {
+  const absAlpha = Math.sqrt(cxAbs2(psi[0]));
+  const theta = 2 * Math.acos(Math.min(1, absAlpha));
+  const phi   = ((cxArg(psi[1]) - cxArg(psi[0])) % (2*Math.PI) + 2*Math.PI) % (2*Math.PI);
+  return { theta, phi };
+}
+
+function blochVector(psi) {
+  const { theta, phi } = blochAngles(psi);
+  return {
+    x: Math.sin(theta) * Math.cos(phi),
+    y: Math.sin(theta) * Math.sin(phi),
+    z: Math.cos(theta)
+  };
+}
+
+// ── Tensor product of two 2-vectors ──────────────────────────────────
+function tensorProduct(psiA, psiB) {
+  return [
+    cxMul(psiA[0], psiB[0]),
+    cxMul(psiA[0], psiB[1]),
+    cxMul(psiA[1], psiB[0]),
+    cxMul(psiA[1], psiB[1])
+  ];
+}
+
+// ── Demo ──────────────────────────────────────────────────────────────
+const hPsi = matVec2(H_gate, ket0);
+console.log("H|0⟩:", hPsi);                     // [1/√2, 1/√2]
+
+const hhPsi = matVec2(H_gate, hPsi);
+console.log("H²|0⟩:", hhPsi);                   // [1, 0] = |0⟩
+
+const twoQ = tensorProduct(ketPlus, ket0);
+console.log("|+⟩ ⊗ |0⟩:", twoQ);               // product state
+
+let counts = {0:0, 1:0};
+for (let i=0; i<1000; i++) counts[measure(hPsi).outcome]++;
+console.log("H|0⟩ outcomes:", counts);           // ~500/500</code></pre></div>
+
+        <!-- C -->
+        <div class="ct-panel" data-tab="q-c"><pre><code>#include &lt;stdio.h&gt;
+#include &lt;math.h&gt;
+#include &lt;complex.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;assert.h&gt;
+
+#define INV_SQRT2 0.70710678118654752440
+
+/* ── Types ─────────────────────────────────────────────────────────── */
+typedef double complex cx;
+
+/* Qubit: two complex amplitudes */
+typedef struct { cx alpha; cx beta; } Qubit;
+
+/* 2×2 matrix stored row-major */
+typedef struct { cx m[2][2]; } Mat2;
+
+/* ── Common gates ──────────────────────────────────────────────────── */
+Mat2 gate_H(void) {
+    Mat2 H = {{ {INV_SQRT2, INV_SQRT2},
+                {INV_SQRT2,-INV_SQRT2} }};
+    return H;
+}
+Mat2 gate_X(void) { Mat2 X = {{ {0,1},{1,0} }}; return X; }
+Mat2 gate_Z(void) { Mat2 Z = {{ {1,0},{0,-1} }}; return Z; }
+
+/* ── Apply gate ────────────────────────────────────────────────────── */
+Qubit apply_gate(Mat2 U, Qubit q) {
+    Qubit out;
+    out.alpha = U.m[0][0]*q.alpha + U.m[0][1]*q.beta;
+    out.beta  = U.m[1][0]*q.alpha + U.m[1][1]*q.beta;
+    return out;
+}
+
+/* ── Normalization check ────────────────────────────────────────────── */
+double norm2(Qubit q) {
+    return creal(q.alpha)*creal(q.alpha) + cimag(q.alpha)*cimag(q.alpha)
+         + creal(q.beta) *creal(q.beta)  + cimag(q.beta) *cimag(q.beta);
+}
+
+/* ── Born-rule measurement ─────────────────────────────────────────── */
+int measure(Qubit q, Qubit *collapsed) {
+    double p0 = creal(q.alpha)*creal(q.alpha) + cimag(q.alpha)*cimag(q.alpha);
+    double r  = (double)rand() / RAND_MAX;
+    if (r < p0) { *collapsed = (Qubit){1.0+0.0*I, 0.0+0.0*I}; return 0; }
+    else        { *collapsed = (Qubit){0.0+0.0*I, 1.0+0.0*I}; return 1; }
+}
+
+/* ── Bloch sphere angles ────────────────────────────────────────────── */
+void bloch_angles(Qubit q, double *theta, double *phi) {
+    double abs_alpha = sqrt(creal(q.alpha)*creal(q.alpha)
+                           + cimag(q.alpha)*cimag(q.alpha));
+    *theta = 2.0 * acos(fmin(1.0, abs_alpha));
+    double arg_beta  = atan2(cimag(q.beta),  creal(q.beta));
+    double arg_alpha = atan2(cimag(q.alpha), creal(q.alpha));
+    *phi = fmod(arg_beta - arg_alpha + 4*M_PI, 2*M_PI);
+}
+
+/* ── Tensor product → 4-vector ─────────────────────────────────────── */
+void tensor_product(Qubit a, Qubit b, cx out[4]) {
+    out[0] = a.alpha * b.alpha;
+    out[1] = a.alpha * b.beta;
+    out[2] = a.beta  * b.alpha;
+    out[3] = a.beta  * b.beta;
+}
+
+int main(void) {
+    Qubit ket0 = {1.0, 0.0};
+    Mat2 H = gate_H();
+
+    Qubit hPsi  = apply_gate(H, ket0);       /* H|0⟩ = |+⟩ */
+    Qubit hhPsi = apply_gate(H, hPsi);       /* H²|0⟩ = |0⟩ */
+
+    printf("H|0⟩: alpha=%.4f, beta=%.4f\n",
+           creal(hPsi.alpha), creal(hPsi.beta));
+    printf("H²|0⟩: alpha=%.4f, beta=%.4f\n",
+           creal(hhPsi.alpha), creal(hhPsi.beta));
+
+    double theta, phi;
+    bloch_angles(hPsi, &theta, &phi);
+    printf("|+⟩ Bloch: theta=%.4f rad, phi=%.4f rad\n", theta, phi);
+
+    /* 1000 measurements of H|0⟩ */
+    int counts[2] = {0};
+    srand(42);
+    for (int i = 0; i < 1000; i++) {
+        Qubit col;
+        counts[measure(hPsi, &col)]++;
+    }
+    printf("Measurements: 0->%d, 1->%d\n", counts[0], counts[1]);
+    return 0;
+}</code></pre></div>
+
+        <!-- C++ -->
+        <div class="ct-panel" data-tab="q-cpp"><pre><code>#include &lt;Eigen/Dense&gt;
+#include &lt;complex&gt;
+#include &lt;iostream&gt;
+#include &lt;random&gt;
+#include &lt;cmath&gt;
+
+using namespace Eigen;
+using cx = std::complex&lt;double&gt;;
+using Vec2c = Matrix&lt;cx, 2, 1&gt;;
+using Vec4c = Matrix&lt;cx, 4, 1&gt;;
+using Mat2c = Matrix&lt;cx, 2, 2&gt;;
+
+static constexpr double INV_SQRT2 = 0.7071067811865475;
+
+// ── Common gates ───────────────────────────────────────────────────────
+Mat2c gate_H() {
+    Mat2c H;
+    H &lt;&lt; cx(INV_SQRT2), cx(INV_SQRT2),
+         cx(INV_SQRT2), cx(-INV_SQRT2);
+    return H;
+}
+Mat2c gate_X() { Mat2c X; X &lt;&lt; 0,1,1,0; return X.cast&lt;cx&gt;(); }
+Mat2c gate_Y() { Mat2c Y; Y &lt;&lt; 0, cx(0,-1), cx(0,1), 0; return Y; }
+Mat2c gate_Z() { Mat2c Z; Z &lt;&lt; 1,0,0,-1; return Z.cast&lt;cx&gt;(); }
+
+// ── Bloch sphere coordinates ───────────────────────────────────────────
+struct BlochAngles { double theta, phi; };
+
+BlochAngles bloch_angles(const Vec2c& psi) {
+    double abs_alpha = std::abs(psi(0));
+    double theta = 2.0 * std::acos(std::min(1.0, abs_alpha));
+    double phi = std::fmod(std::arg(psi(1)) - std::arg(psi(0)) + 4*M_PI, 2*M_PI);
+    return { theta, phi };
+}
+
+// ── Measurement ────────────────────────────────────────────────────────
+std::pair&lt;int, Vec2c&gt; measure(const Vec2c& psi, std::mt19937& rng) {
+    double p0 = std::norm(psi(0));  // |alpha|^2
+    std::uniform_real_distribution&lt;double&gt; dist(0.0, 1.0);
+    Vec2c collapsed = Vec2c::Zero();
+    if (dist(rng) &lt; p0) { collapsed(0) = 1.0; return {0, collapsed}; }
+    else                 { collapsed(1) = 1.0; return {1, collapsed}; }
+}
+
+// ── Tensor product ─────────────────────────────────────────────────────
+Vec4c tensor_product(const Vec2c& a, const Vec2c& b) {
+    Vec4c out;
+    out &lt;&lt; a(0)*b(0), a(0)*b(1), a(1)*b(0), a(1)*b(1);
+    return out;
+}
+
+int main() {
+    Vec2c ket0, ket1, ketPlus;
+    ket0 &lt;&lt; 1, 0;
+    ket1 &lt;&lt; 0, 1;
+    ketPlus &lt;&lt; cx(INV_SQRT2), cx(INV_SQRT2);
+
+    Mat2c H = gate_H();
+    Vec2c hPsi  = H * ket0;   // H|0⟩
+    Vec2c hhPsi = H * hPsi;   // H²|0⟩ = |0⟩
+
+    std::cout &lt;&lt; "H|0⟩ =\n" &lt;&lt; hPsi &lt;&lt; "\n";
+    std::cout &lt;&lt; "H²|0⟩ =\n" &lt;&lt; hhPsi &lt;&lt; "\n";
+
+    auto [theta, phi] = bloch_angles(hPsi);
+    std::cout &lt;&lt; "|+⟩ Bloch: theta=" &lt;&lt; theta &lt;&lt; ", phi=" &lt;&lt; phi &lt;&lt; "\n";
+
+    // Expectation value of Z
+    Mat2c Z = gate_Z();
+    cx exp_Z = (hPsi.adjoint() * Z * hPsi)(0);
+    std::cout &lt;&lt; "&lt;+|Z|+&gt; = " &lt;&lt; exp_Z.real() &lt;&lt; " (should be ~0)\n";
+
+    // Measurements
+    std::mt19937 rng(42);
+    int counts[2] = {};
+    for (int i = 0; i &lt; 1000; i++) counts[measure(hPsi, rng).first]++;
+    std::cout &lt;&lt; "Measurements: 0-&gt;" &lt;&lt; counts[0] &lt;&lt; ", 1-&gt;" &lt;&lt; counts[1] &lt;&lt; "\n";
+
+    // Bell state via CNOT(H⊗I)|00⟩
+    Mat2c I2 = Mat2c::Identity();
+    Matrix&lt;cx,4,4&gt; HI = Matrix&lt;cx,4,4&gt;::Zero();
+    for(int r=0; r&lt;2; r++) for(int c=0; c&lt;2; c++)
+        for(int r2=0; r2&lt;2; r2++) for(int c2=0; c2&lt;2; c2++)
+            HI(r*2+r2, c*2+c2) = H(r,c) * I2(r2,c2);
+    Matrix&lt;cx,4,4&gt; CNOT = Matrix&lt;cx,4,4&gt;::Zero();
+    CNOT(0,0)=CNOT(1,1)=CNOT(2,3)=CNOT(3,2)=1;
+    Vec4c ket00 = tensor_product(ket0, ket0);
+    Vec4c bell = CNOT * HI * ket00;
+    std::cout &lt;&lt; "|Φ+⟩ =\n" &lt;&lt; bell &lt;&lt; "\n";  // [1/√2, 0, 0, 1/√2]
+
+    return 0;
+}</code></pre></div>
+
+        <!-- Java -->
+        <div class="ct-panel" data-tab="q-java"><pre><code>import java.util.Random;
+
+/** Minimal qubit simulator in plain Java — no external dependencies. */
+public class QubitSim {
+
+    // ── Complex number ───────────────────────────────────────────────
+    static double[] cx(double re, double im) { return new double[]{re, im}; }
+    static double cxRe(double[] c) { return c[0]; }
+    static double cxIm(double[] c) { return c[1]; }
+    static double cxAbs2(double[] c) { return c[0]*c[0] + c[1]*c[1]; }
+    static double[] cxMul(double[] a, double[] b) {
+        return cx(a[0]*b[0]-a[1]*b[1], a[0]*b[1]+a[1]*b[0]);
+    }
+    static double[] cxAdd(double[] a, double[] b) {
+        return cx(a[0]+b[0], a[1]+b[1]);
+    }
+    static double[] cxScale(double[] a, double s) { return cx(a[0]*s, a[1]*s); }
+
+    // ── Qubit: {alpha, beta} each a double[2] ───────────────────────
+    static double[][] qubit(double[] alpha, double[] beta) {
+        double norm = Math.sqrt(cxAbs2(alpha) + cxAbs2(beta));
+        assert Math.abs(norm - 1.0) &lt; 1e-9 : "Not normalized";
+        return new double[][]{alpha, beta};
+    }
+
+    static final double INV_SQRT2 = 1.0 / Math.sqrt(2);
+    static final double[][] KET0 = qubit(cx(1,0), cx(0,0));
+    static final double[][] KET1 = qubit(cx(0,0), cx(1,0));
+
+    // ── Hadamard gate ────────────────────────────────────────────────
+    static double[][] hadamard(double[][] q) {
+        double[] na = cxAdd(cxScale(q[0], INV_SQRT2), cxScale(q[1], INV_SQRT2));
+        double[] nb = cxAdd(cxScale(q[0], INV_SQRT2), cxScale(q[1],-INV_SQRT2));
+        return qubit(na, nb);
+    }
+
+    // ── Generic 2×2 gate (row-major, each entry double[2]) ──────────
+    static double[][] applyGate(double[][][] U, double[][] q) {
+        double[] na = cxAdd(cxMul(U[0][0], q[0]), cxMul(U[0][1], q[1]));
+        double[] nb = cxAdd(cxMul(U[1][0], q[0]), cxMul(U[1][1], q[1]));
+        return new double[][]{na, nb};
+    }
+
+    // ── Born-rule measurement ────────────────────────────────────────
+    static int[] measure(double[][] q, Random rng) {
+        double p0 = cxAbs2(q[0]);
+        int outcome = (rng.nextDouble() &lt; p0) ? 0 : 1;
+        return new int[]{outcome};
+    }
+
+    // ── Bloch angles ─────────────────────────────────────────────────
+    static double[] blochAngles(double[][] q) {
+        double absAlpha = Math.sqrt(cxAbs2(q[0]));
+        double theta = 2.0 * Math.acos(Math.min(1.0, absAlpha));
+        double argAlpha = Math.atan2(cxIm(q[0]), cxRe(q[0]));
+        double argBeta  = Math.atan2(cxIm(q[1]), cxRe(q[1]));
+        double phi = ((argBeta - argAlpha) % (2*Math.PI) + 2*Math.PI) % (2*Math.PI);
+        return new double[]{theta, phi};
+    }
+
+    // ── Tensor product ────────────────────────────────────────────────
+    static double[][] tensorProduct(double[][] a, double[][] b) {
+        return new double[][]{
+            cxMul(a[0], b[0]),
+            cxMul(a[0], b[1]),
+            cxMul(a[1], b[0]),
+            cxMul(a[1], b[1])
+        };
+    }
+
+    public static void main(String[] args) {
+        double[][] hPsi  = hadamard(KET0);        // H|0⟩ = |+⟩
+        double[][] hhPsi = hadamard(hPsi);         // H²|0⟩ = |0⟩
+
+        System.out.printf("H|0⟩: alpha=(%.4f,%.4f), beta=(%.4f,%.4f)%n",
+            cxRe(hPsi[0]), cxIm(hPsi[0]), cxRe(hPsi[1]), cxIm(hPsi[1]));
+        System.out.printf("H²|0⟩: alpha=(%.4f,%.4f), beta=(%.4f,%.4f)%n",
+            cxRe(hhPsi[0]), cxIm(hhPsi[0]), cxRe(hhPsi[1]), cxIm(hhPsi[1]));
+
+        double[] angles = blochAngles(hPsi);
+        System.out.printf("|+⟩ Bloch: theta=%.4f, phi=%.4f%n",
+            angles[0], angles[1]);
+
+        Random rng = new Random(42);
+        int[] counts = {0, 0};
+        for (int i = 0; i &lt; 1000; i++) counts[measure(hPsi, rng)[0]]++;
+        System.out.printf("Measurements: 0->%d, 1->%d%n", counts[0], counts[1]);
+
+        double[][] tp = tensorProduct(KET0, hPsi);
+        System.out.printf("|0⟩⊗H|0⟩ amps: [%.4f, %.4f, %.4f, %.4f]%n",
+            cxRe(tp[0]), cxRe(tp[1]), cxRe(tp[2]), cxRe(tp[3]));
+    }
+}</code></pre></div>
+
+        <!-- Go -->
+        <div class="ct-panel" data-tab="q-go"><pre><code>package main
+
+import (
+	"fmt"
+	"math"
+	"math/cmplx"
+	"math/rand"
+)
+
+// ── Qubit: two complex128 amplitudes ──────────────────────────────────
+type Qubit struct{ Alpha, Beta complex128 }
+
+const invSqrt2 = 0.7071067811865475
+
+var (
+	Ket0    = Qubit{1, 0}
+	Ket1    = Qubit{0, 1}
+	KetPlus = Qubit{complex(invSqrt2, 0), complex(invSqrt2, 0)}
+)
+
+// ── Norm (should be 1.0) ──────────────────────────────────────────────
+func (q Qubit) Norm() float64 {
+	return math.Sqrt(cmplx.Abs(q.Alpha)*cmplx.Abs(q.Alpha) +
+		cmplx.Abs(q.Beta)*cmplx.Abs(q.Beta))
+}
+
+// ── 2×2 complex gate ──────────────────────────────────────────────────
+type Gate2 [2][2]complex128
+
+func (g Gate2) Apply(q Qubit) Qubit {
+	return Qubit{
+		Alpha: g[0][0]*q.Alpha + g[0][1]*q.Beta,
+		Beta:  g[1][0]*q.Alpha + g[1][1]*q.Beta,
+	}
+}
+
+// ── Common gates ──────────────────────────────────────────────────────
+func GateH() Gate2 {
+	s := complex(invSqrt2, 0)
+	return Gate2{{s, s}, {s, -s}}
+}
+func GateX() Gate2 { return Gate2{{0, 1}, {1, 0}} }
+func GateZ() Gate2 { return Gate2{{1, 0}, {0, -1}} }
+func GateY() Gate2 { return Gate2{{0, complex(0, -1)}, {complex(0, 1), 0}} }
+
+// ── Born-rule measurement ─────────────────────────────────────────────
+func Measure(q Qubit, rng *rand.Rand) (int, Qubit) {
+	p0 := cmplx.Abs(q.Alpha) * cmplx.Abs(q.Alpha)
+	if rng.Float64() &lt; p0 {
+		return 0, Ket0
+	}
+	return 1, Ket1
+}
+
+// ── Bloch angles ──────────────────────────────────────────────────────
+func BlochAngles(q Qubit) (theta, phi float64) {
+	absAlpha := cmplx.Abs(q.Alpha)
+	theta = 2.0 * math.Acos(math.Min(1.0, absAlpha))
+	argAlpha := cmplx.Phase(q.Alpha)
+	argBeta  := cmplx.Phase(q.Beta)
+	phi = math.Mod(argBeta-argAlpha+4*math.Pi, 2*math.Pi)
+	return
+}
+
+// ── Tensor product → 4-component slice ───────────────────────────────
+func TensorProduct(a, b Qubit) [4]complex128 {
+	return [4]complex128{
+		a.Alpha * b.Alpha,
+		a.Alpha * b.Beta,
+		a.Beta * b.Alpha,
+		a.Beta * b.Beta,
+	}
+}
+
+func main() {
+	H := GateH()
+	hPsi := H.Apply(Ket0)       // H|0⟩
+	hhPsi := H.Apply(hPsi)      // H²|0⟩
+
+	fmt.Printf("H|0⟩  = (%.4f, %.4f)\n", real(hPsi.Alpha), real(hPsi.Beta))
+	fmt.Printf("H²|0⟩ = (%.4f, %.4f)\n", real(hhPsi.Alpha), real(hhPsi.Beta))
+
+	theta, phi := BlochAngles(hPsi)
+	fmt.Printf("|+⟩ Bloch: theta=%.4f rad, phi=%.4f rad\n", theta, phi)
+
+	rng := rand.New(rand.NewSource(42))
+	counts := [2]int{}
+	for i := 0; i &lt; 1000; i++ {
+		outcome, _ := Measure(hPsi, rng)
+		counts[outcome]++
+	}
+	fmt.Printf("Measurements: 0->%d, 1->%d\n", counts[0], counts[1])
+
+	tp := TensorProduct(Ket0, hPsi)
+	fmt.Printf("|0⟩⊗|+⟩: [%.4f, %.4f, %.4f, %.4f]\n",
+		real(tp[0]), real(tp[1]), real(tp[2]), real(tp[3]))
+}</code></pre></div>
+
+      </div><!-- .code-tabs -->
+    </details><!-- .algo-code -->
+
+    <!-- ============================================================ -->
+    <h2 id="summary">11. Summary</h2>
+
+    <p>Qubits are two-level quantum systems whose state before measurement is a unit vector in $\mathbb{C}^2$, parameterized by two complex amplitudes. The four essential ideas to internalize:</p>
+
+    <ol>
+      <li><strong>Amplitudes, not probabilities.</strong> A qubit state $|\psi\rangle = \alpha|0\rangle + \beta|1\rangle$ carries complex amplitudes. Probabilities are $|\alpha|^2, |\beta|^2$. The complex nature allows interference — amplitudes can cancel — which is impossible with probabilities.</li>
+      <li><strong>The Born rule and collapse.</strong> Measurement samples from the probability distribution defined by squared amplitudes, then irreversibly collapses the state to the measured eigenstate. Superposition ends at measurement.</li>
+      <li><strong>The Bloch sphere.</strong> Pure single-qubit states bijectively map to points on a unit sphere in $\mathbb{R}^3$ via $(\theta, \phi)$. Single-qubit gates are rotations. Mixed states (from decoherence) lie strictly inside the sphere.</li>
+      <li><strong>Exponential Hilbert space.</strong> $n$ qubits live in $\mathbb{C}^{2^n}$, requiring $2^n$ complex amplitudes. This exponential space is the source of potential quantum advantage — and the reason decoherence, which leaks that information into the environment, is the central engineering obstacle.</li>
+    </ol>
+
+    <div class="callout" style="border-color: var(--accent);">
+      <div class="label">WHAT COMES NEXT</div>
+      <p style="margin:6px 0">
+        With qubits and superposition understood, the natural next steps are:
+        <strong>quantum gates and circuits</strong> (how to build algorithms from unitary operations),
+        <strong>quantum entanglement</strong> in depth (Bell inequalities, teleportation, superdense coding),
+        <strong>quantum algorithms</strong> (Grover's search, Shor's factoring — both rely critically on amplitude interference),
+        and <strong>quantum error correction</strong> (how to protect logical qubits against decoherence using stabilizer codes).
+      </p>
+    </div>
+
+    <div class="math-glossary">
+      <h4>Quick Reference — All Key Formulas</h4>
+      <dl>
+        <dt>Qubit state</dt>
+        <dd>$|\psi\rangle = \alpha|0\rangle + \beta|1\rangle$, $\alpha,\beta\in\mathbb{C}$, $|\alpha|^2+|\beta|^2=1$</dd>
+        <dt>Bloch parameterization</dt>
+        <dd>$|\psi\rangle = \cos(\theta/2)|0\rangle + e^{i\phi}\sin(\theta/2)|1\rangle$</dd>
+        <dt>Born rule</dt>
+        <dd>$P(\text{outcome }m) = |\langle m|\psi\rangle|^2 = \langle\psi|P_m|\psi\rangle$</dd>
+        <dt>Hadamard</dt>
+        <dd>$H = \frac{1}{\sqrt{2}}\begin{pmatrix}1&1\\1&-1\end{pmatrix}$, &nbsp; $H|0\rangle=|+\rangle$, $H|+\rangle=|0\rangle$</dd>
+        <dt>Pauli-X (NOT)</dt>
+        <dd>$X = \begin{pmatrix}0&1\\1&0\end{pmatrix}$, &nbsp; 180° rotation around $x$-axis</dd>
+        <dt>Rotation gate</dt>
+        <dd>$R_n(\theta) = e^{-i\theta\hat{n}\cdot\vec{\sigma}/2} = I\cos(\theta/2) - i(\hat{n}\cdot\vec{\sigma})\sin(\theta/2)$</dd>
+        <dt>$n$-qubit state space</dt>
+        <dd>$\mathbb{C}^{2^n}$, requires $2^n$ complex amplitudes</dd>
+        <dt>Tensor product</dt>
+        <dd>$|\psi_A\rangle\otimes|\psi_B\rangle = \begin{pmatrix}\alpha_A\alpha_B\\\alpha_A\beta_B\\\beta_A\alpha_B\\\beta_A\beta_B\end{pmatrix}$</dd>
+        <dt>Density matrix (pure)</dt>
+        <dd>$\rho = |\psi\rangle\langle\psi|$, $\text{tr}(\rho^2)=1$</dd>
+        <dt>Expectation value</dt>
+        <dd>$\langle O\rangle = \langle\psi|O|\psi\rangle = \text{tr}(\rho O)$</dd>
+      </dl>
+    </div>
+
+  </article>
+</div><!-- .topic-layout -->
+
+<!-- Code tab switching (shared pattern from backpropagation.html) -->
+<script>
+(function () {
+  'use strict';
+  document.querySelectorAll('.code-tabs').forEach(function (tabs) {
+    tabs.querySelectorAll('.ct-tab').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var target = btn.dataset.tab;
+        tabs.querySelectorAll('.ct-tab').forEach(function (b) { b.classList.remove('active'); });
+        tabs.querySelectorAll('.ct-panel').forEach(function (p) { p.classList.remove('active'); });
+        btn.classList.add('active');
+        tabs.querySelector('.ct-panel[data-tab="' + target + '"]').classList.add('active');
+      });
+    });
+  });
+})();
+</script>
+
+</body>
+</html>

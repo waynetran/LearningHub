@@ -1,0 +1,1315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zero-Knowledge Proofs — Deep Dive</title>
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError: false});"></script>
+</head>
+<body>
+<div id="tooltip"></div>
+
+<nav class="topic-nav">
+  <a class="back" href="../blockchain.html">← Back to Blockchain</a>
+  <div class="crumb">Deep Dives / <span class="topic-name">Zero-Knowledge Proofs</span></div>
+</nav>
+
+<div class="topic-layout">
+  <aside class="topic-toc">
+    <h4>ON THIS PAGE</h4>
+    <ul>
+      <li><a href="#intro">1. What is a ZKP?</a></li>
+      <li><a href="#interactive">2. Interactive proofs &amp; ZK properties</a></li>
+      <li><a href="#snarks-starks">3. SNARKs vs STARKs</a></li>
+      <li><a href="#r1cs">4. Arithmetic circuits &amp; R1CS</a></li>
+      <li><a href="#groth16">5. The Groth16 proof system</a></li>
+      <li><a href="#starks-fri">6. ZK-STARKs and FRI</a></li>
+      <li><a href="#applications">7. Blockchain applications</a>
+        <ul>
+          <li><a href="#zkrollups">zkRollups</a></li>
+          <li><a href="#zkbridges">zkBridges</a></li>
+          <li><a href="#zkidentity">zkIdentity &amp; zkVMs</a></li>
+        </ul>
+      </li>
+      <li><a href="#cave-demo">8. Ali Baba cave demo</a></li>
+      <li><a href="#source">9. Source code</a></li>
+      <li><a href="#summary">10. Summary</a></li>
+    </ul>
+  </aside>
+
+  <article class="topic-content">
+    <h1>Zero-Knowledge Proofs</h1>
+    <p class="subtitle">Proving you know a secret without ever revealing it — the cryptographic primitive powering zkRollups, zkBridges, and private identity on blockchains.</p>
+    <div class="meta-tags">
+      <span>Prereq: basic cryptography, modular arithmetic</span>
+      <span>Time to read: ~35 min</span>
+      <span>Interactive figures: 1</span>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="intro">1. What is a zero-knowledge proof?</h2>
+
+    <p>A <strong>zero-knowledge proof (ZKP)</strong> is an interactive protocol between two parties — a <em>Prover</em> P and a <em>Verifier</em> V — in which:</p>
+    <ul class="clean">
+      <li>P convinces V that some statement is true,</li>
+      <li>yet V learns <em>nothing</em> beyond the bare fact that the statement is true.</li>
+    </ul>
+
+    <p>That sounds paradoxical. How can you convince someone of something while revealing nothing? The key is that "proof" in cryptography is probabilistic, and "nothing" is made precise by a formal simulation argument.</p>
+
+    <h3>The Ali Baba cave — the canonical example</h3>
+    <p>Peggy knows the secret magic word that opens a door connecting the two halves of a circular cave. Victor wants to be convinced she knows the word — but Peggy doesn't want to reveal it. The protocol:</p>
+    <ol>
+      <li>Victor waits outside. Peggy enters the cave and randomly goes left (path A) or right (path B) — Victor doesn't see which.</li>
+      <li>Victor walks to the fork and shouts: <em>"Come out from path A!"</em> (or B — chosen randomly).</li>
+      <li>Peggy uses the magic word if needed and exits from the called side.</li>
+    </ol>
+    <p>If Peggy is bluffing, she has a $\tfrac{1}{2}$ chance of being on the right side already. After $n$ rounds of this the probability of a successful bluff is $(1/2)^n$. After 20 rounds:</p>
+
+    <div class="math-display">$$\Pr[\text{successful bluff after 20 rounds}] = \left(\frac{1}{2}\right)^{20} \approx 10^{-6}$$</div>
+
+    <p>Victor is now essentially certain Peggy knows the word — yet he has learned <em>nothing about the word itself</em>. The transcript (which side she entered, which side was called, which side she exited) could have been manufactured by anyone, even without knowing the word.</p>
+
+    <div class="callout">
+      <div class="label">THE THREE ZK PROPERTIES</div>
+      <ol style="margin:6px 0">
+        <li><strong>Completeness</strong>: if the statement is true and both parties follow the protocol, the verifier accepts.</li>
+        <li><strong>Soundness</strong>: if the statement is false, no cheating prover can convince the verifier except with negligible probability.</li>
+        <li><strong>Zero-knowledge</strong>: the verifier learns nothing beyond the truth of the statement. Formally: the proof transcript can be <em>simulated</em> without the witness, so the transcript contains no information about the secret.</li>
+      </ol>
+    </div>
+
+    <p>The simulation argument is crucial. Zero-knowledge does not mean the verifier is confused or can't reason — it means that whatever the verifier sees during the proof, they could have generated themselves without interacting with the prover. If the transcript is simulatable, it carries zero information about the witness.</p>
+
+    <div class="math-glossary">
+      <p class="mg-title">ZKP vocabulary decoded</p>
+      <dl>
+        <dt>Statement</dt>
+        <dd>A mathematical assertion: "this circuit output is 0", "this ciphertext decrypts to a value &gt; 18", "I know a preimage of this hash."</dd>
+        <dt>Witness</dt>
+        <dd>The secret information that makes the statement true — the private key, the age, the hash preimage. The prover knows it; the verifier must not learn it.</dd>
+        <dt>Transcript</dt>
+        <dd>The sequence of messages exchanged between prover and verifier. Zero-knowledge requires that this transcript is computationally indistinguishable from a simulated one generated without the witness.</dd>
+        <dt>Negligible probability</dt>
+        <dd>A function $\varepsilon(n)$ that shrinks faster than any inverse polynomial. In practice: $\varepsilon < 2^{-128}$ for 128-bit security.</dd>
+        <dt>Knowledge soundness</dt>
+        <dd>Stronger than soundness: not only can't a cheating prover convince the verifier of a false statement, but if the prover <em>can</em> convince the verifier, a hypothetical "extractor" could pull the witness out of the prover. This is the "of Knowledge" in zk-SNARK.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Analogy</strong> Think of a ZK proof as a magic mirror: you can show Victor your reflection (the proof) without revealing the room you're standing in (the witness). The reflection looks real — he can verify it's a genuine reflection — but it tells him nothing about what's behind the mirror.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="interactive">2. Interactive proofs and the ZK properties</h2>
+
+    <h3>Sigma protocols</h3>
+    <p>A <em>sigma protocol</em> ($\Sigma$-protocol) is a 3-move interactive proof:</p>
+    <ol>
+      <li><strong>Commitment</strong>: Prover sends a random commitment $R$.</li>
+      <li><strong>Challenge</strong>: Verifier sends a random challenge $c$.</li>
+      <li><strong>Response</strong>: Prover sends a response $s$ that ties $R$, $c$, and the witness together.</li>
+    </ol>
+
+    <p>The canonical example is the <strong>Schnorr identification protocol</strong> for proving knowledge of a discrete logarithm.</p>
+
+    <div class="callout">
+      <div class="label">SCHNORR PROTOCOL — DISCRETE LOG</div>
+      <p style="margin:6px 0 4px"><strong>Statement:</strong> "I know $x$ such that $Y = g^x \pmod{p}$" (without revealing $x$)</p>
+      <div class="math-display no-center">$$\begin{aligned}
+&\textbf{Commitment:} \quad \text{Prover picks random } r \in \mathbb{Z}_q, \text{ sends } R = g^r \pmod{p} \\
+&\textbf{Challenge:} \quad \text{Verifier sends random } c \in \mathbb{Z}_q \\
+&\textbf{Response:} \quad \text{Prover sends } s = r + c \cdot x \pmod{q} \\
+&\textbf{Verification:} \quad \text{Check } g^s \equiv R \cdot Y^c \pmod{p}
+\end{aligned}$$</div>
+    </div>
+
+    <p>Why does verification work? Because $g^s = g^{r + cx} = g^r \cdot (g^x)^c = R \cdot Y^c$. An honest prover always passes. Why is this zero-knowledge? The transcript $(R, c, s)$ can be simulated by picking $s$ and $c$ uniformly at random and computing $R = g^s \cdot Y^{-c}$. This fake transcript has exactly the same distribution as a real one — indistinguishable — so it carries zero information about $x$.</p>
+
+    <h3>Soundness via the extractor</h3>
+    <p>Suppose a cheating prover can produce valid responses to <em>two different challenges</em> $c \neq c'$ for the same commitment $R$. Then they have $s = r + cx$ and $s' = r + c'x$, so $s - s' = (c - c')x$, giving $x = (s-s')(c-c')^{-1} \pmod{q}$. The extractor can rewind the prover and extract $x$. This <em>special soundness</em> property means that a prover who can convince the verifier must know $x$.</p>
+
+    <h3>The Fiat-Shamir heuristic — making proofs non-interactive</h3>
+    <p>Interactive proofs require back-and-forth. For blockchains, we need proofs that can be verified by anyone, offline. The <strong>Fiat-Shamir transform</strong> removes the verifier from the picture by replacing their random challenge with a hash:</p>
+
+    <div class="math-display">$$c = H(\text{statement} \,\|\, R)$$</div>
+
+    <p>The hash function acts as a random oracle — its output is unpredictable, so the prover can't choose $R$ to make $c$ favorable. The resulting proof $(R, s)$ is non-interactive and publicly verifiable. This is the foundation of signature schemes (Schnorr signatures are exactly this), and more generally of all practical SNARKs.</p>
+
+    <div class="callout">
+      <div class="label">WHY BLOCKCHAINS NEED NON-INTERACTIVE ZKPs</div>
+      <p style="margin:6px 0">An Ethereum smart contract can't play 20 rounds of the Ali Baba cave protocol — it can only read calldata. Non-interactive proofs (NIZKs) let a prover generate a proof off-chain that the contract verifies in a single transaction. This is what makes zkRollups possible.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="snarks-starks">3. SNARKs vs STARKs</h2>
+
+    <p>Modern ZK proof systems fall into two families. Both prove the same thing: "I know a witness $w$ such that $C(w) = 0$ for circuit $C$." They differ in setup, size, and cryptographic assumptions.</p>
+
+    <table class="rank-table">
+      <thead>
+        <tr>
+          <th>Property</th>
+          <th>zk-SNARK</th>
+          <th>zk-STARK</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Full name</strong></td>
+          <td>Succinct Non-interactive ARgument of Knowledge</td>
+          <td>Scalable Transparent ARgument of Knowledge</td>
+        </tr>
+        <tr>
+          <td><strong>Proof size</strong></td>
+          <td>$O(1)$ — ~200 bytes (Groth16: 3 group elements)</td>
+          <td>$O(\log^2 n)$ — tens of kilobytes</td>
+        </tr>
+        <tr>
+          <td><strong>Verification time</strong></td>
+          <td>$O(1)$ — ~3 ms, 3 pairings</td>
+          <td>$O(\log^2 n)$ — ~10–50 ms</td>
+        </tr>
+        <tr>
+          <td><strong>Trusted setup</strong></td>
+          <td>Yes — circuit-specific (Groth16) or universal (Plonk, Marlin)</td>
+          <td>No — fully transparent (public randomness)</td>
+        </tr>
+        <tr>
+          <td><strong>Cryptographic assumption</strong></td>
+          <td>Elliptic curve pairings (BN254, BLS12-381) — not quantum-safe</td>
+          <td>Collision-resistant hash functions only — quantum-safe</td>
+        </tr>
+        <tr>
+          <td><strong>Prover time</strong></td>
+          <td>$O(n \log n)$ with FFTs</td>
+          <td>$O(n \log^2 n)$ — somewhat slower</td>
+        </tr>
+        <tr>
+          <td><strong>Toxic waste</strong></td>
+          <td>Yes — setup parameters must be destroyed</td>
+          <td>No — anyone can verify the setup</td>
+        </tr>
+        <tr>
+          <td><strong>Used by</strong></td>
+          <td>Groth16: zkSync, Scroll, Zcash; Plonk: Aztec, Linea</td>
+          <td>StarkNet, Polygon Miden, Risc0</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>The trusted setup and "toxic waste"</h3>
+    <p>Groth16 requires a <strong>Structured Reference String (SRS)</strong>: a set of elliptic curve points computed from secret random values $(\alpha, \beta, \gamma, \delta, \tau)$. These values must never be known to anyone — if they are, an attacker can create proofs for false statements. Hence the name <em>toxic waste</em>.</p>
+
+    <p>To mitigate this, the ZK community runs <strong>powers-of-tau ceremonies</strong>: many parties contribute randomness, and the SRS is secure as long as at least <em>one</em> party destroys their randomness. Zcash's ceremony involved hundreds of contributors. Ethereum's KZG ceremony had over 140,000 participants.</p>
+
+    <div class="callout">
+      <div class="label">UNIVERSAL VS CIRCUIT-SPECIFIC SETUP</div>
+      <p style="margin:6px 0">Groth16 requires a fresh setup per circuit — expensive for many applications. <strong>Universal SNARKs</strong> (Plonk, Marlin, Sonic) use a single "universal" SRS for any circuit up to a certain size. This doesn't eliminate the trusted setup, but amortizes it. STARKs need no setup at all — their "randomness" comes from the verifier's challenges (or a hash in the non-interactive setting), which is publicly auditable.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="r1cs">4. Arithmetic circuits and R1CS</h2>
+
+    <p>Before you can generate a ZK proof, you must express your computation as an <strong>arithmetic circuit</strong> over a prime field $\mathbb{F}_p$. The prover's claim is "I know an assignment of wires that satisfies all the gate constraints."</p>
+
+    <h3>Arithmetic circuits</h3>
+    <p>An arithmetic circuit over $\mathbb{F}_p$ has:</p>
+    <ul class="clean">
+      <li><strong>Input wires</strong> — public inputs and private witness values.</li>
+      <li><strong>Addition gates</strong> — free (no extra constraints needed).</li>
+      <li><strong>Multiplication gates</strong> — each one costs a constraint.</li>
+      <li><strong>Output wire</strong> — must equal the claimed value (e.g., 0 for "valid").</li>
+    </ul>
+
+    <p>The key insight: <em>multiplication is expensive, addition is free</em>. This is why circuit complexity is measured in <em>multiplication gates</em> (also called "constraints" or "R1CS rows").</p>
+
+    <h3>Rank-1 Constraint System (R1CS)</h3>
+    <p>An R1CS is a system of equations over $\mathbb{F}_p$. Each equation encodes one multiplication gate:</p>
+
+    <div class="math-display">$$(\mathbf{a}_i \cdot \mathbf{s}) \times (\mathbf{b}_i \cdot \mathbf{s}) = (\mathbf{c}_i \cdot \mathbf{s})$$</div>
+
+    <p>where $\mathbf{s}$ is the <strong>witness vector</strong> (all wire values: public inputs, private inputs, and intermediate values), and $\mathbf{a}_i, \mathbf{b}_i, \mathbf{c}_i$ are selector vectors picking out the relevant wires for gate $i$.</p>
+
+    <div class="math-glossary">
+      <p class="mg-title">R1CS symbols decoded</p>
+      <dl>
+        <dt>$\mathbf{s}$</dt>
+        <dd>The witness vector. Always starts with $1$ (a constant wire), followed by public inputs, then private inputs, then intermediate values. E.g. for $x^3 + x + 5 = 35$: $\mathbf{s} = (1, \text{out}, x, v_1, v_2) = (1, 35, 3, 9, 27)$.</dd>
+        <dt>$\mathbf{a}_i, \mathbf{b}_i, \mathbf{c}_i$</dt>
+        <dd>Sparse selector vectors — mostly zero. $\mathbf{a}_i \cdot \mathbf{s}$ picks out the left input to gate $i$; $\mathbf{b}_i \cdot \mathbf{s}$ picks the right input; $\mathbf{c}_i \cdot \mathbf{s}$ picks the output.</dd>
+        <dt>$n$ constraints</dt>
+        <dd>One per multiplication gate. Addition is encoded by adding entries in the selector vectors (linear combinations are "free").</dd>
+        <dt>$m$ witness variables</dt>
+        <dd>Total wires. Proof size and verification time are $O(1)$ in $m$; only prover time scales with $m$.</dd>
+      </dl>
+    </div>
+
+    <h3>Worked example: $x^3 + x + 5 = 35$</h3>
+    <p>Claim: I know $x = 3$ such that $x^3 + x + 5 = 35$, without revealing $x$.</p>
+    <p>Introduce intermediate variables to flatten to degree-2:</p>
+    <ul class="clean">
+      <li>$v_1 = x \cdot x \quad (= x^2 = 9)$</li>
+      <li>$v_2 = v_1 \cdot x \quad (= x^3 = 27)$</li>
+      <li>$\text{out} = v_2 + x + 5 \quad (= 35)$ — this is a linear constraint, encodeable in $\mathbf{c}$</li>
+    </ul>
+    <p>The R1CS constraints (each row is one multiplication gate):</p>
+
+    <div class="math-display no-center">$$\begin{array}{rcll}
+x &\cdot& x &= v_1 \\
+v_1 &\cdot& x &= v_2 \\
+(v_2 + x + 5) &\cdot& 1 &= \text{out}
+\end{array}$$</div>
+
+    <p>Witness vector: $\mathbf{s} = (1,\ \text{out},\ x,\ v_1,\ v_2) = (1,\ 35,\ 3,\ 9,\ 27)$</p>
+    <p>Just 3 constraints for a cubic computation. If we had $x^{1000}$, we'd need only $O(\log 1000)$ squarings — circuits are very efficient for repeated squaring.</p>
+
+    <h3>From R1CS to QAP</h3>
+    <p>A <strong>Quadratic Arithmetic Program (QAP)</strong> encodes the R1CS as polynomial equations. For each wire $i$, define polynomials $u_i(x), v_i(x), w_i(x)$ that interpolate the $i$-th column of $A, B, C$ at roots of unity. The R1CS constraint $As \odot Bs = Cs$ becomes:</p>
+
+    <div class="math-display">$$\left(\sum_i a_i u_i(\tau)\right) \cdot \left(\sum_i a_i v_i(\tau)\right) - \sum_i a_i w_i(\tau) = h(\tau) \cdot t(\tau)$$</div>
+
+    <p>where $t(\tau) = \prod_k (\tau - \omega^k)$ is the "target polynomial" vanishing at all the roots, and $h$ is the quotient. The Groth16 prover evaluates this at a secret point $\tau$ using the proving key (a list of encrypted powers of $\tau$), and the verifier checks it via pairings without ever knowing $\tau$.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="groth16">5. The Groth16 proof system</h2>
+
+    <p>Groth16 (Jens Groth, 2016) is currently the most-deployed SNARK in production, notable for its <em>minimal proof size</em>: exactly 3 elliptic curve group elements (~192 bytes for BN254). Verification requires exactly 3 pairing operations, taking roughly 3 ms regardless of circuit complexity.</p>
+
+    <h3>Setup phase</h3>
+    <p>The setup generates a proving key $\mathsf{pk}$ and verification key $\mathsf{vk}$ from the circuit and secret values $(\alpha, \beta, \gamma, \delta, \tau) \in \mathbb{F}_p^5$ (the "toxic waste"). These values must be destroyed after the ceremony. The keys encode encrypted evaluations of the QAP polynomials at $\tau$, using elliptic curve points $[x]_1 = x \cdot G_1$ and $[x]_2 = x \cdot G_2$.</p>
+
+    <h3>Proving</h3>
+    <p>Given a witness vector $\mathbf{a}$ satisfying the R1CS, the prover picks random blinding factors $r, s \in \mathbb{F}_p$ and computes three group elements:</p>
+
+    <div class="math-display no-center">$$\begin{aligned}
+[A]_1 &= [\alpha]_1 + \sum_i a_i [\sigma_i^A]_1 + r[\delta]_1 \\
+[B]_2 &= [\beta]_2 + \sum_i a_i [\sigma_i^B]_2 + s[\delta]_2 \\
+[C]_1 &= \frac{\sum_{i \in \text{priv}} a_i[\sigma_i^C]_1 + [h(\tau) \cdot t(\tau)]_1 - r[A]_1 - s[B]_1 + rs[\delta]_1}{1}
+\end{aligned}$$</div>
+
+    <p>The proof is $\pi = ([A]_1, [B]_2, [C]_1)$ — just those three points. The blinding terms $r, s$ ensure zero-knowledge: without them, a verifier who saw two proofs for the same witness could extract it.</p>
+
+    <h3>Verification</h3>
+    <p>Given public inputs $\mathbf{x}$, the verifier checks a single pairing equation:</p>
+
+    <div class="math-display">$$e(A,\, B) \;=\; e([\alpha]_1, [\beta]_2) \;\cdot\; e\!\left(\sum_{i \in \text{pub}} x_i \left[\frac{\beta u_i(\tau) + \alpha v_i(\tau) + w_i(\tau)}{\gamma}\right]_1,\; [\gamma]_2\right) \;\cdot\; e(C,\; [\delta]_2)$$</div>
+
+    <p>This is one equation with 3 pairings and $|\text{pub}|$ group additions. The verification time is dominated by the pairings, which cost ~1 ms each on modern hardware — so ~3 ms total, independent of circuit size.</p>
+
+    <div class="callout">
+      <div class="label">WHY PAIRINGS WORK FOR THIS</div>
+      <p style="margin:6px 0">A bilinear pairing $e: G_1 \times G_2 \to G_T$ satisfies $e(aP, bQ) = e(P, Q)^{ab}$. This lets the verifier "multiply in the exponent" — comparing encrypted values without decrypting them. The security rests on the hardness of the discrete log in $G_T$ (the "pairing DH assumption"). Elliptic curves BN254 and BLS12-381 are carefully engineered to support efficient pairings.</p>
+    </div>
+
+    <h3>The Plonk improvement</h3>
+    <p><strong>Plonk</strong> (Gabizon, Williamson, Ciobotaru, 2019) achieves a <em>universal</em> trusted setup: one ceremony works for all circuits up to a maximum size. The tradeoff: proof size is ~400 bytes (larger than Groth16) but eliminating per-circuit ceremonies dramatically reduces operational complexity. Plonk and its variants (TurboPlonk, UltraPlonk, HyperPlonk) are now the dominant SNARK in new zkEVM deployments.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="starks-fri">6. ZK-STARKs and FRI</h2>
+
+    <p>STARKs take a completely different approach: instead of elliptic curves and pairings, they use only collision-resistant hash functions. This makes them quantum-safe, transparent (no trusted setup), and highly parallelizable — at the cost of larger proofs.</p>
+
+    <h3>Arithmetization: from computation to polynomials</h3>
+    <p>STARKs use an <strong>Algebraic Intermediate Representation (AIR)</strong>. The computation trace is laid out as a table: rows are time steps, columns are register values. Transition constraints are low-degree polynomial equations $P(T_i, T_{i+1}) = 0$ that must hold for every step $i$. Boundary constraints specify initial and final states.</p>
+
+    <p>The prover encodes the trace as polynomials interpolated over a <strong>low-degree extension</strong> (LDE) domain — a set of roots of unity in a large field. The verifier needs to check that these polynomials have low degree and satisfy the AIR constraints.</p>
+
+    <h3>FRI: Fast Reed-Solomon IOP of Proximity</h3>
+    <p>FRI is a protocol for proving that a function $f: D \to \mathbb{F}$ is close to a polynomial of degree $&lt; d$, using only Merkle-hash commitments (no elliptic curves). The core idea is a <strong>folding</strong> protocol:</p>
+
+    <ol>
+      <li>Prover commits to $f$ by Merkle-hashing its evaluations over a domain $D$ of size $N$.</li>
+      <li>Verifier sends a random $\beta \in \mathbb{F}$.</li>
+      <li>Prover "folds" $f$ into $f'$ of degree $d/2$ over domain $D' = D^2$ of size $N/2$:
+        <div class="math-display">$$f'(x^2) = \frac{f(x) + f(-x)}{2} + \beta \cdot \frac{f(x) - f(-x)}{2x}$$</div>
+      </li>
+      <li>Repeat $O(\log d)$ times until the polynomial is constant (degree 0 = trivially verifiable).</li>
+    </ol>
+
+    <p>Each fold halves the degree and domain size. The final proof is the sequence of Merkle roots and decommitment paths for queried positions. Total proof size: $O(\log^2 n)$ hash values. Verification: $O(\log^2 n)$ hash checks.</p>
+
+    <div class="math-glossary">
+      <p class="mg-title">STARK/FRI vocabulary</p>
+      <dl>
+        <dt>AIR</dt>
+        <dd>Algebraic Intermediate Representation. The computation expressed as polynomial transition constraints over a trace table. Each row is one step of the program; constraints must hold for every consecutive pair of rows.</dd>
+        <dt>LDE (Low-Degree Extension)</dt>
+        <dd>Evaluating the trace polynomials over a domain much larger than the original trace. Errors in the trace polynomial become "spread out" in the LDE, making them easier for the FRI verifier to detect via random queries.</dd>
+        <dt>Blowup factor</dt>
+        <dd>The ratio of LDE domain size to trace length. Larger blowup = smaller soundness error per query = fewer queries needed = smaller proof, at higher prover cost.</dd>
+        <dt>DEEP-FRI</dt>
+        <dd>An optimization that binds the AIR constraint check and the FRI low-degree test together via out-of-domain sampling, improving soundness without increasing proof size.</dd>
+        <dt>Cairo VM</dt>
+        <dd>StarkWare's provable CPU architecture. Cairo programs compile to AIR constraints over a STARK-friendly field ($\mathbb{F}_{2^{251} + \ldots}$). StarkNet uses Cairo for its zkEVM-equivalent.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Analogy</strong> FRI is like a binary search for polynomial degree. You start with a huge polynomial (the full trace), and each folding round says: "I'll bet this is low-degree — here's a compressed version half the size." The verifier spot-checks each compressed version. If the polynomial were high-degree, the folding would break down, and the verifier would catch it in a random query with high probability.</p>
+    </div>
+
+    <h3>STARK proof size in practice</h3>
+    <p>For a computation with $n = 10^6$ steps, a STARK proof is typically 40–200 KB (depending on hash function, blowup factor, and security level), versus ~200 bytes for Groth16. This is a 100–1000× size difference. However, STARKs are:</p>
+    <ul class="clean">
+      <li>Faster to generate (no FFT over large fields, no multi-scalar multiplication over elliptic curves)</li>
+      <li>More easily parallelized (Merkle hashing is trivially parallel)</li>
+      <li>Post-quantum secure</li>
+      <li>Recursion-friendly via "hash-based" recursion (Plonky2, Starky)</li>
+    </ul>
+
+    <!-- ========================================================== -->
+    <h2 id="applications">7. Applications in blockchain</h2>
+
+    <h3 id="zkrollups">zkRollups</h3>
+    <p>A <strong>zkRollup</strong> is a Layer 2 scaling solution: batch thousands of transactions off-chain, generate a ZK proof that all state transitions are valid, and post only the proof and compressed transaction data on-chain.</p>
+
+    <div class="callout">
+      <div class="label">HOW A ZKROLLUP WORKS</div>
+      <ol style="margin:6px 0">
+        <li>Users submit transactions to a sequencer (the L2 node).</li>
+        <li>The sequencer executes the transactions, updating the L2 state tree.</li>
+        <li>A ZK prover generates a proof that: (a) each transaction has a valid signature, (b) each sender had sufficient balance, (c) the state root transitioned correctly.</li>
+        <li>The proof (~200 bytes for Groth16) and a compressed transaction batch (calldata) are submitted to an Ethereum smart contract.</li>
+        <li>The verifier contract checks the proof in ~500,000 gas — the same cost regardless of whether the batch contained 10 or 10,000 transactions.</li>
+      </ol>
+    </div>
+
+    <p>Result: <strong>100–1000× throughput increase</strong> with full Ethereum security guarantees. Unlike optimistic rollups, zkRollups have instant finality — no 7-day challenge period, because the proof is a mathematical guarantee, not an economic incentive.</p>
+
+    <table class="rank-table">
+      <thead>
+        <tr>
+          <th>Protocol</th>
+          <th>Proof system</th>
+          <th>EVM-compatible</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>zkSync Era</td><td>Plonk (Boojum)</td><td>Full EVM (zkEVM)</td><td>Mainnet</td></tr>
+        <tr><td>Scroll</td><td>Plonk</td><td>Full EVM (zkEVM)</td><td>Mainnet</td></tr>
+        <tr><td>Linea</td><td>Plonk (gnark)</td><td>Full EVM</td><td>Mainnet</td></tr>
+        <tr><td>Polygon zkEVM</td><td>Plonk + STARK (Plonky2)</td><td>Full EVM</td><td>Mainnet</td></tr>
+        <tr><td>StarkNet</td><td>STARK (Cairo)</td><td>Cairo VM (not EVM)</td><td>Mainnet</td></tr>
+        <tr><td>Zcash</td><td>Groth16</td><td>N/A (payments only)</td><td>Mainnet</td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="zkbridges">zkBridges</h3>
+    <p>Traditional cross-chain bridges use a multisig of "validators" who sign off on messages — a trusted committee. If the committee is compromised (as happened with Ronin, Wormhole, Nomad), funds are stolen.</p>
+
+    <p>A <strong>zkBridge</strong> replaces the trusted committee with a ZK proof. The prover generates a proof that: "the source chain's light client state at block $N$ has hash $H$, and this hash was signed by a supermajority of validators according to the consensus rules." The destination chain verifies the proof onchain — no trust assumptions beyond the cryptography.</p>
+
+    <p>Projects in this space: Succinct Labs (SP1-based bridge proofs), Polyhedra (zkBridge with BLS signature aggregation proofs), Axiom (historical Ethereum state proofs), Lagrange (cross-chain ZK coprocessor).</p>
+
+    <h3 id="zkidentity">zkIdentity and zkVMs</h3>
+    <p><strong>zkIdentity</strong> lets you prove properties about yourself without revealing the underlying data:</p>
+    <ul class="clean">
+      <li>Age ≥ 18, proven from a government credential, without revealing birthdate or name</li>
+      <li>Credit score above a threshold, proven from bank data, without revealing income or account numbers</li>
+      <li>Citizenship, without revealing passport number</li>
+    </ul>
+
+    <p><strong>Semaphore</strong> is an Ethereum protocol for anonymous group membership: prove you're in a group without revealing which member you are. Used for anonymous voting, whistleblowing, and private airdrops. <strong>World ID</strong> (Worldcoin) uses iris biometrics to generate a unique nullifier — proving personhood without linking transactions to identity.</p>
+
+    <p><strong>zkVMs</strong> prove the correct execution of arbitrary programs inside a ZK proof:</p>
+    <ul class="clean">
+      <li><strong>RISC Zero</strong>: proves execution of RISC-V programs (Rust compiles to RISC-V)</li>
+      <li><strong>SP1</strong> (Succinct Labs): proves RISC-V with a STARK + Groth16 wrapper for cheap onchain verification</li>
+      <li><strong>Nexus</strong>: zkVM targeting a folding-scheme-based prover (Nova/SuperNova)</li>
+    </ul>
+
+    <p>The vision: any program can be proven correct off-chain and verified on-chain for a flat fee. This would enable fully trustless bridges, provable rollup sequencers, and ZK-proven AI inference.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="cave-demo">8. Interactive: ZK Ali Baba cave</h2>
+    <p>Run rounds of the Ali Baba protocol below. Each round: Peggy enters a random side, Victor calls out a side, Peggy exits correctly. Watch the cheating probability drop toward zero.</p>
+
+    <div class="viz-3d" id="cave-viz">
+      <svg id="cave-svg" viewBox="0 0 640 300" width="100%" style="background:var(--bg-2); border-radius:8px; display:block;">
+        <!-- Cave background -->
+        <ellipse cx="320" cy="150" rx="200" ry="120" fill="#1a1f2e" stroke="#334155" stroke-width="2"/>
+        <!-- Left path -->
+        <path id="path-left" d="M 320 220 Q 200 200 160 150 Q 200 100 320 80" fill="none" stroke="#475569" stroke-width="18" stroke-linecap="round"/>
+        <!-- Right path -->
+        <path id="path-right" d="M 320 220 Q 440 200 480 150 Q 440 100 320 80" fill="none" stroke="#475569" stroke-width="18" stroke-linecap="round"/>
+        <!-- Magic door -->
+        <rect x="308" y="130" width="24" height="40" rx="4" fill="#7c3aed" stroke="#a78bfa" stroke-width="2" opacity="0.9"/>
+        <text x="320" y="155" text-anchor="middle" fill="#e9d5ff" font-size="9" font-family="monospace">DOOR</text>
+        <!-- Entrance marker -->
+        <line x1="310" y1="240" x2="330" y2="240" stroke="#64748b" stroke-width="3"/>
+        <text x="320" y="260" text-anchor="middle" fill="#94a3b8" font-size="11" font-family="monospace">ENTRANCE</text>
+        <!-- Path labels -->
+        <text x="185" y="148" text-anchor="middle" fill="#7dd3fc" font-size="13" font-family="monospace" font-weight="bold">A</text>
+        <text x="455" y="148" text-anchor="middle" fill="#7dd3fc" font-size="13" font-family="monospace" font-weight="bold">B</text>
+        <!-- Peggy figure (starts at entrance) -->
+        <g id="peggy-g">
+          <circle id="peggy-head" cx="320" cy="228" r="7" fill="#f472b6" stroke="#fda4af" stroke-width="1.5"/>
+          <line id="peggy-body" x1="320" y1="235" x2="320" y2="248" stroke="#f472b6" stroke-width="2.5"/>
+          <text x="320" y="272" text-anchor="middle" fill="#f472b6" font-size="10" font-family="monospace">Peggy</text>
+        </g>
+        <!-- Victor figure (stays at entrance) -->
+        <g>
+          <circle cx="365" cy="255" r="7" fill="#4ade80" stroke="#86efac" stroke-width="1.5"/>
+          <line x1="365" y1="262" x2="365" y2="275" stroke="#4ade80" stroke-width="2.5"/>
+          <text x="365" y="290" text-anchor="middle" fill="#4ade80" font-size="10" font-family="monospace">Victor</text>
+        </g>
+        <!-- State text overlay -->
+        <text id="cave-state-text" x="320" y="30" text-anchor="middle" fill="#cbd5e1" font-size="12" font-family="monospace">Press "Run Round" to start</text>
+        <!-- Victor's call bubble -->
+        <g id="victor-call-group" opacity="0">
+          <rect x="375" y="235" width="110" height="22" rx="4" fill="#1e293b" stroke="#4ade80" stroke-width="1"/>
+          <text id="victor-call-text" x="430" y="250" text-anchor="middle" fill="#4ade80" font-size="11" font-family="monospace">"Come out from A!"</text>
+        </g>
+        <!-- Round result tag -->
+        <g id="result-tag" opacity="0">
+          <rect x="245" y="60" width="150" height="24" rx="6" fill="#14532d" stroke="#4ade80" stroke-width="1.5"/>
+          <text id="result-tag-text" x="320" y="76" text-anchor="middle" fill="#86efac" font-size="12" font-family="monospace">✓ Correct!</text>
+        </g>
+      </svg>
+
+      <div style="display:flex; gap:16px; align-items:flex-start; flex-wrap:wrap; margin-top:12px;">
+        <div style="flex:1; min-width:200px;">
+          <div style="font-family:monospace; font-size:13px; color:var(--text-2); margin-bottom:8px;">Round: <span id="cave-round">0</span> / 20</div>
+          <div style="font-family:monospace; font-size:13px; color:var(--text-2); margin-bottom:8px;">Cheating probability: <span id="cave-prob">1.000000</span></div>
+          <div style="font-family:monospace; font-size:13px; margin-bottom:8px;" id="cave-verdict">&nbsp;</div>
+        </div>
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <button class="btn primary" id="cave-run-btn" onclick="caveRunRound()">Run Round</button>
+          <button class="btn" onclick="caveReset()">↺ Reset</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="source">9. Source code</h2>
+    <p>Implementation examples across languages — from a Schnorr protocol simulation to full Groth16 proof generation using gnark, snarkjs, and arkworks.</p>
+
+    <details class="algo-code">
+      <summary>Source — Zero-Knowledge Proof Implementations</summary>
+      <div class="code-tabs">
+        <div class="ct-header">
+          <button class="ct-tab active" data-tab="zkp-pseudo">Pseudocode</button>
+          <button class="ct-tab" data-tab="zkp-py">Python</button>
+          <button class="ct-tab" data-tab="zkp-js">JavaScript</button>
+          <button class="ct-tab" data-tab="zkp-c">C</button>
+          <button class="ct-tab" data-tab="zkp-cpp">C++</button>
+          <button class="ct-tab" data-tab="zkp-java">Java</button>
+          <button class="ct-tab" data-tab="zkp-go">Go</button>
+        </div>
+
+        <!-- PSEUDOCODE -->
+        <div class="ct-panel active" data-tab="zkp-pseudo"><pre><code># ─── Schnorr Identification Protocol ───────────────────────────
+# Public: p (prime), q (prime, q | p-1), g (generator of order q)
+# Public: Y = g^x mod p  (the statement)
+# Secret: x  (the witness / private key)
+
+function schnorr_prove(x, Y, g, p, q):
+    r  = random(1, q-1)            # random blinding factor
+    R  = pow(g, r, p)              # commitment
+    c  = H(Y || R)                 # Fiat-Shamir challenge (non-interactive)
+    s  = (r + c * x) mod q         # response
+    return (R, s)                  # the proof
+
+function schnorr_verify(Y, R, s, c, g, p, q):
+    # recompute challenge
+    c  = H(Y || R)
+    lhs = pow(g, s, p)             # g^s mod p
+    rhs = (R * pow(Y, c, p)) mod p # R * Y^c mod p
+    return lhs == rhs
+
+
+# ─── R1CS Constraint System (for x^3 + x + 5 = 35) ────────────
+# Witness: s = [1, out, x, v1, v2]
+#          s = [1, 35,  3,  9, 27]
+
+constraints:
+  # gate 1: x * x = v1
+  A[0] = [0, 0, 1, 0, 0]   # picks x
+  B[0] = [0, 0, 1, 0, 0]   # picks x
+  C[0] = [0, 0, 0, 1, 0]   # picks v1
+
+  # gate 2: v1 * x = v2
+  A[1] = [0, 0, 0, 1, 0]   # picks v1
+  B[1] = [0, 0, 1, 0, 0]   # picks x
+  C[1] = [0, 0, 0, 0, 1]   # picks v2
+
+  # gate 3: (v2 + x + 5) * 1 = out
+  A[2] = [5, 0, 1, 0, 1]   # 5*1 + x + v2
+  B[2] = [1, 0, 0, 0, 0]   # 1 (constant)
+  C[2] = [0, 1, 0, 0, 0]   # picks out
+
+function check_r1cs(A, B, C, s):
+    for i in range(len(A)):
+        left  = dot(A[i], s)
+        right = dot(B[i], s)
+        out   = dot(C[i], s)
+        assert left * right == out, f"Constraint {i} failed"
+    return True
+
+
+# ─── Groth16 Verification (simplified) ─────────────────────────
+# vk: verification key (alpha_g1, beta_g2, gamma_g2, delta_g2, IC)
+# proof: (A_g1, B_g2, C_g1)
+# public_inputs: [x1, x2, ...]
+
+function groth16_verify(vk, proof, public_inputs):
+    # Compute linear combination of IC points
+    vk_x = vk.IC[0]
+    for i, xi in enumerate(public_inputs):
+        vk_x += xi * vk.IC[i+1]   # scalar multiplication on G1
+
+    # Check pairing equation:
+    # e(A, B) == e(alpha, beta) * e(vk_x, gamma) * e(C, delta)
+    lhs = pairing(proof.A, proof.B)
+    rhs = ( pairing(vk.alpha_g1, vk.beta_g2)
+          * pairing(vk_x, vk.gamma_g2)
+          * pairing(proof.C, vk.delta_g2) )
+    return lhs == rhs</code></pre></div>
+
+        <!-- PYTHON -->
+        <div class="ct-panel" data-tab="zkp-py"><pre><code># ─── Requirements: pip install py_ecc ──────────────────────────
+# py_ecc provides BN128 pairing operations
+
+from py_ecc.bn128 import (
+    G1, G2, pairing, multiply, add, neg, field_modulus, curve_order
+)
+import hashlib, random
+
+# ─── Schnorr protocol simulation ───────────────────────────────
+def schnorr_sim(p=0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141,
+                g=2):
+    """Simulate Schnorr over a toy multiplicative group."""
+    q = p  # prime order group for simplicity
+    x = random.randrange(1, q)          # private key
+    Y = pow(g, x, q)                    # public key
+
+    # Prove knowledge of x
+    r = random.randrange(1, q)
+    R = pow(g, r, q)
+    c = int(hashlib.sha256(f"{Y}{R}".encode()).hexdigest(), 16) % q
+    s = (r + c * x) % q
+
+    # Verify
+    lhs = pow(g, s, q)
+    rhs = (R * pow(Y, c, q)) % q
+    print(f"Valid proof: {lhs == rhs}")
+    return lhs == rhs
+
+schnorr_sim()
+
+
+# ─── R1CS satisfiability check ─────────────────────────────────
+def check_r1cs(A, B, C, s):
+    for i, (a, b, c) in enumerate(zip(A, B, C)):
+        left  = sum(ai * si for ai, si in zip(a, s))
+        right = sum(bi * si for bi, si in zip(b, s))
+        out   = sum(ci * si for ci, si in zip(c, s))
+        if left * right != out:
+            raise ValueError(f"Constraint {i} failed: {left}*{right} != {out}")
+    print("All R1CS constraints satisfied!")
+
+# x^3 + x + 5 = 35, with x=3
+s = [1, 35, 3, 9, 27]  # [1, out, x, v1, v2]
+A = [[0,0,1,0,0], [0,0,0,1,0], [5,0,1,0,1]]
+B = [[0,0,1,0,0], [0,0,1,0,0], [1,0,0,0,0]]
+C = [[0,0,0,1,0], [0,0,0,0,1], [0,1,0,0,0]]
+check_r1cs(A, B, C, s)
+
+
+# ─── BN128 pairing check (Groth16-style) ───────────────────────
+def demo_pairing():
+    # e(aG1, bG2) == e(G1, G2)^(ab)
+    a, b = 5, 7
+    aG1 = multiply(G1, a)
+    bG2 = multiply(G2, b)
+    abG1 = multiply(G1, a * b % curve_order)
+
+    lhs = pairing(bG2, aG1)
+    rhs = pairing(G2, abG1)
+    print(f"Pairing bilinearity: {lhs == rhs}")
+
+demo_pairing()
+
+
+# ─── circom witness generation example ─────────────────────────
+# Requires: npm install -g circom snarkjs
+# Circuit: multiplier2.circom
+#   pragma circom 2.0.0;
+#   template Multiplier2() {
+#       signal input a, b;
+#       signal output c;
+#       c <== a * b;
+#   }
+#   component main = Multiplier2();
+
+import subprocess, json, os
+
+def generate_proof(circom_circuit, input_data, output_dir="."):
+    """Full circom -> witness -> proof pipeline."""
+    # 1. Write input
+    with open(f"{output_dir}/input.json", "w") as f:
+        json.dump(input_data, f)
+
+    # 2. Generate witness
+    subprocess.run(["node", f"{circom_circuit}_js/generate_witness.js",
+                    f"{circom_circuit}_js/{os.path.basename(circom_circuit)}.wasm",
+                    f"{output_dir}/input.json",
+                    f"{output_dir}/witness.wtns"], check=True)
+
+    # 3. Generate proof (requires trusted setup zkey)
+    subprocess.run(["snarkjs", "groth16", "prove",
+                    f"{circom_circuit}.zkey",
+                    f"{output_dir}/witness.wtns",
+                    f"{output_dir}/proof.json",
+                    f"{output_dir}/public.json"], check=True)
+
+    # 4. Verify
+    result = subprocess.run(["snarkjs", "groth16", "verify",
+                              f"{circom_circuit}_vk.json",
+                              f"{output_dir}/public.json",
+                              f"{output_dir}/proof.json"],
+                             capture_output=True, text=True)
+    return "OK" in result.stdout
+
+# generate_proof("multiplier2", {"a": 3, "b": 7})  # proves 3*7=21</code></pre></div>
+
+        <!-- JAVASCRIPT -->
+        <div class="ct-panel" data-tab="zkp-js"><pre><code>// ─── Requirements: npm install snarkjs circomlibjs ─────────────
+
+const snarkjs = require("snarkjs");
+const { buildPoseidon } = require("circomlibjs");
+
+// ─── Generate and verify a Groth16 proof with snarkjs ──────────
+async function proveAndVerify() {
+    // Input to the circuit (must match the circuit's public/private inputs)
+    const input = { a: 3, b: 11 };  // proving a*b = 33
+
+    // Generate proof
+    const { proof, publicSignals } = await snarkjs.groth16.fullProve(
+        input,
+        "multiplier.wasm",   // compiled circuit (circom -> wasm)
+        "multiplier.zkey"    // proving key (from trusted setup)
+    );
+
+    console.log("Proof:", JSON.stringify(proof, null, 2));
+    console.log("Public signals:", publicSignals);
+
+    // Verify proof using verification key
+    const vkey = JSON.parse(require("fs").readFileSync("verification_key.json"));
+    const isValid = await snarkjs.groth16.verify(vkey, publicSignals, proof);
+    console.log("Proof valid:", isValid);
+
+    return { proof, publicSignals, isValid };
+}
+
+// ─── Export Solidity verifier contract ─────────────────────────
+async function exportSolidityVerifier() {
+    const templates = { groth16: snarkjs.groth16 };
+    const solidityCode = await snarkjs.zKey.exportSolidityVerifier(
+        "multiplier.zkey",
+        templates
+    );
+    require("fs").writeFileSync("Verifier.sol", solidityCode);
+    console.log("Verifier.sol written — deploy this to Ethereum!");
+}
+
+
+// ─── Circom compilation workflow ───────────────────────────────
+// Install: npm install -g circom
+// 1. Write circuit in multiplier.circom:
+//    pragma circom 2.0.0;
+//    template Multiplier() {
+//        signal input a, b;
+//        signal output c;
+//        c <== a * b;
+//    }
+//    component main { public [c] } = Multiplier();
+//
+// 2. Compile: circom multiplier.circom --r1cs --wasm --sym
+// 3. Trusted setup:
+//    snarkjs powersoftau new bn128 12 pot12_0000.ptau
+//    snarkjs powersoftau contribute pot12_0000.ptau pot12_0001.ptau
+//    snarkjs powersoftau prepare phase2 pot12_0001.ptau pot12_final.ptau
+//    snarkjs groth16 setup multiplier.r1cs pot12_final.ptau multiplier.zkey
+//    snarkjs zkey export verificationkey multiplier.zkey verification_key.json
+
+
+// ─── Poseidon hash (ZK-friendly hash function) ─────────────────
+async function poseidonDemo() {
+    const poseidon = await buildPoseidon();
+    // Poseidon is a ZK-friendly hash — many times cheaper in circuits
+    // than SHA256 (SHA256 needs ~20k R1CS constraints; Poseidon needs ~200)
+    const input = [BigInt(1), BigInt(2), BigInt(3)];
+    const hash = poseidon(input);
+    const hashHex = poseidon.F.toString(hash, 16);
+    console.log("Poseidon hash:", hashHex);
+
+    // Proving knowledge of a Poseidon preimage (for Semaphore/Merkle trees)
+    // Circuit: poseidon(secret, nullifier) == commitment (public)
+    // Proves: I know the secret behind a public commitment
+}
+
+proveAndVerify().catch(console.error);</code></pre></div>
+
+        <!-- C -->
+        <div class="ct-panel" data-tab="zkp-c"><pre><code>/* ── Requirements: libff (https://github.com/scipr-lab/libff) ──
+   Compile: g++ -O2 -o zkp_demo zkp_demo.c -lff -lgmp -lssl -lcrypto
+   libff provides elliptic curve arithmetic and pairing operations.    */
+
+#include &lt;stdio.h&gt;
+#include &lt;stdint.h&gt;
+#include &lt;string.h&gt;
+#include &lt;stdlib.h&gt;
+
+/* ── Conceptual BN128 group element (opaque in real libff) ──── */
+typedef struct { uint64_t x[4], y[4], z[4]; } G1;
+typedef struct { uint64_t x[8], y[8], z[8]; } G2;
+typedef struct { uint64_t c[12]; }             GT;
+
+/* ── Stub declarations — real libff uses C++ ────────────────── */
+extern G1  g1_generator(void);
+extern G2  g2_generator(void);
+extern G1  g1_scalar_mul(G1 P, uint64_t s[4]);
+extern G1  g1_add(G1 P, G1 Q);
+extern GT  bn128_pairing(G2 Q, G1 P);   /* e: G2 x G1 -> GT */
+extern int gt_equal(GT a, GT b);
+extern void g1_print(const char *name, G1 P);
+
+/* ── Check bilinearity: e(aG1, bG2) == e(G1, G2)^(ab) ─────── */
+int check_pairing_bilinearity(uint64_t a, uint64_t b) {
+    G1 G1gen = g1_generator();
+    G2 G2gen = g2_generator();
+
+    /* a*G1, b*G2, (a*b)*G1 */
+    uint64_t a4[4] = {a, 0, 0, 0};
+    uint64_t b4[4] = {b, 0, 0, 0};
+    uint64_t ab4[4] = {a * b, 0, 0, 0};  /* simplified, ignores overflow */
+
+    G1 aG1   = g1_scalar_mul(G1gen, a4);
+    G2 bG2   = g2_scalar_mul(G2gen, b4);
+    G1 abG1  = g1_scalar_mul(G1gen, ab4);
+
+    /* e(aG1, bG2) should equal e(abG1, G2) by bilinearity */
+    GT lhs = bn128_pairing(bG2, aG1);
+    GT rhs = bn128_pairing(G2gen, abG1);
+
+    return gt_equal(lhs, rhs);
+}
+
+/* ── Simplified Groth16 verification (structure only) ────────
+   In practice: use libsnark or arkworks-rs for production code. */
+typedef struct {
+    G1 alpha_g1;
+    G2 beta_g2, gamma_g2, delta_g2;
+    G1 *IC;           /* size: n_public + 1 */
+    int n_public;
+} VerificationKey;
+
+typedef struct { G1 A; G2 B; G1 C; } Proof;
+
+int groth16_verify(const VerificationKey *vk, const Proof *pi,
+                   const uint64_t *pub_inputs, int n_pub)
+{
+    /* Compute vk_x = IC[0] + sum_i( pub_inputs[i] * IC[i+1] ) */
+    G1 vk_x = vk->IC[0];
+    for (int i = 0; i &lt; n_pub; i++) {
+        uint64_t s4[4] = {pub_inputs[i], 0, 0, 0};
+        G1 term = g1_scalar_mul(vk->IC[i + 1], s4);
+        vk_x = g1_add(vk_x, term);
+    }
+
+    /* Check: e(A, B) == e(alpha, beta) * e(vk_x, gamma) * e(C, delta) */
+    GT lhs = bn128_pairing(pi->B, pi->A);
+
+    GT r1 = bn128_pairing(vk->beta_g2, vk->alpha_g1);
+    GT r2 = bn128_pairing(vk->gamma_g2, vk_x);
+    GT r3 = bn128_pairing(vk->delta_g2, pi->C);
+
+    /* GT multiplication */
+    GT rhs = gt_mul(gt_mul(r1, r2), r3);
+
+    return gt_equal(lhs, rhs);
+}
+
+int main(void) {
+    printf("BN128 pairing bilinearity (3, 7): %s\n",
+           check_pairing_bilinearity(3, 7) ? "PASS" : "FAIL");
+    /* For full ZKP: use libsnark C++ interface or arkworks-rs */
+    return 0;
+}</code></pre></div>
+
+        <!-- C++ -->
+        <div class="ct-panel" data-tab="zkp-cpp"><pre><code>// ─── Requirements: libsnark ──────────────────────────────────
+// git clone https://github.com/scipr-lab/libsnark && cd libsnark
+// mkdir build && cd build && cmake .. && make
+// g++ -O2 -o zkp_demo zkp_demo.cpp -lsnark -lff -lgmp -lprocps
+
+#include &lt;libsnark/gadgetlib1/gadgets/basic_gadgets.hpp&gt;
+#include &lt;libsnark/gadgetlib1/gadget.hpp&gt;
+#include &lt;libsnark/gadgetlib1/pb_variable.hpp&gt;
+#include &lt;libsnark/zk_proof_systems/ppzksnark/r1cs_gg_ppzksnark/r1cs_gg_ppzksnark.hpp&gt;
+#include &lt;libff/algebra/curves/public_params.hpp&gt;
+
+using namespace libsnark;
+typedef libff::default_ec_pp ppT;
+typedef libff::Fr&lt;ppT&gt;       FieldT;
+
+// ─── Circuit: prove knowledge of x s.t. x^3 + x + 5 == 35 ───
+class CubicCircuit : public gadget&lt;FieldT&gt; {
+public:
+    pb_variable&lt;FieldT&gt; x;    // private input
+    pb_variable&lt;FieldT&gt; v1;   // x*x
+    pb_variable&lt;FieldT&gt; v2;   // x*x*x
+    pb_variable&lt;FieldT&gt; out;  // public output
+
+    CubicCircuit(protoboard&lt;FieldT&gt; &amp;pb, const std::string &amp;name)
+        : gadget&lt;FieldT&gt;(pb, name)
+    {
+        out.allocate(pb, "out");   // public first
+        x.allocate(pb,   "x");
+        v1.allocate(pb,  "v1");
+        v2.allocate(pb,  "v2");
+        pb.set_input_sizes(1);     // out is the single public input
+    }
+
+    void generate_r1cs_constraints() {
+        // x * x = v1
+        pb.add_r1cs_constraint(
+            r1cs_constraint&lt;FieldT&gt;(x, x, v1), "x*x=v1");
+        // v1 * x = v2
+        pb.add_r1cs_constraint(
+            r1cs_constraint&lt;FieldT&gt;(v1, x, v2), "v1*x=v2");
+        // (v2 + x + 5) * 1 = out
+        pb.add_r1cs_constraint(
+            r1cs_constraint&lt;FieldT&gt;(v2 + x + FieldT(5), FieldT::one(), out),
+            "v2+x+5=out");
+    }
+
+    void generate_r1cs_witness(const FieldT &amp;x_val) {
+        pb.val(x)   = x_val;
+        pb.val(v1)  = x_val * x_val;
+        pb.val(v2)  = pb.val(v1) * x_val;
+        pb.val(out) = pb.val(v2) + x_val + FieldT(5);
+    }
+};
+
+int main() {
+    libff::default_ec_pp::init_public_params();
+    protoboard&lt;FieldT&gt; pb;
+
+    CubicCircuit circuit(pb, "cubic");
+    circuit.generate_r1cs_constraints();
+
+    // ── Trusted setup ────────────────────────────────────────
+    const r1cs_constraint_system&lt;FieldT&gt; cs = pb.get_constraint_system();
+    auto keypair = r1cs_gg_ppzksnark_generator&lt;ppT&gt;(cs);
+
+    // ── Prove: x = 3 ────────────────────────────────────────
+    circuit.generate_r1cs_witness(FieldT(3));
+    assert(pb.is_satisfied());
+
+    const r1cs_gg_ppzksnark_proof&lt;ppT&gt; proof =
+        r1cs_gg_ppzksnark_prover&lt;ppT&gt;(
+            keypair.pk,
+            pb.primary_input(),    // public: out=35
+            pb.auxiliary_input()); // private: x=3, v1=9, v2=27
+
+    // ── Verify ──────────────────────────────────────────────
+    bool verified = r1cs_gg_ppzksnark_verifier_strong_IC&lt;ppT&gt;(
+        keypair.vk,
+        pb.primary_input(),
+        proof);
+
+    std::cout &lt;&lt; "Proof verified: " &lt;&lt; verified &lt;&lt; "\n";
+    // Proof size: 3 group elements (~192 bytes for BN254)
+    return 0;
+}</code></pre></div>
+
+        <!-- JAVA -->
+        <div class="ct-panel" data-tab="zkp-java"><pre><code>import java.math.BigInteger;
+import java.security.SecureRandom;
+import java.security.MessageDigest;
+import org.web3j.protocol.Web3j;
+import org.web3j.tx.gas.DefaultGasProvider;
+
+/**
+ * Zero-Knowledge Proof demonstration in Java.
+ * Part 1: Schnorr protocol simulation (educational, over toy group)
+ * Part 2: web3j interaction with an on-chain Groth16 verifier
+ */
+public class ZKPDemo {
+
+    // ── Schnorr simulation (educational - uses BigInteger, not EC) ──
+    static final BigInteger P = new BigInteger(
+        "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F", 16);
+    static final BigInteger Q = P.subtract(BigInteger.ONE).divide(BigInteger.TWO);
+    static final BigInteger G = BigInteger.valueOf(2);
+
+    public static BigInteger[] schnorrProve(BigInteger x) throws Exception {
+        SecureRandom rng = new SecureRandom();
+        BigInteger r = new BigInteger(Q.bitLength(), rng).mod(Q);
+        BigInteger Y = G.modPow(x, P);
+        BigInteger R = G.modPow(r, P);
+
+        // Fiat-Shamir challenge: c = H(Y || R)
+        MessageDigest md = MessageDigest.getInstance("SHA-256");
+        md.update(Y.toByteArray());
+        md.update(R.toByteArray());
+        BigInteger c = new BigInteger(1, md.digest()).mod(Q);
+
+        BigInteger s = r.add(c.multiply(x)).mod(Q);
+        return new BigInteger[]{ R, c, s };
+    }
+
+    public static boolean schnorrVerify(BigInteger Y, BigInteger[] proof) throws Exception {
+        BigInteger R = proof[0], c = proof[1], s = proof[2];
+
+        // Recompute challenge
+        MessageDigest md = MessageDigest.getInstance("SHA-256");
+        md.update(Y.toByteArray());
+        md.update(R.toByteArray());
+        BigInteger cCheck = new BigInteger(1, md.digest()).mod(Q);
+        if (!cCheck.equals(c)) return false;
+
+        // Check g^s == R * Y^c mod P
+        BigInteger lhs = G.modPow(s, P);
+        BigInteger rhs = R.multiply(Y.modPow(c, P)).mod(P);
+        return lhs.equals(rhs);
+    }
+
+    // ── web3j: call deployed Groth16 verifier contract ──────────────
+    // After running `snarkjs groth16 exportsolidityverifier circuit.zkey`
+    // you get a Verifier.sol. Deploy it, then call verifyProof().
+    public static boolean verifyOnChain(Web3j web3, String verifierAddress,
+                                         BigInteger[] a,       // [2]    G1 point
+                                         BigInteger[][] b,     // [2][2] G2 point
+                                         BigInteger[] c2,      // [2]    G1 point
+                                         BigInteger[] inputs)  // public signals
+            throws Exception
+    {
+        // Load the auto-generated Java wrapper (web3j generate ...)
+        Verifier verifier = Verifier.load(
+            verifierAddress, web3,
+            /* credentials */ null,
+            new DefaultGasProvider()
+        );
+
+        // The snarkjs-generated Solidity verifier exposes:
+        // function verifyProof(uint[2] a, uint[2][2] b, uint[2] c, uint[] input)
+        //     external view returns (bool)
+        return verifier.verifyProof(
+            new org.web3j.abi.datatypes.generated.Uint256[]{
+                new org.web3j.abi.datatypes.generated.Uint256(a[0]),
+                new org.web3j.abi.datatypes.generated.Uint256(a[1])
+            },
+            new org.web3j.abi.datatypes.generated.Uint256[][]{
+                { new org.web3j.abi.datatypes.generated.Uint256(b[0][0]),
+                  new org.web3j.abi.datatypes.generated.Uint256(b[0][1]) },
+                { new org.web3j.abi.datatypes.generated.Uint256(b[1][0]),
+                  new org.web3j.abi.datatypes.generated.Uint256(b[1][1]) }
+            },
+            // ... c, inputs
+        ).send();
+    }
+
+    public static void main(String[] args) throws Exception {
+        // Simulate Schnorr proof
+        BigInteger x = new BigInteger("12345678901234567890");
+        BigInteger Y = G.modPow(x, P);
+        BigInteger[] proof = schnorrProve(x);
+
+        boolean valid = schnorrVerify(Y, proof);
+        System.out.println("Schnorr proof valid: " + valid);
+
+        // x = 3, Y = 2^3 mod P
+        BigInteger x2 = BigInteger.valueOf(3);
+        BigInteger Y2 = G.modPow(x2, P);
+        BigInteger[] proof2 = schnorrProve(x2);
+        System.out.println("Schnorr proof for x=3 valid: " + schnorrVerify(Y2, proof2));
+    }
+}</code></pre></div>
+
+        <!-- GO -->
+        <div class="ct-panel" data-tab="zkp-go"><pre><code>// ─── Requirements: go get github.com/consensys/gnark@latest ────
+//     go get github.com/consensys/gnark-crypto@latest
+
+package main
+
+import (
+	"fmt"
+	"log"
+
+	"github.com/consensys/gnark-crypto/ecc"
+	"github.com/consensys/gnark/backend/groth16"
+	"github.com/consensys/gnark/frontend"
+	"github.com/consensys/gnark/frontend/cs/r1cs"
+	"github.com/consensys/gnark-crypto/ecc/bn254/fr/poseidon"
+)
+
+// ─── Circuit: prove x^3 + x + 5 == out ─────────────────────────
+type CubicCircuit struct {
+	X   frontend.Variable `gnark:",secret"`  // private witness
+	Out frontend.Variable `gnark:",public"`  // public output
+}
+
+// Define adds R1CS constraints. Called once during setup.
+func (c *CubicCircuit) Define(api frontend.API) error {
+	// v1 = x * x
+	v1 := api.Mul(c.X, c.X)
+	// v2 = v1 * x  (= x^3)
+	v2 := api.Mul(v1, c.X)
+	// out == v2 + x + 5
+	api.AssertIsEqual(c.Out, api.Add(v2, c.X, 5))
+	return nil
+}
+
+func groth16Demo() {
+	var circuit CubicCircuit
+
+	// ── Compile to R1CS ────────────────────────────────────────
+	ccs, err := frontend.Compile(ecc.BN254.ScalarField(), r1cs.NewBuilder, &circuit)
+	if err != nil {
+		log.Fatal("compile:", err)
+	}
+	fmt.Printf("Constraints: %d\n", ccs.GetNbConstraints()) // should be 3
+
+	// ── Trusted setup (Groth16) ────────────────────────────────
+	pk, vk, err := groth16.Setup(ccs)
+	if err != nil {
+		log.Fatal("setup:", err)
+	}
+	fmt.Println("Setup complete. pk size:", pk.NbG1(), "G1 elements")
+
+	// ── Prove: x = 3, out = 35 ────────────────────────────────
+	witness, err := frontend.NewWitness(&CubicCircuit{X: 3, Out: 35}, ecc.BN254.ScalarField())
+	if err != nil {
+		log.Fatal("witness:", err)
+	}
+
+	proof, err := groth16.Prove(ccs, pk, witness)
+	if err != nil {
+		log.Fatal("prove:", err)
+	}
+	fmt.Println("Proof generated:", proof)
+
+	// ── Verify ────────────────────────────────────────────────
+	publicWitness, _ := witness.Public()
+	err = groth16.Verify(proof, vk, publicWitness)
+	if err != nil {
+		fmt.Println("Verification FAILED:", err)
+	} else {
+		fmt.Println("Proof VERIFIED ✓")
+	}
+}
+
+// ─── Poseidon hash (gnark-crypto) ──────────────────────────────
+func poseidonDemo() {
+	// Poseidon is ZK-friendly: ~200 constraints vs ~20k for SHA256
+	h, err := poseidon.New()
+	if err != nil {
+		log.Fatal(err)
+	}
+	h.Write([]byte("secret preimage"))
+	digest := h.Sum(nil)
+	fmt.Printf("Poseidon hash: %x\n", digest)
+
+	// In a circuit you'd use: mimc.NewMiMC() or poseidon.NewPoseidon()
+	// and call api.Commit(inputs...) to get a ZK-native commitment
+}
+
+// ─── zkVM-style: prove a general Go program ────────────────────
+// SP1 (Succinct) and Risc0 support proving arbitrary Go programs
+// compiled to RISC-V. The pattern:
+//
+//   sp1-sdk: https://github.com/succinctlabs/sp1
+//   1. Write your Go/Rust program as normal
+//   2. Compile to RISC-V ELF
+//   3. sp1_prover.prove(elf_bytes, stdin_bytes) -> proof
+//   4. Deploy SP1Verifier.sol, call verify(proof, public_values)
+//
+// Cost: ~1M gas onchain verification for any program up to 10^8 cycles
+
+func main() {
+	groth16Demo()
+	poseidonDemo()
+}</code></pre></div>
+      </div>
+    </details>
+
+    <!-- ========================================================== -->
+    <h2 id="summary">10. Summary</h2>
+
+    <div class="callout good">
+      <div class="label">ONE-PARAGRAPH SUMMARY</div>
+      <p style="margin:6px 0">A zero-knowledge proof lets a prover convince a verifier of a statement's truth while revealing nothing beyond that truth. The three properties — completeness, soundness, and zero-knowledge — are formalized via a simulator argument. Modern non-interactive ZKPs (SNARKs and STARKs) encode computation as arithmetic circuits or AIR constraints over finite fields, reducing any program to a polynomial satisfiability problem. SNARKs (Groth16, Plonk) use elliptic curve pairings to achieve 200-byte proofs with 3ms verification, requiring a trusted setup. STARKs use only hash functions (FRI protocol) for quantum-safe, transparent proofs that are larger but faster to generate and parallelizable. On blockchains, ZKPs enable zkRollups (1000× throughput increase with full security), zkBridges (trustless cross-chain messaging), and zkIdentity (prove properties without revealing data). zkVMs (RISC Zero, SP1) generalize this to prove any computation off-chain and verify it on-chain cheaply — the cryptographic foundation of the next generation of blockchain infrastructure.</p>
+    </div>
+
+    <h3>Key equations at a glance</h3>
+    <div class="math-display">$$\text{Soundness error after } n \text{ rounds}: \quad \varepsilon = \left(\frac{1}{2}\right)^n$$</div>
+    <div class="math-display">$$\text{Schnorr response}: \quad s = r + c \cdot x \pmod{q}$$</div>
+    <div class="math-display">$$\text{R1CS constraint}: \quad (\mathbf{a}_i \cdot \mathbf{s}) \cdot (\mathbf{b}_i \cdot \mathbf{s}) = (\mathbf{c}_i \cdot \mathbf{s})$$</div>
+    <div class="math-display">$$\text{Groth16 verify}: \quad e(A,B) = e([\alpha]_1, [\beta]_2) \cdot e(\text{vk}_x, [\gamma]_2) \cdot e(C, [\delta]_2)$$</div>
+
+    <h3>Where to go next</h3>
+    <ul class="clean">
+      <li><a href="blockchain-consensus.html">→ Consensus mechanisms</a> — the foundation ZKPs are built on top of.</li>
+      <li><a href="blockchain-evm.html">→ EVM deep dive</a> — understanding what zkEVMs are proving.</li>
+      <li><a class="ext" href="https://docs.circom.io/" target="_blank">Circom documentation</a> — write your first ZK circuit in 30 minutes.</li>
+      <li><a class="ext" href="https://docs.gnark.consensys.io/" target="_blank">gnark documentation</a> — Go library for building ZK circuits and generating Groth16 proofs.</li>
+      <li><a class="ext" href="https://eprint.iacr.org/2016/260.pdf" target="_blank">Groth16 paper (2016)</a> — the original "On the Size of Pairing-based Non-interactive Arguments."</li>
+      <li><a class="ext" href="https://eprint.iacr.org/2018/046.pdf" target="_blank">STARKs paper (Ben-Sasson et al., 2018)</a> — "Scalable, transparent, and post-quantum secure computational integrity."</li>
+      <li><a class="ext" href="https://vitalik.eth.limo/general/2022/06/15/using_snarks.html" target="_blank">Vitalik: Using SNARKs for more</a> — applications beyond ZK proofs of correct computation.</li>
+    </ul>
+
+  </article>
+</div>
+
+<script>
+// ============================================================
+// Code tabs — generic handler
+// ============================================================
+(function() {
+  document.querySelectorAll('.code-tabs').forEach(function(tabs) {
+    tabs.querySelectorAll('.ct-tab').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        const tab = btn.dataset.tab;
+        tabs.querySelectorAll('.ct-tab').forEach(function(b) { b.classList.remove('active'); });
+        tabs.querySelectorAll('.ct-panel').forEach(function(p) { p.classList.remove('active'); });
+        btn.classList.add('active');
+        tabs.querySelector('.ct-panel[data-tab="' + tab + '"]').classList.add('active');
+      });
+    });
+  });
+})();
+
+// ============================================================
+// Ali Baba Cave Visualizer
+// ============================================================
+(function() {
+  var round = 0;
+  var maxRounds = 20;
+  var running = false;
+
+  function updateDisplay() {
+    document.getElementById('cave-round').textContent = round;
+    var prob = Math.pow(0.5, round);
+    document.getElementById('cave-prob').textContent = prob.toFixed(6);
+
+    if (round >= maxRounds) {
+      document.getElementById('cave-verdict').innerHTML =
+        '<span style="color:#4ade80;font-weight:bold;">CONVINCED! (p &lt; 0.000001)</span>';
+      document.getElementById('cave-run-btn').disabled = true;
+    } else {
+      document.getElementById('cave-verdict').innerHTML = '&nbsp;';
+      document.getElementById('cave-run-btn').disabled = false;
+    }
+  }
+
+  function setPeggyCx(cx, cy) {
+    document.getElementById('peggy-head').setAttribute('cx', cx);
+    document.getElementById('peggy-head').setAttribute('cy', cy);
+    document.getElementById('peggy-body').setAttribute('x1', cx);
+    document.getElementById('peggy-body').setAttribute('x2', cx);
+    document.getElementById('peggy-body').setAttribute('y1', cy + 7);
+    document.getElementById('peggy-body').setAttribute('y2', cy + 20);
+  }
+
+  function setStateText(msg) {
+    document.getElementById('cave-state-text').textContent = msg;
+  }
+
+  function setVictorCall(msg, show) {
+    var g = document.getElementById('victor-call-group');
+    g.setAttribute('opacity', show ? '1' : '0');
+    if (msg) document.getElementById('victor-call-text').textContent = msg;
+  }
+
+  function setResultTag(msg, show) {
+    var g = document.getElementById('result-tag');
+    g.setAttribute('opacity', show ? '1' : '0');
+    if (msg) document.getElementById('result-tag-text').textContent = msg;
+  }
+
+  function sleep(ms) {
+    return new Promise(function(resolve) { setTimeout(resolve, ms); });
+  }
+
+  async function runRound() {
+    if (running) return;
+    running = true;
+    document.getElementById('cave-run-btn').disabled = true;
+
+    setVictorCall(null, false);
+    setResultTag(null, false);
+
+    // Peggy enters a random side
+    var enterSide = Math.random() < 0.5 ? 'A' : 'B';
+    var enterX = enterSide === 'A' ? 195 : 445;
+    var enterY = 148;
+
+    setStateText('Peggy enters cave and goes to path ' + enterSide + '...');
+    // Animate Peggy walking into cave
+    setPeggyCx(320, 225);
+    await sleep(300);
+    setPeggyCx(enterX, enterY);
+    await sleep(500);
+
+    // Victor calls a side
+    var callSide = Math.random() < 0.5 ? 'A' : 'B';
+    setStateText('Victor calls: "Come out from side ' + callSide + '!"');
+    setVictorCall('"Come out from ' + callSide + '!"', true);
+    await sleep(700);
+
+    // Peggy exits from called side (using magic word if necessary)
+    var exitX = callSide === 'A' ? 195 : 445;
+    var exitY = 148;
+    if (callSide !== enterSide) {
+      setStateText('Peggy uses the magic word and crosses to path ' + callSide + '...');
+      await sleep(400);
+    }
+    setPeggyCx(exitX, exitY);
+    await sleep(300);
+    setPeggyCx(320, 225);
+    await sleep(400);
+
+    // Show result
+    round++;
+    var probFail = Math.pow(0.5, round);
+    setStateText('Round ' + round + ' complete. Cheating probability: ' + probFail.toFixed(6));
+    setResultTag('✓ Correct! (round ' + round + ')', true);
+    setVictorCall(null, false);
+
+    updateDisplay();
+    await sleep(800);
+    setResultTag(null, false);
+
+    running = false;
+    if (round < maxRounds) {
+      document.getElementById('cave-run-btn').disabled = false;
+    }
+  }
+
+  function reset() {
+    if (running) return;
+    round = 0;
+    setPeggyCx(320, 228);
+    setStateText('Press "Run Round" to start');
+    setVictorCall(null, false);
+    setResultTag(null, false);
+    updateDisplay();
+    document.getElementById('cave-verdict').innerHTML = '&nbsp;';
+    document.getElementById('cave-run-btn').disabled = false;
+  }
+
+  // Expose to onclick handlers
+  window.caveRunRound = runRound;
+  window.caveReset = reset;
+
+  // Initialize
+  updateDisplay();
+})();
+</script>
+
+</body>
+</html>

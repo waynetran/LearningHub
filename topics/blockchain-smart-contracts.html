@@ -1,0 +1,1654 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart Contracts — Deep Dive</title>
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError: false});"></script>
+</head>
+<body>
+<div id="tooltip"></div>
+
+<nav class="topic-nav">
+  <a class="back" href="../blockchain.html">← Back to Blockchain</a>
+  <div class="crumb">Deep Dives / <span class="topic-name">Smart Contracts</span></div>
+</nav>
+
+<div class="topic-layout">
+  <aside class="topic-toc">
+    <h4>ON THIS PAGE</h4>
+    <ul>
+      <li><a href="#what-is">1. What is a smart contract?</a></li>
+      <li><a href="#evm">2. The Ethereum Virtual Machine</a></li>
+      <li><a href="#solidity">3. Solidity fundamentals</a></li>
+      <li><a href="#erc20">4. A complete ERC-20 token</a></li>
+      <li><a href="#patterns">5. Common patterns</a></li>
+      <li><a href="#security">6. Security vulnerabilities</a></li>
+      <li><a href="#gas">7. Gas optimization</a></li>
+      <li><a href="#beyond">8. Beyond Ethereum</a></li>
+      <li><a href="#evm-viz">9. EVM stack visualizer</a></li>
+      <li><a href="#source">10. Source code</a></li>
+      <li><a href="#summary">11. Summary</a></li>
+    </ul>
+  </aside>
+
+  <article class="topic-content">
+    <h1>Smart Contracts</h1>
+    <p class="subtitle">Programmable money and autonomous code — how self-executing agreements written in Solidity run on the world's decentralised computer, what makes them vulnerable, and how engineers secure and optimise them.</p>
+    <div class="meta-tags">
+      <span>Prereq: basic blockchain concepts, some programming experience</span>
+      <span>Time to read: ~35 min</span>
+      <span>Interactive figures: 1</span>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="what-is">1. What is a smart contract?</h2>
+
+    <p>In 1994, cryptographer Nick Szabo described <em>smart contracts</em> as "a set of promises, specified in digital form, including protocols within which the parties perform on these promises." The canonical example he gave was a vending machine: insert correct payment, receive item — no clerk needed, no possibility of the machine deciding to keep your money. The rules are <em>enforced mechanically</em>.</p>
+
+    <p>On Ethereum, a smart contract is a program deployed to a deterministic state machine. It executes identically on every full node in the network. Once deployed, the code is immutable (absent upgrade patterns). Trust does not come from trusting the counterparty — it comes from the network verifying execution.</p>
+
+    <div class="callout">
+      <div class="label">THE CORE GUARANTEE</div>
+      <p style="margin:6px 0">If the code says "transfer 1 ETH when condition X is met," the network will do exactly that, without asking anyone's permission, without the possibility of the deployer reversing it. The code <em>is</em> the agreement.</p>
+    </div>
+
+    <h3>Five key properties</h3>
+    <ul class="clean">
+      <li><strong>Trustless</strong> — parties need not trust each other; they trust the code and the consensus mechanism.</li>
+      <li><strong>Transparent</strong> — bytecode is public on-chain; anyone can decompile and audit it.</li>
+      <li><strong>Composable</strong> — contracts call other contracts. A DeFi protocol can be built from a dozen composable primitives, like software libraries.</li>
+      <li><strong>Permissionless</strong> — anyone with ETH for gas can deploy a contract. No approval process.</li>
+      <li><strong>Deterministic</strong> — given the same inputs and state, all honest nodes compute the same output. No randomness except from oracles or verifiable random functions.</li>
+    </ul>
+
+    <h3>The oracle problem</h3>
+    <p>Smart contracts execute in a closed, deterministic environment. They cannot natively fetch the BTC/USD price, the weather in London, or the outcome of an election. They are isolated from the external world by design.</p>
+
+    <p>The solution is an <em>oracle</em> — a trusted (or cryptoeconomically incentivised) external service that writes real-world data on-chain. <a class="ext" href="https://chain.link" target="_blank">Chainlink</a> is the dominant oracle network: a decentralised set of nodes aggregates data feeds and writes the result to a smart contract, which other protocols query. The security assumption shifts: your contract is only as trustworthy as its oracle.</p>
+
+    <div class="callout warn">
+      <div class="label">IMPORTANT DISTINCTION</div>
+      <p style="margin:6px 0">The blockchain guarantees that code executes as written. It makes no guarantee that the <em>inputs</em> to that code are accurate. Garbage in, garbage out — just immutably.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="evm">2. The Ethereum Virtual Machine</h2>
+
+    <p>The EVM is a <strong>256-bit stack machine</strong>. Every integer operand is a 256-bit (32-byte) word. The architecture has five data regions:</p>
+
+    <div class="math-glossary">
+      <div class="mg-title">EVM Memory Model</div>
+      <dl>
+        <dt>Stack</dt>
+        <dd>A LIFO structure with a maximum depth of 1,024 items. Each item is one 256-bit word. Almost all EVM arithmetic operates on the stack. <span class="mg-why">Why 256 bits? To natively handle Ethereum addresses (160 bits) and keccak256 hashes (256 bits) without truncation.</span></dd>
+
+        <dt>Memory</dt>
+        <dd>Byte-addressable scratch space that exists only for the duration of a call. Expands in 32-byte chunks. Gas cost is <em>quadratic</em> in the number of words used: $\text{gas} = 3w + \lfloor w^2/512 \rfloor$ where $w$ is the number of 32-byte words. Accessing high memory addresses is deliberately expensive to prevent unbounded memory allocation.</dd>
+
+        <dt>Storage</dt>
+        <dd>A persistent key–value store mapping 256-bit keys to 256-bit values. Per-contract, survives between transactions. Very expensive: 20,000 gas to write a non-zero value to a previously zero slot (<code>SSTORE</code>), 2,100 gas for a cold read (<code>SLOAD</code>). The EVM's most significant cost centre.</dd>
+
+        <dt>Calldata</dt>
+        <dd>Read-only data passed from the transaction initiator. Cheap: 16 gas per non-zero byte, 4 gas per zero byte. Function selectors and arguments arrive here. Use <code>calldata</code> keyword in Solidity for read-only external function parameters to avoid copying to memory.</dd>
+
+        <dt>Code</dt>
+        <dd>The contract's deployed bytecode. Immutable. Accessed by the <code>CODECOPY</code> opcode and read by <code>EXTCODECOPY</code> for other contracts' code.</dd>
+      </dl>
+    </div>
+
+    <h3>EVM instruction set highlights</h3>
+
+    <table class="rank-table">
+      <thead>
+        <tr><th>Category</th><th>Opcodes</th><th>Notes</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Arithmetic</td><td>ADD, SUB, MUL, DIV, SDIV, MOD, ADDMOD, MULMOD, EXP</td><td>All modular $2^{256}$; no built-in overflow check pre-0.8</td></tr>
+        <tr><td>Stack</td><td>PUSH1–PUSH32, POP, DUP1–DUP16, SWAP1–SWAP16</td><td>PUSH pushes N-byte literal; DUP/SWAP reference stack depth</td></tr>
+        <tr><td>Memory</td><td>MLOAD, MSTORE, MSTORE8</td><td>MLOAD reads 32 bytes; MSTORE8 writes 1 byte</td></tr>
+        <tr><td>Storage</td><td>SLOAD, SSTORE</td><td>Most expensive opcodes; warm vs. cold access after EIP-2929</td></tr>
+        <tr><td>Flow control</td><td>JUMP, JUMPI, PC, JUMPDEST, STOP</td><td>JUMPI = conditional jump; destination must be JUMPDEST</td></tr>
+        <tr><td>Environment</td><td>ADDRESS, CALLER, CALLVALUE, CALLDATALOAD, CALLDATASIZE, BLOCKHASH, TIMESTAMP, NUMBER</td><td>Transaction and block context</td></tr>
+        <tr><td>Calls</td><td>CALL, STATICCALL, DELEGATECALL, CREATE, CREATE2</td><td>DELEGATECALL runs target code in caller's storage context</td></tr>
+        <tr><td>Logging</td><td>LOG0–LOG4</td><td>Emit events; indexed by up to 4 topics; cheap but not queryable on-chain</td></tr>
+        <tr><td>System</td><td>RETURN, REVERT, SELFDESTRUCT, INVALID</td><td>REVERT refunds remaining gas; SELFDESTRUCT deprecated (EIP-6780)</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Gas: the anti-halting-problem tax</h3>
+    <p>The EVM is Turing-complete. Without some mechanism to bound execution, a malicious contract could run an infinite loop and halt all nodes. The solution is gas: every opcode costs a fixed amount of gas, deducted from the transaction's gas limit. If gas runs out, execution reverts and the fee is forfeit. This makes infinite loops economically impossible — they would exhaust the gas budget first.</p>
+
+    <div class="math-display">$$\text{transaction fee} = \text{gas used} \times \text{gas price (gwei)}$$</div>
+
+    <p>Representative costs: <code>SSTORE</code> (new slot) = 20,000 gas, <code>CALL</code> to new address = 25,000 gas, <code>ADD</code> = 3 gas, <code>MUL</code> = 5 gas, simple ETH transfer = 21,000 gas base.</p>
+
+    <h3>ABI encoding: how calldata works</h3>
+    <p>When you call a contract function, the EVM doesn't know function names — it only sees bytes. The <em>Application Binary Interface</em> (ABI) is the convention for encoding function calls.</p>
+
+    <p>The first 4 bytes are the <em>function selector</em>: the first 4 bytes of the keccak256 hash of the canonical function signature string.</p>
+
+    <div class="callout math">
+      <div class="label">EXAMPLE: ERC-20 transfer</div>
+      <p style="margin:6px 0; font-family: monospace; font-size: 0.92em;">
+        Signature string: <code>transfer(address,uint256)</code><br>
+        keccak256 → <code>0xa9059cbb2ab09eb219583f4a59a5d0623ade346d962bcd4e46b11da047c9049b</code><br>
+        Selector (first 4 bytes): <code>0xa9059cbb</code><br><br>
+        Full calldata for <code>transfer(0xABCD...1234, 1000000000000000000)</code>:<br>
+        <code>0xa9059cbb</code> &nbsp;← selector<br>
+        <code>000000000000000000000000ABCD...1234</code> &nbsp;← address, left-padded to 32 bytes<br>
+        <code>0000000000000000000000000000000000000000000000000de0b6b3a7640000</code> &nbsp;← 1e18 in hex
+      </p>
+    </div>
+
+    <p>Dynamic types (strings, bytes, dynamic arrays) are encoded with an offset to their data and a length prefix. Static types (uint256, address, bool, bytes32) are encoded inline, each padded to 32 bytes.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="solidity">3. Solidity fundamentals</h2>
+
+    <p>Solidity is a statically-typed, curly-brace language inspired by JavaScript and C++, compiled to EVM bytecode. The current stable version is 0.8.x, which introduced built-in checked arithmetic (overflow reverts instead of wrapping).</p>
+
+    <h3>Types</h3>
+    <ul class="clean">
+      <li><strong>Value types</strong>: <code>uint256</code>, <code>int256</code> (and smaller variants like <code>uint8</code>), <code>address</code>, <code>address payable</code>, <code>bool</code>, <code>bytes1</code>–<code>bytes32</code>, enums.</li>
+      <li><strong>Reference types</strong>: <code>string</code>, <code>bytes</code>, arrays (<code>uint256[]</code>, <code>uint256[5]</code>), structs, mappings.</li>
+      <li><strong>Special</strong>: <code>mapping(K =&gt; V)</code> — a hash table that lives in storage; all keys exist with a default zero value. Cannot be iterated.</li>
+    </ul>
+
+    <h3>Data locations</h3>
+    <p>Every reference type has a data location modifier. Getting this wrong is a common source of bugs and gas waste.</p>
+    <ul class="clean">
+      <li><code>storage</code> — persistent on-chain. State variables live here. Reads/writes are expensive. A storage pointer lets you alias a nested struct without copying.</li>
+      <li><code>memory</code> — temporary, exists only during the call. Arrays and structs created here are ephemeral. Cheaper than storage but costs linear gas to allocate.</li>
+      <li><code>calldata</code> — read-only, for external function parameters. Cheapest option; avoids the copy into memory. Use whenever you only need to read an input array.</li>
+    </ul>
+
+    <h3>Visibility and mutability</h3>
+    <ul class="clean">
+      <li><code>public</code> — callable externally and internally; Solidity auto-generates a getter for public state variables.</li>
+      <li><code>external</code> — only callable from outside; slightly cheaper for functions that receive large calldata arrays.</li>
+      <li><code>internal</code> — only callable from the contract and its children (like <code>protected</code> in Java).</li>
+      <li><code>private</code> — only callable from the defining contract (NOT truly private on-chain — all storage is readable).</li>
+      <li><code>view</code> — reads state but does not modify it. Free to call off-chain (no gas).</li>
+      <li><code>pure</code> — does not read or modify state. Useful for math helpers.</li>
+      <li><code>payable</code> — the function can receive ETH. Unmarked functions revert if ETH is sent.</li>
+    </ul>
+
+    <h3>Errors and events</h3>
+    <p><code>require(condition, "message")</code> reverts the entire transaction if the condition is false, refunding remaining gas and returning the message. <code>revert CustomError(args)</code> (Solidity 0.8.4+) is cheaper and allows typed error arguments.</p>
+
+    <p>Events are logged to a Bloom filter stored in the transaction receipt. They cost roughly 375 gas base + 8 gas/byte of data + 375 gas per topic. They cannot be read by smart contracts on-chain, but they are queryable by clients (ethers.js, web3.py) via <code>eth_getLogs</code>. Use events for historical records, not for data your contract needs to query itself.</p>
+
+    <h3>A minimal contract: counter</h3>
+    <details class="algo-code">
+      <summary>Counter.sol — all basic Solidity concepts in one contract</summary>
+      <div class="code-tabs">
+        <div class="ct-header">
+          <button class="ct-tab active" data-tab="ctr-sol">Solidity</button>
+          <button class="ct-tab" data-tab="ctr-pseudo">Pseudocode</button>
+        </div>
+        <div class="ct-panel active" data-tab="ctr-sol"><pre><code>// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+/// @title Counter — minimal Solidity example
+contract Counter {
+    // ── State variables (live in storage) ────────────────────────
+    uint256 private _count;
+    address public  owner;
+
+    // ── Events ────────────────────────────────────────────────────
+    event Incremented(address indexed by, uint256 newCount);
+    event Decremented(address indexed by, uint256 newCount);
+    event Reset(address indexed by);
+
+    // ── Custom errors (cheaper than string revert) ────────────────
+    error NotOwner();
+    error Underflow();
+
+    // ── Modifier ─────────────────────────────────────────────────
+    modifier onlyOwner() {
+        if (msg.sender != owner) revert NotOwner();
+        _;  // placeholder for function body
+    }
+
+    // ── Constructor ───────────────────────────────────────────────
+    constructor() {
+        owner = msg.sender;
+        _count = 0;
+    }
+
+    // ── External / public functions ───────────────────────────────
+
+    /// @notice Increment the counter by 1
+    function increment() external {
+        _count += 1;                    // 0.8+ checked; reverts on overflow
+        emit Incremented(msg.sender, _count);
+    }
+
+    /// @notice Decrement the counter by 1 (reverts at zero)
+    function decrement() external {
+        if (_count == 0) revert Underflow();
+        _count -= 1;
+        emit Decremented(msg.sender, _count);
+    }
+
+    /// @notice Reset counter to zero (owner only)
+    function reset() external onlyOwner {
+        _count = 0;
+        emit Reset(msg.sender);
+    }
+
+    /// @notice Read the current count — free (view function)
+    function get() external view returns (uint256) {
+        return _count;
+    }
+
+    // ── Pure helper example ───────────────────────────────────────
+
+    /// @notice Return x squared — no state access at all
+    function square(uint256 x) external pure returns (uint256) {
+        return x * x;
+    }
+}</code></pre></div>
+        <div class="ct-panel" data-tab="ctr-pseudo"><pre><code>contract Counter:
+    state:
+        _count: uint256  = 0
+        owner: address   = deployer
+
+    modifier onlyOwner:
+        if caller != owner: revert
+        run function body
+
+    function increment():
+        _count = _count + 1          // reverts on overflow (0.8+)
+        emit Incremented(caller, _count)
+
+    function decrement():
+        if _count == 0: revert Underflow
+        _count = _count - 1
+        emit Decremented(caller, _count)
+
+    function reset() [onlyOwner]:
+        _count = 0
+        emit Reset(caller)
+
+    function get() [view] -> uint256:
+        return _count
+
+    function square(x) [pure] -> uint256:
+        return x * x</code></pre></div>
+      </div>
+    </details>
+
+    <!-- ========================================================== -->
+    <h2 id="erc20">4. A complete ERC-20 token</h2>
+
+    <p>ERC-20 is Ethereum's token standard, defined in <a class="ext" href="https://eips.ethereum.org/EIPS/eip-20" target="_blank">EIP-20</a>. Every fungible token — USDC, DAI, UNI, LINK — implements this interface. The standard ensures any wallet or exchange can interact with any token without token-specific logic.</p>
+
+    <h3>The IERC20 interface</h3>
+    <details class="algo-code">
+      <summary>IERC20.sol — the full standard interface</summary>
+      <div class="code-tabs">
+        <div class="ct-header">
+          <button class="ct-tab active" data-tab="ierc-sol">Solidity</button>
+        </div>
+        <div class="ct-panel active" data-tab="ierc-sol"><pre><code>// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+interface IERC20 {
+    // ── Events ────────────────────────────────────────────────────
+
+    /// @dev Emitted when `value` tokens are moved from `from` to `to`.
+    ///      Also emitted when tokens are minted (from = address(0))
+    ///      or burned (to = address(0)).
+    event Transfer(address indexed from, address indexed to, uint256 value);
+
+    /// @dev Emitted when the allowance of `spender` over `owner`'s tokens
+    ///      is set by a call to approve(). `value` is the new allowance.
+    event Approval(address indexed owner, address indexed spender, uint256 value);
+
+    // ── Read functions ────────────────────────────────────────────
+
+    /// @return Total token supply
+    function totalSupply() external view returns (uint256);
+
+    /// @return Token balance of `account`
+    function balanceOf(address account) external view returns (uint256);
+
+    /// @return Remaining tokens that `spender` is allowed to spend
+    ///         on behalf of `owner` via transferFrom().
+    function allowance(address owner, address spender)
+        external view returns (uint256);
+
+    // ── Write functions ───────────────────────────────────────────
+
+    /// @notice Move `amount` tokens from the caller to `to`.
+    /// @return True on success (always; failure reverts)
+    function transfer(address to, uint256 amount) external returns (bool);
+
+    /// @notice Approve `spender` to spend `amount` of caller's tokens.
+    /// @return True on success
+    function approve(address spender, uint256 amount) external returns (bool);
+
+    /// @notice Move `amount` tokens from `from` to `to` using the
+    ///         allowance mechanism. Decrements allowance.
+    /// @return True on success
+    function transferFrom(address from, address to, uint256 amount)
+        external returns (bool);
+}</code></pre></div>
+      </div>
+    </details>
+
+    <h3>Complete implementation</h3>
+    <details class="algo-code">
+      <summary>ERC20.sol — 85-line self-contained implementation</summary>
+      <div class="code-tabs">
+        <div class="ct-header">
+          <button class="ct-tab active" data-tab="erc20-sol">Solidity</button>
+          <button class="ct-tab" data-tab="erc20-pseudo">Pseudocode</button>
+        </div>
+        <div class="ct-panel active" data-tab="erc20-sol"><pre><code>// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+import "./IERC20.sol";
+
+contract ERC20 is IERC20 {
+    // ── Storage ───────────────────────────────────────────────────
+    mapping(address => uint256) private _balances;
+    mapping(address => mapping(address => uint256)) private _allowances;
+    uint256 private _totalSupply;
+
+    string public name;
+    string public symbol;
+    uint8  public constant decimals = 18;
+
+    // ── Constructor ───────────────────────────────────────────────
+    constructor(string memory _name, string memory _symbol, uint256 initialSupply) {
+        name   = _name;
+        symbol = _symbol;
+        _mint(msg.sender, initialSupply * 10 ** decimals);
+    }
+
+    // ── IERC20 view functions ─────────────────────────────────────
+    function totalSupply() external view returns (uint256) {
+        return _totalSupply;
+    }
+
+    function balanceOf(address account) external view returns (uint256) {
+        return _balances[account];
+    }
+
+    function allowance(address owner, address spender)
+        external view returns (uint256)
+    {
+        return _allowances[owner][spender];
+    }
+
+    // ── IERC20 write functions ────────────────────────────────────
+    function transfer(address to, uint256 amount) external returns (bool) {
+        _transfer(msg.sender, to, amount);
+        return true;
+    }
+
+    function approve(address spender, uint256 amount) external returns (bool) {
+        require(spender != address(0), "ERC20: approve to zero address");
+        _allowances[msg.sender][spender] = amount;
+        emit Approval(msg.sender, spender, amount);
+        return true;
+    }
+
+    function transferFrom(address from, address to, uint256 amount)
+        external returns (bool)
+    {
+        uint256 currentAllowance = _allowances[from][msg.sender];
+        require(currentAllowance >= amount, "ERC20: insufficient allowance");
+        // Checks-effects: update allowance BEFORE transfer
+        unchecked {
+            _allowances[from][msg.sender] = currentAllowance - amount;
+        }
+        emit Approval(from, msg.sender, _allowances[from][msg.sender]);
+        _transfer(from, to, amount);
+        return true;
+    }
+
+    // ── Internal helpers ──────────────────────────────────────────
+
+    /// @dev Core transfer logic. Validates, updates state, emits event.
+    function _transfer(address from, address to, uint256 amount) internal {
+        require(from != address(0), "ERC20: transfer from zero address");
+        require(to   != address(0), "ERC20: transfer to zero address");
+
+        uint256 fromBalance = _balances[from];
+        require(fromBalance >= amount, "ERC20: transfer amount exceeds balance");
+
+        // Effects before any external interaction (not that we have any here)
+        unchecked {
+            _balances[from] = fromBalance - amount;  // can't underflow: checked above
+        }
+        _balances[to] += amount;                     // can't overflow: total supply bounded
+
+        emit Transfer(from, to, amount);
+    }
+
+    /// @dev Mint `amount` new tokens to `account`. Increases total supply.
+    function _mint(address account, uint256 amount) internal {
+        require(account != address(0), "ERC20: mint to zero address");
+        _totalSupply      += amount;
+        _balances[account] += amount;
+        emit Transfer(address(0), account, amount);
+    }
+
+    /// @dev Burn `amount` tokens from `account`. Decreases total supply.
+    function _burn(address account, uint256 amount) internal {
+        require(account != address(0), "ERC20: burn from zero address");
+        uint256 accountBalance = _balances[account];
+        require(accountBalance >= amount, "ERC20: burn exceeds balance");
+        unchecked { _balances[account] = accountBalance - amount; }
+        _totalSupply -= amount;
+        emit Transfer(account, address(0), amount);
+    }
+}</code></pre></div>
+        <div class="ct-panel" data-tab="erc20-pseudo"><pre><code>contract ERC20:
+    state:
+        _balances:    mapping(address -> uint256)
+        _allowances:  mapping(address -> mapping(address -> uint256))
+        _totalSupply: uint256
+        name, symbol: string
+        decimals:     uint8 = 18
+
+    constructor(name, symbol, initialSupply):
+        self.name   = name
+        self.symbol = symbol
+        _mint(deployer, initialSupply * 10^18)
+
+    // ── View ─────────────────────────────────────────────────────
+    totalSupply()  → _totalSupply
+    balanceOf(a)   → _balances[a]
+    allowance(o,s) → _allowances[o][s]
+
+    // ── Transfer ─────────────────────────────────────────────────
+    transfer(to, amount):
+        _transfer(caller, to, amount)
+        return true
+
+    approve(spender, amount):
+        _allowances[caller][spender] = amount
+        emit Approval(caller, spender, amount)
+        return true
+
+    transferFrom(from, to, amount):
+        check _allowances[from][caller] >= amount
+        _allowances[from][caller] -= amount      // effect before interaction
+        _transfer(from, to, amount)
+        return true
+
+    // ── Internal ─────────────────────────────────────────────────
+    _transfer(from, to, amount):
+        check from != 0, to != 0
+        check _balances[from] >= amount
+        _balances[from] -= amount
+        _balances[to]   += amount
+        emit Transfer(from, to, amount)
+
+    _mint(account, amount):
+        _totalSupply      += amount
+        _balances[account] += amount
+        emit Transfer(0, account, amount)
+
+    _burn(account, amount):
+        check _balances[account] >= amount
+        _balances[account] -= amount
+        _totalSupply       -= amount
+        emit Transfer(account, 0, amount)</code></pre></div>
+      </div>
+    </details>
+
+    <!-- ========================================================== -->
+    <h2 id="patterns">5. Common patterns</h2>
+
+    <h3>Ownable</h3>
+    <p>Almost every production contract needs administrative functions callable only by the deployer or a governance address. The Ownable pattern standardises this:</p>
+
+    <details class="algo-code">
+      <summary>Ownable.sol — owner access control</summary>
+      <div class="code-tabs">
+        <div class="ct-header">
+          <button class="ct-tab active" data-tab="own-sol">Solidity</button>
+        </div>
+        <div class="ct-panel active" data-tab="own-sol"><pre><code>// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+abstract contract Ownable {
+    address private _owner;
+
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+    error OwnableUnauthorized(address account);
+
+    constructor() {
+        _owner = msg.sender;
+        emit OwnershipTransferred(address(0), msg.sender);
+    }
+
+    function owner() public view returns (address) { return _owner; }
+
+    modifier onlyOwner() {
+        if (msg.sender != _owner) revert OwnableUnauthorized(msg.sender);
+        _;
+    }
+
+    /// @notice Transfer ownership to a new address. Use renounceOwnership()
+    ///         to leave the contract without an owner (disables onlyOwner forever).
+    function transferOwnership(address newOwner) public onlyOwner {
+        require(newOwner != address(0), "Ownable: new owner is zero address");
+        address old = _owner;
+        _owner = newOwner;
+        emit OwnershipTransferred(old, newOwner);
+    }
+
+    function renounceOwnership() public onlyOwner {
+        emit OwnershipTransferred(_owner, address(0));
+        _owner = address(0);
+    }
+}</code></pre></div>
+      </div>
+    </details>
+
+    <h3>Reentrancy guard</h3>
+    <p>The checks-effects-interactions pattern requires that you update all state <em>before</em> making external calls. A reentrancy guard enforces this as a mutex:</p>
+
+    <details class="algo-code">
+      <summary>ReentrancyGuard.sol — mutex for external calls</summary>
+      <div class="code-tabs">
+        <div class="ct-header">
+          <button class="ct-tab active" data-tab="rg-sol">Solidity</button>
+        </div>
+        <div class="ct-panel active" data-tab="rg-sol"><pre><code>// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+abstract contract ReentrancyGuard {
+    // Using 1 and 2 rather than 0 and 1 saves gas on resets
+    // (avoids writing a zero value, which triggers the 20,000 → 2,900 SSTORE discount)
+    uint256 private constant _NOT_ENTERED = 1;
+    uint256 private constant _ENTERED     = 2;
+
+    uint256 private _status;
+
+    constructor() {
+        _status = _NOT_ENTERED;
+    }
+
+    modifier nonReentrant() {
+        require(_status == _NOT_ENTERED, "ReentrancyGuard: reentrant call");
+        _status = _ENTERED;
+        _;
+        _status = _NOT_ENTERED;
+    }
+}
+
+// Usage example: a simple ETH withdrawal
+contract Vault is ReentrancyGuard {
+    mapping(address => uint256) public balances;
+
+    function deposit() external payable {
+        balances[msg.sender] += msg.value;
+    }
+
+    function withdraw(uint256 amount) external nonReentrant {
+        require(balances[msg.sender] >= amount, "Insufficient balance");
+
+        // Effects BEFORE interaction — critical!
+        balances[msg.sender] -= amount;
+
+        // Interaction last
+        (bool ok, ) = msg.sender.call{value: amount}("");
+        require(ok, "Transfer failed");
+    }
+}</code></pre></div>
+      </div>
+    </details>
+
+    <h3>Upgradeable proxy pattern</h3>
+    <p>Deployed contract code is immutable. But the Ethereum community developed proxy patterns that preserve upgradeability while keeping this guarantee for <em>a given implementation</em>:</p>
+
+    <div class="callout">
+      <div class="label">HOW PROXIES WORK</div>
+      <p style="margin:6px 0">A <em>proxy contract</em> holds all the user's storage and receives all calls. When a function is called that the proxy doesn't define, it <code>DELEGATECALL</code>s to an <em>implementation contract</em> — which executes in the proxy's storage context. To upgrade, you point the proxy at a new implementation. Storage layout must be preserved between upgrades.</p>
+    </div>
+
+    <ul class="clean">
+      <li><strong>Transparent Proxy (EIP-1967)</strong> — the proxy distinguishes admin calls (upgrade) from user calls by checking <code>msg.sender</code>. Simple but slightly more gas due to the admin check on every call. OpenZeppelin's default.</li>
+      <li><strong>UUPS (EIP-1822)</strong> — the upgrade logic lives in the implementation, not the proxy. Proxy is minimal (~50 bytes). Cheaper. Risk: if you deploy an implementation without upgrade logic, you are permanently locked in.</li>
+      <li><strong>Beacon Proxy</strong> — many proxy instances all point to a single "beacon" contract that holds the implementation address. One upgrade updates all instances simultaneously. Used for factory-deployed contracts (e.g., Uniswap v3 pools).</li>
+    </ul>
+
+    <!-- ========================================================== -->
+    <h2 id="security">6. Security vulnerabilities</h2>
+
+    <div class="callout warn">
+      <div class="label">HIGH STAKES</div>
+      <p style="margin:6px 0">Smart contracts hold real value: billions of dollars locked in DeFi protocols. A single bug, once deployed, is exploitable by anyone in the world. There is no patch Tuesday. There is no reversing the transaction (usually). Security is not optional.</p>
+    </div>
+
+    <h3>Reentrancy — The DAO hack (2016, $60M)</h3>
+    <p>In June 2016, an attacker drained approximately $60M from The DAO (a decentralised venture fund) by exploiting reentrancy. The vulnerable code looked like this:</p>
+
+    <details class="algo-code">
+      <summary>Reentrancy — vulnerable vs. fixed</summary>
+      <div class="code-tabs">
+        <div class="ct-header">
+          <button class="ct-tab active" data-tab="re-bad">Vulnerable</button>
+          <button class="ct-tab" data-tab="re-good">Fixed</button>
+          <button class="ct-tab" data-tab="re-attack">Attack contract</button>
+        </div>
+        <div class="ct-panel active" data-tab="re-bad"><pre><code>// VULNERABLE — do NOT deploy
+contract VulnerableVault {
+    mapping(address => uint256) public balances;
+
+    function deposit() external payable { balances[msg.sender] += msg.value; }
+
+    function withdraw() external {
+        uint256 amount = balances[msg.sender];
+        require(amount > 0, "nothing to withdraw");
+
+        // INTERACTION before EFFECT — the fatal mistake
+        (bool ok, ) = msg.sender.call{value: amount}("");
+        require(ok);
+
+        // By the time we reach here the attacker has already re-entered
+        // and called withdraw() again with the same (stale) balance
+        balances[msg.sender] = 0;  // too late
+    }
+}</code></pre></div>
+        <div class="ct-panel" data-tab="re-good"><pre><code>// FIXED — checks-effects-interactions pattern
+contract SafeVault is ReentrancyGuard {
+    mapping(address => uint256) public balances;
+
+    function deposit() external payable { balances[msg.sender] += msg.value; }
+
+    function withdraw() external nonReentrant {
+        uint256 amount = balances[msg.sender];
+        require(amount > 0, "nothing to withdraw");
+
+        // EFFECT first — zero out balance before external call
+        balances[msg.sender] = 0;
+
+        // INTERACTION last
+        (bool ok, ) = msg.sender.call{value: amount}("");
+        require(ok, "transfer failed");
+    }
+}</code></pre></div>
+        <div class="ct-panel" data-tab="re-attack"><pre><code>// The attacker's contract
+contract Attacker {
+    VulnerableVault public victim;
+    uint256 public count;
+
+    constructor(address _victim) { victim = VulnerableVault(_victim); }
+
+    // Seed the attack: deposit a small amount so we have a balance
+    function attack() external payable {
+        require(msg.value >= 1 ether);
+        victim.deposit{value: msg.value}();
+        victim.withdraw();  // trigger the chain
+    }
+
+    // Fallback fires when victim sends ETH
+    receive() external payable {
+        count++;
+        if (count < 10 && address(victim).balance >= 1 ether) {
+            victim.withdraw();  // re-enter before balance is zeroed
+        }
+    }
+}</code></pre></div>
+      </div>
+    </details>
+
+    <p>The attacker's <code>receive()</code> fallback fires whenever the victim sends ETH. Because the victim hadn't zeroed the balance yet, the check <code>amount > 0</code> still passes on re-entry. The attack runs until the vault is empty or gas runs out.</p>
+
+    <h3>Integer overflow / underflow</h3>
+    <p>Before Solidity 0.8.0, arithmetic silently wrapped. A classic exploit: if a contract decremented a <code>uint256</code> past zero, you'd get $2^{256} - 1$ — an astronomically large number that could give you unlimited token balance.</p>
+
+    <div class="math-display">$$\text{uint256}: \quad 0 - 1 \equiv 2^{256} - 1 \pmod{2^{256}}$$</div>
+
+    <p>Fix: use Solidity ≥0.8.0 (checked by default) or OpenZeppelin's SafeMath library for older code. In 0.8+ code, use <code>unchecked {}</code> blocks <em>only</em> when you have mathematically proven the operation cannot overflow.</p>
+
+    <h3>Access control failures</h3>
+    <p>Missing or incorrect access control is consistently the second-largest exploit category by value. A real-world pattern:</p>
+
+    <details class="algo-code">
+      <summary>Access control — missing modifier</summary>
+      <div class="code-tabs">
+        <div class="ct-header">
+          <button class="ct-tab active" data-tab="ac-bad">Vulnerable</button>
+          <button class="ct-tab" data-tab="ac-good">Fixed</button>
+        </div>
+        <div class="ct-panel active" data-tab="ac-bad"><pre><code>contract BadToken {
+    address public owner;
+    mapping(address => uint256) public balances;
+
+    constructor() { owner = msg.sender; }
+
+    // MISSING onlyOwner — ANYONE can call this
+    function mint(address to, uint256 amount) external {
+        balances[to] += amount;
+    }
+
+    // MISSING onlyOwner — ANYONE can destroy the contract
+    function destroy() external {
+        selfdestruct(payable(msg.sender));  // sends all ETH to attacker
+    }
+}</code></pre></div>
+        <div class="ct-panel" data-tab="ac-good"><pre><code>contract GoodToken is Ownable {
+    mapping(address => uint256) public balances;
+
+    // onlyOwner modifier prevents unauthorised minting
+    function mint(address to, uint256 amount) external onlyOwner {
+        balances[to] += amount;
+    }
+
+    // renounceOwnership() or transferOwnership() via Ownable
+    // selfdestruct removed — prefer pausing mechanisms
+}</code></pre></div>
+      </div>
+    </details>
+
+    <h3>Front-running (MEV)</h3>
+    <p>Ethereum transactions are broadcast to a public mempool before inclusion in a block. Validators (and specialised bots) can observe pending transactions and insert their own transactions <em>before</em> them by paying a higher gas price — a practice called <em>Maximal Extractable Value</em> (MEV).</p>
+
+    <p>Classic attacks:</p>
+    <ul class="clean">
+      <li><strong>DEX sandwich attack</strong> — a bot sees your large swap, buys the token first (driving up price), lets your swap execute at the worse price, then sells — profiting from the slippage you experienced.</li>
+      <li><strong>Auction sniping</strong> — in a first-price NFT auction, a bot watches for your bid and submits a slightly higher one just before yours lands.</li>
+    </ul>
+
+    <p>Mitigations: commit-reveal schemes (submit a hash first, reveal the value later); slippage tolerance limits in DEX trades; private transaction pools (Flashbots Protect).</p>
+
+    <h3>Oracle manipulation — Mango Markets (2022, $116M)</h3>
+    <p>Mango Markets used a TWAP (time-weighted average price) derived from thin on-chain order books to price its MNGO collateral. An attacker purchased massive amounts of MNGO perp futures on two accounts (one long, one short), temporarily driving the on-chain oracle price from ~$0.03 to ~$0.91. With the artificially inflated collateral value, they borrowed $116M in other tokens, then price collapsed. The "borrowed" funds were unrecoverable.</p>
+
+    <p>Fix: use robust, manipulation-resistant oracles (Chainlink, Uniswap v3 TWAP with long windows), circuit breakers on price deviations, borrow caps per asset.</p>
+
+    <h3>Signature replay and EIP-712</h3>
+    <p>If a contract accepts off-chain signatures for authorisations (e.g., permit(), meta-transactions), a signature valid on Ethereum Mainnet is also valid on every chain that forks it — unless the signed message includes the chain ID.</p>
+
+    <p>EIP-712 standardises typed structured data hashing. The domain separator includes <code>chainId</code> and the contract's address, making signatures chain- and contract-specific. Always use EIP-712 for any off-chain signed authorisation.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="gas">7. Gas optimization</h2>
+
+    <p>Gas is money. On a busy chain, a single contract call can cost $5–$50. Optimisation is not premature — it is the difference between a usable protocol and an unusable one.</p>
+
+    <table class="rank-table">
+      <thead>
+        <tr><th>Technique</th><th>Approx. saving</th><th>Notes</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Use <code>calldata</code> instead of <code>memory</code> for read-only params</td>
+          <td>~200 gas / 32-byte word</td>
+          <td>Avoids CALLDATACOPY into memory. Valid for <code>external</code> functions only.</td>
+        </tr>
+        <tr>
+          <td>Pack storage slots</td>
+          <td>~15,000 gas per avoided slot</td>
+          <td>EVM writes 32-byte slots. Put <code>uint128 a; uint128 b;</code> together — one SSTORE instead of two.</td>
+        </tr>
+        <tr>
+          <td>Use <code>uint256</code> not <code>uint8</code> in local variables</td>
+          <td>~20–100 gas</td>
+          <td>EVM pads all values to 256 bits anyway. Smaller types cost a masking opcode inside functions. Exception: storage packing (above).</td>
+        </tr>
+        <tr>
+          <td><code>unchecked {}</code> for safe arithmetic</td>
+          <td>~40 gas per operation</td>
+          <td>Only when you can mathematically prove no overflow. E.g., <code>for (uint i; i &lt; n; ++i)</code> — increment can't overflow a 256-bit counter.</td>
+        </tr>
+        <tr>
+          <td>Cache storage reads in memory</td>
+          <td>~2,000 gas per avoided SLOAD</td>
+          <td>A cold SLOAD = 2,100 gas; a warm one = 100 gas. A MLOAD costs 3 gas. <code>uint256 cached = storageVar;</code> and use <code>cached</code> in a loop.</td>
+        </tr>
+        <tr>
+          <td>Use events instead of storage for history</td>
+          <td>~19,000 gas per data point</td>
+          <td>Emitting an event with 2 topics and 32 bytes data ≈ 1,500 gas. Storing the same data in a slot = 20,000 gas. Events are unreadable on-chain but perfectly fine for off-chain indexers.</td>
+        </tr>
+        <tr>
+          <td>Minimise contract size (EIP-170 limit: 24 KB)</td>
+          <td>Deployment cost</td>
+          <td>Deployment costs 200 gas/byte. Use libraries, split logic, remove dead code. <code>--via-ir</code> with the Solidity optimizer can significantly reduce output size.</td>
+        </tr>
+        <tr>
+          <td><code>++i</code> not <code>i++</code></td>
+          <td>~5 gas</td>
+          <td>Post-increment creates a temporary value. In unchecked loops it adds up over thousands of iterations.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="callout">
+      <div class="label">OPTIMIZER TIP</div>
+      <p style="margin:6px 0">Enable the Solidity optimizer with <code>--optimize --optimize-runs 200</code>. The "runs" value is a hint about how many times each function will be called: higher values optimise for runtime gas at the cost of larger bytecode; lower values optimise for deployment cost. DeFi protocols that expect heavy usage set runs to 1,000,000.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="beyond">8. Beyond Ethereum</h2>
+
+    <p>Ethereum pioneered smart contracts, but the ecosystem has diversified. Each platform makes different trade-offs between throughput, safety, and programmability.</p>
+
+    <table class="rank-table">
+      <thead>
+        <tr><th>Platform</th><th>VM / Runtime</th><th>Language</th><th>TPS (approx.)</th><th>Key property</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Ethereum</strong></td>
+          <td>EVM (256-bit stack)</td>
+          <td>Solidity, Vyper, Yul</td>
+          <td>~15–30 (L1), ~2,000+ (rollups)</td>
+          <td>Largest ecosystem, most tooling, most audited patterns</td>
+        </tr>
+        <tr>
+          <td><strong>Solana</strong></td>
+          <td>Sealevel (parallel BPF/eBPF)</td>
+          <td>Rust (Anchor framework)</td>
+          <td>~50,000 theoretical</td>
+          <td>Parallel execution; account model (state passed in by caller); no EVM compatibility</td>
+        </tr>
+        <tr>
+          <td><strong>Cosmos / CosmWasm</strong></td>
+          <td>CosmWasm (WASM VM)</td>
+          <td>Rust</td>
+          <td>~10,000 per chain</td>
+          <td>IBC cross-chain messaging; sovereign app-chains; actor model with explicit message passing</td>
+        </tr>
+        <tr>
+          <td><strong>Polkadot</strong></td>
+          <td>Substrate / ink!</td>
+          <td>Rust (ink! DSL)</td>
+          <td>~1,000+ per parachain</td>
+          <td>Shared security from relay chain; parachain customisation; WASM-based</td>
+        </tr>
+        <tr>
+          <td><strong>Sui / Aptos</strong></td>
+          <td>Move VM</td>
+          <td>Move</td>
+          <td>~100,000+ claimed</td>
+          <td>Object-centric model; linear types prevent reentrancy and double-spend by construction</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>The Move language insight</h3>
+    <p>Move was designed at Meta (for the Diem blockchain) specifically to model financial assets safely. Its central innovation is <em>linear types</em> (called <em>resources</em>): a value of resource type can be <strong>moved</strong> from one owner to another, but it cannot be <strong>copied</strong> or <strong>dropped</strong> (silently destroyed). The type system enforces this at compile time.</p>
+
+    <div class="callout good">
+      <div class="label">MOVE'S GUARANTEE</div>
+      <p style="margin:6px 0">In Solidity, a "token balance" is just a <code>uint256</code> in a mapping — you could accidentally create tokens by writing to the wrong slot. In Move, a <code>Coin&lt;T&gt;</code> is a resource. You can't create one without calling the module that mints them. You can't destroy one without calling the burn function. The compiler enforces conservation of value as a type-level property, eliminating entire classes of exploits — including reentrancy — by construction.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="evm-viz">9. Interactive: EVM stack machine visualizer</h2>
+
+    <p>The program below runs on a simplified EVM. Press <strong>Step</strong> to execute the next opcode and watch the stack update in real time. Gas is tracked per instruction.</p>
+
+    <div class="viz-3d">
+      <div class="viz-title">EVM Stack Machine — PUSH1 3, PUSH1 5, ADD, PUSH1 2, MUL, STOP</div>
+      <svg id="evm-svg" viewBox="0 0 500 340" style="width:100%;max-width:500px;display:block;margin:0 auto"></svg>
+      <div class="viz-caption" id="evm-caption">Press Step to begin execution.</div>
+      <div class="viz-controls">
+        <button onclick="evmReset()">↺ Reset</button>
+        <button onclick="evmStep()" id="evm-step-btn">Step ▶</button>
+      </div>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="source">10. Source code</h2>
+
+    <details class="algo-code">
+      <summary>Source — Smart Contracts &amp; EVM</summary>
+      <div class="code-tabs">
+        <div class="ct-header">
+          <button class="ct-tab active" data-tab="sc-pseudo">Pseudocode</button>
+          <button class="ct-tab" data-tab="sc-py">Python</button>
+          <button class="ct-tab" data-tab="sc-js">JavaScript</button>
+          <button class="ct-tab" data-tab="sc-c">C</button>
+          <button class="ct-tab" data-tab="sc-cpp">C++</button>
+          <button class="ct-tab" data-tab="sc-java">Java</button>
+          <button class="ct-tab" data-tab="sc-go">Go</button>
+        </div>
+
+        <!-- Pseudocode -->
+        <div class="ct-panel active" data-tab="sc-pseudo"><pre><code>// ── ERC-20 transfer logic ────────────────────────────────────────
+function transfer(from, to, amount):
+    require from != ZERO_ADDRESS
+    require to   != ZERO_ADDRESS
+    require balances[from] >= amount
+    balances[from] -= amount           // effect before any interaction
+    balances[to]   += amount
+    emit Transfer(from, to, amount)
+    return true
+
+// ── Reentrancy guard ─────────────────────────────────────────────
+status = NOT_ENTERED  (= 1)
+
+modifier nonReentrant:
+    require status == NOT_ENTERED
+    status = ENTERED  (= 2)
+    run protected function body
+    status = NOT_ENTERED
+
+// ── Minimal EVM interpreter ──────────────────────────────────────
+state:
+    stack:   []
+    memory:  bytes
+    storage: map(uint256 -> uint256)
+    pc:      int = 0
+    gas:     int = initial_gas
+
+function step(bytecode):
+    opcode = bytecode[pc]; pc += 1
+    match opcode:
+        PUSH1:
+            val = bytecode[pc]; pc += 1
+            stack.push(val); gas -= 3
+        ADD:
+            b = stack.pop(); a = stack.pop()
+            stack.push((a + b) mod 2^256); gas -= 3
+        MUL:
+            b = stack.pop(); a = stack.pop()
+            stack.push((a * b) mod 2^256); gas -= 5
+        SSTORE:
+            key = stack.pop(); val = stack.pop()
+            storage[key] = val
+            gas -= 20000 if slot was zero else 5000
+        STOP:
+            execution halts
+        REVERT:
+            execution halts, all state changes rolled back</code></pre></div>
+
+        <!-- Python -->
+        <div class="ct-panel" data-tab="sc-py"><pre><code>"""
+Smart contract interaction with Python web3.py
+Requires: pip install web3
+"""
+from web3 import Web3
+from web3.middleware import geth_poa_middleware
+import json
+
+# ── Connect ──────────────────────────────────────────────────────
+w3 = Web3(Web3.HTTPProvider("https://mainnet.infura.io/v3/YOUR_KEY"))
+w3.middleware_onion.inject(geth_poa_middleware, layer=0)
+assert w3.is_connected()
+
+# ── ERC-20 ABI (minimal) ─────────────────────────────────────────
+ERC20_ABI = json.loads('''[
+  {"name":"balanceOf","type":"function","stateMutability":"view",
+   "inputs":[{"name":"account","type":"address"}],
+   "outputs":[{"name":"","type":"uint256"}]},
+  {"name":"transfer","type":"function","stateMutability":"nonpayable",
+   "inputs":[{"name":"to","type":"address"},{"name":"amount","type":"uint256"}],
+   "outputs":[{"name":"","type":"bool"}]},
+  {"name":"Transfer","type":"event",
+   "inputs":[{"indexed":true,"name":"from","type":"address"},
+             {"indexed":true,"name":"to","type":"address"},
+             {"indexed":false,"name":"value","type":"uint256"}]}
+]''')
+
+USDC_ADDRESS = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+contract = w3.eth.contract(address=USDC_ADDRESS, abi=ERC20_ABI)
+
+# ── Read (free — no gas) ─────────────────────────────────────────
+MY_WALLET = "0xYOUR_WALLET_ADDRESS"
+balance_raw = contract.functions.balanceOf(MY_WALLET).call()
+# USDC has 6 decimals
+balance_usdc = balance_raw / 10**6
+print(f"USDC balance: {balance_usdc:.2f}")
+
+# ── Write (requires signing and broadcasting) ────────────────────
+PRIVATE_KEY = "0xYOUR_PRIVATE_KEY"
+account     = w3.eth.account.from_key(PRIVATE_KEY)
+recipient   = "0xRECIPIENT_ADDRESS"
+amount_usdc = int(1.5 * 10**6)   # 1.5 USDC
+
+tx = contract.functions.transfer(recipient, amount_usdc).build_transaction({
+    "from":     account.address,
+    "nonce":    w3.eth.get_transaction_count(account.address),
+    "gas":      100_000,
+    "maxFeePerGas":         w3.to_wei("20", "gwei"),
+    "maxPriorityFeePerGas": w3.to_wei("1",  "gwei"),
+    "chainId":  1,
+})
+
+signed = account.sign_transaction(tx)
+tx_hash = w3.eth.send_raw_transaction(signed.rawTransaction)
+receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
+print(f"tx: {tx_hash.hex()}  status: {receipt['status']}")
+
+# ── Decode past Transfer events ──────────────────────────────────
+from_block = w3.eth.block_number - 500
+logs = contract.events.Transfer().get_logs(fromBlock=from_block)
+for log in logs[:5]:
+    args = log["args"]
+    print(f"  {args['from'][:8]}… → {args['to'][:8]}… : {args['value'] / 1e6:.2f} USDC")</code></pre></div>
+
+        <!-- JavaScript -->
+        <div class="ct-panel" data-tab="sc-js"><pre><code>/**
+ * Smart contract interaction with ethers.js v6
+ * npm install ethers hardhat
+ */
+import { ethers } from "ethers";
+
+// ── Connect ───────────────────────────────────────────────────────
+const provider = new ethers.JsonRpcProvider("https://mainnet.infura.io/v3/KEY");
+const signer   = new ethers.Wallet("0xYOUR_PRIVATE_KEY", provider);
+
+// ── ERC-20 minimal ABI ────────────────────────────────────────────
+const ERC20_ABI = [
+  "function balanceOf(address) view returns (uint256)",
+  "function transfer(address to, uint256 amount) returns (bool)",
+  "function approve(address spender, uint256 amount) returns (bool)",
+  "event Transfer(address indexed from, address indexed to, uint256 value)",
+];
+
+const USDC = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";
+const token = new ethers.Contract(USDC, ERC20_ABI, signer);
+
+// ── Read ──────────────────────────────────────────────────────────
+const raw = await token.balanceOf(signer.address);
+console.log("Balance:", ethers.formatUnits(raw, 6), "USDC");
+
+// ── Write (send a transaction) ────────────────────────────────────
+const tx = await token.transfer("0xRECIPIENT", ethers.parseUnits("1.5", 6));
+console.log("tx hash:", tx.hash);
+const receipt = await tx.wait();
+console.log("confirmed in block", receipt.blockNumber);
+
+// ── Event listener ────────────────────────────────────────────────
+token.on("Transfer", (from, to, value, event) => {
+  console.log(`Transfer: ${from} -> ${to} : ${ethers.formatUnits(value, 6)} USDC`);
+  console.log("block:", event.log.blockNumber);
+});
+
+// ── Hardhat test example ─────────────────────────────────────────
+// test/ERC20.test.js
+import { expect } from "chai";
+import hre from "hardhat";
+
+describe("ERC20", () => {
+  let token, owner, alice;
+
+  beforeEach(async () => {
+    [owner, alice] = await hre.ethers.getSigners();
+    const Factory = await hre.ethers.getContractFactory("ERC20");
+    token = await Factory.deploy("MyToken", "MTK", 1_000_000n);
+    await token.waitForDeployment();
+  });
+
+  it("mints initial supply to owner", async () => {
+    const bal = await token.balanceOf(owner.address);
+    expect(bal).to.equal(ethers.parseUnits("1000000", 18));
+  });
+
+  it("transfers tokens", async () => {
+    const amount = ethers.parseUnits("100", 18);
+    await token.transfer(alice.address, amount);
+    expect(await token.balanceOf(alice.address)).to.equal(amount);
+  });
+
+  it("reverts on insufficient balance", async () => {
+    const tooMuch = ethers.parseUnits("2000000", 18);
+    await expect(token.transfer(alice.address, tooMuch))
+      .to.be.revertedWith("ERC20: transfer amount exceeds balance");
+  });
+});</code></pre></div>
+
+        <!-- C -->
+        <div class="ct-panel" data-tab="sc-c"><pre><code>/*
+ * ABI-encode an ERC-20 transfer call in C
+ * (keccak256 via libssl / OpenSSL EVP)
+ * gcc -o abi_encode abi_encode.c -lssl -lcrypto
+ */
+#include &lt;stdio.h&gt;
+#include &lt;stdint.h&gt;
+#include &lt;string.h&gt;
+#include &lt;openssl/evp.h&gt;
+
+/* keccak256 wrapper using EVP_MD_CTX */
+static int keccak256(const uint8_t *in, size_t inlen, uint8_t out[32]) {
+    EVP_MD_CTX *ctx = EVP_MD_CTX_new();
+    const EVP_MD *md = EVP_MD_fetch(NULL, "KECCAK-256", NULL);
+    if (!ctx || !md) return -1;
+    EVP_DigestInit_ex(ctx, md, NULL);
+    EVP_DigestUpdate(ctx, in, inlen);
+    unsigned int outlen = 32;
+    EVP_DigestFinal_ex(ctx, out, &amp;outlen);
+    EVP_MD_CTX_free(ctx);
+    EVP_MD_free((EVP_MD*)md);
+    return 0;
+}
+
+/* ABI-encode transfer(address,uint256)
+ * Layout: [4-byte selector][32-byte address][32-byte uint256]
+ * Total:  68 bytes
+ */
+void abi_encode_transfer(
+    const uint8_t addr[20],          /* 20-byte Ethereum address */
+    const uint8_t amount[32],        /* 32-byte big-endian uint256 */
+    uint8_t calldata_out[68])
+{
+    /* 1. Compute selector: keccak256("transfer(address,uint256)")[0:4] */
+    const char *sig = "transfer(address,uint256)";
+    uint8_t hash[32];
+    keccak256((const uint8_t*)sig, strlen(sig), hash);
+
+    memcpy(calldata_out, hash, 4);   /* selector */
+
+    /* 2. Encode address: left-pad 20 bytes to 32 bytes */
+    memset(calldata_out + 4, 0, 12);
+    memcpy(calldata_out + 4 + 12, addr, 20);
+
+    /* 3. Encode uint256: already 32 bytes (caller responsible for big-endian) */
+    memcpy(calldata_out + 36, amount, 32);
+}
+
+int main(void) {
+    uint8_t addr[20] = {
+        0xAB,0xCD,0xEF,0x00,0x11,0x22,0x33,0x44,0x55,0x66,
+        0x77,0x88,0x99,0xAA,0xBB,0xCC,0xDD,0xEE,0xFF,0x12
+    };
+    /* 1 ether = 10^18 = 0x0de0b6b3a7640000 */
+    uint8_t amount[32] = {0};
+    amount[24] = 0x0d; amount[25] = 0xe0; amount[26] = 0xb6;
+    amount[27] = 0xb3; amount[28] = 0xa7; amount[29] = 0x64;
+    amount[30] = 0x00; amount[31] = 0x00;
+
+    uint8_t calldata[68];
+    abi_encode_transfer(addr, amount, calldata);
+
+    printf("Calldata (%d bytes):\n  ", 68);
+    for (int i = 0; i &lt; 68; i++) {
+        printf("%02x", calldata[i]);
+        if ((i+1) % 32 == 0) printf("\n  ");
+    }
+    printf("\n");
+    return 0;
+}</code></pre></div>
+
+        <!-- C++ -->
+        <div class="ct-panel" data-tab="sc-cpp"><pre><code>/*
+ * Minimal EVM stack machine in C++
+ * Demonstrates PUSH1, ADD, MUL, STOP
+ */
+#include &lt;cstdint&gt;
+#include &lt;vector&gt;
+#include &lt;stdexcept&gt;
+#include &lt;iostream&gt;
+#include &lt;format&gt;
+
+using Word = uint64_t;  // simplified: real EVM uses 256-bit integers
+
+enum Opcode : uint8_t {
+    STOP  = 0x00,
+    ADD   = 0x01,
+    MUL   = 0x02,
+    PUSH1 = 0x60,
+};
+
+struct EVMResult {
+    std::vector&lt;Word&gt; stack;
+    uint64_t gasUsed;
+    bool     stopped;
+};
+
+EVMResult runEVM(const std::vector&lt;uint8_t&gt;&amp; bytecode, uint64_t gasLimit) {
+    std::vector&lt;Word&gt; stack;
+    uint64_t gasUsed = 0;
+    size_t pc = 0;
+
+    auto consumeGas = [&amp;](uint64_t cost) {
+        if (gasUsed + cost &gt; gasLimit)
+            throw std::runtime_error("Out of gas");
+        gasUsed += cost;
+    };
+
+    while (pc &lt; bytecode.size()) {
+        uint8_t op = bytecode[pc++];
+        switch (op) {
+            case PUSH1: {
+                consumeGas(3);
+                if (pc &gt;= bytecode.size()) throw std::runtime_error("PUSH1: missing operand");
+                stack.push_back(bytecode[pc++]);
+                break;
+            }
+            case ADD: {
+                consumeGas(3);
+                if (stack.size() &lt; 2) throw std::runtime_error("ADD: stack underflow");
+                Word b = stack.back(); stack.pop_back();
+                Word a = stack.back(); stack.pop_back();
+                stack.push_back(a + b);
+                break;
+            }
+            case MUL: {
+                consumeGas(5);
+                if (stack.size() &lt; 2) throw std::runtime_error("MUL: stack underflow");
+                Word b = stack.back(); stack.pop_back();
+                Word a = stack.back(); stack.pop_back();
+                stack.push_back(a * b);
+                break;
+            }
+            case STOP:
+                consumeGas(0);
+                return {stack, gasUsed, true};
+            default:
+                throw std::runtime_error(std::format("Unknown opcode: 0x{:02x}", op));
+        }
+    }
+    return {stack, gasUsed, false};
+}
+
+int main() {
+    // PUSH1 3, PUSH1 5, ADD, PUSH1 2, MUL, STOP
+    // Expected: (3 + 5) * 2 = 16
+    std::vector&lt;uint8_t&gt; program = {
+        0x60, 0x03,   // PUSH1 3
+        0x60, 0x05,   // PUSH1 5
+        0x01,         // ADD   → stack: [8]
+        0x60, 0x02,   // PUSH1 2
+        0x02,         // MUL   → stack: [16]
+        0x00          // STOP
+    };
+
+    auto result = runEVM(program, 100'000);
+    std::cout &lt;&lt; "Stack top: " &lt;&lt; result.stack.back()
+              &lt;&lt; "  gas used: " &lt;&lt; result.gasUsed &lt;&lt; "\n";
+    return 0;
+}</code></pre></div>
+
+        <!-- Java -->
+        <div class="ct-panel" data-tab="sc-java"><pre><code>/**
+ * Smart contract interaction with web3j
+ * Maven: org.web3j:core:4.10.3
+ */
+import org.web3j.crypto.Credentials;
+import org.web3j.protocol.Web3j;
+import org.web3j.protocol.http.HttpService;
+import org.web3j.protocol.core.methods.response.*;
+import org.web3j.tx.gas.DefaultGasProvider;
+import org.web3j.abi.FunctionEncoder;
+import org.web3j.abi.FunctionReturnDecoder;
+import org.web3j.abi.TypeReference;
+import org.web3j.abi.datatypes.*;
+import org.web3j.abi.datatypes.generated.Uint256;
+import org.web3j.model.ERC20;   // generated wrapper
+
+import java.math.BigInteger;
+import java.util.Arrays;
+import java.util.List;
+
+public class SmartContractDemo {
+
+    static final String NODE_URL    = "https://mainnet.infura.io/v3/KEY";
+    static final String PRIVATE_KEY = "0xYOUR_KEY";
+    static final String USDC_ADDR   = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";
+
+    public static void main(String[] args) throws Exception {
+        Web3j web3j   = Web3j.build(new HttpService(NODE_URL));
+        Credentials creds = Credentials.create(PRIVATE_KEY);
+
+        // ── Using a generated wrapper (web3j generate ...) ──────────
+        // ERC20 token = ERC20.load(USDC_ADDR, web3j, creds, new DefaultGasProvider());
+        // BigInteger balance = token.balanceOf(creds.getAddress()).send();
+        // System.out.println("Balance: " + balance);
+
+        // ── Manual ABI call (no generated wrapper needed) ────────────
+        Function balanceOf = new Function(
+            "balanceOf",
+            Arrays.asList(new Address(creds.getAddress())),
+            Arrays.asList(new TypeReference&lt;Uint256&gt;() {})
+        );
+
+        String encoded = FunctionEncoder.encode(balanceOf);
+        EthCall response = web3j.ethCall(
+            org.web3j.protocol.core.methods.request.Transaction.createEthCallTransaction(
+                creds.getAddress(), USDC_ADDR, encoded
+            ),
+            org.web3j.protocol.core.DefaultBlockParameterName.LATEST
+        ).send();
+
+        List&lt;Type&gt; result = FunctionReturnDecoder.decode(
+            response.getValue(), balanceOf.getOutputParameters()
+        );
+        BigInteger rawBalance = ((Uint256) result.get(0)).getValue();
+        System.out.printf("USDC balance: %.2f%n", rawBalance.doubleValue() / 1e6);
+
+        // ── Send a transfer transaction ───────────────────────────────
+        Function transfer = new Function(
+            "transfer",
+            Arrays.asList(
+                new Address("0xRECIPIENT"),
+                new Uint256(BigInteger.valueOf(1_500_000L))  // 1.5 USDC (6 decimals)
+            ),
+            Arrays.asList(new TypeReference&lt;Bool&gt;() {})
+        );
+
+        String txData = FunctionEncoder.encode(transfer);
+        BigInteger nonce = web3j.ethGetTransactionCount(
+            creds.getAddress(),
+            org.web3j.protocol.core.DefaultBlockParameterName.LATEST
+        ).send().getTransactionCount();
+
+        org.web3j.protocol.core.methods.request.Transaction tx =
+            org.web3j.protocol.core.methods.request.Transaction.createFunctionCallTransaction(
+                creds.getAddress(), nonce,
+                org.web3j.tx.gas.DefaultGasProvider.GAS_PRICE,
+                org.web3j.tx.gas.DefaultGasProvider.GAS_LIMIT,
+                USDC_ADDR, txData
+            );
+
+        EthSendTransaction ethSendTx = web3j.ethSendTransaction(tx).send();
+        System.out.println("tx hash: " + ethSendTx.getTransactionHash());
+
+        web3j.shutdown();
+    }
+}</code></pre></div>
+
+        <!-- Go -->
+        <div class="ct-panel" data-tab="sc-go"><pre><code>// Smart contract interaction with go-ethereum (geth)
+// go get github.com/ethereum/go-ethereum
+package main
+
+import (
+    "context"
+    "fmt"
+    "log"
+    "math/big"
+
+    "github.com/ethereum/go-ethereum"
+    "github.com/ethereum/go-ethereum/accounts/abi"
+    "github.com/ethereum/go-ethereum/common"
+    "github.com/ethereum/go-ethereum/core/types"
+    "github.com/ethereum/go-ethereum/crypto"
+    "github.com/ethereum/go-ethereum/ethclient"
+    "strings"
+)
+
+const erc20ABI = `[
+  {"name":"balanceOf","type":"function","stateMutability":"view",
+   "inputs":[{"name":"account","type":"address"}],
+   "outputs":[{"name":"","type":"uint256"}]},
+  {"name":"transfer","type":"function","stateMutability":"nonpayable",
+   "inputs":[{"name":"to","type":"address"},{"name":"amount","type":"uint256"}],
+   "outputs":[{"name":"","type":"bool"}]}
+]`
+
+func main() {
+    client, err := ethclient.Dial("https://mainnet.infura.io/v3/KEY")
+    if err != nil { log.Fatal(err) }
+    defer client.Close()
+
+    parsedABI, err := abi.JSON(strings.NewReader(erc20ABI))
+    if err != nil { log.Fatal(err) }
+
+    usdcAddr    := common.HexToAddress("0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48")
+    myAddr      := common.HexToAddress("0xYOUR_ADDRESS")
+
+    // ── Pack a balanceOf call ────────────────────────────────────
+    callData, err := parsedABI.Pack("balanceOf", myAddr)
+    if err != nil { log.Fatal(err) }
+
+    msg := ethereum.CallMsg{To: &amp;usdcAddr, Data: callData}
+    rawResult, err := client.CallContract(context.Background(), msg, nil)
+    if err != nil { log.Fatal(err) }
+
+    // ── Unpack the result ────────────────────────────────────────
+    results, err := parsedABI.Unpack("balanceOf", rawResult)
+    if err != nil { log.Fatal(err) }
+
+    balance := results[0].(*big.Int)
+    fmt.Printf("USDC balance: %.2f\n", float64(balance.Int64())/1e6)
+
+    // ── Send a transfer transaction ──────────────────────────────
+    privateKey, err := crypto.HexToECDSA("YOUR_PRIVATE_KEY_NO_0x")
+    if err != nil { log.Fatal(err) }
+
+    recipient := common.HexToAddress("0xRECIPIENT")
+    amount    := big.NewInt(1_500_000)  // 1.5 USDC
+
+    txData, err := parsedABI.Pack("transfer", recipient, amount)
+    if err != nil { log.Fatal(err) }
+
+    nonce, _    := client.PendingNonceAt(context.Background(), myAddr)
+    gasPrice, _ := client.SuggestGasPrice(context.Background())
+    chainID, _  := client.ChainID(context.Background())
+
+    tx := types.NewTransaction(nonce, usdcAddr, big.NewInt(0), 100_000, gasPrice, txData)
+    signedTx, err := types.SignTx(tx, types.NewEIP155Signer(chainID), privateKey)
+    if err != nil { log.Fatal(err) }
+
+    if err := client.SendTransaction(context.Background(), signedTx); err != nil {
+        log.Fatal(err)
+    }
+    fmt.Printf("tx sent: %s\n", signedTx.Hash().Hex())
+}</code></pre></div>
+
+      </div>
+    </details>
+
+    <!-- ========================================================== -->
+    <h2 id="summary">11. Summary</h2>
+
+    <div class="callout good">
+      <div class="label">ONE-PARAGRAPH SUMMARY</div>
+      <p style="margin:6px 0">A smart contract is a deterministic program stored on a blockchain that executes exactly as written without a trusted intermediary. Ethereum's EVM is a 256-bit stack machine where every opcode costs gas, making infinite loops economically impossible. Solidity compiles to EVM bytecode and provides a high-level type system including mappings, structs, events, and modifiers. The ERC-20 standard defines the interface all fungible tokens implement. Common security patterns — the checks-effects-interactions ordering, reentrancy guards, Ownable access control, EIP-712 signed messages — guard against the most costly exploit classes, from the $60M DAO reentrancy hack to oracle manipulation and front-running. Gas optimisation (packing storage, caching reads, using calldata, unchecked arithmetic) reduces fees from prohibitive to acceptable. Beyond Ethereum, Solana, Cosmos, and Move-based chains (Sui, Aptos) offer alternative execution environments, with Move's linear type system providing the most fundamental safety guarantee: assets cannot be copied or silently destroyed.</p>
+    </div>
+
+    <h3>Where to go next</h3>
+    <ul class="clean">
+      <li><a class="ext" href="https://docs.soliditylang.org/en/latest/" target="_blank">Solidity documentation</a> — the definitive reference, updated with every release.</li>
+      <li><a class="ext" href="https://docs.openzeppelin.com/contracts/5.x/" target="_blank">OpenZeppelin Contracts v5</a> — battle-tested, audited building blocks for every common pattern.</li>
+      <li><a class="ext" href="https://book.getfoundry.sh/" target="_blank">Foundry Book</a> — the modern Solidity development toolchain: forge test, cast, anvil.</li>
+      <li><a class="ext" href="https://swcregistry.io/" target="_blank">SWC Registry</a> — the Smart Contract Weakness Classification, cataloguing every known vulnerability class.</li>
+      <li><a class="ext" href="https://move-book.com/" target="_blank">The Move Book</a> — introduction to Move's resource model and linear types.</li>
+      <li><a class="ext" href="https://www.evm.codes/" target="_blank">evm.codes</a> — interactive opcode reference with gas costs for every EVM instruction.</li>
+    </ul>
+  </article>
+</div>
+
+<script>
+// ============================================================
+// Code-tab switcher (shared pattern)
+// ============================================================
+document.querySelectorAll('.code-tabs').forEach(tabs => {
+  tabs.querySelectorAll('.ct-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.tab;
+      tabs.querySelectorAll('.ct-tab').forEach(b => b.classList.remove('active'));
+      tabs.querySelectorAll('.ct-panel').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      tabs.querySelector(`.ct-panel[data-tab="${id}"]`).classList.add('active');
+    });
+  });
+});
+
+// ============================================================
+// EVM Stack Machine Visualizer
+// ============================================================
+(function () {
+  const svg    = document.getElementById('evm-svg');
+  const cap    = document.getElementById('evm-caption');
+  const stepBtn = document.getElementById('evm-step-btn');
+
+  // The program: PUSH1 3, PUSH1 5, ADD, PUSH1 2, MUL, STOP
+  const PROGRAM = [
+    { op: 'PUSH1', arg: 3,    gas: 3,  desc: 'Push literal 3 onto the stack.' },
+    { op: 'PUSH1', arg: 5,    gas: 3,  desc: 'Push literal 5 onto the stack.' },
+    { op: 'ADD',   arg: null, gas: 3,  desc: 'Pop 5 and 3, push 5+3 = 8.' },
+    { op: 'PUSH1', arg: 2,    gas: 3,  desc: 'Push literal 2 onto the stack.' },
+    { op: 'MUL',   arg: null, gas: 5,  desc: 'Pop 2 and 8, push 2×8 = 16.' },
+    { op: 'STOP',  arg: null, gas: 0,  desc: 'Execution halts. Final result: 16.' },
+  ];
+
+  let state = {
+    pc:        0,
+    stack:     [],
+    gasUsed:   0,
+    done:      false,
+  };
+
+  function applyStep() {
+    if (state.done || state.pc >= PROGRAM.length) return;
+    const instr = PROGRAM[state.pc];
+    state.gasUsed += instr.gas;
+    switch (instr.op) {
+      case 'PUSH1':
+        state.stack.push(instr.arg);
+        break;
+      case 'ADD': {
+        const b = state.stack.pop();
+        const a = state.stack.pop();
+        state.stack.push(a + b);
+        break;
+      }
+      case 'MUL': {
+        const b = state.stack.pop();
+        const a = state.stack.pop();
+        state.stack.push(a * b);
+        break;
+      }
+      case 'STOP':
+        state.done = true;
+        break;
+    }
+    const instr2 = PROGRAM[state.pc];
+    cap.textContent = `${instr2.op}${instr2.arg !== null ? ' ' + instr2.arg : ''}: ${instr2.desc}  |  Gas used: ${state.gasUsed}`;
+    state.pc++;
+    if (state.done || state.pc >= PROGRAM.length) {
+      stepBtn.disabled = true;
+      cap.textContent = `STOP — Execution complete. Result on stack: ${state.stack[state.stack.length - 1]}. Total gas: ${state.gasUsed}.`;
+    }
+    render();
+  }
+
+  function render() {
+    svg.innerHTML = '';
+
+    const W = 500, H = 340;
+    const PROG_X = 20, PROG_Y = 20;
+    const STACK_X = 300, STACK_Y = 20;
+    const BOX_W = 160, BOX_H = 26;
+    const SLOT_H = 32;
+
+    // ── Background panels ────────────────────────────────────────
+    const mkRect = (x, y, w, h, fill, stroke, rx) => {
+      const r = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      r.setAttribute('x', x); r.setAttribute('y', y);
+      r.setAttribute('width', w); r.setAttribute('height', h);
+      r.setAttribute('fill', fill); r.setAttribute('stroke', stroke);
+      r.setAttribute('rx', rx || 4);
+      return r;
+    };
+    const mkText = (x, y, txt, fill, size, anchor, weight) => {
+      const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      t.setAttribute('x', x); t.setAttribute('y', y);
+      t.setAttribute('fill', fill || '#dbe1ec');
+      t.setAttribute('font-family', 'monospace');
+      t.setAttribute('font-size', size || 12);
+      t.setAttribute('text-anchor', anchor || 'start');
+      if (weight) t.setAttribute('font-weight', weight);
+      t.textContent = txt;
+      return t;
+    };
+
+    // Panel: program listing
+    svg.appendChild(mkRect(PROG_X, PROG_Y, 240, 300, '#11141c', '#242a3a', 6));
+    svg.appendChild(mkText(PROG_X + 8, PROG_Y + 18, 'PROGRAM', '#8a93a6', 10, 'start', 'bold'));
+
+    PROGRAM.forEach((instr, i) => {
+      const y = PROG_Y + 30 + i * 40;
+      const isCurrent = (i === state.pc - 1 && !state.done) ||
+                        (state.done && i === PROGRAM.length - 1);
+      const isPast    = i < state.pc - (state.done ? 0 : 1);
+
+      const bg = isCurrent ? '#1e2a1a' : isPast ? '#151922' : '#11141c';
+      const bd = isCurrent ? '#34d399' : '#242a3a';
+      svg.appendChild(mkRect(PROG_X + 6, y, 228, 34, bg, bd, 4));
+
+      // PC counter
+      const pcFill = isCurrent ? '#34d399' : isPast ? '#546e7a' : '#546e7a';
+      svg.appendChild(mkText(PROG_X + 12, y + 14, `${String(i).padStart(2, '0')}:`, pcFill, 10, 'start'));
+
+      // Opcode
+      const opColor = isCurrent ? '#ffffff' : isPast ? '#546e7a' : '#c5b5ff';
+      const opText = instr.op + (instr.arg !== null ? '  ' + instr.arg : '');
+      svg.appendChild(mkText(PROG_X + 36, y + 14, opText, opColor, 12, 'start', isCurrent ? 'bold' : 'normal'));
+
+      // Gas badge
+      if (instr.gas > 0) {
+        svg.appendChild(mkText(PROG_X + 200, y + 14, `${instr.gas}g`, '#fbbf24', 10, 'end'));
+      }
+
+      // Arrow for current
+      if (isCurrent) {
+        svg.appendChild(mkText(PROG_X + 220, y + 14, '→', '#34d399', 12, 'start'));
+      }
+    });
+
+    // Panel: stack
+    svg.appendChild(mkRect(STACK_X, STACK_Y, 180, 230, '#11141c', '#242a3a', 6));
+    svg.appendChild(mkText(STACK_X + 8, STACK_Y + 18, 'STACK', '#8a93a6', 10, 'start', 'bold'));
+    svg.appendChild(mkText(STACK_X + 160, STACK_Y + 18, '↑ top', '#546e7a', 9, 'end'));
+
+    // Draw stack items (bottom to top display order: show top at top)
+    const maxShow = 6;
+    const displayStack = [...state.stack].reverse().slice(0, maxShow);
+    displayStack.forEach((val, i) => {
+      const y = STACK_Y + 30 + i * SLOT_H;
+      const isTop = i === 0;
+      svg.appendChild(mkRect(STACK_X + 8, y, 164, 28, isTop ? '#1a2236' : '#151922', isTop ? '#22d3ee' : '#2a3248', 4));
+      svg.appendChild(mkText(STACK_X + 16, y + 18, String(val), isTop ? '#22d3ee' : '#dbe1ec', 13, 'start', isTop ? 'bold' : 'normal'));
+      svg.appendChild(mkText(STACK_X + 164, y + 18, `[${state.stack.length - 1 - i}]`, '#546e7a', 9, 'end'));
+    });
+
+    if (state.stack.length === 0) {
+      svg.appendChild(mkText(STACK_X + 90, STACK_Y + 60, '(empty)', '#546e7a', 11, 'middle'));
+    }
+    if (state.stack.length > maxShow) {
+      svg.appendChild(mkText(STACK_X + 90, STACK_Y + 30 + maxShow * SLOT_H + 10, `... +${state.stack.length - maxShow} more`, '#546e7a', 10, 'middle'));
+    }
+
+    // Gas counter panel
+    svg.appendChild(mkRect(STACK_X, STACK_Y + 240, 180, 40, '#11141c', '#242a3a', 6));
+    svg.appendChild(mkText(STACK_X + 8, STACK_Y + 256, 'GAS USED', '#8a93a6', 9, 'start'));
+    svg.appendChild(mkText(STACK_X + 8, STACK_Y + 272, String(state.gasUsed), '#fbbf24', 14, 'start', 'bold'));
+    svg.appendChild(mkText(STACK_X + 120, STACK_Y + 272, '/ 100 000', '#546e7a', 9, 'start'));
+
+    // Stack depth indicator
+    svg.appendChild(mkRect(STACK_X, STACK_Y + 288, 180, 30, '#11141c', '#242a3a', 6));
+    svg.appendChild(mkText(STACK_X + 8, STACK_Y + 304, `DEPTH: ${state.stack.length}  /  1024 max`, '#8a93a6', 10, 'start'));
+  }
+
+  window.evmStep = function () {
+    if (!state.done && state.pc < PROGRAM.length) {
+      applyStep();
+    }
+  };
+
+  window.evmReset = function () {
+    state = { pc: 0, stack: [], gasUsed: 0, done: false };
+    stepBtn.disabled = false;
+    cap.textContent = 'Press Step to begin execution.';
+    render();
+  };
+
+  // Initial render
+  render();
+})();
+</script>
+<script defer src="../search-index.js"></script>
+<script defer src="../search.js"></script>
+</body>
+</html>

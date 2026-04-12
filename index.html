@@ -12,14 +12,16 @@
 
 <div class="hero">
   <div class="hero-inner">
-    <span class="chip">UPDATED Apr 11 2026 18:45</span>
-    <p class="lede">A field guide to the quantitative reasoning under modern science and technology, covering the math you need for physics, chemistry, computer science, and AI/ML, with deep dives when you want to know why.</p>
+    <span class="chip">UPDATED Apr 11 2026 19:15</span>
+    <p class="lede">A field guide to the quantitative reasoning under modern science and technology, covering the math you need for physics, chemistry, computer science, AI/ML, blockchain, and quantum computing, with deep dives when you want to know why.</p>
     <nav class="hero-nav">
       <a class="hero-nav-btn tb-math"    href="#math">Mathematics</a>
       <a class="hero-nav-btn tb-phys"    href="#physics">Physics</a>
       <a class="hero-nav-btn tb-chem"    href="#chemistry">Chemistry</a>
       <a class="hero-nav-btn tb-cs"      href="#cs">Computer Science</a>
       <a class="hero-nav-btn tb-ai"      href="#ai-ml">AI / ML</a>
+      <a class="hero-nav-btn tb-chain"   href="#blockchain">Blockchain</a>
+      <a class="hero-nav-btn tb-qc"      href="#quantum">Quantum Computing</a>
     </nav>
   </div>
 </div>
@@ -398,6 +400,84 @@
           <p class="meta">ongoing</p>
           <p>Measured effects on jobs, information, democracy, and warfare.</p>
           <span class="tag">policy</span>
+        </a>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section id="blockchain">
+      <h2>Blockchain</h2>
+      <a class="track-banner tb-chain" href="blockchain.html">
+        <div class="tb-main">
+          <div class="tb-label">Start here · Track hub</div>
+          <div class="tb-title">Blockchain</div>
+          <div class="tb-desc">Distributed ledgers, consensus mechanisms, smart contracts, zero-knowledge proofs, and DeFi. From cryptographic foundations to ZK rollups.</div>
+        </div>
+        <div class="tb-arrow">→</div>
+      </a>
+      <div class="grid">
+        <a class="card card-link" href="topics/blockchain-crypto.html">
+          <h4>Cryptographic Foundations</h4>
+          <p class="meta">hashes · signatures · Merkle trees</p>
+          <p>SHA-256, ECDSA on secp256k1, Merkle proofs, and how they make tamper-evident ledgers possible.</p>
+          <span class="tag hot">core</span>
+        </a>
+        <a class="card card-link" href="topics/blockchain-consensus.html">
+          <h4>Consensus Mechanisms</h4>
+          <p class="meta">PoW · PoS · BFT</p>
+          <p>The Byzantine Generals Problem, Nakamoto consensus, Proof of Stake, and BFT protocols (Tendermint, HotStuff).</p>
+          <span class="tag hot">core</span>
+        </a>
+        <a class="card card-link" href="topics/blockchain-smart-contracts.html">
+          <h4>Smart Contracts</h4>
+          <p class="meta">EVM · Solidity · security</p>
+          <p>The Ethereum Virtual Machine, Solidity patterns, ERC-20/721, reentrancy attacks, and gas optimization.</p>
+          <span class="tag hot">core</span>
+        </a>
+        <a class="card card-link" href="topics/blockchain-zkp.html">
+          <h4>Zero-Knowledge Proofs</h4>
+          <p class="meta">SNARKs · STARKs · zkRollups</p>
+          <p>Prove without revealing. R1CS, Groth16, FRI, and how ZK proofs power the next generation of scaling.</p>
+          <span class="tag hot">frontier</span>
+        </a>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section id="quantum">
+      <h2>Quantum Computing</h2>
+      <a class="track-banner tb-qc" href="quantum-computing.html">
+        <div class="tb-main">
+          <div class="tb-label">Start here · Track hub</div>
+          <div class="tb-title">Quantum Computing</div>
+          <div class="tb-desc">Superposition, entanglement, interference, and the algorithms that exploit them. From the Bloch sphere to Shor's algorithm and error correction.</div>
+        </div>
+        <div class="tb-arrow">→</div>
+      </a>
+      <div class="grid">
+        <a class="card card-link" href="topics/quantum-qubits.html">
+          <h4>Qubits &amp; Superposition</h4>
+          <p class="meta">state vectors · Born rule · Bloch sphere</p>
+          <p>The qubit state vector, Dirac notation, measurement and the Born rule, multi-qubit tensor products, decoherence.</p>
+          <span class="tag hot">core</span>
+        </a>
+        <a class="card card-link" href="topics/quantum-gates.html">
+          <h4>Quantum Gates &amp; Circuits</h4>
+          <p class="meta">unitaries · CNOT · universality</p>
+          <p>Pauli gates, Hadamard, rotations, CNOT, universality with {H, T, CNOT}, circuit identities, and a working 2-qubit simulator.</p>
+          <span class="tag hot">core</span>
+        </a>
+        <a class="card card-link" href="topics/quantum-algorithms.html">
+          <h4>Quantum Algorithms</h4>
+          <p class="meta">Grover · Shor · QFT · QAOA</p>
+          <p>Deutsch-Jozsa, Grover's O(√N) search, Shor's factoring via the QFT, phase estimation, and near-term VQE/QAOA.</p>
+          <span class="tag hot">frontier</span>
+        </a>
+        <a class="card card-link" href="topics/quantum-entanglement.html">
+          <h4>Entanglement &amp; Bell States</h4>
+          <p class="meta">EPR · teleportation · Bell inequality</p>
+          <p>Bell states, the CHSH inequality and its experimental violation, quantum teleportation, superdense coding, entanglement entropy.</p>
+          <span class="tag hot">core</span>
         </a>
       </div>
     </section>
