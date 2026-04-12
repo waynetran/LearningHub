@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cosmos — The Internet of Blockchains, IBC, and Sovereign App-Chains</title>
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError: false});"></script>
+<style>
+  :root { --cos: #06b6d4; --cos-dim: rgba(6,182,212,0.10); --cos-border: rgba(6,182,212,0.30); }
+  h1 { background: linear-gradient(135deg, #fff 0%, #06b6d4 55%, #67e8f9 100%) !important; -webkit-background-clip: text; background-clip: text; }
+  h2 { border-bottom-color: var(--cos-border); }
+  a { color: var(--cos); }
+  a:hover { color: #67e8f9; }
+  .callout { border-left-color: var(--cos); background: var(--cos-dim); }
+  .callout .label { color: var(--cos); }
+  .topic-toc a { color: var(--text-dim); }
+  .topic-toc a:hover { color: var(--cos); }
+  .chip { display:inline-block; font-family:var(--mono); font-size:11px; color:var(--cos); background:var(--cos-dim); border:1px solid var(--cos-border); border-radius:4px; padding:2px 8px; margin-bottom:16px; }
+  .ibc-diagram { background:#0b0d12; border:1px solid var(--border); border-radius:8px; padding:16px; }
+</style>
+</head>
+<body>
+<div id="tooltip"></div>
+
+<nav class="topic-nav">
+  <a class="back" href="../blockchain.html">← Back to Blockchain</a>
+  <div class="crumb">Deep Dives / <span class="topic-name">Cosmos</span></div>
+</nav>
+
+<div class="topic-layout">
+  <aside class="topic-toc">
+    <h4>ON THIS PAGE</h4>
+    <ul>
+      <li><a href="#overview">1. Overview</a></li>
+      <li><a href="#cometbft">2. CometBFT (Tendermint Core)</a></li>
+      <li><a href="#sdk">3. The Cosmos SDK</a></li>
+      <li><a href="#ibc">4. IBC — Inter-Blockchain Communication</a></li>
+      <li><a href="#appchain">5. The app-chain thesis</a></li>
+      <li><a href="#ecosystem">6. Key ecosystem chains</a></li>
+      <li><a href="#governance">7. Governance and tokenomics</a></li>
+      <li><a href="#ibc-viz">8. Interactive: IBC packet lifecycle</a></li>
+    </ul>
+  </aside>
+
+  <article class="topic-content">
+    <h1>Cosmos — The Internet of Blockchains, IBC, and Sovereign App-Chains</h1>
+    <p class="subtitle">How Cosmos's hub-and-zone architecture, CometBFT consensus, and the Inter-Blockchain Communication protocol enable a network of sovereign application-specific blockchains that can exchange assets and messages trustlessly.</p>
+    <div class="meta-tags">
+      <span>Prereq: basic blockchain concepts, consensus fundamentals</span>
+      <span>Time to read: ~28 min</span>
+      <span>Interactive figures: 1</span>
+    </div>
+    <span class="chip">UPDATED Apr 11 2026 19:32</span>
+
+    <!-- ========================================================== -->
+    <h2 id="overview">1. Overview</h2>
+
+    <p>The Ethereum worldview — one general-purpose blockchain that every application shares — was the dominant paradigm for smart contracts through 2020. Cosmos proposed a radical alternative in its 2016 whitepaper: rather than one chain doing everything, build a <em>protocol</em> for connecting many purpose-built chains. Each chain is sovereign, has its own validators, its own token, and its own governance. The Cosmos network is the infrastructure layer that lets these independent chains communicate.</p>
+
+    <table class="rank-table">
+      <thead><tr><th>Concept</th><th>Ethereum approach</th><th>Cosmos approach</th></tr></thead>
+      <tbody>
+        <tr><td>Application hosting</td><td>Smart contract on shared L1</td><td>Dedicated app-chain</td></tr>
+        <tr><td>Security</td><td>Inherits Ethereum's validator set</td><td>App-chain's own validator set</td></tr>
+        <tr><td>Governance</td><td>Ethereum governance affects all apps</td><td>App-chain governs itself independently</td></tr>
+        <tr><td>Throughput</td><td>Shared blockspace — apps compete</td><td>Dedicated blockspace — no contention</td></tr>
+        <tr><td>Cross-chain</td><td>Bridges (often centralised)</td><td>IBC (trustless protocol standard)</td></tr>
+        <tr><td>Fees</td><td>Paid in ETH, go to Ethereum validators</td><td>Paid in app-chain token, stay in app-chain</td></tr>
+      </tbody>
+    </table>
+
+    <p>The Cosmos Hub (ticker: ATOM) is the first and most prominent chain in the network. It functions as a routing hub for IBC connections, hosts the reference implementation of Interchain Security, and serves as the governance layer for the broader Cosmos protocol. But crucially, Cosmos is not a hierarchy — any chain can connect to any other via IBC without routing through the Hub.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="cometbft">2. CometBFT (Tendermint Core)</h2>
+
+    <p>Every Cosmos chain runs the <strong>CometBFT</strong> consensus engine (formerly Tendermint Core, renamed in 2023 after the fork that created the CometBFT codebase). It provides <strong>instant finality</strong>: once a block is committed, it can never be reversed. This is a fundamental difference from Nakamoto consensus (Bitcoin, Ethereum PoW), where finality is probabilistic and deepens with each additional block.</p>
+
+    <h3>BFT foundations</h3>
+
+    <p>CometBFT is derived from Practical Byzantine Fault Tolerance (PBFT). It tolerates up to $f$ Byzantine validators in a system of $n$ validators where:</p>
+
+    <div class="math-display">$$n \geq 3f + 1 \quad \Leftrightarrow \quad f < \frac{n}{3}$$</div>
+
+    <p>In practice: as long as fewer than 1/3 of staked voting power is Byzantine, the network makes progress and never forks. If more than 1/3 is Byzantine, the network halts (stops producing blocks) rather than producing conflicting blocks — halting is always safer than forking when finality must be absolute.</p>
+
+    <h3>The two phases: Prevote and Precommit</h3>
+
+    <p>Each consensus round has a proposer (the validator selected to propose the next block, rotated proportionally to stake) and three steps:</p>
+
+    <ol>
+      <li><strong>Propose</strong> — the proposer broadcasts a block proposal</li>
+      <li><strong>Prevote</strong> — each validator broadcasts a prevote for the proposal (or nil if it timed out). A <em>polka</em> is formed when 2/3+ of voting power prevotes for the same block.</li>
+      <li><strong>Precommit</strong> — each validator that saw a polka broadcasts a precommit. When 2/3+ precommit for the same block, the block is committed.</li>
+    </ol>
+
+    <div class="callout">
+      <div class="label">LOCK AND UNLOCK RULES</div>
+      <p style="margin:6px 0">A validator is "locked" on the block it last precommitted. It may only prevote for that block (or a valid unlock). This prevents a minority Byzantine coalition from tricking validators into precommitting to two different blocks in the same height. The lock/unlock rules are the mathematical core of CometBFT's safety proof.</p>
+    </div>
+
+    <h3>Why instant finality enables IBC</h3>
+
+    <p>IBC requires <strong>light client verification</strong>: Chain B maintains a light client of Chain A and checks Merkle proofs against Chain A's committed state. For this to work, Chain B must be certain that a block it sees will not be reversed. With Nakamoto consensus, you'd need to wait for many confirmations (probabilistic finality). With CometBFT instant finality, the moment a block is committed on Chain A, Chain B can immediately trust Merkle proofs against that block's state root.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="sdk">3. The Cosmos SDK</h2>
+
+    <p>The <strong>Cosmos SDK</strong> is a Go framework for building app-chains. Rather than writing a blockchain from scratch, developers compose existing modules and add custom logic. The SDK handles the entire stack from networking to consensus to state machine.</p>
+
+    <h3>Module system</h3>
+
+    <p>Standard modules included with every Cosmos SDK chain:</p>
+
+    <table class="rank-table">
+      <thead><tr><th>Module</th><th>Responsibility</th></tr></thead>
+      <tbody>
+        <tr><td><code>bank</code></td><td>Token balances, transfers, multi-send</td></tr>
+        <tr><td><code>staking</code></td><td>Validator set, delegation, unbonding, redelegation</td></tr>
+        <tr><td><code>slashing</code></td><td>Downtime tombstoning, double-sign evidence</td></tr>
+        <tr><td><code>distribution</code></td><td>Block rewards, commission, fee distribution to delegators</td></tr>
+        <tr><td><code>governance</code></td><td>On-chain proposals, voting, parameter changes</td></tr>
+        <tr><td><code>ibc</code></td><td>IBC transport, light clients, channels, ports</td></tr>
+        <tr><td><code>wasm</code> (optional)</td><td>CosmWasm smart contracts (Rust → Wasm)</td></tr>
+      </tbody>
+    </table>
+
+    <p>Custom modules are written as Go structs implementing a <code>AppModule</code> interface. A module exposes a <strong>Msg Server</strong> (handles state-changing transactions) and a <strong>Query Server</strong> (read-only gRPC queries). Modules interact with each other only through their exported keeper interfaces — a dependency injection pattern that prevents circular imports and enables testing modules in isolation.</p>
+
+    <h3>ABCI: the consensus / application boundary</h3>
+
+    <p>CometBFT and the Cosmos SDK application layer communicate via the <strong>Application BlockChain Interface</strong> (ABCI). This is a well-defined protocol boundary — the consensus engine knows nothing about transaction meaning; the application knows nothing about peer-to-peer networking. The key ABCI calls are:</p>
+
+    <ul>
+      <li><strong><code>CheckTx</code></strong> — called when a transaction arrives; the app validates it (signature, fees, basic checks) and accepts or rejects it for the mempool</li>
+      <li><strong><code>BeginBlock</code> / <code>EndBlock</code></strong> — called at the start/end of every block; modules can run any logic (e.g., slashing, distribution, inflation)</li>
+      <li><strong><code>DeliverTx</code></strong> — called for each transaction in a committed block; the app executes the state transition</li>
+      <li><strong><code>Commit</code></strong> — called when the block is finalised; the app returns the new state root (Merkle root of the IAVL tree)</li>
+    </ul>
+
+    <!-- ========================================================== -->
+    <h2 id="ibc">4. IBC — Inter-Blockchain Communication</h2>
+
+    <p>IBC is the defining primitive of the Cosmos ecosystem. It is an open, trustless, and permissionless protocol for passing data and tokens between blockchains — as foundational to Cosmos as TCP/IP is to the internet.</p>
+
+    <h3>The IBC stack</h3>
+
+    <p>IBC has a layered architecture, deliberately analogous to the TCP/IP model:</p>
+
+    <table class="rank-table">
+      <thead><tr><th>Layer</th><th>IBC component</th><th>Analogy</th></tr></thead>
+      <tbody>
+        <tr><td>Application</td><td>ICS-20 (token transfer), ICS-27 (interchain accounts), ICS-29 (fee middleware)</td><td>HTTP/SMTP</td></tr>
+        <tr><td>Channel</td><td>Ordered or unordered packet delivery over a channel</td><td>TCP stream</td></tr>
+        <tr><td>Connection</td><td>Authenticated connection between two chains (using light clients)</td><td>TLS handshake</td></tr>
+        <tr><td>Client</td><td>Light client tracking the counterparty chain's consensus state</td><td>DNS / PKI</td></tr>
+        <tr><td>Relayer</td><td>Off-chain process that submits Merkle proofs to counterparty chains</td><td>Network router</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Why IBC is trustless</h3>
+
+    <p>The relayer is a key source of confusion. Relayers do not require trust because they <em>cannot lie</em>. When the relayer submits a packet receipt to Chain B, Chain B verifies a <strong>Merkle proof</strong> against the <em>committed state root of Chain A's light client</em>. The relayer cannot forge this proof — it would require breaking the cryptographic hash function. A malicious relayer can only delay or censor packets; it cannot fabricate state.</p>
+
+    <p>This is fundamentally different from most "bridges", which rely on a committee of signers to attest to cross-chain events. Those bridges are as trustworthy as their signer set. IBC's trust model is: you trust Chain A's validator set (which you already do, because you're using Chain A) and you trust the cryptography.</p>
+
+    <h3>ICS-20 token transfer flow</h3>
+
+    <ol>
+      <li>User calls <code>transfer</code> on Chain A's bank module via ICS-20</li>
+      <li>Chain A <strong>escrows</strong> the tokens (locks them in a module account) and emits an IBC packet event in the block</li>
+      <li>The relayer detects the event, queries a Merkle proof of the packet commitment on Chain A</li>
+      <li>The relayer submits the proof to Chain B's IBC module via a <code>MsgRecvPacket</code> transaction</li>
+      <li>Chain B verifies the proof against its light client of Chain A, then <strong>mints voucher tokens</strong> (IBC-denominated: <code>ibc/&lt;hash&gt;</code>) and credits the destination address</li>
+      <li>If the user sends the voucher tokens back to Chain A, Chain A burns the voucher and <strong>un-escrows</strong> the originals</li>
+    </ol>
+
+    <div class="callout">
+      <div class="label">IBC DENOM PATHS</div>
+      <p style="margin:6px 0">An IBC token's denom is a hash of its full path: e.g., <code>ibc/3C3D5F14823B4E6F8A81C77CEBA90C59FA6C34A...</code>. This path encodes the entire route the token took across chains. A token that traversed Chain A → Hub → Chain B has a different denom on Chain B than one that went directly A → B. This prevents impersonation of tokens from different routes but can confuse users unfamiliar with IBC semantics.</p>
+    </div>
+
+    <h3>Interchain Accounts (ICA)</h3>
+
+    <p>ICS-27 Interchain Accounts extend IBC from token transfers to arbitrary transaction execution. Chain A can <em>control an account on Chain B</em> — submitting any transaction on Chain B on behalf of a contract or module on Chain A. Use cases include: cross-chain staking from a liquid staking protocol, composing DeFi actions across chains in a single user transaction, and DAO-controlled accounts on multiple chains. ICA has been running on mainnet since 2022 and handles hundreds of millions in cross-chain staking volume.</p>
+
+    <h3>Current scale</h3>
+
+    <p>As of early 2025, IBC connects approximately <strong>120 chains</strong> and processes roughly <strong>$3B in monthly transfer volume</strong>. Osmosis alone processes $500M+ per month. IBC is the largest functioning trustless cross-chain communication system in production.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="appchain">5. The App-Chain Thesis</h2>
+
+    <p>Why would a team choose to build their own sovereign blockchain rather than deploy a smart contract on Ethereum, an L2, or another shared L1? The Cosmos answer involves four dimensions:</p>
+
+    <h3>Sovereignty</h3>
+
+    <p>An Ethereum L2 rollup is subject to Ethereum's upgrade path, Ethereum's fee market, and Ethereum's governance decisions. A Cosmos app-chain sets its own block times, its own fee token, its own validator requirements, and its own governance. If you disagree with a network upgrade, you can fork — the chain's code is yours. This matters for regulated institutions (who may need veto power over protocol changes) and for performance-sensitive applications (who cannot accept shared blockspace congestion).</p>
+
+    <h3>Economics</h3>
+
+    <p>On a shared L1, transaction fees are paid in the platform token (ETH, SOL) and accrue to the platform's validators. On a Cosmos app-chain, all fees are paid in the app-chain's own token and accrue to the app-chain's stakers. The application captures its own economic value rather than subsidising the platform.</p>
+
+    <h3>The bootstrapping problem and Interchain Security</h3>
+
+    <p>The main argument against app-chains is that bootstrapping a validator set and gaining enough economic security is hard for new chains. Cosmos Hub's <strong>Replicated Security</strong> (formerly Interchain Security) partially solves this: a consumer chain can opt to use the Cosmos Hub's full validator set for its block production, inheriting the Hub's ~$2.5B of staked security. Consumer chains pay the Hub in fees; Hub stakers are slashed if they misbehave on consumer chains.</p>
+
+    <h3>Cosmos vs. Ethereum L2s</h3>
+
+    <table class="rank-table">
+      <thead><tr><th>Dimension</th><th>Cosmos app-chain</th><th>Ethereum L2 (optimistic)</th></tr></thead>
+      <tbody>
+        <tr><td>Security source</td><td>Own validators (or Hub via ICS)</td><td>Ethereum mainnet (fraud proofs)</td></tr>
+        <tr><td>Finality time</td><td>~6s (CometBFT instant)</td><td>~7 days (challenge window)</td></tr>
+        <tr><td>Token</td><td>Own token for fees &amp; staking</td><td>Usually ETH or a custom ERC-20</td></tr>
+        <tr><td>EVM compatibility</td><td>Optional (EVM via Evmos/Berachain)</td><td>Native EVM</td></tr>
+        <tr><td>Sovereignty</td><td>Full — own governance, own clients</td><td>Limited — Ethereum governance upstream</td></tr>
+        <tr><td>Infrastructure cost</td><td>Must run own validator set</td><td>Sequencer only; Ethereum handles rest</td></tr>
+      </tbody>
+    </table>
+
+    <!-- ========================================================== -->
+    <h2 id="ecosystem">6. Key Ecosystem Chains</h2>
+
+    <p>The Cosmos ecosystem includes over 80 active chains. These represent the most prominent and illustrative cases:</p>
+
+    <table class="rank-table">
+      <thead><tr><th>Chain</th><th>Purpose</th><th>Why Cosmos?</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>Osmosis</strong></td>
+          <td>IBC-native DEX and DeFi hub</td>
+          <td>Direct IBC integration eliminates bridge risk; sovereign AMM upgrade governance</td>
+        </tr>
+        <tr>
+          <td><strong>dYdX v4</strong></td>
+          <td>Order book perpetuals DEX (migrated from StarkEx L2)</td>
+          <td>Order book matching requires deterministic sequencing; Cosmos SDK + CometBFT provide this; full fee capture in DYDX token</td>
+        </tr>
+        <tr>
+          <td><strong>Celestia</strong></td>
+          <td>Data availability layer</td>
+          <td>Sovereign rollups using Celestia for DA; Cosmos SDK for chain logic; IBC for communication</td>
+        </tr>
+        <tr>
+          <td><strong>Injective</strong></td>
+          <td>DeFi focused on derivatives and prediction markets</td>
+          <td>High-frequency order matching; dedicated blockspace; no gas wars</td>
+        </tr>
+        <tr>
+          <td><strong>Akash</strong></td>
+          <td>Decentralised cloud compute marketplace</td>
+          <td>Sovereign governance for resource pricing; IBC for payment flows</td>
+        </tr>
+        <tr>
+          <td><strong>Stride</strong></td>
+          <td>Liquid staking for IBC assets (stATOM, stOSMO)</td>
+          <td>Interchain Accounts to stake on Hub while liquid stETH stays on Stride</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- ========================================================== -->
+    <h2 id="governance">7. Governance and Tokenomics</h2>
+
+    <p>Every Cosmos SDK chain has <strong>on-chain governance</strong> built in from day one. Governance is stake-weighted: your vote counts proportionally to your bonded ATOM (or the chain's native token). Delegators can vote directly or inherit their validator's vote.</p>
+
+    <h3>Proposal lifecycle</h3>
+
+    <ol>
+      <li><strong>Deposit period</strong> (~2 weeks): proposer must gather a minimum deposit (typically 250 ATOM on the Hub). This prevents spam proposals. If the deposit is not met, the deposit is burned.</li>
+      <li><strong>Voting period</strong> (~2 weeks): validators and delegators vote Yes / No / No With Veto / Abstain. No With Veto with 33%+ quorum causes the proposal to fail and deposits burned.</li>
+      <li><strong>Execution</strong>: if the proposal passes (50%+ Yes, &lt;33% NoWithVeto, &gt;40% participation quorum), the change is executed automatically on-chain — no developer action required.</li>
+    </ol>
+
+    <h3>ATOM tokenomics</h3>
+
+    <p>ATOM's inflation is dynamic, targeting a 67% bonding ratio. When less than 67% of ATOM is staked, inflation increases (up to 20%) to incentivise staking; when more than 67% is staked, inflation decreases (toward 7%). The community pool receives a 2% tax on all staking rewards, funding ecosystem grants via governance proposals.</p>
+
+    <p>The <strong>ATOM 2.0</strong> tokenomics overhaul proposed in 2022 — which aimed to give ATOM a broader utility role through Interchain Security revenue sharing — was rejected by governance in a controversial vote, then partially re-proposed in modified form. The debate exposed fundamental disagreement in the community about ATOM's role: pure governance + security token vs. a more aggressive hub-centric economic model. As of 2025, the Hub has settled into a hub-centric but incrementally evolving model focused on Interchain Security (Replicated Security) consumer chains.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="ibc-viz">8. Interactive: IBC Packet Lifecycle</h2>
+
+    <p>Step through the lifecycle of an ICS-20 token transfer between Chain A and Chain B. Click <strong>Next Step</strong> to advance through each stage, or <strong>Reset</strong> to start over.</p>
+
+    <div class="ibc-diagram">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <span style="font-family:var(--mono); font-size:12px; color:var(--cos);">IBC Packet Lifecycle</span>
+        <div>
+          <button id="ibc-next" style="font-family:var(--mono);font-size:11px;background:var(--cos-dim);border:1px solid var(--cos-border);color:var(--cos);padding:4px 12px;border-radius:4px;cursor:pointer;">Next Step →</button>
+          <button id="ibc-reset" style="font-family:var(--mono);font-size:11px;background:var(--bg-3);border:1px solid var(--border);color:var(--text-dim);padding:4px 12px;border-radius:4px;cursor:pointer;margin-left:6px;">Reset</button>
+        </div>
+      </div>
+      <svg id="ibc-svg" viewBox="0 0 700 300" width="100%" style="display:block;"></svg>
+      <p id="ibc-desc" style="font-family:var(--mono);font-size:11px;color:var(--text-dim);margin:8px 0 0;min-height:3em;"></p>
+    </div>
+
+    <script>
+    (function(){
+      const svg = document.getElementById('ibc-svg');
+      const desc = document.getElementById('ibc-desc');
+      const nextBtn = document.getElementById('ibc-next');
+      const resetBtn = document.getElementById('ibc-reset');
+      const NS = 'http://www.w3.org/2000/svg';
+
+      function mk(t, a) {
+        const e = document.createElementNS(NS, t);
+        for (const [k, v] of Object.entries(a)) e.setAttribute(k, v);
+        return e;
+      }
+      function mktxt(x, y, content, attrs) {
+        const t = mk('text', Object.assign({x, y, 'text-anchor':'middle', 'font-family':'monospace', 'font-size':'11'}, attrs));
+        t.textContent = content;
+        return t;
+      }
+
+      const STEPS = [
+        {
+          label: 'Initial state — establish connection',
+          desc: 'Before any packet can be sent, Chain A and Chain B must establish an IBC connection. This involves a 4-way handshake where each chain creates a light client of the other, verifies the client state, and opens a connection. This is done once; subsequent packets reuse the connection and channel.',
+          highlights: ['chain-a', 'chain-b'],
+          packetPos: null,
+          relayerActive: false,
+          arrowFrom: null,
+        },
+        {
+          label: 'Step 1: App sends packet on Chain A',
+          desc: 'The user calls ICS-20 transfer on Chain A. Chain A escrows the tokens (moves them to a locked module account) and writes a packet commitment to its state: hash(packet_data, timeout) stored at a well-known IBC store path.',
+          highlights: ['chain-a', 'packet-a'],
+          packetPos: 'a',
+          relayerActive: false,
+          arrowFrom: null,
+        },
+        {
+          label: 'Step 2: Relayer detects event',
+          desc: 'An off-chain relayer process monitors Chain A\'s event log. It detects the SendPacket event, queries the Merkle proof of the packet commitment from Chain A\'s IBC store, and prepares a MsgRecvPacket transaction for Chain B.',
+          highlights: ['relayer', 'chain-a'],
+          packetPos: 'a',
+          relayerActive: true,
+          arrowFrom: 'a-to-relay',
+        },
+        {
+          label: 'Step 3: Relayer submits proof to Chain B',
+          desc: 'The relayer submits the packet + Merkle proof to Chain B. Chain B uses its light client (tracking Chain A\'s state) to verify that the packet commitment exists at the correct path in Chain A\'s committed state root. The relayer cannot forge this proof.',
+          highlights: ['relayer', 'chain-b'],
+          packetPos: 'relay',
+          relayerActive: true,
+          arrowFrom: 'relay-to-b',
+        },
+        {
+          label: 'Step 4: Chain B verifies via light client',
+          desc: 'Chain B\'s IBC module checks: (1) the channel/connection is open, (2) the proof is valid against Chain A\'s latest committed block root, (3) the packet has not timed out. If all checks pass, the packet is accepted.',
+          highlights: ['chain-b', 'light-client'],
+          packetPos: 'b',
+          relayerActive: false,
+          arrowFrom: null,
+        },
+        {
+          label: 'Step 5: Chain B mints voucher tokens',
+          desc: 'Chain B mints IBC voucher tokens (denominated as ibc/<path_hash>) and credits them to the destination address. The relayer then sends an acknowledgement back to Chain A, which can remove the packet commitment. The transfer is complete.',
+          highlights: ['chain-b', 'complete'],
+          packetPos: 'b',
+          relayerActive: false,
+          arrowFrom: 'b-ack',
+          complete: true,
+        },
+      ];
+
+      let step = 0;
+
+      function render() {
+        svg.innerHTML = '';
+        svg.appendChild(mk('rect', {x:0, y:0, width:700, height:300, fill:'#0b0d12', rx:8}));
+
+        const s = STEPS[step];
+
+        // Chain A box
+        const aActive = s.highlights.includes('chain-a');
+        svg.appendChild(mk('rect', {x:20, y:40, width:160, height:220, rx:8, fill: aActive ? 'rgba(6,182,212,0.07)' : '#111520', stroke: aActive ? '#06b6d4' : '#2a3044', 'stroke-width': aActive ? 2 : 1}));
+        svg.appendChild(mktxt(100, 70, 'Chain A', {fill: aActive ? '#06b6d4' : '#505870', 'font-size':'13', 'font-weight':'bold'}));
+
+        // IBC module on A
+        const aIbcActive = s.highlights.includes('chain-a') && step >= 1;
+        svg.appendChild(mk('rect', {x:35, y:85, width:130, height:40, rx:5, fill: aIbcActive ? 'rgba(6,182,212,0.12)' : '#151a28', stroke: aIbcActive ? '#06b6d4' : '#2a3044'}));
+        svg.appendChild(mktxt(100, 102, 'IBC Module', {fill: aIbcActive ? '#67e8f9' : '#505870', 'font-size':'10'}));
+        svg.appendChild(mktxt(100, 117, step >= 1 ? 'packet committed ✓' : 'awaiting packet', {fill: step >= 1 ? '#34d399' : '#3a4460', 'font-size':'9'}));
+
+        // Token escrow on A
+        const escrowActive = step >= 1;
+        svg.appendChild(mk('rect', {x:35, y:140, width:130, height:36, rx:5, fill: escrowActive ? 'rgba(251,191,36,0.07)' : '#151a28', stroke: escrowActive ? '#fbbf24' : '#2a3044'}));
+        svg.appendChild(mktxt(100, 157, 'Token Escrow', {fill: escrowActive ? '#fbbf24' : '#505870', 'font-size':'10'}));
+        svg.appendChild(mktxt(100, 170, escrowActive ? '100 ATOM locked' : 'empty', {fill: escrowActive ? '#fbbf24' : '#3a4460', 'font-size':'9'}));
+
+        // Light client on A (for Chain B)
+        svg.appendChild(mk('rect', {x:35, y:192, width:130, height:30, rx:5, fill:'#151a28', stroke:'#2a3044'}));
+        svg.appendChild(mktxt(100, 207, 'Light Client B', {fill:'#505870', 'font-size':'9'}));
+        svg.appendChild(mktxt(100, 219, 'tracking Chain B', {fill:'#3a4460', 'font-size':'8'}));
+
+        // Chain B box
+        const bActive = s.highlights.includes('chain-b');
+        svg.appendChild(mk('rect', {x:520, y:40, width:160, height:220, rx:8, fill: bActive ? 'rgba(6,182,212,0.07)' : '#111520', stroke: bActive ? '#06b6d4' : '#2a3044', 'stroke-width': bActive ? 2 : 1}));
+        svg.appendChild(mktxt(600, 70, 'Chain B', {fill: bActive ? '#06b6d4' : '#505870', 'font-size':'13', 'font-weight':'bold'}));
+
+        // IBC module on B
+        const bIbcActive = s.highlights.includes('chain-b') && step >= 4;
+        svg.appendChild(mk('rect', {x:535, y:85, width:130, height:40, rx:5, fill: bIbcActive ? 'rgba(6,182,212,0.12)' : '#151a28', stroke: bIbcActive ? '#06b6d4' : '#2a3044'}));
+        svg.appendChild(mktxt(600, 102, 'IBC Module', {fill: bIbcActive ? '#67e8f9' : '#505870', 'font-size':'10'}));
+        svg.appendChild(mktxt(600, 117, step >= 4 ? 'proof verified ✓' : 'awaiting proof', {fill: step >= 4 ? '#34d399' : '#3a4460', 'font-size':'9'}));
+
+        // Token mint on B
+        const mintActive = step >= 5;
+        svg.appendChild(mk('rect', {x:535, y:140, width:130, height:36, rx:5, fill: mintActive ? 'rgba(52,211,153,0.07)' : '#151a28', stroke: mintActive ? '#34d399' : '#2a3044'}));
+        svg.appendChild(mktxt(600, 157, 'Voucher Mint', {fill: mintActive ? '#34d399' : '#505870', 'font-size':'10'}));
+        svg.appendChild(mktxt(600, 170, mintActive ? '100 ibc/ATOM ✓' : 'empty', {fill: mintActive ? '#34d399' : '#3a4460', 'font-size':'9'}));
+
+        // Light client on B (for Chain A) — highlighted at step 4+
+        const lcActive = s.highlights.includes('light-client');
+        svg.appendChild(mk('rect', {x:535, y:192, width:130, height:30, rx:5, fill: lcActive ? 'rgba(6,182,212,0.1)' : '#151a28', stroke: lcActive ? '#06b6d4' : '#2a3044'}));
+        svg.appendChild(mktxt(600, 207, 'Light Client A', {fill: lcActive ? '#67e8f9' : '#505870', 'font-size':'9'}));
+        svg.appendChild(mktxt(600, 219, lcActive ? 'verifying proof…' : 'tracking Chain A', {fill: lcActive ? '#06b6d4' : '#3a4460', 'font-size':'8'}));
+
+        // Relayer box (middle)
+        const relActive = s.highlights.includes('relayer');
+        svg.appendChild(mk('rect', {x:270, y:110, width:160, height:80, rx:8, fill: relActive ? 'rgba(124,92,255,0.10)' : '#111520', stroke: relActive ? '#7c5cff' : '#2a3044', 'stroke-width': relActive ? 2 : 1}));
+        svg.appendChild(mktxt(350, 136, 'Relayer', {fill: relActive ? '#c5b5ff' : '#505870', 'font-size':'12', 'font-weight':'bold'}));
+        svg.appendChild(mktxt(350, 153, '(off-chain process)', {fill: relActive ? '#8a75df' : '#3a4460', 'font-size':'9'}));
+        if (relActive && step === 2) {
+          svg.appendChild(mktxt(350, 170, 'querying Merkle proof…', {fill:'#7c5cff', 'font-size':'9'}));
+        } else if (relActive && step === 3) {
+          svg.appendChild(mktxt(350, 170, 'submitting to Chain B…', {fill:'#7c5cff', 'font-size':'9'}));
+        } else {
+          svg.appendChild(mktxt(350, 170, 'monitoring events', {fill:'#3a4460', 'font-size':'9'}));
+        }
+
+        // Packet / arrow animations
+        if (s.arrowFrom === 'a-to-relay') {
+          // Dashed arrow from Chain A to Relayer
+          svg.appendChild(mk('line', {x1:180, y1:150, x2:268, y2:150, stroke:'#7c5cff', 'stroke-width':2, 'stroke-dasharray':'5,3'}));
+          svg.appendChild(mk('path', {d:'M262,145 L270,150 L262,155', fill:'none', stroke:'#7c5cff', 'stroke-width':2}));
+          svg.appendChild(mktxt(224, 143, 'event detected', {fill:'#7c5cff', 'font-size':'8'}));
+        }
+        if (s.arrowFrom === 'relay-to-b') {
+          svg.appendChild(mk('line', {x1:432, y1:150, x2:518, y2:150, stroke:'#06b6d4', 'stroke-width':2}));
+          svg.appendChild(mk('path', {d:'M512,145 L520,150 L512,155', fill:'none', stroke:'#06b6d4', 'stroke-width':2}));
+          svg.appendChild(mktxt(475, 143, 'MsgRecvPacket +', {fill:'#06b6d4', 'font-size':'8'}));
+          svg.appendChild(mktxt(475, 153, 'Merkle proof', {fill:'#06b6d4', 'font-size':'8'}));
+        }
+        if (s.arrowFrom === 'b-ack' || s.complete) {
+          svg.appendChild(mk('line', {x1:518, y1:240, x2:182, y2:240, stroke:'#34d399', 'stroke-width':1.5, 'stroke-dasharray':'4,3'}));
+          svg.appendChild(mk('path', {d:'M188,235 L180,240 L188,245', fill:'none', stroke:'#34d399', 'stroke-width':1.5}));
+          svg.appendChild(mktxt(350, 233, 'acknowledgement', {fill:'#34d399', 'font-size':'9'}));
+        }
+
+        // Packet dot
+        if (s.packetPos === 'a') {
+          svg.appendChild(mk('circle', {cx:100, cy:100, r:7, fill:'#f59e0b', opacity:0.9}));
+          svg.appendChild(mktxt(100, 103, 'P', {fill:'#0b0d12', 'font-size':'9', 'font-weight':'bold'}));
+        } else if (s.packetPos === 'relay') {
+          svg.appendChild(mk('circle', {cx:350, cy:150, r:7, fill:'#f59e0b', opacity:0.9}));
+          svg.appendChild(mktxt(350, 153, 'P', {fill:'#0b0d12', 'font-size':'9', 'font-weight':'bold'}));
+        } else if (s.packetPos === 'b') {
+          svg.appendChild(mk('circle', {cx:600, cy:100, r:7, fill: s.complete ? '#34d399' : '#f59e0b', opacity:0.9}));
+          svg.appendChild(mktxt(600, 103, s.complete ? '✓' : 'P', {fill:'#0b0d12', 'font-size': s.complete ? '10' : '9', 'font-weight':'bold'}));
+        }
+
+        // Step indicator
+        svg.appendChild(mk('rect', {x:4, y:268, width:692, height:28, rx:4, fill:'#0d1018'}));
+        svg.appendChild(mktxt(350, 282, `Step ${step} of ${STEPS.length - 1}: ${s.label}`, {fill:'#06b6d4', 'font-size':'9'}));
+
+        desc.textContent = s.desc;
+
+        nextBtn.textContent = step >= STEPS.length - 1 ? 'Done ✓' : 'Next Step →';
+        nextBtn.disabled = step >= STEPS.length - 1;
+        nextBtn.style.opacity = step >= STEPS.length - 1 ? '0.5' : '1';
+      }
+
+      nextBtn.addEventListener('click', function() {
+        if (step < STEPS.length - 1) { step++; render(); }
+      });
+      resetBtn.addEventListener('click', function() { step = 0; render(); });
+
+      render();
+    })();
+    </script>
+
+  </article>
+</div>
+
+<script>
+(function () {
+  document.querySelectorAll('.ct-header').forEach(function (header) {
+    header.querySelectorAll('.ct-tab').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var panel = btn.closest('.code-tabs');
+        var tab   = btn.dataset.tab;
+        panel.querySelectorAll('.ct-tab').forEach(function (t) { t.classList.remove('active'); });
+        panel.querySelectorAll('.ct-panel').forEach(function (p) { p.classList.remove('active'); });
+        btn.classList.add('active');
+        panel.querySelector('.ct-panel[data-tab="' + tab + '"]').classList.add('active');
+      });
+    });
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Solana — Proof of History, Sealevel, and High-Throughput Blockchains</title>
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError: false});"></script>
+<style>
+  :root { --sol: #f59e0b; --sol-dim: rgba(245,158,11,0.12); --sol-border: rgba(245,158,11,0.35); }
+  h1 { background: linear-gradient(135deg, #fff 0%, #f59e0b 55%, #fcd34d 100%) !important; -webkit-background-clip: text; background-clip: text; }
+  h2 { border-bottom-color: var(--sol-border); }
+  a { color: var(--sol); }
+  a:hover { color: #fcd34d; }
+  .callout { border-left-color: var(--sol); background: var(--sol-dim); }
+  .callout .label { color: var(--sol); }
+  .topic-toc a { color: var(--text-dim); }
+  .topic-toc a:hover { color: var(--sol); }
+  .chip { display:inline-block; font-family:var(--mono); font-size:11px; color:var(--sol); background:var(--sol-dim); border:1px solid var(--sol-border); border-radius:4px; padding:2px 8px; margin-bottom:16px; }
+  .poh-chain { background:#0b0d12; border:1px solid var(--border); border-radius:8px; padding:16px; overflow-x:auto; }
+  .poh-chain svg { display:block; min-width:500px; }
+</style>
+</head>
+<body>
+<div id="tooltip"></div>
+
+<nav class="topic-nav">
+  <a class="back" href="../blockchain.html">← Back to Blockchain</a>
+  <div class="crumb">Deep Dives / <span class="topic-name">Solana</span></div>
+</nav>
+
+<div class="topic-layout">
+  <aside class="topic-toc">
+    <h4>ON THIS PAGE</h4>
+    <ul>
+      <li><a href="#overview">1. Overview</a></li>
+      <li><a href="#poh">2. Proof of History</a></li>
+      <li><a href="#tower-bft">3. Tower BFT</a></li>
+      <li><a href="#sealevel">4. Sealevel — parallel execution</a></li>
+      <li><a href="#programs">5. Programs (smart contracts)</a></li>
+      <li><a href="#firedancer">6. Firedancer validator client</a></li>
+      <li><a href="#network">7. Network architecture</a></li>
+      <li><a href="#outages">8. Outages and criticism</a></li>
+      <li><a href="#poh-viz">9. Interactive: PoH chain</a></li>
+    </ul>
+  </aside>
+
+  <article class="topic-content">
+    <h1>Solana — Proof of History, Sealevel, and High-Throughput Blockchains</h1>
+    <p class="subtitle">How Solana achieves 50,000+ TPS on a single global state machine — without sharding — using a cryptographic clock, parallel execution, and a pipelined validator architecture.</p>
+    <div class="meta-tags">
+      <span>Prereq: basic blockchain concepts, consensus fundamentals</span>
+      <span>Time to read: ~30 min</span>
+      <span>Interactive figures: 1</span>
+    </div>
+    <span class="chip">UPDATED Apr 11 2026 19:32</span>
+
+    <!-- ========================================================== -->
+    <h2 id="overview">1. Overview</h2>
+
+    <p>When Anatoly Yakovenko published the Solana whitepaper in 2017, his central claim was provocative: you do not need to shard a blockchain to achieve web-scale throughput. Every other high-throughput design at the time either partitioned state (Ethereum's shard roadmap, Near's nightshade) or reduced decentralisation to the point of being a trusted database cluster. Solana's thesis was that the bottleneck was not computation or bandwidth — it was <em>time</em>. Validators waste enormous message-passing overhead just trying to agree on <em>when</em> things happened. Give every node a shared, cryptographically verifiable clock, and consensus collapses to a tiny fraction of its usual cost.</p>
+
+    <table class="rank-table">
+      <thead><tr><th>Metric</th><th>Value (2025)</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td>Peak TPS (mainnet)</td><td>~65,000 non-vote txs/s</td><td>Total including vote txs exceeds 5,000/s average</td></tr>
+        <tr><td>Average fee</td><td>&lt;$0.001 per tx</td><td>Base fee 5,000 lamports (0.000005 SOL)</td></tr>
+        <tr><td>Slot time</td><td>~400 ms</td><td>Block time; probabilistic finality ~1.3s</td></tr>
+        <tr><td>Validator count</td><td>~2,000 active</td><td>Nakamoto coefficient ≈ 19–25</td></tr>
+        <tr><td>Hardware requirement</td><td>12-core CPU, 256 GB RAM, 10 Gbps NIC</td><td>Higher than most L1s</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout">
+      <div class="label">THE CENTRALISATION TRADE-OFF</div>
+      <p style="margin:6px 0">Solana's throughput comes at a real cost. The hardware requirements for validators are substantially higher than Ethereum or Bitcoin, limiting who can participate. The Nakamoto coefficient — the minimum number of validators that could collude to halt or censor the network — sits around 19–25. By comparison, Bitcoin's mining Nakamoto coefficient is approximately 4. Solana's design makes a deliberate engineering trade-off: maximise performance for users while accepting a higher barrier to validator participation.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="poh">2. Proof of History</h2>
+
+    <p>Proof of History (PoH) is the most misunderstood concept in Solana. It is <strong>not a consensus mechanism</strong>. It is a <em>cryptographic clock</em> — a way for the network to agree on the ordering and approximate timestamps of events without all-to-all message passing.</p>
+
+    <h3>The VDF construction</h3>
+
+    <p>PoH is a <strong>Verifiable Delay Function</strong> (VDF) implemented using SHA-256. The leader node runs a continuous sequential hash chain:</p>
+
+    <div class="math-display">$$h_0 = \text{SHA256}(\text{seed})$$</div>
+    <div class="math-display">$$h_{n+1} = \text{SHA256}(h_n)$$</div>
+
+    <p>Each evaluation takes a fixed amount of time because the next hash depends on the <em>output</em> of the previous one — it cannot be parallelised. After $N$ iterations, the chain proves that at least $N$ SHA-256 evaluations of sequential work have been performed. An observer who sees $h_N$ knows that the node has been running for at least as long as it takes to compute $N$ sequential hashes.</p>
+
+    <p>Events (transactions, block headers) are "stamped" into the chain by inserting them as additional input to the next hash:</p>
+
+    <div class="math-display">$$h_{n+1} = \text{SHA256}(h_n \mathbin\| \text{event}_k)$$</div>
+
+    <p>This proves the event occurred between tick $n$ and tick $n+1$, establishing a causal order without any clock synchronisation protocol.</p>
+
+    <h3>Why this matters for consensus</h3>
+
+    <p>In a traditional BFT protocol like PBFT, every validator must receive and acknowledge messages from a supermajority of other validators before confirming a value. For $n$ validators, each round requires $O(n^2)$ messages. At 2,000 validators, this is 4,000,000 messages per round — catastrophically expensive.</p>
+
+    <p>With PoH, the leader node publishes a continuous hash chain that acts as a shared timeline. Other validators do not need to negotiate on ordering — the PoH sequence <em>is</em> the ordering. They only need to verify that the leader's hash chain is valid (fast, parallel) and then cast a single vote on the chain state. This collapses per-round messaging from $O(n^2)$ to $O(n)$.</p>
+
+    <table class="rank-table">
+      <thead><tr><th>Concept</th><th>What it is</th><th>What it is NOT</th></tr></thead>
+      <tbody>
+        <tr><td>PoH tick</td><td>One sequential SHA-256 evaluation</td><td>Not a block or a vote</td></tr>
+        <tr><td>PoH sequence</td><td>A cryptographic proof of elapsed time and event ordering</td><td>Not a consensus decision</td></tr>
+        <tr><td>PoH clock</td><td>Enables Tower BFT to skip message rounds</td><td>Not a replacement for Tower BFT</td></tr>
+      </tbody>
+    </table>
+
+    <!-- ========================================================== -->
+    <h2 id="tower-bft">3. Tower BFT</h2>
+
+    <p>Tower BFT is Solana's consensus protocol, built on top of the PoH clock. It is derived from Practical Byzantine Fault Tolerance (PBFT) but is optimised for Solana's PoH-ordered environment.</p>
+
+    <h3>Vote structure and lockout</h3>
+
+    <p>Each validator periodically votes for the highest valid PoH slot it has seen. The critical innovation is the <strong>exponential lockout</strong>: when a validator votes on slot $s$, it must wait an exponentially growing number of slots before it is allowed to vote on a fork that does not include $s$.</p>
+
+    <div class="math-display">$$\text{lockout}(v) = 2^v \text{ slots}$$</div>
+
+    <p>where $v$ is the number of consecutive votes the validator has made for this fork. After 32 votes, the lockout is $2^{32} \approx 4$ billion slots — practically irreversible. This makes switching forks increasingly expensive, not in computation, but in <em>time</em> the validator must wait before it can vote on an alternative.</p>
+
+    <div class="callout">
+      <div class="label">SLASHING AND SAFETY</div>
+      <p style="margin:6px 0">A validator that violates lockout — votes on a competing fork before its lockout expires — can be <em>slashed</em>: a portion of its staked SOL is burned. This makes Byzantine behaviour not merely unproductive but economically costly. The combination of lockout and slashing achieves safety under the standard BFT assumption: as long as fewer than 1/3 of stake is Byzantine, the chain cannot fork at a depth where any validators have non-expired lockouts.</p>
+    </div>
+
+    <h3>Finality</h3>
+
+    <p>A block achieves <strong>optimistic confirmation</strong> (probabilistic finality) when more than 2/3 of stake has voted for it — typically within 1.3 seconds (roughly 3 slots). <strong>Full Tower BFT finality</strong> (with lockouts) requires more votes and takes longer, but in practice the network treats optimistic confirmation as final for most purposes.</p>
+
+    <p>The combination of PoH ordering and Tower BFT lockout achieves a 400 ms slot time and 1.3 s probabilistic finality — far faster than Ethereum's 12 s slot time and 2-epoch (~15 min) economic finality.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="sealevel">4. Sealevel — Parallel Execution</h2>
+
+    <p>The Ethereum Virtual Machine (EVM) executes transactions <strong>sequentially</strong>. One transaction completes before the next begins. This is safe and simple, but it leaves all CPU cores except one idle. Solana's <strong>Sealevel</strong> runtime enables true parallel transaction execution across multiple cores and, in principle, GPUs.</p>
+
+    <h3>Account declaration</h3>
+
+    <p>The key mechanism is simple: every Solana transaction must declare, at submission time, the complete set of accounts it will read and write:</p>
+
+    <ul>
+      <li><strong>Read accounts</strong> — can be read concurrently by multiple transactions</li>
+      <li><strong>Write accounts</strong> — require exclusive access; only one transaction at a time</li>
+    </ul>
+
+    <p>The Sealevel scheduler inspects these account sets and builds a dependency graph. Transactions with no overlapping write accounts are <em>non-conflicting</em> and can execute in parallel. In practice, a block full of diverse DeFi transactions — swaps on different pools, transfers between different accounts — has very few conflicts and achieves close to linear speedup with core count.</p>
+
+    <h3>Stateless programs</h3>
+
+    <p>Solana programs (smart contracts) are <strong>stateless</strong>. All state lives in separate <em>data accounts</em>. A program account contains only executable code; it does not store any data itself. When a program needs to read or write state, it operates on the data accounts passed to it in the transaction. This separation enables Sealevel to reason about parallelism purely from the account list — no analysis of program code is needed.</p>
+
+    <table class="rank-table">
+      <thead><tr><th>Concept</th><th>Solana</th><th>Ethereum</th></tr></thead>
+      <tbody>
+        <tr><td>Execution model</td><td>Parallel (Sealevel)</td><td>Sequential (EVM)</td></tr>
+        <tr><td>State location</td><td>Separate data accounts</td><td>Inside contract storage slots</td></tr>
+        <tr><td>Conflict detection</td><td>Declared at submission time</td><td>Not applicable (sequential)</td></tr>
+        <tr><td>VM</td><td>eBPF (extended Berkeley Packet Filter)</td><td>EVM (stack machine)</td></tr>
+      </tbody>
+    </table>
+
+    <h3>The eBPF VM</h3>
+
+    <p>Solana programs compile to <strong>extended Berkeley Packet Filter</strong> (eBPF) bytecode. eBPF was originally a Linux kernel technology for high-performance network packet filtering; its register-based architecture is far more amenable to JIT compilation than EVM's stack machine. The Solana runtime JIT-compiles eBPF bytecode on first execution, achieving near-native speed for hot programs.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="programs">5. Programs (Smart Contracts)</h2>
+
+    <p>Solana programs are primarily written in <strong>Rust</strong>, compiled to eBPF. C is also supported. The dominant framework is <strong>Anchor</strong>, which provides macros that handle the boilerplate of account validation, serialisation, and error handling.</p>
+
+    <h3>Core concepts</h3>
+
+    <p><strong>Cross-Program Invocation (CPI)</strong>: A program can invoke another program synchronously. The callee runs in a child context with a subset of the caller's accounts. Unlike Ethereum's arbitrary call depth, Solana limits CPI depth to 4 to prevent stack overflows in the fixed-size eBPF stack.</p>
+
+    <p><strong>Program Derived Addresses (PDAs)</strong>: A program can deterministically generate account addresses it "owns" using:</p>
+
+    <div class="math-display">$$\text{PDA} = \text{find\_program\_address}(\text{seeds},\; \text{program\_id})$$</div>
+
+    <p>The seeds are arbitrary bytes; the function finds a valid public key that is not on the Ed25519 curve (ensuring no private key exists for it). This means only the program itself can sign for PDA accounts — they are effectively owned by the program. PDAs are used for escrow accounts, pool vaults, metadata accounts, and anywhere a program needs to control funds without a human private key.</p>
+
+    <p><strong>SPL Token Program</strong>: Solana's fungible token standard lives in a shared system program (the SPL Token Program). All SPL tokens — including USDC, wrapped SOL, and every memecoin — use the same program. Holding a token requires an <strong>Associated Token Account</strong> (ATA): a PDA derived from your wallet address and the token mint address. This is deterministic, so any program or user can compute where your tokens are stored without asking you.</p>
+
+    <details class="algo-code">
+      <summary>Anchor counter program — minimal example (Rust)</summary>
+      <pre><code>// Anchor counter program — Rust
+// Demonstrates: program structure, account constraints, PDA ownership
+
+use anchor_lang::prelude::*;
+
+declare_id!("Counter111111111111111111111111111111111111");
+
+#[program]
+pub mod counter {
+    use super::*;
+
+    /// Initialise a new counter account, owned by this program.
+    pub fn initialize(ctx: Context&lt;Initialize&gt;) -&gt; Result&lt;()&gt; {
+        let counter = &amp;mut ctx.accounts.counter;
+        counter.count = 0;
+        counter.authority = ctx.accounts.authority.key();
+        msg!("Counter initialized. Count: {}", counter.count);
+        Ok(())
+    }
+
+    /// Increment the counter by 1.
+    pub fn increment(ctx: Context&lt;Increment&gt;) -&gt; Result&lt;()&gt; {
+        let counter = &amp;mut ctx.accounts.counter;
+        require!(
+            counter.authority == ctx.accounts.authority.key(),
+            CounterError::Unauthorized
+        );
+        counter.count = counter.count.checked_add(1)
+            .ok_or(CounterError::Overflow)?;
+        msg!("Incremented. Count: {}", counter.count);
+        Ok(())
+    }
+}
+
+// ── Account structs ────────────────────────────────────────────────────
+
+#[derive(Accounts)]
+pub struct Initialize&lt;'info&gt; {
+    // init: creates the account; payer pays rent
+    // space: 8 (discriminator) + 32 (pubkey) + 8 (u64) = 48 bytes
+    #[account(init, payer = authority, space = 48)]
+    pub counter: Account&lt;'info, Counter&gt;,
+    #[account(mut)]
+    pub authority: Signer&lt;'info&gt;,
+    pub system_program: Program&lt;'info, System&gt;,
+}
+
+#[derive(Accounts)]
+pub struct Increment&lt;'info&gt; {
+    // mut: we will write to this account
+    #[account(mut)]
+    pub counter: Account&lt;'info, Counter&gt;,
+    pub authority: Signer&lt;'info&gt;,
+}
+
+// ── Data layout ────────────────────────────────────────────────────────
+
+#[account]
+pub struct Counter {
+    pub authority: Pubkey,   // 32 bytes — who can increment
+    pub count:     u64,      //  8 bytes — current value
+}
+
+// ── Errors ─────────────────────────────────────────────────────────────
+
+#[error_code]
+pub enum CounterError {
+    #[msg("Only the authority can increment this counter.")]
+    Unauthorized,
+    #[msg("Counter overflow.")]
+    Overflow,
+}
+
+/* ── Key design points ────────────────────────────────────────────────
+   1. All state is in `Counter` — a separate data account.
+      The program itself has no mutable storage.
+   2. Anchor's #[account(init)] creates the account and sets the
+      program as its owner — only this program can write to it.
+   3. The authority field enforces access control in program logic,
+      not in the account ownership model.
+   4. checked_add() prevents integer overflow (Rust arithmetic is
+      checked in debug mode but wraps in release — always use
+      checked_* in smart contracts).
+   5. For a PDA-owned counter (program signs for it):
+      seeds = [b"counter", authority.key().as_ref()],
+      bump — then only this program can modify the account.
+*/</code></pre>
+    </details>
+
+    <!-- ========================================================== -->
+    <h2 id="firedancer">6. The Firedancer Validator Client</h2>
+
+    <p>Solana launched with a single validator client, written in Rust by Solana Labs. In 2022, Jump Crypto — one of the most sophisticated trading firms in crypto — announced they were building a <strong>complete, independent reimplementation of the validator in C</strong>, called Firedancer.</p>
+
+    <h3>Why rewrite from scratch?</h3>
+
+    <p>Having only one client implementation is a serious risk: a single bug in the Rust client could halt the entire network, as happened during Solana's 2021–2022 outages. A second independent implementation means the network keeps running as long as at least one client works correctly. Firedancer also targets dramatically higher throughput:</p>
+
+    <ul>
+      <li><strong>Performance target</strong>: 1,000,000+ TPS on commodity server hardware</li>
+      <li><strong>Network layer</strong>: QUIC (UDP-based) replacing TCP for the transaction ingress pipeline, enabling per-connection backpressure and stake-weighted packet dropping at the network layer rather than the application layer</li>
+      <li><strong>Architecture</strong>: Tile-based pipeline with strict CPU and memory pinning; each "tile" is a single-threaded process handling one stage of the validator pipeline (networking, signature verification, banking, broadcast)</li>
+    </ul>
+
+    <h3>Status</h3>
+
+    <p>Firedancer reached <strong>devnet</strong> in 2023 and was deployed to <strong>mainnet</strong> in phases during 2024. As of early 2025, Frankendancer (Firedancer's networking stack combined with the existing Solana Labs execution engine) runs on approximately 20% of mainnet validators. Full Firedancer — with its own execution engine — is in active deployment.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="network">7. Network Architecture</h2>
+
+    <p>Solana's high throughput requires innovations at every layer of the networking stack. Four subsystems work in concert.</p>
+
+    <h3>Gulf Stream — mempool-less forwarding</h3>
+
+    <p>Ethereum and Bitcoin maintain a mempool: a buffer of unconfirmed transactions waiting to be included in a block. Solana eliminates the mempool entirely. Because the PoH sequence determines the upcoming leader schedule (known up to ~2 epochs, ~4 days in advance), clients and validators can forward transactions <strong>directly to the upcoming leader</strong> — typically 4 slots ahead. By the time the leader's slot arrives, its transaction buffer is pre-populated, enabling it to begin execution immediately.</p>
+
+    <h3>Turbine — block propagation</h3>
+
+    <p>Propagating a large block to 2,000 validators over a peer-to-peer gossip network is slow. Turbine solves this with two ideas borrowed from BitTorrent: <strong>erasure coding</strong> and a <strong>fanout tree</strong>.</p>
+
+    <ul>
+      <li>The leader shreds each block into ~1.28 KB data packets, adding Reed-Solomon erasure codes so the block can be reconstructed from any 2/3 of shreds</li>
+      <li>Shreds propagate in a tree: the leader sends each shred to a small set of validators (the "root" layer), who each forward to another set, and so on</li>
+      <li>Each validator only needs to receive and forward a fraction of total shreds, limiting bandwidth per node to approximately 1 Gbps regardless of network size</li>
+    </ul>
+
+    <h3>Cloudbreak — concurrent account I/O</h3>
+
+    <p>With thousands of transactions executing in parallel, the bottleneck shifts to disk I/O. Cloudbreak is Solana's account state storage layer. It stores accounts as <strong>memory-mapped files</strong> on SSDs, allowing the OS to manage caching and enabling concurrent reads from multiple threads with minimal locking. New account writes are appended to a write-ahead log and batch-committed to the memory-mapped store.</p>
+
+    <h3>The four pipeline stages</h3>
+
+    <ol>
+      <li><strong>Fetch</strong> — network thread receives transaction packets via QUIC, applies stake-weighted rate limiting (validators with more stake get higher ingress priority), deduplicates packets</li>
+      <li><strong>SigVerify</strong> — GPU-accelerated batch verification of Ed25519 signatures; a single high-end GPU can verify ~1,000,000 signatures per second</li>
+      <li><strong>Banking</strong> — the Sealevel scheduler builds the account dependency graph, schedules parallel threads, and executes transactions; the result is a new account state</li>
+      <li><strong>Broadcast</strong> — the new block is shredded and propagated via Turbine; the leader also appends the PoH ticks for this slot and begins voting</li>
+    </ol>
+
+    <!-- ========================================================== -->
+    <h2 id="outages">8. Outages and Criticism</h2>
+
+    <p>Solana has experienced more network outages than any other major L1. Understanding them honestly is important for evaluating the platform.</p>
+
+    <h3>September 2021 — 17-hour outage</h3>
+
+    <p>A bot-driven initial DEX offering (IDO) on Raydium generated a flood of transactions — approximately 400,000 per second, 100× the normal rate. The transaction processing queue consumed all available memory on validators; nodes began running out of RAM and crashing. Because restarts required loading the full account state, recovery was slow. The network coordinated an emergency restart via validator operators on a Discord server — a coordination mechanism that itself raised decentralisation concerns.</p>
+
+    <p><strong>Root cause</strong>: No rate limiting at the transaction ingress layer. Any connection could flood the network.</p>
+    <p><strong>Fix</strong>: QUIC-based transaction ingress with stake-weighted QoS (Quality of Service) — validator connections get priority proportional to their stake, and raw user connections are rate-limited.</p>
+
+    <h3>2022 partial outages</h3>
+
+    <p>Multiple shorter outages in 2022 stemmed from a combination of bugs in the vote transaction handling code and nonce flooding attacks similar to 2021. Each was resolved within a few hours via coordinated validator restarts.</p>
+
+    <h3>Validator hardware requirements and centralisation</h3>
+
+    <p>Running a Solana validator requires a dedicated server with:</p>
+    <ul>
+      <li>12+ CPU cores (AMD EPYC or similar), 2.8+ GHz</li>
+      <li>256 GB RAM (512 GB recommended for larger ledger history)</li>
+      <li>NVMe SSD with 500 MB/s sustained I/O</li>
+      <li>10 Gbps symmetric network connection</li>
+    </ul>
+
+    <p>This hardware costs approximately $3,000–8,000 to purchase or $500–1,500/month to rent. The Nakamoto coefficient — roughly 19–25 entities controlling 33% of stake — is significantly lower than Ethereum's ~10,000 validator minimum. Solana's foundation holds 2% of all staked SOL; the top 10 validators control around 30% of stake-weighted votes.</p>
+
+    <div class="callout">
+      <div class="label">THE ENGINEERING TRADE-OFF</div>
+      <p style="margin:6px 0">Solana's designers made a deliberate bet: optimise for performance now, improve decentralisation over time as hardware costs fall (Moore's Law) and the validator ecosystem matures. Whether this bet will pay off remains genuinely contested. The honest answer is that Solana's centralisation is a real concern — not just FUD — and the network's resilience during an adversarial event has not yet been fully tested.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="poh-viz">9. Interactive: Proof of History Chain</h2>
+
+    <p>The animation below simulates a Proof of History chain. Every 500 ms a new "tick" is added: the previous hash is truncated to show just the first 8 hex characters, fed into SHA-256, and the new hash is displayed. New events are occasionally stamped into the chain. This demonstrates how the chain creates a tamper-evident, ordered sequence of time-stamps.</p>
+
+    <div class="poh-chain">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <span style="font-family:var(--mono); font-size:12px; color:var(--sol);">PoH Chain (simulated)</span>
+        <div>
+          <button id="poh-pause" style="font-family:var(--mono);font-size:11px;background:var(--sol-dim);border:1px solid var(--sol-border);color:var(--sol);padding:4px 12px;border-radius:4px;cursor:pointer;">Pause</button>
+          <button id="poh-reset" style="font-family:var(--mono);font-size:11px;background:var(--bg-3);border:1px solid var(--border);color:var(--text-dim);padding:4px 12px;border-radius:4px;cursor:pointer;margin-left:6px;">Reset</button>
+        </div>
+      </div>
+      <svg id="poh-svg" viewBox="0 0 700 240" width="100%" style="display:block;"></svg>
+      <p id="poh-info" style="font-family:var(--mono);font-size:11px;color:var(--text-dim);margin:8px 0 0;">Chain is running. Each tick = one SHA-256 evaluation. Events stamped into chain are shown in amber.</p>
+    </div>
+
+    <script>
+    (function(){
+      const svg = document.getElementById('poh-svg');
+      const pauseBtn = document.getElementById('poh-pause');
+      const resetBtn = document.getElementById('poh-reset');
+      const infoEl = document.getElementById('poh-info');
+      const NS = 'http://www.w3.org/2000/svg';
+
+      // Tiny deterministic hash simulator (not real SHA-256, but visually convincing)
+      function fakeHash(input) {
+        let h = 0x811c9dc5;
+        for (let i = 0; i < input.length; i++) {
+          h ^= input.charCodeAt(i);
+          h = (h * 0x01000193) >>> 0;
+        }
+        let h2 = (h ^ 0xdeadbeef) >>> 0;
+        let h3 = ((h << 13) ^ h2 ^ 0xf00ba5) >>> 0;
+        let h4 = (h2 * 1664525 + 1013904223) >>> 0;
+        return [h, h2, h3, h4].map(x => x.toString(16).padStart(8, '0')).join('');
+      }
+
+      const EVENTS = ['tx:Alice→Bob', 'vote:val#1', 'tx:DeFi swap', 'vote:val#2', 'tx:NFT mint', 'vote:val#3'];
+      const MAX_VISIBLE = 5;
+
+      let chain = [];
+      let tickCount = 0;
+      let running = true;
+      let interval;
+
+      function mk(t, a) {
+        const e = document.createElementNS(NS, t);
+        for (const [k, v] of Object.entries(a)) e.setAttribute(k, v);
+        return e;
+      }
+
+      function txt(x, y, content, attrs) {
+        const t = mk('text', Object.assign({x, y, 'text-anchor':'middle', 'font-family':'monospace', 'font-size':'10', fill:'#8a93a6'}, attrs));
+        t.textContent = content;
+        return t;
+      }
+
+      function initChain() {
+        chain = [];
+        tickCount = 0;
+        const seed = 'genesis_' + Date.now().toString(16);
+        chain.push({ tick: 0, hash: fakeHash(seed), event: null });
+      }
+
+      function addTick() {
+        const prev = chain[chain.length - 1];
+        const event = (tickCount % 7 === 0 && tickCount > 0) ? EVENTS[Math.floor(tickCount / 7) % EVENTS.length] : null;
+        const input = event ? (prev.hash + event) : prev.hash;
+        const newHash = fakeHash(input);
+        chain.push({ tick: tickCount + 1, hash: newHash, event });
+        if (chain.length > MAX_VISIBLE + 2) chain.shift();
+        tickCount++;
+        render();
+      }
+
+      function render() {
+        svg.innerHTML = '';
+        svg.appendChild(mk('rect', {x:0, y:0, width:700, height:240, fill:'#0b0d12', rx:8}));
+
+        const visible = chain.slice(-MAX_VISIBLE);
+        const boxW = 120, boxH = 60, gap = 20;
+        const totalW = visible.length * (boxW + gap) - gap;
+        const startX = (700 - totalW) / 2;
+        const cy = 100;
+
+        visible.forEach((node, i) => {
+          const x = startX + i * (boxW + gap);
+          const hasEvent = !!node.event;
+          const stroke = hasEvent ? '#f59e0b' : '#3a4460';
+          const fill = hasEvent ? 'rgba(245,158,11,0.07)' : '#141823';
+          const isLatest = (i === visible.length - 1);
+
+          // Box
+          svg.appendChild(mk('rect', {x, y: cy - boxH/2, width: boxW, height: boxH, rx:6, fill, stroke, 'stroke-width': isLatest ? 2 : 1}));
+
+          // Tick label
+          const tickLabel = mk('text', {x: x + boxW/2, y: cy - 14, 'text-anchor':'middle', 'font-family':'monospace', 'font-size':'9', fill: isLatest ? '#f59e0b' : '#505870'});
+          tickLabel.textContent = `tick #${node.tick}`;
+          svg.appendChild(tickLabel);
+
+          // Hash (abbreviated)
+          const hashLabel = mk('text', {x: x + boxW/2, y: cy + 2, 'text-anchor':'middle', 'font-family':'monospace', 'font-size':'10', fill: isLatest ? '#fcd34d' : '#8090a8'});
+          hashLabel.textContent = node.hash.substring(0, 12) + '…';
+          svg.appendChild(hashLabel);
+
+          // Event label
+          if (hasEvent) {
+            const evLabel = mk('text', {x: x + boxW/2, y: cy + 18, 'text-anchor':'middle', 'font-family':'monospace', 'font-size':'8', fill:'#f59e0b'});
+            evLabel.textContent = node.event;
+            svg.appendChild(evLabel);
+          }
+
+          // Arrow to next
+          if (i < visible.length - 1) {
+            const ax = x + boxW + 2;
+            const ay = cy;
+            const ex = x + boxW + gap - 2;
+            svg.appendChild(mk('line', {x1:ax, y1:ay, x2:ex, y2:ay, stroke:'#3a4460', 'stroke-width':'1.5'}));
+            svg.appendChild(mk('path', {d:`M${ex-6},${ay-4} L${ex},${ay} L${ex-6},${ay+4}`, fill:'#3a4460'}));
+            // SHA-256 label above arrow
+            const midX = (ax + ex) / 2;
+            const arrowLabel = mk('text', {x: midX, y: cy - 8, 'text-anchor':'middle', 'font-family':'monospace', 'font-size':'8', fill:'#505870'});
+            arrowLabel.textContent = 'SHA-256';
+            svg.appendChild(arrowLabel);
+          }
+
+          // Full hash below (for latest)
+          if (isLatest) {
+            const hRow1 = mk('text', {x: x + boxW/2, y: cy + boxH/2 + 20, 'text-anchor':'middle', 'font-family':'monospace', 'font-size':'8', fill:'#505870'});
+            hRow1.textContent = node.hash.substring(0, 32);
+            svg.appendChild(hRow1);
+            const hRow2 = mk('text', {x: x + boxW/2, y: cy + boxH/2 + 32, 'text-anchor':'middle', 'font-family':'monospace', 'font-size':'8', fill:'#505870'});
+            hRow2.textContent = node.hash.substring(32);
+            svg.appendChild(hRow2);
+          }
+        });
+
+        // Legend
+        svg.appendChild(mk('rect', {x:4, y:200, width:692, height:34, rx:4, fill:'#0d1018'}));
+        const legItems = [{c:'#f59e0b', l:'event stamped into chain'}, {c:'#3a4460', l:'regular tick (no event)'}, {c:'#fcd34d', l:'latest hash'}];
+        legItems.forEach((it, i) => {
+          const ox = 16 + i * 200;
+          svg.appendChild(mk('rect', {x:ox, y:211, width:10, height:10, rx:2, fill:it.c}));
+          const lt = mk('text', {x:ox+14, y:220, 'font-family':'monospace', 'font-size':'9', fill:'#8090a8'});
+          lt.textContent = it.l;
+          svg.appendChild(lt);
+        });
+
+        const latest = chain[chain.length - 1];
+        infoEl.textContent = `Tick #${latest.tick} | Hash: ${latest.hash.substring(0, 16)}… | ${latest.event ? 'Event stamped: ' + latest.event : 'Regular tick'}`;
+      }
+
+      function startInterval() {
+        interval = setInterval(addTick, 500);
+      }
+
+      pauseBtn.addEventListener('click', function() {
+        if (running) {
+          clearInterval(interval);
+          running = false;
+          pauseBtn.textContent = 'Resume';
+        } else {
+          startInterval();
+          running = true;
+          pauseBtn.textContent = 'Pause';
+        }
+      });
+
+      resetBtn.addEventListener('click', function() {
+        clearInterval(interval);
+        running = true;
+        pauseBtn.textContent = 'Pause';
+        initChain();
+        render();
+        startInterval();
+      });
+
+      initChain();
+      render();
+      startInterval();
+    })();
+    </script>
+
+  </article>
+</div>
+
+<script>
+(function () {
+  document.querySelectorAll('.ct-header').forEach(function (header) {
+    header.querySelectorAll('.ct-tab').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var panel = btn.closest('.code-tabs');
+        var tab   = btn.dataset.tab;
+        panel.querySelectorAll('.ct-tab').forEach(function (t) { t.classList.remove('active'); });
+        panel.querySelectorAll('.ct-panel').forEach(function (p) { p.classList.remove('active'); });
+        btn.classList.add('active');
+        panel.querySelector('.ct-panel[data-tab="' + tab + '"]').classList.add('active');
+      });
+    });
+  });
+})();
+</script>
+</body>
+</html>

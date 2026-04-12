@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cardano — Formal Methods, eUTXO, and Research-First Blockchain</title>
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError: false});"></script>
+<style>
+  :root { --card: #6366f1; --card-dim: rgba(99,102,241,0.10); --card-border: rgba(99,102,241,0.30); }
+  h1 { background: linear-gradient(135deg, #fff 0%, #6366f1 55%, #a5b4fc 100%) !important; -webkit-background-clip: text; background-clip: text; }
+  h2 { border-bottom-color: var(--card-border); }
+  a { color: var(--card); }
+  a:hover { color: #a5b4fc; }
+  .callout { border-left-color: var(--card); background: var(--card-dim); }
+  .callout .label { color: var(--card); }
+  .topic-toc a { color: var(--text-dim); }
+  .topic-toc a:hover { color: var(--card); }
+  .chip { display:inline-block; font-family:var(--mono); font-size:11px; color:var(--card); background:var(--card-dim); border:1px solid var(--card-border); border-radius:4px; padding:2px 8px; margin-bottom:16px; }
+  .eutxo-diagram { background:#0b0d12; border:1px solid var(--border); border-radius:8px; padding:16px; }
+</style>
+</head>
+<body>
+<div id="tooltip"></div>
+
+<nav class="topic-nav">
+  <a class="back" href="../blockchain.html">← Back to Blockchain</a>
+  <div class="crumb">Deep Dives / <span class="topic-name">Cardano</span></div>
+</nav>
+
+<div class="topic-layout">
+  <aside class="topic-toc">
+    <h4>ON THIS PAGE</h4>
+    <ul>
+      <li><a href="#overview">1. Overview</a></li>
+      <li><a href="#ouroboros">2. Ouroboros PoS</a></li>
+      <li><a href="#eutxo">3. The eUTXO model</a></li>
+      <li><a href="#plutus">4. Plutus and Aiken</a></li>
+      <li><a href="#hydra">5. Hydra: Layer 2</a></li>
+      <li><a href="#governance">6. On-chain governance (Conway era)</a></li>
+      <li><a href="#impact">7. Impact and adoption</a></li>
+      <li><a href="#eutxo-viz">8. Interactive: eUTXO spending</a></li>
+    </ul>
+  </aside>
+
+  <article class="topic-content">
+    <h1>Cardano — Formal Methods, eUTXO, and Research-First Blockchain</h1>
+    <p class="subtitle">How IOG's academic approach to blockchain design produced the first peer-reviewed PoS protocol, a provably local smart contract model, and one of the most sophisticated on-chain governance systems in production.</p>
+    <div class="meta-tags">
+      <span>Prereq: basic blockchain concepts, UTXO model</span>
+      <span>Time to read: ~30 min</span>
+      <span>Interactive figures: 1</span>
+    </div>
+    <span class="chip">UPDATED Apr 11 2026 19:32</span>
+
+    <!-- ========================================================== -->
+    <h2 id="overview">1. Overview</h2>
+
+    <p>Cardano's founding premise is that blockchains should be built the way safety-critical software is built: from first principles, with peer-reviewed research, formal specification, and mathematical proofs of correctness. The platform was founded by Charles Hoskinson (Ethereum co-founder) and Jeremy Wood, with core development handled by Input Output Global (IOG), chain adoption by the Cardano Foundation, and commercial development by Emurgo.</p>
+
+    <p>The generational framing that Hoskinson popularised is contested but useful as a lens:</p>
+
+    <table class="rank-table">
+      <thead><tr><th>Generation</th><th>Platform</th><th>Innovation</th></tr></thead>
+      <tbody>
+        <tr><td>1st generation</td><td>Bitcoin</td><td>Decentralised digital money; UTXO; Nakamoto consensus</td></tr>
+        <tr><td>2nd generation</td><td>Ethereum</td><td>General-purpose smart contracts; EVM; account model</td></tr>
+        <tr><td>3rd generation</td><td>Cardano</td><td>Scalability (eUTXO parallelism, L2), sustainability (PoS, governance), interoperability (formal standards)</td></tr>
+      </tbody>
+    </table>
+
+    <p>As of 2025, IOG has published over 170 peer-reviewed academic papers. The protocols powering Cardano — Ouroboros, Hydra, Mithril, Leios — all have academic publications before or alongside their implementation. Whether this research-first methodology delivers better outcomes in practice than more rapid, empirical approaches remains an open and genuinely interesting question.</p>
+
+    <div class="callout">
+      <div class="label">THE CRITICISM: MOVE SLOW AND CITE THINGS</div>
+      <p style="margin:6px 0">Cardano's academic approach has a significant downside: speed. Features that were deployed on Ethereum within months of being proposed took years on Cardano. Smart contracts did not launch until September 2021 (the Alonzo hard fork), years after Ethereum's competitors. Native tokens launched in March 2021; staking in July 2020. The ecosystem is maturing but remains smaller than Ethereum or Solana by TVL and developer count. Cardano's advocates argue this deliberateness is a feature; critics argue it is simply slow.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="ouroboros">2. Ouroboros PoS</h2>
+
+    <p>Ouroboros is the consensus protocol underpinning Cardano. It was the <strong>first PoS protocol with a formal security proof</strong> published in a peer-reviewed cryptography venue (Crypto 2017). The protocol has evolved through a series of published variants:</p>
+
+    <table class="rank-table">
+      <thead><tr><th>Variant</th><th>Year</th><th>Key contribution</th></tr></thead>
+      <tbody>
+        <tr><td>Ouroboros Classic</td><td>2017</td><td>First provably secure PoS; epoch-based randomness via secure multiparty computation</td></tr>
+        <tr><td>Ouroboros Praos</td><td>2018</td><td>Private leader election via VRF; no secure MPC needed; adaptive adversary model</td></tr>
+        <tr><td>Ouroboros Genesis</td><td>2019</td><td>Bootstrapping from genesis without a trusted checkpoint; matches PoW's bootstrapping security</td></tr>
+        <tr><td>Ouroboros Chronos</td><td>2021</td><td>Provably secure time synchronisation from the blockchain itself</td></tr>
+        <tr><td>Ouroboros Leios</td><td>2024+</td><td>Input endorsers: separates transaction dissemination from block production to increase throughput</td></tr>
+      </tbody>
+    </table>
+
+    <h3>How Ouroboros Praos works</h3>
+
+    <p>Cardano time is divided into <strong>epochs</strong> (5 days) and <strong>slots</strong> (1 second each; 432,000 slots per epoch). For each slot, zero or more stakeholders may be elected <em>slot leaders</em> — eligible to mint a block.</p>
+
+    <p><strong>Leader election via VRF</strong>: Each stake pool privately evaluates a Verifiable Random Function for each slot:</p>
+
+    <div class="math-display">$$y, \pi = \text{VRF}_{sk}(\text{slot} \mathbin\| \eta)$$</div>
+
+    <p>where $sk$ is the pool's secret key and $\eta$ is the epoch nonce (randomness derived from the previous epoch). The pool is a slot leader if:</p>
+
+    <div class="math-display">$$y < T_\phi = 1 - (1 - f)^\sigma$$</div>
+
+    <p>where $\sigma$ is the pool's stake fraction and $f$ is the active slot coefficient (~5% of slots contain a block). The proof $\pi$ accompanies the block, allowing any observer to verify the leadership claim without knowing the pool's secret key. Crucially, the leader does not reveal whether they are the leader until they publish the block — preventing adversarial targeting of upcoming leaders.</p>
+
+    <h3>Epoch randomness</h3>
+
+    <p>The epoch nonce $\eta$ must be unpredictable. Ouroboros Praos derives it from the VRF outputs of the first 2/3 of the preceding epoch's blocks. The last 1/3 of the epoch is a "stability window" during which no new randomness is incorporated — this prevents last-block grinding attacks where a pool with the final block could iterate over its VRF to manipulate future leader elections.</p>
+
+    <h3>Finality</h3>
+
+    <p>Ouroboros provides <strong>probabilistic finality</strong>. A block at depth $k$ in the chain is considered final when the probability that it will be rolled back is negligibly small. The security parameter $k \approx 2160$ blocks (~12 hours) provides deep finality. In practice, users and exchanges treat blocks as final after ~15–20 confirmations (15–20 minutes). The protocol uses a "longest chain" (heaviest chain by stake) rule, analogous to Bitcoin's longest chain rule but weighted by stake rather than proof-of-work.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="eutxo">3. The eUTXO Model</h2>
+
+    <p>Bitcoin uses a UTXO (Unspent Transaction Output) model. Each unspent output can be spent by providing a scriptSig that satisfies the output's scriptPubKey. Bitcoin Script is intentionally limited — it lacks loops and complex state.</p>
+
+    <p>Cardano's <strong>Extended UTXO</strong> (eUTXO) model adds two primitives to the basic Bitcoin UTXO:</p>
+
+    <ol>
+      <li><strong>Datum</strong> — arbitrary data attached to a UTXO output. The datum can hold any Haskell data structure: a price oracle value, an escrow state machine, a liquidity pool's invariants.</li>
+      <li><strong>Validator script</strong> — instead of Bitcoin's limited scriptPubKey, a UTXO can be locked by a full Plutus script (a function from datum × redeemer × transaction context → Bool).</li>
+    </ol>
+
+    <h3>Spending a Plutus UTXO</h3>
+
+    <p>When a transaction consumes a Plutus-locked UTXO, it must provide a <strong>redeemer</strong>: additional data specific to this spending. The validator script is evaluated with three arguments:</p>
+
+    <div class="math-display">$$\text{validator}(\underbrace{d}_\text{datum},\; \underbrace{r}_\text{redeemer},\; \underbrace{\text{ctx}}_\text{tx context}) \to \text{Bool}$$</div>
+
+    <p>The transaction context includes the full set of inputs, outputs, fees, valid time range, and signatories. The validator can inspect all of this to enforce complex invariants.</p>
+
+    <div class="callout">
+      <div class="label">DETERMINISM: LOCAL VALIDATION</div>
+      <p style="margin:6px 0">The most important property of eUTXO: a transaction can be fully validated <em>off-chain</em> before submission, and the on-chain result is guaranteed to match. In Ethereum's account model, transaction validity depends on the blockchain state at execution time — a transaction valid at simulation time may fail on-chain due to state changes from other transactions. In eUTXO, the only inputs to validation are explicitly listed in the transaction. If the transaction is valid when you build it, it will be valid on-chain (unless a UTXO is spent by another transaction first).</p>
+    </div>
+
+    <h3>The concurrency challenge</h3>
+
+    <p>eUTXO's determinism comes with a constraint: a UTXO can only be consumed by <strong>one transaction per block</strong>. On Ethereum, an AMM pool is a single contract address that any transaction can write to. On Cardano, a naively designed AMM pool is a single UTXO — only one swap can occur per block.</p>
+
+    <p>The solution used by Cardano DEXes (Minswap, SundaeSwap, etc.) is <strong>order batching</strong>: users submit swap intent UTXOs to a contract address, and a batching bot aggregates multiple orders into a single transaction that processes them all against the pool UTXO in one block. Another approach splits the pool state across <strong>multiple UTXOs</strong> (virtual pools) and uses routing to balance load. Both approaches add latency vs. Ethereum AMMs, but the theoretical throughput ceiling is higher once batching is fully utilised.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="plutus">4. Plutus and Aiken</h2>
+
+    <p>Cardano smart contracts execute in the <strong>Plutus</strong> framework. The compilation pipeline is:</p>
+
+    <div class="math-display">$$\text{Haskell} \;\xrightarrow{\text{GHC plugin}}\; \text{Plutus IR} \;\xrightarrow{}\; \text{Typed Plutus Core} \;\xrightarrow{\text{erasure}}\; \text{Untyped Plutus Core (UPLC)}$$</div>
+
+    <p>UPLC is a minimal lambda calculus that executes on-chain. It is intentionally stripped of the type information used for correctness at the Haskell level — on-chain, every term is an untyped lambda calculus expression. This keeps the evaluator simple and the on-chain footprint small.</p>
+
+    <h3>Plutus strengths and limitations</h3>
+
+    <table class="rank-table">
+      <thead><tr><th>Aspect</th><th>Plutus</th></tr></thead>
+      <tbody>
+        <tr><td>Type safety</td><td>Full Haskell types; property-based testing via QuickCheck; formal verification possible</td></tr>
+        <tr><td>Correctness</td><td>Pure functional style; no hidden state mutations; equational reasoning</td></tr>
+        <tr><td>Developer experience</td><td>Haskell has a steep learning curve; compilation errors can be cryptic</td></tr>
+        <tr><td>Script size</td><td>UPLC serialises large due to Haskell abstraction; scripts are expensive in on-chain bytes</td></tr>
+        <tr><td>Debugging</td><td>Limited on-chain error messages; tracing must be explicitly added at cost</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Aiken</h3>
+
+    <p><strong>Aiken</strong> is a purpose-built smart contract language for Cardano, introduced in 2022–2023 and now the dominant choice for new projects. Its syntax is inspired by Rust and Gleam — familiar to the mainstream developer community. It compiles directly to UPLC with aggressive optimisation, producing smaller scripts than equivalent Plutus/Haskell code.</p>
+
+    <details class="algo-code">
+      <summary>Aiken timelock validator — minimal example</summary>
+      <pre><code>// Aiken timelock validator
+// Funds can only be spent after a specified slot number.
+// Demonstrates: validator structure, transaction context, redeemer pattern.
+
+use aiken/transaction.{ScriptContext, Spend, Transaction}
+use aiken/transaction/value
+use aiken/interval.{Finite, Interval, IntervalBound}
+
+// ── Datum: the unlock slot ─────────────────────────────────────────────
+
+pub type TimelockDatum {
+  unlock_after: Int,  // POSIX time in milliseconds
+}
+
+// ── Redeemer: no additional data needed for a simple timelock ──────────
+
+pub type TimelockRedeemer {
+  Unlock
+}
+
+// ── Validator ──────────────────────────────────────────────────────────
+
+validator {
+  fn timelock(datum: TimelockDatum, _redeemer: TimelockRedeemer, ctx: ScriptContext) -> Bool {
+    // Pattern match on the script purpose — we only handle Spend
+    when ctx.purpose is {
+      Spend(_) -> {
+        let tx: Transaction = ctx.transaction
+
+        // The transaction's valid-from lower bound must be after the unlock time.
+        // This proves the transaction cannot be submitted before that time.
+        let valid_after: Bool =
+          when tx.validity_range.lower_bound.bound_type is {
+            Finite(tx_lower_bound) -> tx_lower_bound >= datum.unlock_after
+            _ -> False  // open-ended lower bound is not acceptable
+          }
+
+        // The transaction must be signed by the owner (datum embeds their hash).
+        // (Simplified here — a real timelock would include a pkh in the datum.)
+        valid_after
+      }
+      // Reject any other purpose (minting, rewarding, certifying)
+      _ -> False
+    }
+  }
+}
+
+// ── How to use ─────────────────────────────────────────────────────────
+//
+// 1. Lock funds: send ADA to the script address with datum:
+//      TimelockDatum { unlock_after: 1_800_000_000_000 }  // ms since epoch
+//
+// 2. Unlock funds: submit a transaction where:
+//      - inputs include the script UTXO
+//      - redeemer is Unlock
+//      - validity_range.lower_bound >= unlock_after
+//
+// The node evaluates the validator off-chain before accepting the tx.
+// If validator returns False, tx is rejected before touching the chain.
+//
+// ── Key properties ──────────────────────────────────────────────────────
+//
+// Deterministic: validator outcome depends only on tx contents, not
+// on blockchain state at execution time. You can simulate locally and
+// know for certain whether the tx will succeed on-chain.
+//
+// No re-entrancy: UTXO is an input; it is consumed atomically. There
+// is no way for the validator to call back into itself mid-execution.
+//
+// Composable: multiple validators can check the same UTXO set;
+// the transaction is valid iff ALL validators return True.</code></pre>
+    </details>
+
+    <!-- ========================================================== -->
+    <h2 id="hydra">5. Hydra: Layer 2 for Cardano</h2>
+
+    <p>Hydra is Cardano's Layer 2 scaling solution, published as an academic paper in 2020 and actively deployed since 2023. It is fundamentally different from Ethereum's rollup-based L2 approach.</p>
+
+    <h3>The Hydra Head protocol</h3>
+
+    <p>A <strong>Hydra Head</strong> is an <em>isomorphic state channel</em>: a mini-ledger that uses exactly the same eUTXO rules as the Cardano mainchain, but runs off-chain among a small set of participants. "Isomorphic" means that any transaction valid on Cardano L1 is also valid inside a Hydra Head — the same validator scripts, the same eUTXO semantics, the same token types.</p>
+
+    <p>Lifecycle of a Hydra Head:</p>
+
+    <ol>
+      <li><strong>Open</strong>: Participants commit UTXOs to a head contract on L1. The funds are locked until the head closes.</li>
+      <li><strong>Live</strong>: Participants run their own Hydra node off-chain. Transactions are proposed, validated by all participants (instant local consensus), and confirmed without touching L1. Finality is immediate — milliseconds.</li>
+      <li><strong>Close</strong>: Any participant can close the head unilaterally by submitting the last agreed state to L1. After a contestation window (during which other participants can submit evidence of a newer state), funds are distributed according to the final state.</li>
+    </ol>
+
+    <h3>Throughput claims</h3>
+
+    <p>The theoretical 1,000,000 TPS figure associated with Hydra refers to <em>per head</em>. A single Hydra Head among $n$ participants processes transactions at the speed of local network round-trips between those $n$ nodes — no global consensus, no block times. With sub-millisecond LAN round trips, 1M simple TPS is plausible for a 2-party head. In production, real-world TPS depends on participant count, network latency, and transaction complexity.</p>
+
+    <div class="callout">
+      <div class="label">HYDRA VS. PAYMENT CHANNELS</div>
+      <p style="margin:6px 0">Bitcoin's Lightning Network uses payment channels — off-chain updates to a shared UTXO balance. Hydra Heads are more general: any eUTXO transaction is valid inside a head, including smart contract interactions, NFT trades, and complex DeFi operations. The constraint is that all participants must be online and co-sign every state update — making Hydra Heads unsuitable for permissionless, open-membership protocols, but ideal for high-frequency interactions between known parties (exchanges, gaming platforms, micropayment services).</p>
+    </div>
+
+    <h3>Hydra Doom and real-world deployment</h3>
+
+    <p>In 2024, the Cardano community ran a now-famous demonstration: the 1993 game DOOM running inside a Hydra Head, with each player action submitted as an on-chain transaction. The demo processed game frames at ~5,000 TPS on a 2-party head with sub-second finality — playably fast. Beyond demos, Hydra is in production use for micropayment streams and as settlement infrastructure for Cardano-based payment processors.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="governance">6. On-Chain Governance (Conway Era)</h2>
+
+    <p>The <strong>Conway</strong> era hard fork (2024) introduced the most sophisticated on-chain governance system deployed by any major blockchain. It implements a constitutional democracy model with three distinct governance bodies that must reach threshold agreement before any protocol change takes effect.</p>
+
+    <h3>Three governance bodies</h3>
+
+    <table class="rank-table">
+      <thead><tr><th>Body</th><th>Composition</th><th>Role</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>DReps</strong> (Delegated Representatives)</td>
+          <td>Any ADA holder can register as a DRep; ADA holders delegate their voting power to DReps</td>
+          <td>Vote on all governance actions; represent ADA holder interests</td>
+        </tr>
+        <tr>
+          <td><strong>SPOs</strong> (Stake Pool Operators)</td>
+          <td>All registered stake pools</td>
+          <td>Vote on hard fork initiations and certain security-critical parameter changes</td>
+        </tr>
+        <tr>
+          <td><strong>Constitutional Committee</strong></td>
+          <td>7 elected multi-sig members; 5-of-7 threshold for decisions</td>
+          <td>Constitutional guardian — vetoes governance actions that violate the Cardano Constitution</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>Governance actions</h3>
+
+    <p>Seven governance action types are defined on-chain, each with its own threshold requirements:</p>
+
+    <ul>
+      <li><strong>Protocol parameter change</strong> — requires DRep threshold (67%) + Constitutional Committee ratification</li>
+      <li><strong>Hard fork initiation</strong> — requires DRep threshold + SPO threshold (51%) + Constitutional Committee</li>
+      <li><strong>Treasury withdrawal</strong> — requires DRep threshold + Constitutional Committee</li>
+      <li><strong>Constitutional amendment</strong> — requires DRep supermajority (75%) + SPO threshold + Constitutional Committee</li>
+      <li><strong>Info</strong> — no on-chain effect; used for signalling</li>
+    </ul>
+
+    <p>The Cardano Constitution itself is a document ratified on-chain. It constrains what the Constitutional Committee can approve — the committee is not a veto on popular proposals, but a check on proposals that would violate constitutional principles (e.g., a proposal to confiscate ADA from specific addresses would be unconstitutional regardless of DRep vote outcome).</p>
+
+    <h3>Comparison to Ethereum governance</h3>
+
+    <p>Ethereum uses a predominantly off-chain governance model: EIPs (Ethereum Improvement Proposals) are debated on GitHub and the Ethereum Magicians forum; validators signal readiness by upgrading clients; users and exchanges signal via social consensus. There is no on-chain voting, no formal constitution, and no veto mechanism. Ethereum's model values permissionlessness and minimises on-chain governance risk. Cardano's model prioritises explicit legitimacy, formal accountability, and constitutional constraint. Both approaches involve real trade-offs — Ethereum's informality can move faster; Cardano's formalism is more legible but slower and more complex to navigate.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="impact">7. Impact and Adoption</h2>
+
+    <h3>Atala PRISM: Ethiopia's student ID system</h3>
+
+    <p>In 2021, IOG and the Ethiopian Ministry of Education launched <strong>Atala PRISM</strong> — a self-sovereign identity system anchored on Cardano — for 5 million students across 3,500 schools. Student academic credentials (grades, attendance, teacher notes) are issued as verifiable credentials with DIDs (Decentralised Identifiers) stored on Cardano. This is the largest blockchain-based identity deployment in history. The system provides students with portable, tamper-resistant records they own independently of any institution.</p>
+
+    <h3>World Mobile Token</h3>
+
+    <p>World Mobile is a Cardano-native telecom project deploying solar-powered network nodes in underserved African regions, particularly Tanzania and Kenya. The project uses ADA and the WMT token for node operator rewards and consumer payments, aiming to provide connectivity where traditional carriers find it uneconomical.</p>
+
+    <h3>Ecosystem metrics (early 2025)</h3>
+
+    <ul>
+      <li><strong>Active addresses</strong>: ~1.3M wallets with non-zero ADA balance</li>
+      <li><strong>Native assets</strong>: 10M+ tokens issued (including NFTs)</li>
+      <li><strong>DEX TVL</strong>: ~$250M across Minswap, SundaeSwap, WingRiders, and others</li>
+      <li><strong>Project Catalyst</strong>: $100M+ in community grants awarded across 10+ funding rounds; ~1,000 funded projects</li>
+      <li><strong>Stake pools</strong>: ~3,100 active pools; ~74% of all ADA staked</li>
+    </ul>
+
+    <p>Project Catalyst is Cardano's community innovation fund — a quarterly on-chain vote where ADA holders allocate treasury funds to ecosystem projects. It has funded wallet development, educational content, DeFi protocols, and real-world impact projects. With $100M+ distributed to date, it is among the largest community-governed innovation funds in any technology ecosystem.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="eutxo-viz">8. Interactive: eUTXO Spending</h2>
+
+    <p>Step through the lifecycle of spending a Plutus-locked eUTXO. Each step shows how the datum, redeemer, and transaction context interact with the validator script. Click <strong>Next</strong> to advance.</p>
+
+    <div class="eutxo-diagram">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <span style="font-family:var(--mono); font-size:12px; color:var(--card);">eUTXO Spending Flow</span>
+        <div>
+          <button id="eu-next" style="font-family:var(--mono);font-size:11px;background:var(--card-dim);border:1px solid var(--card-border);color:var(--card);padding:4px 12px;border-radius:4px;cursor:pointer;">Next →</button>
+          <button id="eu-reset" style="font-family:var(--mono);font-size:11px;background:var(--bg-3);border:1px solid var(--border);color:var(--text-dim);padding:4px 12px;border-radius:4px;cursor:pointer;margin-left:6px;">Reset</button>
+        </div>
+      </div>
+      <svg id="eu-svg" viewBox="0 0 700 280" width="100%" style="display:block;"></svg>
+      <p id="eu-desc" style="font-family:var(--mono);font-size:11px;color:var(--text-dim);margin:8px 0 0;min-height:3em;"></p>
+    </div>
+
+    <script>
+    (function(){
+      const svg = document.getElementById('eu-svg');
+      const descEl = document.getElementById('eu-desc');
+      const nextBtn = document.getElementById('eu-next');
+      const resetBtn = document.getElementById('eu-reset');
+      const NS = 'http://www.w3.org/2000/svg';
+
+      function mk(t, a) {
+        const e = document.createElementNS(NS, t);
+        for (const [k, v] of Object.entries(a)) e.setAttribute(k, v);
+        return e;
+      }
+      function mktxt(x, y, content, attrs) {
+        const t = mk('text', Object.assign({x, y, 'text-anchor':'middle', 'font-family':'monospace', 'font-size':'10'}, attrs));
+        t.textContent = content;
+        return t;
+      }
+      function mkbox(x, y, w, h, rx, fill, stroke, sw) {
+        return mk('rect', {x, y, width:w, height:h, rx: rx||6, fill, stroke, 'stroke-width': sw||1.5});
+      }
+
+      const STEPS = [
+        {
+          label: 'Initial state — locked UTXO',
+          desc: 'An eUTXO sits at a script address. It holds 100 ADA, a datum (the escrow state: seller pubkey + unlock slot), and is governed by a validator script (the Plutus code). No one can spend it yet — the validator must approve.',
+          phase: 0,
+        },
+        {
+          label: 'Step 1: Build the spending transaction',
+          desc: 'A user constructs a transaction that consumes the script UTXO as an input. The transaction must include a redeemer — here, the buyer\'s signature hash proving they are the authorised recipient. The transaction also specifies output UTXOs for where the ADA goes.',
+          phase: 1,
+        },
+        {
+          label: 'Step 2: Validator receives datum + redeemer + context',
+          desc: 'The Plutus evaluator calls: validator(datum, redeemer, txContext). The datum is the escrow data locked in the UTXO. The redeemer is the buyer\'s claim. The txContext contains all inputs, outputs, signatories, valid time range, and fee.',
+          phase: 2,
+        },
+        {
+          label: 'Step 3: Validator checks conditions',
+          desc: 'The validator evaluates: (1) Is the buyer\'s pubkey hash in txContext.signatories? (2) Is the valid time range after the unlock slot in the datum? (3) Does the output go to the correct address? All conditions must be True for the validator to return True.',
+          phase: 3,
+        },
+        {
+          label: 'Step 4: Transaction accepted — new UTXOs created',
+          desc: 'Validator returned True. The spending UTXO is consumed. Two new UTXOs are created: one to the buyer (100 ADA minus fee) and one optional change output. The on-chain result is deterministic — identical to the off-chain simulation. The old UTXO no longer exists.',
+          phase: 4,
+        },
+      ];
+
+      let step = 0;
+
+      function render() {
+        svg.innerHTML = '';
+        svg.appendChild(mkbox(0, 0, 700, 280, 8, '#0b0d12', 'none', 0));
+
+        const s = STEPS[step];
+
+        // ── Phase 0/1: the locked UTXO (input side) ──────────────────
+        const utxoActive = s.phase >= 0;
+        const utxoConsumed = s.phase >= 4;
+        const utxoStroke = utxoConsumed ? '#505870' : s.phase >= 2 ? '#6366f1' : '#a5b4fc';
+        const utxoFill = utxoConsumed ? '#0d0f18' : s.phase >= 2 ? 'rgba(99,102,241,0.10)' : 'rgba(165,180,252,0.06)';
+
+        svg.appendChild(mkbox(20, 30, 160, 160, 8, utxoFill, utxoStroke));
+        svg.appendChild(mktxt(100, 52, 'Script UTXO', {fill: utxoConsumed ? '#3a4060' : '#a5b4fc', 'font-size':'11', 'font-weight':'bold'}));
+
+        // Value
+        svg.appendChild(mkbox(30, 60, 140, 28, 4, utxoConsumed ? '#0d0f18' : '#151a28', utxoConsumed ? '#2a3044' : '#6366f1'));
+        svg.appendChild(mktxt(100, 72, 'Value: 100 ADA', {fill: utxoConsumed ? '#3a4060' : '#c5b5ff', 'font-size':'9'}));
+        svg.appendChild(mktxt(100, 82, utxoConsumed ? '(consumed)' : '', {fill:'#505870', 'font-size':'8'}));
+
+        // Datum
+        svg.appendChild(mkbox(30, 96, 140, 44, 4, utxoConsumed ? '#0d0f18' : '#141e2a', utxoConsumed ? '#2a3044' : '#06b6d4'));
+        svg.appendChild(mktxt(100, 109, 'Datum:', {fill: utxoConsumed ? '#3a4060' : '#67e8f9', 'font-size':'9'}));
+        svg.appendChild(mktxt(100, 121, utxoConsumed ? '—' : 'seller_pkh: 0x4a3f…', {fill: utxoConsumed ? '#3a4060' : '#8090a8', 'font-size':'8'}));
+        svg.appendChild(mktxt(100, 133, utxoConsumed ? '' : 'unlock_slot: 8400000', {fill:'#505870', 'font-size':'8'}));
+
+        // Validator hash
+        svg.appendChild(mkbox(30, 148, 140, 26, 4, '#141823', '#2a3044'));
+        svg.appendChild(mktxt(100, 160, 'Validator: timelock.uplc', {fill:'#505870', 'font-size':'8'}));
+        svg.appendChild(mktxt(100, 171, '#7c3f28a…', {fill:'#3a4060', 'font-size':'8'}));
+
+        // ── Phase 1+: Transaction box (middle) ───────────────────────
+        if (s.phase >= 1) {
+          svg.appendChild(mkbox(210, 40, 200, 180, 8, 'rgba(99,102,241,0.05)', '#6366f1'));
+          svg.appendChild(mktxt(310, 64, 'Spending Tx', {fill:'#a5b4fc', 'font-size':'12', 'font-weight':'bold'}));
+
+          // Redeemer
+          const redActive = s.phase >= 2;
+          svg.appendChild(mkbox(222, 74, 176, 36, 4, redActive ? 'rgba(251,191,36,0.08)' : '#141823', redActive ? '#fbbf24' : '#2a3044'));
+          svg.appendChild(mktxt(310, 88, 'Redeemer:', {fill: redActive ? '#fcd34d' : '#505870', 'font-size':'9'}));
+          svg.appendChild(mktxt(310, 100, 'buyer_pkh_sig: 0xb8d2…', {fill: redActive ? '#fbbf24' : '#3a4060', 'font-size':'8'}));
+
+          // Context
+          const ctxActive = s.phase >= 2;
+          svg.appendChild(mkbox(222, 118, 176, 50, 4, ctxActive ? 'rgba(52,211,153,0.06)' : '#141823', ctxActive ? '#34d399' : '#2a3044'));
+          svg.appendChild(mktxt(310, 131, 'Tx Context:', {fill: ctxActive ? '#34d399' : '#505870', 'font-size':'9'}));
+          svg.appendChild(mktxt(310, 143, 'inputs: [scriptUTXO]', {fill: ctxActive ? '#6ee7b7' : '#3a4060', 'font-size':'8'}));
+          svg.appendChild(mktxt(310, 155, 'signatories: [buyer]', {fill: ctxActive ? '#6ee7b7' : '#3a4060', 'font-size':'8'}));
+          svg.appendChild(mktxt(310, 167, 'valid_range: [8400001, ∞)', {fill: ctxActive ? '#6ee7b7' : '#3a4060', 'font-size':'8'}));
+
+          // Inputs arrow
+          svg.appendChild(mk('line', {x1:180, y1:110, x2:208, y2:110, stroke:'#6366f1', 'stroke-width':2}));
+          svg.appendChild(mk('path', {d:'M203,105 L211,110 L203,115', fill:'none', stroke:'#6366f1', 'stroke-width':2}));
+        }
+
+        // ── Phase 2+: Validator evaluation ───────────────────────────
+        if (s.phase >= 2) {
+          const valPassed = s.phase >= 4;
+          const valChecking = s.phase === 3;
+          svg.appendChild(mkbox(210, 228, 200, 34, 6, valPassed ? 'rgba(52,211,153,0.10)' : valChecking ? 'rgba(99,102,241,0.15)' : 'rgba(99,102,241,0.08)', valPassed ? '#34d399' : '#6366f1'));
+          svg.appendChild(mktxt(310, 244, 'validator(datum, redeemer, ctx)', {fill:'#c5b5ff', 'font-size':'8'}));
+          svg.appendChild(mktxt(310, 256, valPassed ? '→ True ✓' : valChecking ? '→ evaluating…' : '→ pending', {fill: valPassed ? '#34d399' : valChecking ? '#fbbf24' : '#505870', 'font-size':'9', 'font-weight': valPassed ? 'bold' : 'normal'}));
+        }
+
+        // ── Phase 4: Output UTXOs ─────────────────────────────────────
+        if (s.phase >= 4) {
+          // Arrow from tx to outputs
+          svg.appendChild(mk('line', {x1:412, y1:110, x2:458, y2:110, stroke:'#34d399', 'stroke-width':2}));
+          svg.appendChild(mk('path', {d:'M453,105 L461,110 L453,115', fill:'none', stroke:'#34d399', 'stroke-width':2}));
+
+          // Output 1
+          svg.appendChild(mkbox(462, 40, 220, 80, 8, 'rgba(52,211,153,0.08)', '#34d399'));
+          svg.appendChild(mktxt(572, 62, 'Output UTXO #1', {fill:'#34d399', 'font-size':'11', 'font-weight':'bold'}));
+          svg.appendChild(mktxt(572, 78, 'Value: 99.8 ADA', {fill:'#6ee7b7', 'font-size':'9'}));
+          svg.appendChild(mktxt(572, 91, 'To: buyer address (0xb8d2…)', {fill:'#8090a8', 'font-size':'8'}));
+          svg.appendChild(mktxt(572, 103, 'No datum/script required', {fill:'#505870', 'font-size':'8'}));
+
+          // Output 2 (fee)
+          svg.appendChild(mkbox(462, 134, 220, 60, 8, '#141823', '#3a4460'));
+          svg.appendChild(mktxt(572, 153, 'Tx Fee', {fill:'#505870', 'font-size':'11'}));
+          svg.appendChild(mktxt(572, 167, '0.2 ADA → burned/validator', {fill:'#3a4060', 'font-size':'8'}));
+          svg.appendChild(mktxt(572, 180, '(Cardano: min-fee model)', {fill:'#3a4060', 'font-size':'8'}));
+        }
+
+        // ── Step indicator ────────────────────────────────────────────
+        svg.appendChild(mkbox(4, 258, 692, 18, 4, '#0d1018', 'none', 0));
+        svg.appendChild(mktxt(350, 270, `Step ${step} of ${STEPS.length - 1}: ${s.label}`, {fill:'#6366f1', 'font-size':'9'}));
+
+        descEl.textContent = s.desc;
+        nextBtn.textContent = step >= STEPS.length - 1 ? 'Done ✓' : 'Next →';
+        nextBtn.disabled = step >= STEPS.length - 1;
+        nextBtn.style.opacity = step >= STEPS.length - 1 ? '0.5' : '1';
+      }
+
+      nextBtn.addEventListener('click', function() {
+        if (step < STEPS.length - 1) { step++; render(); }
+      });
+      resetBtn.addEventListener('click', function() { step = 0; render(); });
+
+      render();
+    })();
+    </script>
+
+  </article>
+</div>
+
+<script>
+(function () {
+  document.querySelectorAll('.ct-header').forEach(function (header) {
+    header.querySelectorAll('.ct-tab').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var panel = btn.closest('.code-tabs');
+        var tab   = btn.dataset.tab;
+        panel.querySelectorAll('.ct-tab').forEach(function (t) { t.classList.remove('active'); });
+        panel.querySelectorAll('.ct-panel').forEach(function (p) { p.classList.remove('active'); });
+        btn.classList.add('active');
+        panel.querySelector('.ct-panel[data-tab="' + tab + '"]').classList.add('active');
+      });
+    });
+  });
+})();
+</script>
+</body>
+</html>

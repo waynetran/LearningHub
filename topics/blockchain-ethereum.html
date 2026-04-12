@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ethereum — Smart Contracts, DeFi, and the Rollup-Centric World</title>
+<link rel="stylesheet" href="../styles.css">
+<style>
+  :root { --accent: #7c5cff; --accent-dim: rgba(124,92,255,0.13); --accent-border: rgba(124,92,255,0.35); }
+  .topic-nav .back { color: var(--accent); }
+  .topic-toc a:hover, .topic-toc a.active { color: var(--accent); }
+  .topic-content h2 { border-left: 3px solid var(--accent); padding-left: 10px; }
+  .callout { border-left: 4px solid var(--accent); background: var(--accent-dim); border-radius: 0 6px 6px 0; padding: 12px 16px; margin: 20px 0; }
+  .callout.warn { border-left-color: #facc15; background: rgba(250,204,21,0.1); }
+  .callout.good { border-left-color: #22c55e; background: rgba(34,197,94,0.1); }
+  .callout.danger { border-left-color: #ef4444; background: rgba(239,68,68,0.1); }
+  .callout .label { font-size: 10px; font-family: monospace; font-weight: bold; letter-spacing: .1em; color: var(--accent); margin-bottom: 4px; }
+  .callout.warn .label { color: #facc15; }
+  .callout.good .label { color: #22c55e; }
+  .callout.danger .label { color: #ef4444; }
+  .chip { display: inline-block; font-size: 11px; font-family: monospace; background: var(--accent-dim); color: var(--accent); border: 1px solid var(--accent-border); border-radius: 4px; padding: 2px 8px; }
+  .viz-3d { background: #0b0d12; border: 1px solid #1e2535; border-radius: 8px; margin: 20px 0; overflow: hidden; }
+  .algo-code { margin: 14px 0; border: 1px solid #1e2535; border-radius: 6px; overflow: hidden; }
+  .algo-code summary { padding: 10px 14px; cursor: pointer; font-family: monospace; font-size: 12px; color: var(--accent); background: #0d1018; user-select: none; }
+  .algo-code summary:hover { background: #111622; }
+  .algo-code pre { margin: 0; padding: 14px; background: #0b0d12; font-size: 12px; overflow-x: auto; line-height: 1.6; }
+  .rank-table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 13px; }
+  .rank-table th { background: #111622; color: #8a93a6; font-family: monospace; font-size: 11px; text-align: left; padding: 8px 10px; border-bottom: 1px solid #1e2535; }
+  .rank-table td { padding: 8px 10px; border-bottom: 1px solid #161c28; vertical-align: top; }
+  .rank-table tr:last-child td { border-bottom: none; }
+  .rank-table code { font-size: 11px; background: #111622; padding: 1px 5px; border-radius: 3px; }
+  .math-display { text-align: center; margin: 16px 0; font-size: 15px; font-family: monospace; background: #0b0d12; padding: 10px; border-radius: 6px; border: 1px solid #1e2535; }
+  .math-glossary { border: 1px solid #1e2535; border-radius: 6px; overflow: hidden; margin: 14px 0; }
+  .mg-row { display: flex; gap: 16px; padding: 9px 14px; border-bottom: 1px solid #161c28; }
+  .mg-row:last-child { border-bottom: none; }
+  .mg-sym { font-family: monospace; font-size: 13px; color: var(--accent); min-width: 130px; }
+  .mg-def { font-size: 13px; color: #b0b8cc; }
+  .meta-tags { display: flex; gap: 10px; flex-wrap: wrap; margin: 8px 0 24px; }
+  .meta-tags span { font-size: 11px; font-family: monospace; background: #111622; color: #8a93a6; border: 1px solid #1e2535; padding: 2px 8px; border-radius: 4px; }
+  figure { margin: 20px 0; }
+  figcaption { font-size: 11px; color: #6b7280; text-align: center; margin-top: 6px; font-style: italic; }
+  .subtitle { color: #8a93a6; font-size: 15px; line-height: 1.7; margin-bottom: 8px; }
+  .btn { cursor: pointer; padding: 6px 14px; border-radius: 5px; border: 1px solid #2a3550; background: #111622; color: #8a93a6; font-family: monospace; font-size: 12px; }
+  .btn.primary { background: var(--accent-dim); color: var(--accent); border-color: var(--accent-border); }
+  .btn:hover { border-color: var(--accent); color: var(--accent); }
+  .evm-step-box { border: 1px solid #1e2535; border-radius: 6px; background: #0d1018; padding: 10px 14px; margin: 6px 0; font-family: monospace; font-size: 12px; }
+  .evm-step-box.active { border-color: var(--accent); background: rgba(124,92,255,0.1); }
+  input[type=range] { accent-color: var(--accent); }
+</style>
+</head>
+<body>
+<div id="tooltip"></div>
+
+<nav class="topic-nav">
+  <a class="back" href="../blockchain.html">← Back to Blockchain</a>
+  <div class="crumb">Deep Dives / <span class="topic-name">Ethereum</span></div>
+</nav>
+
+<div class="topic-layout">
+  <aside class="topic-toc">
+    <h4>ON THIS PAGE</h4>
+    <ul>
+      <li><a href="#overview">1. Overview</a></li>
+      <li><a href="#evm">2. The EVM</a></li>
+      <li><a href="#solidity">3. Solidity in practice</a></li>
+      <li><a href="#pos">4. The Merge and PoS</a></li>
+      <li><a href="#rollups">5. The rollup-centric roadmap</a></li>
+      <li><a href="#defi">6. DeFi ecosystem</a></li>
+      <li><a href="#impact">7. Ethereum's impact</a></li>
+    </ul>
+  </aside>
+
+  <article class="topic-content">
+    <h1>Ethereum — Smart Contracts, DeFi, and the Rollup-Centric World</h1>
+    <p class="subtitle">From Vitalik Buterin's 2013 whitepaper to the settlement layer of decentralized finance: how the EVM, Solidity, the Merge to Proof-of-Stake, and a rollup-centric scaling roadmap combine to create the programmable blockchain. Covers gas mechanics, EIP-1559, Casper FFG, ZK vs optimistic rollups, EIP-4844, and the DeFi primitives reshaping finance.</p>
+    <div class="meta-tags">
+      <span>Prereq: blockchain basics, hash functions, ECDSA</span>
+      <span>Time to read: ~50 min</span>
+      <span>Interactive diagrams: 2</span>
+      <span class="chip">UPDATED Apr 11 2026 19:32</span>
+    </div>
+
+    <!-- ===================================================== -->
+    <h2 id="overview">1. Overview</h2>
+
+    <p>In late 2013, Vitalik Buterin proposed a general-purpose blockchain that treats smart contracts as first-class citizens. Where Bitcoin's Script is deliberately limited, Ethereum's EVM is a complete computational environment — any program that can be expressed as a finite state machine can be deployed and run on-chain, with execution guaranteed by every node independently.</p>
+
+    <p>The conceptual shift: Bitcoin's blockchain is a ledger of <em>ownership</em>. Ethereum's blockchain is a ledger of <em>state</em> — including the state of arbitrary programs.</p>
+
+    <h3>Account model</h3>
+
+    <p>Ethereum uses an account model rather than Bitcoin's UTXO model. There are two account types:</p>
+
+    <div class="math-glossary">
+      <div class="mg-row"><div class="mg-sym">EOA</div><div class="mg-def">Externally Owned Account. Controlled by a private key. Has a balance (in wei) and a nonce (transaction counter). No code.</div></div>
+      <div class="mg-row"><div class="mg-sym">Contract account</div><div class="mg-def">Created by deploying bytecode. Has a balance, a nonce, EVM bytecode, and a persistent storage mapping (256-bit key → 256-bit value). Only executes when called.</div></div>
+      <div class="mg-row"><div class="mg-sym">World state</div><div class="mg-def">A mapping of 20-byte addresses to account objects. The state root (a Merkle-Patricia trie root) is committed to every block header.</div></div>
+      <div class="mg-row"><div class="mg-sym">Nonce</div><div class="mg-def">Monotonically increasing counter per EOA. Transaction with nonce N is only valid after nonce N-1 has been processed — prevents replay attacks and enforces ordering.</div></div>
+    </div>
+
+    <h3>What "trustless" contracts actually means</h3>
+
+    <p>A smart contract is not "trusted" in the sense of being correct or bug-free. It is "trustless" in the sense that its execution is <em>deterministic and transparent</em>: anyone can read the bytecode and predict exactly what will happen given any inputs, without trusting the deployer to execute it honestly. The Ethereum network guarantees the code runs exactly as written — no more, no less.</p>
+
+    <div class="callout">
+      <div class="label">THE WORLD COMPUTER: VISION VS REALITY</div>
+      <p style="margin:6px 0">The "world computer" framing was powerful but misleading. Ethereum is not a fast computer — it processes ~15 transactions/second at L1. It is better understood as a <strong>shared notary</strong>: an expensive but highly credible record of state changes, with the property that no single party controls its output. The actual computation happens off-chain (in L2 rollups). L1 is used for settlement and dispute resolution.</p>
+    </div>
+
+    <!-- ===================================================== -->
+    <h2 id="evm">2. The EVM</h2>
+
+    <p>The Ethereum Virtual Machine is a 256-bit stack machine. Every full node runs it identically — determinism is guaranteed by the specification (the Yellow Paper, or its more readable successor, the Execution Client Specs). A transaction that calls a contract triggers EVM execution; the resulting state change is included in the block.</p>
+
+    <h3>Memory regions</h3>
+
+    <table class="rank-table">
+      <thead><tr><th>Region</th><th>Size</th><th>Persistence</th><th>Cost</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Stack</strong></td><td>Max 1024 items × 256 bits</td><td>Execution-scoped</td><td>~3 gas per operation</td></tr>
+        <tr><td><strong>Memory</strong></td><td>Dynamically allocated bytes</td><td>Execution-scoped (zeroed per call)</td><td>Quadratic: cheap when small, expensive when large</td></tr>
+        <tr><td><strong>Storage</strong></td><td>2²⁵⁶ slots × 32 bytes per contract</td><td>Permanent (survives across transactions)</td><td>SSTORE: 20,000 gas (new slot), 2,900 gas (update); most expensive EVM operation</td></tr>
+        <tr><td><strong>Calldata</strong></td><td>Varies; passed with transaction</td><td>Read-only within execution</td><td>4 gas/zero byte, 16 gas/non-zero byte (post-EIP-2028)</td></tr>
+        <tr><td><strong>Returndata</strong></td><td>Varies; output from subcall</td><td>Available after CALL/STATICCALL returns</td><td>No additional cost beyond reading</td></tr>
+        <tr><td><strong>Code</strong></td><td>Fixed at deploy time</td><td>Immutable (unless proxy pattern)</td><td>CODESIZE, CODECOPY opcodes</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Gas model</h3>
+
+    <p>Every EVM opcode consumes a fixed (or dynamic) number of gas units. Gas is purchased at the current base fee rate in ETH. This prevents infinite loops and prices computation proportionally to its cost to network validators.</p>
+
+    <p>Why 21,000 base fee for a simple transfer? Every transaction incurs fixed overhead: signature verification, nonce check, sender balance check, updating sender and recipient state, and adding the receipt to the trie. The 21,000 gas covers this minimum overhead even with zero calldata and no contract execution.</p>
+
+    <h3>EIP-1559: base fee + priority tip + burn</h3>
+
+    <p>Before EIP-1559 (August 2021), gas pricing was a first-price auction — users bid arbitrarily high to get included. EIP-1559 replaced this with a protocol-determined base fee:</p>
+
+    <div class="math-glossary">
+      <div class="mg-row"><div class="mg-sym">base_fee</div><div class="mg-def">Protocol-set fee that adjusts automatically. Increases by up to 12.5% if previous block was full; decreases by up to 12.5% if empty. Target: 50% full blocks.</div></div>
+      <div class="mg-row"><div class="mg-sym">priority_fee</div><div class="mg-def">Tip paid directly to validator/miner. Only way to jump the queue above base fee.</div></div>
+      <div class="mg-row"><div class="mg-sym">max_fee</div><div class="mg-def">User-specified ceiling. If base_fee + priority_fee &lt; max_fee, user pays base_fee + priority_fee. If base_fee &gt; max_fee, tx is not included.</div></div>
+      <div class="mg-row"><div class="mg-sym">Fee burn</div><div class="mg-def">The entire base_fee is burned — permanently removed from supply. Makes ETH net deflationary when activity is high enough (>~15 gwei base fee).</div></div>
+    </div>
+
+    <p>The deflationary mechanism: in periods of high network activity, ETH issuance (validator rewards) &lt; ETH burned (base fees). The supply shrinks. In low-activity periods, issuance &gt; burn and supply grows slightly. The supply dynamics depend on network usage, making ETH fundamentally different from Bitcoin's predictable issuance schedule.</p>
+
+    <h3>Key opcodes with gas costs</h3>
+
+    <table class="rank-table">
+      <thead><tr><th>Opcode</th><th>Gas (Berlin/Shanghai)</th><th>Operation</th></tr></thead>
+      <tbody>
+        <tr><td><code>ADD, MUL, SUB</code></td><td>3</td><td>Basic arithmetic on 256-bit stack items</td></tr>
+        <tr><td><code>PUSH1 … PUSH32</code></td><td>3</td><td>Push N-byte constant onto stack</td></tr>
+        <tr><td><code>MLOAD / MSTORE</code></td><td>3 + memory expansion</td><td>Load/store 32 bytes to/from memory</td></tr>
+        <tr><td><code>SLOAD</code></td><td>2,100 (cold), 100 (warm)</td><td>Load 32-byte value from contract storage</td></tr>
+        <tr><td><code>SSTORE</code></td><td>20,000 (zero→nonzero), 2,900 (update), 100 (same value)</td><td>Write 32-byte value to contract storage</td></tr>
+        <tr><td><code>CALL</code></td><td>2,600 (cold target) + value transfer overhead</td><td>Call external contract</td></tr>
+        <tr><td><code>CREATE</code></td><td>32,000 + init code cost</td><td>Deploy new contract</td></tr>
+        <tr><td><code>KECCAK256</code></td><td>30 + 6/word</td><td>Keccak-256 hash of memory range</td></tr>
+        <tr><td><code>LOG0…LOG4</code></td><td>375 + 375/topic + 8/byte</td><td>Emit event (stored in receipt, not state)</td></tr>
+        <tr><td><code>SELFDESTRUCT</code></td><td>5,000 (+ 25,000 if creating new account)</td><td>Destroy contract, send ETH to target; deprecated in EIP-6049</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Interactive: EVM stack execution trace</h3>
+
+    <div class="viz-3d" id="evm-viz" style="padding:16px;">
+      <p style="font-family:monospace;font-size:11px;color:#8a93a6;margin:0 0 10px;">Step through the execution of <code>PUSH1 3, PUSH1 4, ADD, PUSH1 0, MSTORE</code> — a minimal EVM program that computes 3+4 and stores the result at memory offset 0.</p>
+      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center;">
+        <button class="btn" id="evm-prev">← Prev</button>
+        <button class="btn primary" id="evm-next">Next →</button>
+        <button class="btn" id="evm-reset">Reset</button>
+        <span id="evm-step-label" style="font-family:monospace;font-size:11px;color:#8a93a6;"></span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div>
+          <div style="font-family:monospace;font-size:10px;color:#8a93a6;margin-bottom:6px;">PROGRAM</div>
+          <div id="evm-program"></div>
+        </div>
+        <div>
+          <div style="font-family:monospace;font-size:10px;color:#8a93a6;margin-bottom:6px;">STACK (top is first)</div>
+          <div id="evm-stack" style="font-family:monospace;font-size:12px;background:#0b0d12;border:1px solid #1e2535;border-radius:5px;padding:10px;min-height:80px;"></div>
+          <div style="font-family:monospace;font-size:10px;color:#8a93a6;margin:8px 0 4px;">MEMORY (slot 0)</div>
+          <div id="evm-memory" style="font-family:monospace;font-size:12px;background:#0b0d12;border:1px solid #1e2535;border-radius:5px;padding:10px;min-height:32px;color:#6b7280;">—</div>
+          <div id="evm-explain" style="font-family:monospace;font-size:11px;color:#8a93a6;margin-top:8px;min-height:2.5em;line-height:1.5;"></div>
+        </div>
+      </div>
+    </div>
+
+    <h3>Transaction lifecycle</h3>
+
+    <ol>
+      <li>User signs transaction (nonce, to, value, data, gas params, chainId via EIP-155)</li>
+      <li>Transaction broadcast to peer-to-peer network; each node validates signature and nonce, adds to mempool</li>
+      <li>Block proposer (PoS validator) selects transactions from mempool; EIP-1559: all must pay ≥ base_fee</li>
+      <li>EVM executes each transaction in order; state changes are buffered in a write-ahead journal</li>
+      <li>If execution reverts (OOG, REVERT), state changes are discarded but gas is consumed up to the OOG point</li>
+      <li>Successful transactions are committed; state root, receipts root, bloom filter are computed and placed in the block header</li>
+      <li>Block is gossiped; other validators attest to it; after 2 epochs (~12.8 min) block is finalized by Casper FFG</li>
+    </ol>
+
+    <!-- ===================================================== -->
+    <h2 id="solidity">3. Solidity in practice</h2>
+
+    <p>Solidity is not the only language that compiles to EVM bytecode (see: Vyper, Yul, Fe, Huff) but it is the dominant choice (~90% of deployed contracts). This section covers design patterns, security pitfalls, and gas optimization — not a syntax tutorial.</p>
+
+    <h3>ABI encoding</h3>
+
+    <p>Contracts interact via the ABI (Application Binary Interface). A function call is encoded as: first 4 bytes = keccak256(function signature)[0:4], followed by ABI-encoded arguments. The 4-byte selector enables compact routing — each contract can expose hundreds of functions using a simple dispatch table.</p>
+
+    <h3>Key design patterns</h3>
+
+    <table class="rank-table">
+      <thead><tr><th>Pattern</th><th>Purpose</th><th>Mechanism</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Proxy (UUPS/Transparent)</strong></td><td>Upgradeable contracts — logic can be replaced without changing the address</td><td><code>delegatecall</code> from proxy to implementation; proxy stores state, implementation provides logic. Storage layout must remain identical.</td></tr>
+        <tr><td><strong>Ownable</strong></td><td>Administrative access control</td><td>Single <code>owner</code> address with modifier <code>onlyOwner</code>. Simple but centralized — often replaced by multisig (Gnosis Safe) or DAO governance.</td></tr>
+        <tr><td><strong>Checks-Effects-Interactions</strong></td><td>Prevent reentrancy attacks</td><td>Always update internal state BEFORE making external calls. Prevents re-entry into the function with stale state.</td></tr>
+        <tr><td><strong>Pull over Push</strong></td><td>Avoid DoS via reverting recipients</td><td>Instead of sending ETH to all recipients (any one failure blocks all), let each recipient pull their own funds.</td></tr>
+        <tr><td><strong>Factory</strong></td><td>Deploy many instances of a contract</td><td>Factory contract calls <code>CREATE</code> or <code>CREATE2</code>. <code>CREATE2</code> enables counterfactual deployment — predict address before deployment using salt.</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Events and logs</h3>
+
+    <p>Events (LOG0–LOG4 opcodes) are the primary off-chain communication mechanism. Log data is stored in the transaction receipt and indexed in Bloom filters in the block header — not in the Merkle state trie. This makes them ~50× cheaper than storage for data you only need to query off-chain. The Graph Protocol indexes Ethereum events to power decentralized subgraphs used by Uniswap, Aave, and every major DeFi protocol.</p>
+
+    <h3>Gas optimization techniques</h3>
+
+    <table class="rank-table">
+      <thead><tr><th>Technique</th><th>Saving</th><th>Explanation</th></tr></thead>
+      <tbody>
+        <tr><td>Pack struct fields</td><td>Up to 10× on reads</td><td>EVM storage slots are 32 bytes. Multiple small values (uint128, uint64, bool) packed into one slot use one SLOAD instead of N.</td></tr>
+        <tr><td>Use <code>calldata</code> not <code>memory</code></td><td>16 gas/byte vs memory copy</td><td>For function parameters that are only read (not modified), declare as <code>calldata</code> — avoids copying to memory.</td></tr>
+        <tr><td><code>unchecked { }</code> blocks</td><td>3× faster arithmetic</td><td>Solidity 0.8+ adds overflow checks by default (~3 gas each). When you know overflow can't happen (loop counter), use <code>unchecked</code>.</td></tr>
+        <tr><td>Cache storage in memory</td><td>2,000+ gas per repeated read</td><td><code>uint256 val = myStorage;</code> — one SLOAD (2100 gas). Reading <code>myStorage</code> in a loop = N × 100 gas (warm) vs 1 copy. Load once, read many times.</td></tr>
+        <tr><td>Use custom errors</td><td>~100 gas per revert</td><td>Custom errors <code>error Unauthorized()</code> are cheaper than revert strings — no string encoding in bytecode.</td></tr>
+        <tr><td>Avoid <code>address.transfer()</code></td><td>Future-proof</td><td>Hard-codes 2300 gas stipend — breaks with any EVM gas cost repricing. Use <code>call{value: amount}("")</code> with checks-effects-interactions instead.</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Security checklist</h3>
+
+    <div class="callout danger">
+      <div class="label">TOP SECURITY VULNERABILITIES</div>
+      <p style="margin:6px 0"><strong>Reentrancy</strong> — The DAO hack ($60M, 2016). External call before state update lets attacker recursively drain funds. Fix: Checks-Effects-Interactions pattern, or ReentrancyGuard modifier.<br><br>
+      <strong>Integer overflow (pre-0.8)</strong> — BEC token hack ($900M). Solidity &lt;0.8 silently wraps on overflow. Fix: use SafeMath or Solidity ≥0.8.<br><br>
+      <strong>tx.origin authentication</strong> — Using <code>tx.origin</code> (original EOA) instead of <code>msg.sender</code> (immediate caller) enables phishing. Fix: always use <code>msg.sender</code>.<br><br>
+      <strong>block.timestamp manipulation</strong> — Miners/validators can manipulate timestamp by ~15 seconds. Do not use for randomness or high-precision timing.<br><br>
+      <strong>Price oracle manipulation</strong> — Spot prices on AMMs can be manipulated in a single transaction (flash loan). Fix: use TWAP (time-weighted average price) over multiple blocks.</p>
+    </div>
+
+    <details class="algo-code">
+      <summary>▶ Proxy pattern: delegatecall mechanics (pseudocode)</summary>
+      <pre>
+# Transparent proxy pattern
+# Proxy contract (stores all state)
+contract Proxy:
+    address implementation    # slot 0 — must match implementation's slot layout
+    address admin             # slot 1
+
+    fallback():
+        # Forward all calls to implementation using delegatecall
+        # delegatecall: runs implementation code but with proxy's storage/address
+        result = delegatecall(
+            target=self.implementation,
+            calldata=msg.data,
+            gas=gasleft()
+        )
+        return result
+
+# Implementation contract (provides logic, no state)
+contract ImplementationV2:
+    uint256 counter   # must be at same slot as in V1!
+
+    function increment():
+        self.counter += 1  # modifies PROXY's storage, not own
+
+# Upgrade
+proxy.upgradeTo(ImplementationV2_address)
+# All subsequent calls to proxy now use V2 logic
+# Storage state is preserved — only the code changes
+
+# Storage collision danger:
+# If V2 declares a new variable BEFORE counter, it overwrites
+# a different slot than V1 expected — SILENT data corruption</pre>
+    </details>
+
+    <!-- ===================================================== -->
+    <h2 id="pos">4. The Merge and Proof-of-Stake</h2>
+
+    <p>On September 15, 2022, Ethereum switched from Proof-of-Work to Proof-of-Stake in a live network upgrade called The Merge — one of the most complex protocol upgrades in blockchain history. The PoW execution chain was merged with the PoS Beacon Chain (launched December 1, 2020).</p>
+
+    <p>Motivations: (1) eliminate ~99.9% of Ethereum's energy consumption; (2) reduce ETH issuance from ~13,000 ETH/day to ~1,700 ETH/day; (3) lay groundwork for sharding and rollup-centric scaling.</p>
+
+    <h3>How Gasper works</h3>
+
+    <p>Gasper is the combination of two consensus mechanisms:</p>
+
+    <div class="math-glossary">
+      <div class="mg-row"><div class="mg-sym">LMD-GHOST</div><div class="mg-def">Latest Message Driven Greediest Heaviest Observed Subtree — the fork choice rule. At each fork, follow the branch with the most recent attestation weight. Provides liveness: the chain always has a canonical head.</div></div>
+      <div class="mg-row"><div class="mg-sym">Casper FFG</div><div class="mg-def">Friendly Finality Gadget — adds economic finality. Once a checkpoint gets 2/3+ validator votes in two consecutive epochs, it is finalized. Reverting a finalized block requires slashing ≥1/3 of staked ETH.</div></div>
+      <div class="mg-row"><div class="mg-sym">Slot</div><div class="mg-def">12 seconds. One validator is randomly selected to propose a block. 128 validators attest (vote) for the block head.</div></div>
+      <div class="mg-row"><div class="mg-sym">Epoch</div><div class="mg-def">32 slots = 6.4 minutes. At epoch boundaries, checkpoints are created and FFG votes are tallied for finality.</div></div>
+      <div class="mg-row"><div class="mg-sym">Finality</div><div class="mg-def">A block is finalized after 2 epochs (~12.8 minutes). Reverting it would cost the attacker &gt;1/3 of all staked ETH (~$30B+) in slashing penalties.</div></div>
+    </div>
+
+    <h3>Validator lifecycle</h3>
+
+    <table class="rank-table">
+      <thead><tr><th>Stage</th><th>Condition</th><th>Detail</th></tr></thead>
+      <tbody>
+        <tr><td>Deposit</td><td>32 ETH sent to deposit contract</td><td>Generates BLS key pair; deposit included in beacon chain state</td></tr>
+        <tr><td>Activation queue</td><td>Up to several weeks when demand is high</td><td>Limited activation rate (churn limit) prevents rapid validator influx from destabilizing committee selection</td></tr>
+        <tr><td>Active</td><td>Proposing and attesting each epoch</td><td>Earn ~4–5% APR from issuance + MEV tips; must maintain uptime</td></tr>
+        <tr><td>Inactivity leak</td><td>Offline for &gt;4 epochs during non-finality</td><td>Balance gradually depleted — forces non-participating stake offline to allow remaining 2/3 to achieve finality</td></tr>
+        <tr><td>Slashing</td><td>Double-vote or surround-vote detected</td><td>Immediate ≥1/32 penalty, 36-day exit queue, correlation penalty proportional to % of validators slashed simultaneously</td></tr>
+        <tr><td>Voluntary exit</td><td>Validator submits exit message</td><td>Exit queue; minimum 256 epochs withdrawal delay after exit; principal unlocked after Shanghai upgrade (April 2023)</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Slashing conditions</h3>
+
+    <ul>
+      <li><strong>Double vote (equivocation)</strong> — proposing two different blocks for the same slot, or attesting to two different checkpoint pairs in the same epoch</li>
+      <li><strong>Surround vote</strong> — attesting to a pair (source, target) that "surrounds" a previous attestation — a more subtle form of attempting to rewrite finalized history</li>
+    </ul>
+
+    <p>These are the only two slashable offenses. Being offline (missing attestations) is penalized via inactivity leak but is <em>not</em> slashable — the protocol distinguishes between honest failure (crash) and malicious behavior (equivocation).</p>
+
+    <h3>Issuance vs. burn: when is ETH deflationary?</h3>
+
+    <p>Post-Merge ETH dynamics (approximate, 2025 numbers):</p>
+    <ul>
+      <li>Validator issuance: ~2,600 ETH/day (with ~1M+ validators)</li>
+      <li>EIP-1559 burn: variable, ~500–3,000 ETH/day depending on base fee</li>
+      <li>ETH is net deflationary when base_fee &gt; ~15 gwei continuously (burn &gt; issuance)</li>
+      <li>At peak DeFi activity (base fee ~100+ gwei), ETH burns faster than it is issued by 5–10×</li>
+    </ul>
+
+    <!-- ===================================================== -->
+    <h2 id="rollups">5. The Rollup-Centric Roadmap</h2>
+
+    <p>Ethereum L1 processes ~15 tx/s. Visa processes ~24,000 tx/s. The scaling gap is 1,600×. The Ethereum core developer community settled on a specific strategy: scale via rollups (Layer 2), not by increasing L1 block size. L1 remains a high-security settlement and data availability layer; rollups provide user-facing throughput.</p>
+
+    <h3>Optimistic rollups</h3>
+
+    <p>Optimistic rollups assume transactions are valid by default (optimistically) and post compressed transaction data to L1. Validity is enforced by a 7-day <em>challenge period</em> during which anyone can submit a <em>fraud proof</em> showing a specific transaction was invalid.</p>
+
+    <div class="math-glossary">
+      <div class="mg-row"><div class="mg-sym">Arbitrum One</div><div class="mg-def">Multi-round interactive fraud proofs (disagree → challenge → narrow to single step → verify on L1). Most used optimistic rollup by TVL. Uses custom ArbOS that extends EVM.</div></div>
+      <div class="mg-row"><div class="mg-sym">Optimism / Base</div><div class="mg-def">Single-round fault proofs (Cannon). OP Stack is an open-source framework enabling many chains (Base by Coinbase, Mode, Zora) to share the same tech stack and liquidity via the "Superchain" vision.</div></div>
+      <div class="mg-row"><div class="mg-sym">7-day delay</div><div class="mg-def">Users withdrawing to L1 must wait 7 days for the challenge period to expire. Liquidity providers (bridges) can front the liquidity and claim the L1 funds when it matures — for a fee.</div></div>
+    </div>
+
+    <h3>ZK rollups</h3>
+
+    <p>ZK rollups generate a cryptographic <em>validity proof</em> (ZK-SNARK or ZK-STARK) that mathematically proves the state transition is correct. L1 verifies this proof — no need for a challenge period. Withdrawals to L1 can be instant (once the proof is verified).</p>
+
+    <table class="rank-table">
+      <thead><tr><th>Type</th><th>EVM compatibility</th><th>Proof system</th><th>Examples</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Type 1</strong></td><td>Fully EVM-equivalent (hash-for-hash identical)</td><td>ZK proof of actual EVM execution</td><td>Taiko; theoretical ideal</td></tr>
+        <tr><td><strong>Type 2</strong></td><td>EVM-equivalent (same behavior, slightly different internals)</td><td>ZK proof of EVM-like VM</td><td>Scroll, Polygon zkEVM</td></tr>
+        <tr><td><strong>Type 3</strong></td><td>Almost EVM-equivalent (minor incompatibilities)</td><td>Modified EVM for proof efficiency</td><td>Polygon zkEVM v1, early zkSync Era</td></tr>
+        <tr><td><strong>Type 4</strong></td><td>High-level language compatible (compiles to different VM)</td><td>ZK proof of native VM (Cairo)</td><td>StarkNet (Cairo VM), zkSync (LLVM-based)</td></tr>
+      </tbody>
+    </table>
+
+    <p>The tradeoff: Type 1 maximizes compatibility but generating ZK proofs of full EVM execution is enormously computationally expensive. Type 4 breaks compatibility but enables much faster proof generation and potentially better performance.</p>
+
+    <h3>EIP-4844: proto-danksharding</h3>
+
+    <p>Activated March 2024. Introduces <em>blob transactions</em> — a new transaction type that carries 128 KB data blobs that are stored by consensus nodes for ~18 days (not forever) and are NOT accessible to the EVM (only their commitments are). This creates a separate fee market for rollup data with a target of 3 blobs per block.</p>
+
+    <p>Impact: rollup data costs dropped by ~90% immediately after activation. Arbitrum, Optimism, Base, and zkSync all reduced L2 fees from ~$0.10–1.00 to ~$0.001–0.01 per transaction within days.</p>
+
+    <div class="callout good">
+      <div class="label">THE DANKSHARDING ROADMAP</div>
+      <p style="margin:6px 0">EIP-4844 is the first step. Full danksharding will increase blob capacity to 64 blobs/block (~8 MB/block). Combined with <strong>Data Availability Sampling (DAS)</strong> — where light clients verify that blobs are available without downloading them — the target is ~1.3 GB/block of DA capacity, sufficient to support thousands of rollups with millions of transactions per second in aggregate.</p>
+    </div>
+
+    <h3>Interactive: L1 vs L2 fee comparison</h3>
+
+    <div class="viz-3d" style="padding:20px;">
+      <p style="font-family:monospace;font-size:11px;color:#8a93a6;margin:0 0 12px;">Adjust the base fee slider to see how L1 and L2 costs compare for a simple ERC-20 transfer (65,000 gas L1 / ~200 gas equivalent L2).</p>
+      <div style="margin-bottom:12px;">
+        <label style="font-family:monospace;font-size:11px;color:#8a93a6;">L1 base fee: <span id="fee-val">30</span> gwei</label><br>
+        <input type="range" id="fee-slider" min="1" max="500" value="30" style="width:100%;margin-top:6px;">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px;">
+        <div style="background:#111622;border:1px solid #1e2535;border-radius:6px;padding:12px;text-align:center;">
+          <div style="font-family:monospace;font-size:10px;color:#8a93a6;margin-bottom:4px;">L1 (Ethereum)</div>
+          <div id="l1-cost" style="font-family:monospace;font-size:18px;color:#ef4444;font-weight:bold;">$1.95</div>
+          <div style="font-family:monospace;font-size:9px;color:#4b5563;margin-top:2px;">65,000 gas × base fee</div>
+        </div>
+        <div style="background:#111622;border:1px solid #1e2535;border-radius:6px;padding:12px;text-align:center;">
+          <div style="font-family:monospace;font-size:10px;color:#8a93a6;margin-bottom:4px;">Optimistic Rollup</div>
+          <div id="opt-cost" style="font-family:monospace;font-size:18px;color:#f59e0b;font-weight:bold;">$0.08</div>
+          <div style="font-family:monospace;font-size:9px;color:#4b5563;margin-top:2px;">L1 data amortized + L2 execution</div>
+        </div>
+        <div style="background:#111622;border:1px solid #1e2535;border-radius:6px;padding:12px;text-align:center;">
+          <div style="font-family:monospace;font-size:10px;color:#8a93a6;margin-bottom:4px;">ZK Rollup</div>
+          <div id="zk-cost" style="font-family:monospace;font-size:18px;color:#34d399;font-weight:bold;">$0.03</div>
+          <div style="font-family:monospace;font-size:9px;color:#4b5563;margin-top:2px;">Validity proof amortized + L2 exec</div>
+        </div>
+      </div>
+      <svg id="fee-bar-svg" viewBox="0 0 500 60" width="100%" style="display:block;"></svg>
+      <p style="font-family:monospace;font-size:9px;color:#4b5563;margin:6px 0 0;">Assumes ETH price $2,500. L2 costs are approximate ratios vs L1; actual costs depend on batch size, proof costs, and blob availability. Post-EIP-4844 numbers.</p>
+    </div>
+
+    <!-- ===================================================== -->
+    <h2 id="defi">6. DeFi ecosystem</h2>
+
+    <p>Decentralized Finance (DeFi) is a suite of financial primitives deployed as smart contracts on Ethereum and its L2 ecosystem. Total Value Locked (TVL) peaked at ~$180B in 2021, contracted during the bear market, and has recovered to $60–100B (2025). The primitives below form the foundation of the entire DeFi stack.</p>
+
+    <h3>Uniswap: Automated Market Maker</h3>
+
+    <p>Uniswap replaced the order book with a mathematical formula. In Uniswap v2, each pool holds two tokens (e.g., ETH and USDC) and maintains the invariant:</p>
+
+    <div class="math-display">x × y = k</div>
+
+    <p>where x and y are the reserves of each token and k is a constant. To buy ETH: deposit USDC → x increases → y decreases to maintain k → you receive ETH. Price = dy/dx = y/x. Slippage is proportional to trade size relative to pool liquidity.</p>
+
+    <p><strong>Uniswap v3</strong> introduced <em>concentrated liquidity</em>: LPs deposit liquidity within a specific price range [P_lower, P_upper] rather than the full [0, ∞] curve. This enables 100–4000× capital efficiency but requires active management (LPs suffer impermanent loss if price exits their range).</p>
+
+    <h3>Aave: overcollateralized lending</h3>
+
+    <p>Aave enables borrowing against crypto collateral. Users deposit assets (e.g., ETH) and can borrow up to a loan-to-value ratio (e.g., 80% LTV) in other assets (e.g., USDC). If the collateral value falls and the health factor drops below 1.0, the position is liquidated — a third party repays part of the loan and receives the collateral at a discount.</p>
+
+    <p><strong>Flash loans</strong> — Aave's most novel primitive: borrow any amount in a single transaction with zero collateral, provided the loan (plus fee) is repaid within the same transaction. Atomicity is the collateral. Used for: arbitrage, collateral swaps, liquidation bots. Abused for: price oracle manipulation attacks in poorly designed protocols.</p>
+
+    <h3>MakerDAO / Sky: algorithmic stablecoin</h3>
+
+    <p>DAI is an ERC-20 token soft-pegged to $1.00. It is minted by depositing collateral (ETH, WBTC, real-world assets) into Maker Vaults (CDPs) at overcollateralization ratios (e.g., 150%). If collateral drops below the liquidation ratio, the vault is auctioned. The peg is maintained via:</p>
+    <ul>
+      <li><strong>Stability fee</strong> (interest rate on DAI debt) — raised to reduce DAI supply; lowered to increase it</li>
+      <li><strong>DAI Savings Rate (DSR)</strong> — offers yield to DAI holders, attracting demand when supply exceeds peg</li>
+      <li><strong>Peg Stability Module (PSM)</strong> — allows 1:1 swap between DAI and USDC; the majority of DAI backing is now USDC (centralization concern)</li>
+    </ul>
+
+    <h3>Curve: stableswap</h3>
+
+    <p>Curve Finance uses a modified AMM invariant optimized for assets that trade near 1:1 (stablecoins, liquid staking derivatives). The stableswap invariant is a combination of the constant sum (x+y=k, zero slippage at 1:1) and constant product (x×y=k) formulas, weighted by an amplification factor A. Higher A → more like a constant sum → less slippage for stable pairs.</p>
+
+    <h3>Liquid staking: Lido</h3>
+
+    <p>Ethereum validators require 32 ETH minimum stake. Lido pools ETH from users and distributes it to a curated set of node operators. In return, users receive <strong>stETH</strong> — a rebasing token representing their share of the staking pool. stETH can be used in DeFi (as collateral on Aave, in Curve pools) while earning staking yield. Lido controls ~30% of all staked ETH, creating systemic centralization risk debated extensively in the Ethereum community.</p>
+
+    <h3>MEV: Maximal Extractable Value</h3>
+
+    <p>MEV is the value that block producers can extract by reordering, inserting, or censoring transactions within a block. Forms include:</p>
+    <ul>
+      <li><strong>Arbitrage</strong> — exploit price differences across DEXs in a single atomic transaction</li>
+      <li><strong>Sandwich attacks</strong> — see a large DEX trade in mempool, front-run it (buy) and back-run it (sell), profiting from the price impact</li>
+      <li><strong>Liquidations</strong> — competing to be first to liquidate undercollateralized positions</li>
+    </ul>
+
+    <p><strong>Flashbots / MEV-Boost</strong> separates block building from block proposing. "Searchers" (bots) submit bundles of transactions to specialized "block builders" who construct maximally profitable blocks. Validators simply pick the highest-paying block via MEV-Boost. This prevents the worst "chaos" MEV (failed transactions, gas spikes) but concentrates block building in a small number of sophisticated entities — a centralization concern.</p>
+
+    <p><strong>Proposer-Builder Separation (PBS)</strong> — EIP-3675 and related proposals formalize MEV-Boost in-protocol, adding censorship resistance guarantees via inclusion lists.</p>
+
+    <!-- ===================================================== -->
+    <h2 id="impact">7. Ethereum's impact</h2>
+
+    <h3>NFTs: ERC-721 and ERC-1155</h3>
+
+    <p>ERC-721 (2018) defines a non-fungible token standard: each token has a unique ID and an owner. The <code>tokenURI</code> function returns metadata (often a JSON file with image URL). Key contracts: CryptoPunks (pre-standard, 2017), CryptoKitties (2017, first mainstream NFT), Bored Ape Yacht Club (2021, $1B+ market cap).</p>
+
+    <p>What NFTs actually enable: on-chain provenance (immutable ownership history), programmable royalties, composability (an NFT can be used as collateral in DeFi), and coordination mechanisms (NFT-gated communities, governance rights).</p>
+
+    <h3>DAOs: on-chain governance</h3>
+
+    <p>A DAO (Decentralized Autonomous Organization) uses smart contracts to codify governance. Token holders vote on-chain; if a proposal passes, it is executed automatically (no human execution required). Notable examples:</p>
+
+    <table class="rank-table">
+      <thead><tr><th>DAO</th><th>Notable governance action</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Compound</strong></td><td>First major DeFi governance; COMP token holders vote on interest rate models, supported assets. Governor Bravo framework widely forked.</td></tr>
+        <tr><td><strong>ENS DAO</strong></td><td>Controls the .eth domain system; treasury holds ~$1B ENS tokens. Demonstrated on-chain governance of public infrastructure.</td></tr>
+        <tr><td><strong>MakerDAO / Sky</strong></td><td>Governs $8B+ in DAI collateral via MKR votes; risk parameter updates executed automatically post-vote.</td></tr>
+        <tr><td><strong>Uniswap DAO</strong></td><td>Controls ~$3B UNI treasury; controversially slow to activate fee switch; deployed on BNB Chain, Avalanche, Polygon via governance.</td></tr>
+      </tbody>
+    </table>
+
+    <h3>The EVM monoculture</h3>
+
+    <p>Over 30 blockchains (BNB Chain, Polygon, Avalanche C-Chain, Fantom, Celo, Cronos, Mantle, Blast, Linea, Scroll, zkSync, Arbitrum, Base, Optimism, and many more) implement EVM compatibility. Developers write Solidity once and deploy everywhere. This network effect creates a powerful gravitational pull around the EVM toolchain (Hardhat, Foundry, MetaMask, ethers.js/viem), Ethereum security research, and Ethereum audit firms.</p>
+
+    <p>Ethereum's role is increasingly that of a <strong>settlement layer</strong>: the chain where final state transitions are recorded, disputes resolved, and cross-rollup bridges anchored. The "internet of value" settlement layer may be more accurate than "world computer" as a mental model for where Ethereum is heading by 2028–2030.</p>
+
+    <div class="callout good">
+      <div class="label">THE MODULAR BLOCKCHAIN THESIS</div>
+      <p style="margin:6px 0">Ethereum's endgame is a modular architecture: L1 provides consensus and data availability (via danksharding); rollups provide execution; bridges provide cross-rollup asset movement; and specialized chains (privacy chains, gaming chains, real-world asset chains) extend the ecosystem. The Ethereum L1 becomes the bedrock — rarely touched directly by end users, but securing trillions of dollars of economic activity processed in L2s above it.</p>
+    </div>
+
+  </article>
+</div><!-- /.topic-layout -->
+
+<script>
+(function() {
+  // === EVM execution trace ===
+  const steps = [
+    {
+      instr: 'PUSH1 0x03',
+      stack: ['0x03'],
+      memory: null,
+      explain: 'PUSH1 pushes a 1-byte value (3) onto the stack. Stack grows upward; top is leftmost.'
+    },
+    {
+      instr: 'PUSH1 0x04',
+      stack: ['0x04', '0x03'],
+      memory: null,
+      explain: 'Another PUSH1 places 4 on top. Stack now has two items: [4, 3].'
+    },
+    {
+      instr: 'ADD',
+      stack: ['0x07'],
+      memory: null,
+      explain: 'ADD pops two top items (4 and 3), adds them, and pushes the result (7). Stack shrinks from 2 to 1 item.'
+    },
+    {
+      instr: 'PUSH1 0x00',
+      stack: ['0x00', '0x07'],
+      memory: null,
+      explain: 'Push memory offset 0. This is the destination address in memory where we will store the result.'
+    },
+    {
+      instr: 'MSTORE',
+      stack: [],
+      memory: '0x0000…0007',
+      explain: 'MSTORE pops offset (0x00) and value (0x07). Stores 32 bytes at memory[0]. Memory[0..31] = 0x00000000000000000000000000000000000000000000000000000000 00000007.'
+    }
+  ];
+
+  let currentStep = -1;
+
+  const programEl = document.getElementById('evm-program');
+  const stackEl = document.getElementById('evm-stack');
+  const memEl = document.getElementById('evm-memory');
+  const explainEl = document.getElementById('evm-explain');
+  const stepLabel = document.getElementById('evm-step-label');
+  const prevBtn = document.getElementById('evm-prev');
+  const nextBtn = document.getElementById('evm-next');
+  const resetBtn = document.getElementById('evm-reset');
+
+  if (!programEl) return;
+
+  function renderProgram() {
+    programEl.innerHTML = steps.map((s, i) => {
+      const active = i === currentStep;
+      const done = i < currentStep;
+      const col = done ? '#374151' : active ? '#7c5cff' : '#8a93a6';
+      const bg = active ? 'rgba(124,92,255,0.12)' : 'transparent';
+      return `<div style="padding:5px 10px;border-radius:4px;background:${bg};border-left:2px solid ${active ? '#7c5cff' : 'transparent'};margin-bottom:3px;font-family:monospace;font-size:11px;color:${col};text-decoration:${done ? 'line-through' : 'none'}">
+        ${i+1}. ${s.instr}
+      </div>`;
+    }).join('');
+  }
+
+  function renderState() {
+    if (currentStep < 0) {
+      stackEl.innerHTML = '<span style="color:#4b5563">— empty —</span>';
+      memEl.innerHTML = '<span style="color:#4b5563">—</span>';
+      explainEl.textContent = 'Click "Next" to step through EVM execution.';
+      stepLabel.textContent = 'Before execution';
+      return;
+    }
+    const s = steps[currentStep];
+    if (s.stack.length === 0) {
+      stackEl.innerHTML = '<span style="color:#4b5563">— empty —</span>';
+    } else {
+      stackEl.innerHTML = s.stack.map((v, i) => `<div style="padding:2px 0;color:${i===0?'#7c5cff':'#8a93a6'}">${i===0?'→ ':'  '}${v}</div>`).join('');
+    }
+    if (s.memory) {
+      memEl.innerHTML = `<span style="color:#34d399">${s.memory}</span>`;
+    } else {
+      memEl.innerHTML = '<span style="color:#4b5563">—</span>';
+    }
+    explainEl.textContent = s.explain;
+    stepLabel.textContent = `Step ${currentStep + 1} / ${steps.length}: ${s.instr}`;
+  }
+
+  function updateButtons() {
+    prevBtn.disabled = currentStep <= -1;
+    nextBtn.disabled = currentStep >= steps.length - 1;
+  }
+
+  function init() {
+    currentStep = -1;
+    renderProgram();
+    renderState();
+    updateButtons();
+  }
+
+  nextBtn.addEventListener('click', () => { if (currentStep < steps.length - 1) { currentStep++; renderProgram(); renderState(); updateButtons(); } });
+  prevBtn.addEventListener('click', () => { if (currentStep > -1) { currentStep--; renderProgram(); renderState(); updateButtons(); } });
+  resetBtn.addEventListener('click', init);
+  init();
+
+  // === L1 vs L2 fee comparison ===
+  const feeSlider = document.getElementById('fee-slider');
+  const feeValEl = document.getElementById('fee-val');
+  const l1CostEl = document.getElementById('l1-cost');
+  const optCostEl = document.getElementById('opt-cost');
+  const zkCostEl = document.getElementById('zk-cost');
+  const barSvg = document.getElementById('fee-bar-svg');
+
+  if (!feeSlider) return;
+
+  const ETH_PRICE = 2500;
+  const GWEI_PER_ETH = 1e9;
+  const L1_GAS = 65000;
+
+  function calcCosts(baseFeeGwei) {
+    const l1 = (L1_GAS * baseFeeGwei / GWEI_PER_ETH) * ETH_PRICE;
+    // Optimistic rollup: ~40x cheaper (data amortized across batch, EIP-4844 blobs)
+    const opt = l1 / 40 + 0.002;
+    // ZK rollup: ~80x cheaper execution, but proof amortized
+    const zk = l1 / 80 + 0.001;
+    return { l1, opt, zk };
+  }
+
+  function fmt(n) {
+    if (n >= 1) return '$' + n.toFixed(2);
+    if (n >= 0.01) return '$' + n.toFixed(3);
+    return '$' + n.toFixed(4);
+  }
+
+  const NS = 'http://www.w3.org/2000/svg';
+  function mkSvg(t, a) {
+    const e = document.createElementNS(NS, t);
+    for (const [k, v] of Object.entries(a)) e.setAttribute(k, v);
+    return e;
+  }
+
+  function updateFee() {
+    const gwei = parseInt(feeSlider.value);
+    feeValEl.textContent = gwei;
+    const c = calcCosts(gwei);
+    l1CostEl.textContent = fmt(c.l1);
+    optCostEl.textContent = fmt(c.opt);
+    zkCostEl.textContent = fmt(c.zk);
+
+    // color based on magnitude
+    l1CostEl.style.color = c.l1 > 5 ? '#ef4444' : c.l1 > 1 ? '#f59e0b' : '#34d399';
+    optCostEl.style.color = c.opt > 0.1 ? '#f59e0b' : '#34d399';
+    zkCostEl.style.color = '#34d399';
+
+    // Bar chart
+    barSvg.innerHTML = '';
+    const maxVal = Math.max(c.l1, 0.001);
+    const bars = [
+      {label:'L1', val:c.l1, color:'#ef4444'},
+      {label:'Optimistic', val:c.opt, color:'#f59e0b'},
+      {label:'ZK', val:c.zk, color:'#34d399'},
+    ];
+    bars.forEach((b, i) => {
+      const w = Math.max((b.val / maxVal) * 380, 3);
+      const y = 8 + i * 18;
+      barSvg.appendChild(mkSvg('rect', {x:70, y, width:w, height:12, rx:3, fill:b.color, opacity:'0.8'}));
+      const lt = mkSvg('text', {x:65, y:y+9, 'text-anchor':'end', 'font-family':'monospace', 'font-size':'9', fill:'#8a93a6'});
+      lt.textContent = b.label;
+      barSvg.appendChild(lt);
+    });
+  }
+
+  feeSlider.addEventListener('input', updateFee);
+  updateFee();
+
+  // Sidebar scroll spy
+  const headers = document.querySelectorAll('.topic-content h2[id]');
+  const links = document.querySelectorAll('.topic-toc a');
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        links.forEach(l => l.classList.remove('active'));
+        const a = document.querySelector(`.topic-toc a[href="#${e.target.id}"]`);
+        if (a) a.classList.add('active');
+      }
+    });
+  }, {rootMargin: '-20% 0px -70% 0px'});
+  headers.forEach(h => observer.observe(h));
+})();
+</script>
+</body>
+</html>
