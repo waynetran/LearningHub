@@ -38,6 +38,7 @@
 
   <article class="topic-content">
     <h1>Cosmology</h1>
+    <span class="chip">UPDATED Apr 11 2026 21:00</span>
     <p class="subtitle">The universe has a history, and we can read it. Over the last thirty years, cosmology stopped being the business of order-of-magnitude arguments and became a precision science, with six numbers — the Lambda-CDM parameters — that fit essentially every observation of the sky. This page is about where those numbers come from, what they mean physically, and where the current cracks in the model are.</p>
     <div class="meta-tags">
       <span>Prereq: <a href="./general-relativity.html">general relativity</a>, <a href="./thermodynamics.html">thermodynamics</a>, <a href="../math/calculus.html">calculus</a></span>
@@ -561,7 +562,7 @@ document.querySelectorAll('.code-tabs').forEach(root => {
     function yOf(a){
       if (a <= 1e-10) a = 1e-10;
       const la = Math.log10(a);
-      return Y0 + (la - 0) / (-10 - 0) * (Y0 - Y1);
+      return Y0 + (la - 0) / (-10 - 0) * (Y1 - Y0);
     }
 
     // grid lines
