@@ -299,11 +299,14 @@
 
   // Proof paths: for each leaf, which nodes are proof elements (siblings)
   const proofs = [
-    { target:'tx0', siblings:['tx1','cd'], path:['tx0','hab','root'] },
-    { target:'tx1', siblings:['tx0','cd'], path:['tx1','hab','root'] },
-    { target:'tx2', siblings:['tx3','ab'], path:['tx2','hcd','root'] },
-    { target:'tx3', siblings:['tx2','ab'], path:['tx3','hcd','root'] },
+    { target:'tx0', siblings:['tx1','hcd'], path:['tx0','hab','root'] },
+    { target:'tx1', siblings:['tx0','hcd'], path:['tx1','hab','root'] },
+    { target:'tx2', siblings:['tx3','hab'], path:['tx2','hcd','root'] },
+    { target:'tx3', siblings:['tx2','hab'], path:['tx3','hcd','root'] },
   ];
+
+  const nodeById = {};
+  Object.values(nodes).forEach(n => nodeById[n.id] = n);
 
   function mk(t,a){ const e=document.createElementNS(NS,t); for(const[k,v] of Object.entries(a)) e.setAttribute(k,v); return e; }
 
@@ -317,13 +320,13 @@
 
     // Edges
     const edges = [
-      ['root','ab'],['root','cd'],
-      ['ab','tx0'],['ab','tx1'],
-      ['cd','tx2'],['cd','tx3'],
+      ['root','hab'],['root','hcd'],
+      ['hab','tx0'],['hab','tx1'],
+      ['hcd','tx2'],['hcd','tx3'],
     ];
     edges.forEach(([a,b]) => {
-      const A = Object.values(nodes).find(n=>n.id===a);
-      const B = Object.values(nodes).find(n=>n.id===b);
+      const A = nodeById[a];
+      const B = nodeById[b];
       const inPath = proof && proofSet.has(a) && proofSet.has(b);
       svg.appendChild(mk('line',{
         x1:A.x, y1:A.y+18, x2:B.x, y2:B.y-18,
