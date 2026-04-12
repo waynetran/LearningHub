@@ -37,6 +37,12 @@
 /* ── Timeline (horizontal) ──────────────────────────*/
 .era-strip { display:flex; gap:8px; flex-wrap:wrap; margin:16px 0; }
 .era-pill { background:rgba(34,211,238,.08); border:1px solid rgba(34,211,238,.25); border-radius:20px; padding:3px 12px; font-size:.78rem; color:#22d3ee; cursor:default; }
+
+/* ── Mission images ─────────────────────────────── */
+.mission-img { display:block; width:100%; max-width:700px; border-radius:8px; margin:18px 0 4px; border:1px solid rgba(255,255,255,.1); }
+.img-caption { font-size:.78rem; color:var(--muted); margin:0 0 20px; font-style:italic; }
+.crew-box { background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.08); border-radius:8px; padding:16px 20px; margin:20px 0; }
+.crew-box h4 { margin:0 0 10px; font-size:.95rem; color:var(--accent-2); }
 </style>
 </head>
 <body>
@@ -59,14 +65,15 @@
       <li><a href="#telescopes">6. Space Telescopes</a></li>
       <li><a href="#iss">7. Space Stations</a></li>
       <li><a href="#commercial">8. Commercial &amp; New Space</a></li>
-      <li><a href="#future">9. Planned 2025–2040s</a></li>
-      <li><a href="#agencies">10. Agency Profiles</a></li>
+      <li><a href="#failures">9. Failures &amp; Disasters</a></li>
+      <li><a href="#future">10. Planned 2025–2040s</a></li>
+      <li><a href="#agencies">11. Agency Profiles</a></li>
     </ul>
   </aside>
 
   <article class="topic-content">
     <h1>Space Missions — Every Major Mission from Sputnik to the 2040s</h1>
-    <span class="chip">UPDATED Apr 12 2026 00:00</span>
+    <span class="chip">UPDATED Apr 12 2026 08:30</span>
     <p class="subtitle">A comprehensive guide to humanity's exploration of space — from the first satellite to robotic rovers on Mars, gravitational wave detectors, and the missions currently en route to the outer solar system. Covers NASA, ESA, Roscosmos, ISRO, CNSA, JAXA, SpaceX, and commercial operators.</p>
     <div class="meta-tags">
       <span>Coverage: 1957 – 2040s</span>
@@ -113,6 +120,29 @@
       <tr><td class="yr">1972</td><td class="name">Apollo 17</td><td><span class="ag ag-nasa">NASA</span></td><td>Last human Moon landing. Cernan, Evans, Schmitt. "Blue Marble" photograph of Earth.</td></tr>
     </table>
 
+    <img src="images/apollo11.jpg" class="mission-img" alt="Apollo 11 — Buzz Aldrin on the Moon" onerror="this.style.display='none'">
+    <p class="img-caption">Buzz Aldrin on the lunar surface during Apollo 11, July 20, 1969. Neil Armstrong and the Eagle lander are reflected in Aldrin's visor. Photo: NASA / Neil Armstrong.</p>
+
+    <div class="crew-box">
+      <h4>Apollo Crewed Missions — Crew, Duration &amp; Notes</h4>
+      <table class="mission-table" style="margin:0">
+        <tr><th>Mission</th><th>Commander · CM Pilot · LM Pilot</th><th>Launch</th><th>Duration</th><th>Outcome</th></tr>
+        <tr><td class="name">Apollo 1</td><td>Gus Grissom · Ed White · Roger Chaffee</td><td>Planned Feb 21, 1967</td><td>—</td><td class="status-failed">Cabin fire on launch pad Jan 27, 1967. All 3 killed.</td></tr>
+        <tr><td class="name">Apollo 7</td><td>Wally Schirra · Donn Eisele · Walter Cunningham</td><td>Oct 11, 1968</td><td>10 d 20 h</td><td class="status-past">First crewed Apollo; Earth orbit shakedown. TV broadcast to public.</td></tr>
+        <tr><td class="name">Apollo 8</td><td>Frank Borman · Jim Lovell · Bill Anders</td><td>Dec 21, 1968</td><td>6 d 3 h</td><td class="status-past">First humans to the Moon. Lunar orbit. "Earthrise" photo on Christmas Eve.</td></tr>
+        <tr><td class="name">Apollo 9</td><td>Jim McDivitt · Dave Scott · Rusty Schweickart</td><td>Mar 3, 1969</td><td>10 d 1 h</td><td class="status-past">Earth orbit LM test. First crewed LM flight. EVA spacesuit testing.</td></tr>
+        <tr><td class="name">Apollo 10</td><td>Tom Stafford · John Young · Gene Cernan</td><td>May 18, 1969</td><td>8 d 0 h</td><td class="status-past">Lunar orbit dress rehearsal. LM descended to 15.2 km from surface.</td></tr>
+        <tr><td class="name">Apollo 11</td><td>Neil Armstrong · Michael Collins · Buzz Aldrin</td><td>Jul 16, 1969</td><td>8 d 3 h 18 m</td><td class="status-past">First Moon landing. Sea of Tranquility. 21 h 36 m on surface. 21.55 kg samples.</td></tr>
+        <tr><td class="name">Apollo 12</td><td>Pete Conrad · Dick Gordon · Alan Bean</td><td>Nov 14, 1969</td><td>10 d 4 h</td><td class="status-past">Precise landing 183m from Surveyor 3. 7.75 h EVA. 34.4 kg samples.</td></tr>
+        <tr><td class="name">Apollo 13</td><td>Jim Lovell · Jack Swigert · Fred Haise</td><td>Apr 11, 1970</td><td>5 d 22 h</td><td class="status-failed">O₂ tank explosion Apr 13. Moon landing aborted. LM used as lifeboat. All crew survived.</td></tr>
+        <tr><td class="name">Apollo 14</td><td>Alan Shepard · Stu Roosa · Ed Mitchell</td><td>Jan 31, 1971</td><td>9 d 0 h</td><td class="status-past">Fra Mauro (Apollo 13 target). 9.38 h EVA. Shepard hit two golf balls on the Moon.</td></tr>
+        <tr><td class="name">Apollo 15</td><td>Dave Scott · Al Worden · Jim Irwin</td><td>Jul 26, 1971</td><td>12 d 7 h</td><td class="status-past">First lunar rover (LRV). Hadley Rille. 18.55 h EVA. 77 kg samples.</td></tr>
+        <tr><td class="name">Apollo 16</td><td>John Young · Ken Mattingly · Charlie Duke</td><td>Apr 16, 1972</td><td>11 d 2 h</td><td class="status-past">Descartes Highlands. 20.23 h EVA. 95.7 kg samples.</td></tr>
+        <tr><td class="name">Apollo 17</td><td>Gene Cernan · Ron Evans · Harrison Schmitt</td><td>Dec 7, 1972</td><td>12 d 14 h</td><td class="status-past">Taurus-Littrow. Schmitt: only geologist on Moon. 22.05 h EVA. 110.5 kg samples. Last humans on Moon.</td></tr>
+      </table>
+      <p style="margin:10px 0 0;font-size:.82rem;color:var(--muted)"><strong>Total Apollo programme cost:</strong> ~$28B in 1960s dollars ≈ <strong>$280B in 2024 dollars.</strong> 6 successful landings · 12 humans walked on the Moon · 382 kg of lunar samples returned · programme ran 1961–1972.</p>
+    </div>
+
     <!-- ============================================================ -->
     <h2 id="moon">3. Moon Missions</h2>
 
@@ -157,6 +187,9 @@
       <tr><td class="yr">2030s</td><td class="name">Starship Mars Mission</td><td><span class="ag ag-spacex">SpaceX</span></td><td>Elon Musk's stated goal: uncrewed Starship to Mars ~2026, crewed mission 2028–2030. No confirmed manifest yet.</td><td class="status-planned">TBD</td></tr>
     </table>
 
+    <img src="images/curiosity-mars.jpg" class="mission-img" alt="NASA Curiosity rover on Mars" onerror="this.style.display='none'">
+    <p class="img-caption">NASA's Curiosity rover self-portrait at the "Namib Dune" in the Murray Formation of Gale Crater, January 2016. Curiosity has driven over 30 km on Mars since landing in August 2012. Photo: NASA/JPL-Caltech/MSSS.</p>
+
     <!-- ============================================================ -->
     <h2 id="outer-planets">5. Outer Planets &amp; Deep Space</h2>
 
@@ -175,6 +208,9 @@
       <tr><td class="yr">2024</td><td class="name">Europa Clipper</td><td><span class="ag ag-nasa">NASA</span></td><td>Largest NASA planetary science spacecraft. 49 flybys of Europa. Will assess habitability of its subsurface ocean. Arrives Jupiter 2030.</td><td class="status-active">En route</td></tr>
       <tr><td class="yr">2027</td><td class="name">Dragonfly</td><td><span class="ag ag-nasa">NASA</span></td><td>Nuclear-powered rotorcraft to Titan. Will fly to dozens of sites on Titan's surface — largest moon of Saturn, only body with lakes of liquid hydrocarbons. Launch 2028, arrives 2034.</td><td class="status-planned">Approved</td></tr>
     </table>
+
+    <img src="images/new-horizons-pluto.jpg" class="mission-img" alt="Pluto as imaged by New Horizons" onerror="this.style.display='none'">
+    <p class="img-caption">Pluto photographed by New Horizons at closest approach, July 14, 2015 — the first close images ever taken of the dwarf planet. The heart-shaped Tombaugh Regio is clearly visible. Photo: NASA/Johns Hopkins University APL/Southwest Research Institute.</p>
 
     <!-- ============================================================ -->
     <h2 id="telescopes">6. Space Telescopes &amp; Observatories</h2>
@@ -195,6 +231,9 @@
       <tr><td class="yr">2035</td><td class="name">Habitable Worlds Observatory (HWO)</td><td><span class="ag ag-nasa">NASA</span></td><td>Successor to Roman. ~6m UV/optical/IR telescope. Primary goal: direct imaging and spectroscopy of Earth-like exoplanets to search for biosignatures.</td><td class="status-planned">~2035+</td></tr>
     </table>
 
+    <img src="images/hubble-telescope.jpg" class="mission-img" alt="Hubble Space Telescope" onerror="this.style.display='none'">
+    <p class="img-caption">The Hubble Space Telescope photographed from Space Shuttle Atlantis during Servicing Mission 4 (STS-125) in May 2009. This was the final shuttle servicing mission. Photo: NASA.</p>
+
     <!-- ============================================================ -->
     <h2 id="iss">7. Space Stations</h2>
 
@@ -208,6 +247,9 @@
       <tr><td class="yr">2025+</td><td class="name">Axiom Station</td><td><span class="ag ag-private">Axiom Space</span></td><td>First commercial space station. Modules attaching to ISS from 2025 then separating after ISS retirement. Will serve as primary LEO lab post-ISS.</td><td class="status-planned">In development</td></tr>
       <tr><td class="yr">2025+</td><td class="name">Gateway (Lunar)</td><td><span class="ag ag-nasa">NASA</span> <span class="ag ag-esa">ESA</span> <span class="ag ag-jaxa">JAXA</span></td><td>Lunar orbital station. Staging point for Moon landings. First modules (PPE + HALO) launch ~2025. Will orbit near-rectilinear halo orbit around Moon.</td><td class="status-planned">In development</td></tr>
     </table>
+
+    <img src="images/iss.jpg" class="mission-img" alt="International Space Station" onerror="this.style.display='none'">
+    <p class="img-caption">The International Space Station photographed from Space Shuttle Discovery (STS-119), March 2009. At 109m × 73m and 420,000 kg, it is the largest structure ever assembled in space, housing research across biology, physics, astronomy, and meteorology. Photo: NASA.</p>
 
     <!-- ============================================================ -->
     <h2 id="commercial">8. Commercial &amp; New Space</h2>
@@ -229,7 +271,104 @@
     </table>
 
     <!-- ============================================================ -->
-    <h2 id="future">9. Planned Missions 2025–2040s</h2>
+    <h2 id="failures">9. Failures &amp; Disasters</h2>
+
+    <p>For every celebrated success, multiple missions have failed — sometimes with the loss of life, sometimes because of software bugs, engineering errors, or units mismatches. These failures shaped safety culture and engineering practice more profoundly than any successes.</p>
+
+    <h3>Crewed Disasters</h3>
+    <table class="mission-table">
+      <tr><th>Date</th><th>Mission</th><th>Crew Lost</th><th>Cause</th><th>Legacy</th></tr>
+      <tr>
+        <td class="yr">Jan 27, 1967</td>
+        <td class="name">Apollo 1 fire</td>
+        <td>Gus Grissom, Ed White, Roger Chaffee</td>
+        <td>Cabin fire during ground test in a pure-oxygen atmosphere. Faulty wiring under Grissom's seat ignited. The inward-opening hatch could not be opened under internal pressure. All three died within minutes.</td>
+        <td>Program halted 20 months. Complete Apollo capsule redesign: quick-opening hatch, fire-resistant materials, mixed O₂/N₂ atmosphere on the pad. The most impactful safety overhaul in US space history.</td>
+      </tr>
+      <tr>
+        <td class="yr">Jun 30, 1971</td>
+        <td class="name">Soyuz 11</td>
+        <td>Georgy Dobrovolsky, Vladislav Volkov, Viktor Patsayev</td>
+        <td>A pressure-equalisation valve opened prematurely during module separation at 168 km altitude. The capsule depressurised in 112 seconds. The crew, not wearing pressure suits (no room in the capsule), were found dead on recovery. The first and only humans to die in space.</td>
+        <td>Soyuz redesigned to carry only 2 suited cosmonauts. Requirement for suits during ascent/reentry became permanent. Salyut programme redesigned. All subsequent crewed missions worldwide require pressure suits during critical phases.</td>
+      </tr>
+      <tr>
+        <td class="yr">Jan 28, 1986</td>
+        <td class="name">Challenger (STS-51-L)</td>
+        <td>Francis Scobee, Michael Smith, Ronald McNair, Ellison Onizuka, Judith Resnik, Gregory Jarvis, Christa McAuliffe</td>
+        <td>O-ring seal in the right solid rocket booster failed due to cold temperatures (−3°C at launch, O-rings brittle below 17°C). Hot gases breached the external tank. Orbiter broke apart 73 seconds after launch at 46,000 ft. Engineers had warned against launching in cold weather; management overruled them.</td>
+        <td>32-month shuttle standdown. Rogers Commission. O-rings redesigned with heaters. Launch decision process overhauled — engineers now have formal authority to scrub. Christa McAuliffe (Teacher in Space) became a symbol. Normalisation-of-deviance concept enters engineering culture.</td>
+      </tr>
+      <tr>
+        <td class="yr">Feb 1, 2003</td>
+        <td class="name">Columbia (STS-107)</td>
+        <td>Rick Husband, William McCool, Michael Anderson, Kalpana Chawla, David Brown, Laurel Clark, Ilan Ramon</td>
+        <td>A 750g piece of foam insulation struck the leading edge of the left wing during launch, creating a 15–25 cm hole in the reinforced carbon-carbon panels. During reentry, superheated plasma (~1480°C) entered the wing structure. Vehicle broke apart over Texas and Louisiana at 63 km altitude, travelling at 18× the speed of sound.</td>
+        <td>2.5-year standdown. Columbia Accident Investigation Board (CAIB). NASA's risk management culture overhauled. Foam strikes had occurred on previous missions but were not acted upon. Shuttle program retired 2011 partly as result. Kalpana Chawla: first Indian-American in space; memorialised worldwide.</td>
+      </tr>
+    </table>
+
+    <h3>Robotic Mission Failures</h3>
+    <table class="mission-table">
+      <tr><th>Year</th><th>Mission</th><th>Agency</th><th>Failure Mode &amp; Cost</th></tr>
+      <tr>
+        <td class="yr">1993</td>
+        <td class="name">Mars Observer</td>
+        <td><span class="ag ag-nasa">NASA</span></td>
+        <td>Lost 3 days before Mars orbit insertion. Probable cause: rupture in fuel pressurisation line caused spacecraft to spin uncontrollably. Cost $813M. Led to NASA's "faster, better, cheaper" policy — which then produced two more Mars failures in 1999.</td>
+      </tr>
+      <tr>
+        <td class="yr">1999</td>
+        <td class="name">Mars Climate Orbiter</td>
+        <td><span class="ag ag-nasa">NASA</span></td>
+        <td>Lost at Mars orbit insertion. Root cause: Lockheed Martin's navigation software output thruster data in pound-force·seconds; NASA's trajectory team assumed newton-seconds. The unit mismatch pushed the spacecraft 170 km too low, causing it to burn up in the atmosphere. Cost $327.6M. Considered the most embarrassing units error in engineering history.</td>
+      </tr>
+      <tr>
+        <td class="yr">1999</td>
+        <td class="name">Mars Polar Lander</td>
+        <td><span class="ag ag-nasa">NASA</span></td>
+        <td>Lost during powered descent. Most likely cause: spurious signal from landing leg sensors, generated when legs deployed during descent, falsely indicated touchdown and shut off the engines at ~40 m altitude. Spacecraft crashed at full descent speed. Cost $165M. Part of the "cheaper, faster" failure cluster alongside MCO.</td>
+      </tr>
+      <tr>
+        <td class="yr">2003</td>
+        <td class="name">Beagle 2</td>
+        <td><span class="ag ag-esa">ESA</span></td>
+        <td>ESA's Mars lander went silent after separation from Mars Express on Christmas Day 2003. Found on the surface in 2015 by Mars Reconnaissance Orbiter — partially deployed with 2–3 of its 4 solar panel "petals" open, blocking the radio antenna. Probable cause: bounced and collided with a rock, or a petal was damaged during airbag landing.</td>
+      </tr>
+      <tr>
+        <td class="yr">2016</td>
+        <td class="name">Schiaparelli EDM</td>
+        <td><span class="ag ag-esa">ESA</span> <span class="ag ag-roscosmos">Roscosmos</span></td>
+        <td>ExoMars test lander crashed at ~300 km/h. IMU readings saturated for 1 second; onboard computer concluded it had already landed, jettisoned the parachute, and fired its retrorockets for only ~3 seconds instead of the required 30. The lander was still 3.7 km above the surface. Telemetry was received throughout — the failure was diagnosed precisely.</td>
+      </tr>
+      <tr>
+        <td class="yr">2019</td>
+        <td class="name">Beresheet</td>
+        <td><span class="ag ag-private">SpaceIL (Israel)</span></td>
+        <td>First private Moon lander. An inertial measurement unit (IMU) was accidentally switched off during descent, triggering a chain of resets. Main engine could not restart in time. Crashed at ~500 km/h. Reportedly carried a payload of tardigrades and human DNA — location unknown on lunar surface.</td>
+      </tr>
+      <tr>
+        <td class="yr">2019</td>
+        <td class="name">Chandrayaan-2 Vikram</td>
+        <td><span class="ag ag-isro">ISRO</span></td>
+        <td>Lander entered an uncontrolled roll during powered descent. Software could not correct fast enough. Impacted ~500m from target at ~50 m/s rather than near-zero. Orbiter healthy and operating. ISRO did not release official failure analysis. Cost ~$140M total (lander + orbiter). Chandrayaan-3 successfully landed the same target site in 2023.</td>
+      </tr>
+      <tr>
+        <td class="yr">2023</td>
+        <td class="name">Luna-25</td>
+        <td><span class="ag ag-roscosmos">Roscosmos</span></td>
+        <td>Russia's first lunar mission since Luna-24 in 1976. An orbit-correction manoeuvre engine fired for 127 seconds instead of the planned 84 seconds due to a software error. Spacecraft entered an uncontrolled orbit and crashed on the Moon at ~2.5 km/s near the south pole — the very target it was racing to beat Chandrayaan-3 to. India landed 3 days later.</td>
+      </tr>
+      <tr>
+        <td class="yr">2024</td>
+        <td class="name">Peregrine Mission 1</td>
+        <td><span class="ag ag-private">Astrobotic / NASA CLPS</span></td>
+        <td>First commercial US lunar lander under NASA's CLPS programme. A propellant valve failed to close after launch, causing an oxidiser leak. The spacecraft lost ~40% of its propellant within hours and could not achieve a lunar trajectory. Redirected to burn up on Earth reentry 10 days later. Carried 5 NASA science instruments and commercial payloads including human remains. Cost ~$108M in NASA funding.</td>
+      </tr>
+    </table>
+
+    <!-- ============================================================ -->
+    <h2 id="future">10. Planned Missions 2025–2040s</h2>
 
     <table class="mission-table">
       <tr><th>Target Date</th><th>Mission</th><th>Agency</th><th>Goal</th></tr>
@@ -253,7 +392,7 @@
     </table>
 
     <!-- ============================================================ -->
-    <h2 id="agencies">10. Agency Profiles</h2>
+    <h2 id="agencies">11. Agency Profiles</h2>
 
     <div class="defn"><strong>NASA — National Aeronautics and Space Administration</strong> (USA, est. 1958)<br>
     Budget ~$25B/year (2026). Leads planetary science, human spaceflight (Artemis), and flagship telescopes. Partners extensively with ESA, JAXA, and commercial providers. Operates JPL (robotic missions), Johnson SC (human spaceflight), Goddard (satellites/telescopes).</div>
