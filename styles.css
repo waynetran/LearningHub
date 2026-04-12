@@ -2527,7 +2527,7 @@ details.algo-code .code-tabs {
    Activated by ⌘K / Ctrl-K / "/". Styles paired with search.js.
    ========================================================================== */
 
-/* --- floating trigger ---------------------------------------------------- */
+/* --- floating trigger (default — used when no topbar is present) --------- */
 .search-trigger {
   position: fixed;
   right: 22px;
@@ -2567,6 +2567,30 @@ details.algo-code .code-tabs {
   font-family: var(--mono);
   font-size: 10.5px;
   line-height: 1.2;
+}
+
+/* --- topbar-embedded trigger (overrides fixed positioning) --------------- */
+.topbar .search-trigger {
+  position: static;
+  right: auto;
+  top: auto;
+  z-index: auto;
+  padding: 5px 12px;
+  font-size: 11px;
+  box-shadow: none;
+  background: rgba(124,92,255,.14);
+  border-color: rgba(124,92,255,.35);
+  margin-left: auto;       /* push it to the right, before .topbar-tracks */
+  margin-right: 0;
+}
+.topbar .search-trigger:hover {
+  transform: none;
+  background: rgba(124,92,255,.26);
+  border-color: var(--accent);
+}
+/* .topbar-tracks already has margin-left:auto — remove it when trigger is present */
+.topbar:has(.search-trigger) .topbar-tracks {
+  margin-left: 0;
 }
 
 /* --- modal scaffold ------------------------------------------------------ */

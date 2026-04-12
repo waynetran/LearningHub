@@ -99,7 +99,6 @@
   }
 
   function buildTrigger() {
-    // Floating trigger — visible in bottom-right on every page.
     var btn = document.createElement("button");
     btn.type = "button";
     btn.className = "search-trigger";
@@ -112,7 +111,21 @@
       '<span class="st-label">Search</span>' +
       '<kbd class="st-kbd">⌘K</kbd>';
     btn.addEventListener("click", open);
-    document.body.appendChild(btn);
+
+    // If the page has a topbar, embed the trigger in it (before .topbar-tracks
+    // so it sits between the crumb and the track links). Otherwise fall back to
+    // the classic floating fixed button.
+    var topbar = document.querySelector(".topbar");
+    if (topbar) {
+      var tracks = topbar.querySelector(".topbar-tracks");
+      if (tracks) {
+        topbar.insertBefore(btn, tracks);
+      } else {
+        topbar.appendChild(btn);
+      }
+    } else {
+      document.body.appendChild(btn);
+    }
 
     // Also wire up any pre-existing `.search-trigger-inline` buttons in page chrome
     Array.prototype.forEach.call(
