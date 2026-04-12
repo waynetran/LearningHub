@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Space Missions — Every Major Mission from Sputnik to the 2040s</title>
+<link rel="stylesheet" href="../assets/css/styles.css">
+<style>
+/* ── Agency pills ─────────────────────────────────── */
+.ag { display:inline-block; font-size:10px; font-weight:700; padding:2px 8px; border-radius:20px; border:1px solid; margin:0 2px 2px 0; vertical-align:middle; }
+.ag-nasa   { background:rgba(30,144,255,.15); border-color:#1e90ff; color:#6ab4ff; }
+.ag-esa    { background:rgba(0,168,255,.15);  border-color:#00a8ff; color:#70d0ff; }
+.ag-roscosmos { background:rgba(255,80,80,.15); border-color:#ff5050; color:#ff9090; }
+.ag-isro   { background:rgba(255,165,0,.15);  border-color:#ffa500; color:#ffd070; }
+.ag-cnsa   { background:rgba(255,50,50,.15);  border-color:#ff3232; color:#ff8888; }
+.ag-jaxa   { background:rgba(255,255,255,.1); border-color:rgba(255,255,255,.3); color:#e2e8f0; }
+.ag-spacex { background:rgba(124,92,255,.15); border-color:#7c5cff; color:#a78bfa; }
+.ag-private{ background:rgba(34,211,238,.12); border-color:#22d3ee; color:#67e8f9; }
+
+/* ── Mission table ────────────────────────────────── */
+.mission-table { width:100%; border-collapse:collapse; font-size:.83rem; margin:12px 0 24px; }
+.mission-table th { background:rgba(255,255,255,.06); color:var(--muted); font-weight:600; padding:7px 10px; text-align:left; border-bottom:1px solid rgba(255,255,255,.1); white-space:nowrap; }
+.mission-table td { padding:6px 10px; border-bottom:1px solid rgba(255,255,255,.05); vertical-align:top; }
+.mission-table tr:hover td { background:rgba(255,255,255,.03); }
+.mission-table .yr { color:var(--muted); white-space:nowrap; }
+.mission-table .name { font-weight:600; color:var(--fg); }
+.mission-table .status-active  { color:#22c55e; font-size:10px; font-weight:700; }
+.mission-table .status-planned { color:#f59e0b; font-size:10px; font-weight:700; }
+.mission-table .status-past    { color:var(--muted); font-size:10px; }
+.mission-table .status-failed  { color:#ef4444; font-size:10px; }
+
+/* ── Category header ──────────────────────────────── */
+.cat-header { display:flex; align-items:center; gap:10px; margin:32px 0 8px; }
+.cat-header h3 { margin:0; }
+.cat-icon { font-size:1.4rem; }
+
+/* ── Timeline (horizontal) ──────────────────────────*/
+.era-strip { display:flex; gap:8px; flex-wrap:wrap; margin:16px 0; }
+.era-pill { background:rgba(34,211,238,.08); border:1px solid rgba(34,211,238,.25); border-radius:20px; padding:3px 12px; font-size:.78rem; color:#22d3ee; cursor:default; }
+</style>
+</head>
+<body>
+<div id="tooltip"></div>
+
+<nav class="topic-nav">
+  <a class="back" href="./index.html">← Astronomy</a>
+  <div class="crumb">Astronomy / <span class="topic-name">Space Missions</span></div>
+</nav>
+
+<div class="topic-layout">
+  <aside class="topic-toc">
+    <h4>ON THIS PAGE</h4>
+    <ul>
+      <li><a href="#overview">1. Overview</a></li>
+      <li><a href="#early-space-age">2. Early Space Age</a></li>
+      <li><a href="#moon">3. Moon Missions</a></li>
+      <li><a href="#mars">4. Mars Missions</a></li>
+      <li><a href="#outer-planets">5. Outer Planets &amp; Deep Space</a></li>
+      <li><a href="#telescopes">6. Space Telescopes</a></li>
+      <li><a href="#iss">7. Space Stations</a></li>
+      <li><a href="#commercial">8. Commercial &amp; New Space</a></li>
+      <li><a href="#future">9. Planned 2025–2040s</a></li>
+      <li><a href="#agencies">10. Agency Profiles</a></li>
+    </ul>
+  </aside>
+
+  <article class="topic-content">
+    <h1>Space Missions — Every Major Mission from Sputnik to the 2040s</h1>
+    <span class="chip">UPDATED Apr 12 2026 00:00</span>
+    <p class="subtitle">A comprehensive guide to humanity's exploration of space — from the first satellite to robotic rovers on Mars, gravitational wave detectors, and the missions currently en route to the outer solar system. Covers NASA, ESA, Roscosmos, ISRO, CNSA, JAXA, SpaceX, and commercial operators.</p>
+    <div class="meta-tags">
+      <span>Coverage: 1957 – 2040s</span>
+      <span>Read time: ~25 min</span>
+      <span>Agencies: 8+</span>
+    </div>
+
+    <!-- ============================================================ -->
+    <h2 id="overview">1. Overview</h2>
+    <p>As of 2026, humanity has launched over 10,000 objects to orbit and beyond. Roughly 60 nations and dozens of private companies operate or have operated spacecraft. The pace of launches has accelerated dramatically since 2015 — SpaceX alone conducts more launches per year than all nations combined did in the 1960s. The missions below represent milestones, scientific achievements, and the most consequential commercial and governmental space programmes.</p>
+
+    <div class="era-strip">
+      <span class="era-pill">Space Race 1957–1969</span>
+      <span class="era-pill">Post-Apollo 1970–1989</span>
+      <span class="era-pill">Space Station Era 1990–2009</span>
+      <span class="era-pill">New Space 2010–2019</span>
+      <span class="era-pill">Artemis &amp; Commercial 2020–2026</span>
+      <span class="era-pill">Deep Space 2027–2040s</span>
+    </div>
+
+    <!-- ============================================================ -->
+    <h2 id="early-space-age">2. Early Space Age (1957–1972)</h2>
+
+    <table class="mission-table">
+      <tr><th>Year</th><th>Mission</th><th>Agency</th><th>Achievement</th></tr>
+      <tr><td class="yr">1957</td><td class="name">Sputnik 1</td><td><span class="ag ag-roscosmos">Roscosmos</span></td><td>First artificial satellite. 184-day orbit. Radio beacon heard worldwide. Triggered the Space Race.</td></tr>
+      <tr><td class="yr">1957</td><td class="name">Sputnik 2</td><td><span class="ag ag-roscosmos">Roscosmos</span></td><td>First living creature in orbit — dog Laika. Proved biological survival in space (briefly).</td></tr>
+      <tr><td class="yr">1958</td><td class="name">Explorer 1</td><td><span class="ag ag-nasa">NASA</span></td><td>First US satellite. Discovered the Van Allen radiation belts.</td></tr>
+      <tr><td class="yr">1959</td><td class="name">Luna 2</td><td><span class="ag ag-roscosmos">Roscosmos</span></td><td>First spacecraft to reach another world — impacted the Moon.</td></tr>
+      <tr><td class="yr">1959</td><td class="name">Luna 3</td><td><span class="ag ag-roscosmos">Roscosmos</span></td><td>First photographs of the Moon's far side.</td></tr>
+      <tr><td class="yr">1961</td><td class="name">Vostok 1</td><td><span class="ag ag-roscosmos">Roscosmos</span></td><td>Yuri Gagarin: first human in space, first orbit. 108 minutes. April 12, 1961.</td></tr>
+      <tr><td class="yr">1962</td><td class="name">Friendship 7 (MA-6)</td><td><span class="ag ag-nasa">NASA</span></td><td>John Glenn: first American to orbit Earth. 3 orbits.</td></tr>
+      <tr><td class="yr">1962</td><td class="name">Mariner 2</td><td><span class="ag ag-nasa">NASA</span></td><td>First successful flyby of another planet — Venus. Confirmed hot dense atmosphere.</td></tr>
+      <tr><td class="yr">1963</td><td class="name">Vostok 6</td><td><span class="ag ag-roscosmos">Roscosmos</span></td><td>Valentina Tereshkova: first woman in space.</td></tr>
+      <tr><td class="yr">1965</td><td class="name">Voskhod 2</td><td><span class="ag ag-roscosmos">Roscosmos</span></td><td>Alexei Leonov: first spacewalk (EVA), 12 minutes outside.</td></tr>
+      <tr><td class="yr">1965</td><td class="name">Mariner 4</td><td><span class="ag ag-nasa">NASA</span></td><td>First flyby of Mars. 21 photographs revealed craters; dashed hopes of a habitable surface.</td></tr>
+      <tr><td class="yr">1966</td><td class="name">Luna 9</td><td><span class="ag ag-roscosmos">Roscosmos</span></td><td>First soft landing on the Moon. Proved surface was solid (not deep dust).</td></tr>
+      <tr><td class="yr">1967</td><td class="name">Apollo 1 (fire)</td><td><span class="ag ag-nasa">NASA</span></td><td>Cabin fire during ground test killed Grissom, White, Chaffee. Led to major redesign.</td></tr>
+      <tr><td class="yr">1968</td><td class="name">Apollo 8</td><td><span class="ag ag-nasa">NASA</span></td><td>First crewed flight to the Moon. "Earthrise" photograph. Christmas Eve broadcast.</td></tr>
+      <tr><td class="yr">1969</td><td class="name">Apollo 11</td><td><span class="ag ag-nasa">NASA</span></td><td>Neil Armstrong and Buzz Aldrin land on the Moon (Sea of Tranquility). July 20, 1969. First humans on another world.</td></tr>
+      <tr><td class="yr">1970</td><td class="name">Apollo 13</td><td><span class="ag ag-nasa">NASA</span></td><td>Oxygen tank explosion. Crew survived using LM as lifeboat. "Successful failure."</td></tr>
+      <tr><td class="yr">1970</td><td class="name">Venera 7</td><td><span class="ag ag-roscosmos">Roscosmos</span></td><td>First soft landing on another planet (Venus). Survived 23 minutes of 465°C surface.</td></tr>
+      <tr><td class="yr">1971</td><td class="name">Mariner 9</td><td><span class="ag ag-nasa">NASA</span></td><td>First spacecraft to orbit Mars. Mapped 85% of surface. Revealed Valles Marineris and Olympus Mons.</td></tr>
+      <tr><td class="yr">1972</td><td class="name">Apollo 17</td><td><span class="ag ag-nasa">NASA</span></td><td>Last human Moon landing. Cernan, Evans, Schmitt. "Blue Marble" photograph of Earth.</td></tr>
+    </table>
+
+    <!-- ============================================================ -->
+    <h2 id="moon">3. Moon Missions</h2>
+
+    <table class="mission-table">
+      <tr><th>Year</th><th>Mission</th><th>Agency</th><th>Achievement / Notes</th><th>Status</th></tr>
+      <tr><td class="yr">1969–72</td><td class="name">Apollo 11–17</td><td><span class="ag ag-nasa">NASA</span></td><td>6 successful landings, 12 humans walked on the Moon, 382 kg of samples returned.</td><td class="status-past">Complete</td></tr>
+      <tr><td class="yr">1990</td><td class="name">Hiten</td><td><span class="ag ag-jaxa">JAXA</span></td><td>Japan's first lunar mission. Demonstrated aerobraking. Impacted Moon 1993.</td><td class="status-past">Complete</td></tr>
+      <tr><td class="yr">1994</td><td class="name">Clementine</td><td><span class="ag ag-nasa">NASA</span></td><td>Mapped the Moon globally. First evidence of water ice at lunar south pole.</td><td class="status-past">Complete</td></tr>
+      <tr><td class="yr">2008</td><td class="name">Chandrayaan-1</td><td><span class="ag ag-isro">ISRO</span></td><td>India's first lunar mission. MIP probe confirmed water molecules in lunar soil.</td><td class="status-past">Complete</td></tr>
+      <tr><td class="yr">2009</td><td class="name">LRO / LCROSS</td><td><span class="ag ag-nasa">NASA</span></td><td>LRO: detailed lunar mapping, still active. LCROSS: impactor confirmed water ice at Cabeus crater.</td><td class="status-past">Complete</td></tr>
+      <tr><td class="yr">2010</td><td class="name">Chang'e 2</td><td><span class="ag ag-cnsa">CNSA</span></td><td>Lunar orbiter; later flew to L2 and then asteroid Toutatis flyby.</td><td class="status-past">Complete</td></tr>
+      <tr><td class="yr">2013</td><td class="name">Chang'e 3 / Yutu</td><td><span class="ag ag-cnsa">CNSA</span></td><td>First soft landing on Moon since 1976. Yutu rover operated 31 months.</td><td class="status-past">Complete</td></tr>
+      <tr><td class="yr">2019</td><td class="name">Chang'e 4 / Yutu-2</td><td><span class="ag ag-cnsa">CNSA</span></td><td>First-ever landing on Moon's far side (Von Kármán crater). Yutu-2 still operating in 2026 — longest-lived lunar rover.</td><td class="status-active">Active</td></tr>
+      <tr><td class="yr">2019</td><td class="name">Chandrayaan-2</td><td><span class="ag ag-isro">ISRO</span></td><td>Orbiter healthy; Vikram lander crashed at ~500m altitude due to software fault.</td><td class="status-past">Partial</td></tr>
+      <tr><td class="yr">2020</td><td class="name">Chang'e 5</td><td><span class="ag ag-cnsa">CNSA</span></td><td>First lunar sample return since Luna 24 (1976). Returned 1.73 kg from Mons Rümker.</td><td class="status-past">Complete</td></tr>
+      <tr><td class="yr">2023</td><td class="name">Chandrayaan-3 / Pragyan</td><td><span class="ag ag-isro">ISRO</span></td><td>First landing at lunar south pole. Vikram lander + Pragyan rover confirmed sulphur and water ice. India becomes 4th nation to soft-land on Moon.</td><td class="status-past">Complete</td></tr>
+      <tr><td class="yr">2024</td><td class="name">IM-1 (Odysseus)</td><td><span class="ag ag-private">Intuitive Machines</span></td><td>First commercial soft landing on Moon (tipped on side near Malapert A). Carried NASA instruments.</td><td class="status-past">Complete</td></tr>
+      <tr><td class="yr">2025</td><td class="name">Artemis II</td><td><span class="ag ag-nasa">NASA</span></td><td>First crewed lunar flyby since Apollo 17. 4 astronauts, 10-day mission around the Moon. SLS + Orion.</td><td class="status-planned">2025</td></tr>
+      <tr><td class="yr">2026</td><td class="name">Chang'e 6</td><td><span class="ag ag-cnsa">CNSA</span></td><td>Sample return from lunar far side South Pole–Aitken Basin — most ancient crater on Moon.</td><td class="status-planned">2026</td></tr>
+      <tr><td class="yr">2026+</td><td class="name">Artemis III</td><td><span class="ag ag-nasa">NASA</span></td><td>First crewed Moon landing since 1972. SpaceX Starship HLS lands at lunar south pole. Targets water ice region.</td><td class="status-planned">2026+</td></tr>
+      <tr><td class="yr">2027</td><td class="name">Luna 27 (LUNA-RESURS)</td><td><span class="ag ag-roscosmos">Roscosmos</span></td><td>Planned polar lander; search for water ice and resources. Previously Luna-25 crashed 2023.</td><td class="status-planned">2027</td></tr>
+    </table>
+
+    <!-- ============================================================ -->
+    <h2 id="mars">4. Mars Missions</h2>
+
+    <table class="mission-table">
+      <tr><th>Year</th><th>Mission</th><th>Agency</th><th>Achievement / Notes</th><th>Status</th></tr>
+      <tr><td class="yr">1976</td><td class="name">Viking 1 &amp; 2</td><td><span class="ag ag-nasa">NASA</span></td><td>First successful Mars landers. Biology experiments inconclusive. Operated 6+ years. High-res surface images.</td><td class="status-past">Complete</td></tr>
+      <tr><td class="yr">1997</td><td class="name">Mars Pathfinder / Sojourner</td><td><span class="ag ag-nasa">NASA</span></td><td>First Mars rover. Sojourner operated 83 days. Demonstrated airbag landing.</td><td class="status-past">Complete</td></tr>
+      <tr><td class="yr">2001</td><td class="name">Mars Odyssey</td><td><span class="ag ag-nasa">NASA</span></td><td>Longest-operating Mars spacecraft. Mapped hydrogen (water ice) deposits. Still active 2026.</td><td class="status-active">Active</td></tr>
+      <tr><td class="yr">2003</td><td class="name">Mars Express</td><td><span class="ag ag-esa">ESA</span></td><td>ESA's first Mars mission. MARSIS radar found subsurface liquid water lake under south polar ice. Active 2026.</td><td class="status-active">Active</td></tr>
+      <tr><td class="yr">2004</td><td class="name">Spirit &amp; Opportunity (MER)</td><td><span class="ag ag-nasa">NASA</span></td><td>Spirit: 6 years. Opportunity: 15 years, 45 km. Confirmed liquid water once flowed on Mars.</td><td class="status-past">Complete</td></tr>
+      <tr><td class="yr">2006</td><td class="name">Mars Reconnaissance Orbiter</td><td><span class="ag ag-nasa">NASA</span></td><td>HiRISE camera at 25 cm/pixel resolution. Identified recurring slope lineae. Communications relay. Active 2026.</td><td class="status-active">Active</td></tr>
+      <tr><td class="yr">2012</td><td class="name">Curiosity (MSL)</td><td><span class="ag ag-nasa">NASA</span></td><td>Sky-crane landing. Confirmed Gale Crater was habitable lake. Still driving in 2026 — 14+ years.</td><td class="status-active">Active</td></tr>
+      <tr><td class="yr">2014</td><td class="name">MOM (Mangalyaan)</td><td><span class="ag ag-isro">ISRO</span></td><td>India's first interplanetary mission. Reached Mars orbit on first attempt — only nation to do so. $74M total cost.</td><td class="status-past">Complete</td></tr>
+      <tr><td class="yr">2016</td><td class="name">ExoMars TGO / Schiaparelli</td><td><span class="ag ag-esa">ESA</span> <span class="ag ag-roscosmos">Roscosmos</span></td><td>TGO mapped methane and other trace gases. Schiaparelli lander crashed (thruster anomaly).</td><td class="status-past">TGO Active</td></tr>
+      <tr><td class="yr">2021</td><td class="name">Perseverance + Ingenuity</td><td><span class="ag ag-nasa">NASA</span></td><td>Caching samples for future return. Ingenuity helicopter: 72 flights — first powered flight on another planet. Active 2026.</td><td class="status-active">Active</td></tr>
+      <tr><td class="yr">2021</td><td class="name">Tianwen-1 / Zhurong</td><td><span class="ag ag-cnsa">CNSA</span></td><td>China's first Mars orbiter+lander+rover. Zhurong rover operated 358 days. Confirmed subsurface water ice.</td><td class="status-past">Complete</td></tr>
+      <tr><td class="yr">2021</td><td class="name">Hope Probe (EMM)</td><td><span class="ag ag-private">UAE</span></td><td>UAE's first space mission. Mars climate orbiter studying atmosphere. First Arab interplanetary mission.</td><td class="status-active">Active</td></tr>
+      <tr><td class="yr">2026</td><td class="name">Mars Sample Return (phase)</td><td><span class="ag ag-nasa">NASA</span> <span class="ag ag-esa">ESA</span></td><td>Earth Return Orbiter + Sample Fetch Rover planned to retrieve Perseverance's cached tubes. Budget and timeline under review.</td><td class="status-planned">2027+</td></tr>
+      <tr><td class="yr">2030s</td><td class="name">Starship Mars Mission</td><td><span class="ag ag-spacex">SpaceX</span></td><td>Elon Musk's stated goal: uncrewed Starship to Mars ~2026, crewed mission 2028–2030. No confirmed manifest yet.</td><td class="status-planned">TBD</td></tr>
+    </table>
+
+    <!-- ============================================================ -->
+    <h2 id="outer-planets">5. Outer Planets &amp; Deep Space</h2>
+
+    <table class="mission-table">
+      <tr><th>Year</th><th>Mission</th><th>Agency</th><th>Achievement</th><th>Status</th></tr>
+      <tr><td class="yr">1972–73</td><td class="name">Pioneer 10 &amp; 11</td><td><span class="ag ag-nasa">NASA</span></td><td>First spacecraft through asteroid belt. Pioneer 10: first Jupiter flyby (1973). Pioneer 11: first Saturn flyby (1979). Pioneer anomaly sparked dark matter debate.</td><td class="status-past">Lost contact</td></tr>
+      <tr><td class="yr">1977</td><td class="name">Voyager 1 &amp; 2</td><td><span class="ag ag-nasa">NASA</span></td><td>Flyby of all four giant planets. Voyager 1 is humanity's most distant object (~24 billion km, 2026). Voyager 2 is the only spacecraft to visit Uranus and Neptune. Both in interstellar space.</td><td class="status-active">Active</td></tr>
+      <tr><td class="yr">1989</td><td class="name">Galileo</td><td><span class="ag ag-nasa">NASA</span></td><td>Jupiter orbiter + atmospheric probe. Discovered Europa's subsurface ocean. Operated 1995–2003.</td><td class="status-past">Complete</td></tr>
+      <tr><td class="yr">1990</td><td class="name">Ulysses</td><td><span class="ag ag-nasa">NASA</span> <span class="ag ag-esa">ESA</span></td><td>First spacecraft over solar poles. Studied solar wind in 3D. Operated 19 years.</td><td class="status-past">Complete</td></tr>
+      <tr><td class="yr">1997</td><td class="name">Cassini-Huygens</td><td><span class="ag ag-nasa">NASA</span> <span class="ag ag-esa">ESA</span></td><td>Saturn orbiter (13 years). Huygens probe landed on Titan — furthest landing from Earth ever. Discovered Enceladus geysers and subsurface ocean.</td><td class="status-past">Complete 2017</td></tr>
+      <tr><td class="yr">2006</td><td class="name">New Horizons</td><td><span class="ag ag-nasa">NASA</span></td><td>Pluto flyby 2015 — first close images. Heart-shaped Tombaugh Regio. Then Arrokoth flyby 2019 (furthest object ever visited). Entering Kuiper Belt.</td><td class="status-active">Active</td></tr>
+      <tr><td class="yr">2011</td><td class="name">Juno</td><td><span class="ag ag-nasa">NASA</span></td><td>Jupiter polar orbiter. Mapped magnetic field, confirmed deep atmospheric bands. Now extended to Ganymede, Europa, Io flybys.</td><td class="status-active">Active</td></tr>
+      <tr><td class="yr">2016</td><td class="name">OSIRIS-REx</td><td><span class="ag ag-nasa">NASA</span></td><td>Sampled asteroid Bennu (2020). Returned 121g of material to Earth (2023) — largest asteroid sample ever. Now en route to asteroid Apophis.</td><td class="status-active">Active (→Apophis)</td></tr>
+      <tr><td class="yr">2019</td><td class="name">Hayabusa2</td><td><span class="ag ag-jaxa">JAXA</span></td><td>Sampled asteroid Ryugu, including subsurface material. Returned 5.4g to Earth 2020. Confirmed organic molecules including amino acid building blocks.</td><td class="status-active">Extended (→1998 KY26)</td></tr>
+      <tr><td class="yr">2023</td><td class="name">JUICE (JUpiter ICy moons Explorer)</td><td><span class="ag ag-esa">ESA</span></td><td>En route to Jupiter. Will orbit Ganymede — first orbit of a moon other than our own. Arrives 2031. Study of Ganymede, Europa, Callisto.</td><td class="status-active">En route</td></tr>
+      <tr><td class="yr">2024</td><td class="name">Europa Clipper</td><td><span class="ag ag-nasa">NASA</span></td><td>Largest NASA planetary science spacecraft. 49 flybys of Europa. Will assess habitability of its subsurface ocean. Arrives Jupiter 2030.</td><td class="status-active">En route</td></tr>
+      <tr><td class="yr">2027</td><td class="name">Dragonfly</td><td><span class="ag ag-nasa">NASA</span></td><td>Nuclear-powered rotorcraft to Titan. Will fly to dozens of sites on Titan's surface — largest moon of Saturn, only body with lakes of liquid hydrocarbons. Launch 2028, arrives 2034.</td><td class="status-planned">Approved</td></tr>
+    </table>
+
+    <!-- ============================================================ -->
+    <h2 id="telescopes">6. Space Telescopes &amp; Observatories</h2>
+
+    <table class="mission-table">
+      <tr><th>Year</th><th>Mission</th><th>Agency</th><th>Achievement / Notes</th><th>Status</th></tr>
+      <tr><td class="yr">1990</td><td class="name">Hubble Space Telescope</td><td><span class="ag ag-nasa">NASA</span> <span class="ag ag-esa">ESA</span></td><td>Most productive science instrument ever. 1.5 million+ observations. Serviced 5 times by shuttle. Deep field images showed early universe. Active 2026 (1 gyro mode).</td><td class="status-active">Active</td></tr>
+      <tr><td class="yr">1999</td><td class="name">Chandra X-ray Observatory</td><td><span class="ag ag-nasa">NASA</span></td><td>Sharpest X-ray images. Studied black holes, supernovae, galaxy clusters. Active 2026.</td><td class="status-active">Active</td></tr>
+      <tr><td class="yr">2003</td><td class="name">Spitzer Space Telescope</td><td><span class="ag ag-nasa">NASA</span></td><td>Infrared telescope. Studied exoplanet atmospheres, cool brown dwarfs, distant galaxies. Retired 2020.</td><td class="status-past">Retired 2020</td></tr>
+      <tr><td class="yr">2009</td><td class="name">Kepler / K2</td><td><span class="ag ag-nasa">NASA</span></td><td>Discovered 2,662 confirmed exoplanets. Showed planets are common around stars. Retired 2018.</td><td class="status-past">Retired 2018</td></tr>
+      <tr><td class="yr">2009</td><td class="name">Planck</td><td><span class="ag ag-esa">ESA</span></td><td>Mapped CMB with highest precision. Confirmed ΛCDM model. Age of universe: 13.8 billion years. Retired 2013.</td><td class="status-past">Complete</td></tr>
+      <tr><td class="yr">2015</td><td class="name">LISA Pathfinder</td><td><span class="ag ag-esa">ESA</span></td><td>Technology demonstrator for gravitational-wave detection in space. Exceeded all requirements. Retired 2017.</td><td class="status-past">Complete</td></tr>
+      <tr><td class="yr">2018</td><td class="name">TESS</td><td><span class="ag ag-nasa">NASA</span></td><td>All-sky exoplanet transit survey. Found 7,000+ candidates, 400+ confirmed planets. Active 2026.</td><td class="status-active">Active</td></tr>
+      <tr><td class="yr">2021</td><td class="name">JWST</td><td><span class="ag ag-nasa">NASA</span> <span class="ag ag-esa">ESA</span> <span class="ag ag-jaxa">CSA</span></td><td>Most powerful space telescope. Infrared. 6.5m mirror. Images galaxies forming 400 million years after Big Bang. Studying exoplanet atmospheres for biosignatures. At L2. Active 2026.</td><td class="status-active">Active</td></tr>
+      <tr><td class="yr">2023</td><td class="name">Euclid</td><td><span class="ag ag-esa">ESA</span></td><td>Dark energy and dark matter survey. Will map 1/3 of sky in visible + near-IR. Active 2026, returning data.</td><td class="status-active">Active</td></tr>
+      <tr><td class="yr">2027</td><td class="name">Roman Space Telescope (Nancy Grace)</td><td><span class="ag ag-nasa">NASA</span></td><td>100× Hubble field of view in near-infrared. Dark energy surveys, microlensing exoplanet census, coronagraph test for direct exoplanet imaging.</td><td class="status-planned">2027</td></tr>
+      <tr><td class="yr">2034</td><td class="name">LISA</td><td><span class="ag ag-esa">ESA</span></td><td>Space gravitational-wave detector. Three spacecraft, 2.5 million km triangle. Will detect supermassive black hole mergers across the observable universe.</td><td class="status-planned">2034</td></tr>
+      <tr><td class="yr">2035</td><td class="name">Habitable Worlds Observatory (HWO)</td><td><span class="ag ag-nasa">NASA</span></td><td>Successor to Roman. ~6m UV/optical/IR telescope. Primary goal: direct imaging and spectroscopy of Earth-like exoplanets to search for biosignatures.</td><td class="status-planned">~2035+</td></tr>
+    </table>
+
+    <!-- ============================================================ -->
+    <h2 id="iss">7. Space Stations</h2>
+
+    <table class="mission-table">
+      <tr><th>Years</th><th>Station</th><th>Agency</th><th>Notes</th><th>Status</th></tr>
+      <tr><td class="yr">1971–82</td><td class="name">Salyut 1–7</td><td><span class="ag ag-roscosmos">Roscosmos</span></td><td>First space stations. Salyut 1: first occupied station (1971). 7 stations total, military and scientific missions.</td><td class="status-past">Deorbited</td></tr>
+      <tr><td class="yr">1973–74</td><td class="name">Skylab</td><td><span class="ag ag-nasa">NASA</span></td><td>First US station. 3 crews. Solar telescope. Reentry 1979.</td><td class="status-past">Deorbited</td></tr>
+      <tr><td class="yr">1986–2001</td><td class="name">Mir</td><td><span class="ag ag-roscosmos">Roscosmos</span></td><td>First modular station. 15 years of continuous occupation. US-Russia cooperation in 1990s. Deorbited 2001.</td><td class="status-past">Deorbited</td></tr>
+      <tr><td class="yr">1998–</td><td class="name">ISS</td><td><span class="ag ag-nasa">NASA</span> <span class="ag ag-roscosmos">Roscosmos</span> <span class="ag ag-esa">ESA</span> <span class="ag ag-jaxa">JAXA</span></td><td>Largest structure in space: 109m × 73m. 420km altitude. Continuously inhabited since Nov 2000. Over 270 individuals from 21 countries. Retirement planned ~2030 (deorbit 2030–2035).</td><td class="status-active">Active</td></tr>
+      <tr><td class="yr">2021–</td><td class="name">Tiangong (CSS)</td><td><span class="ag ag-cnsa">CNSA</span></td><td>Chinese Space Station. 3-module core. Crew of 3. Independently replacing ISS for China. Fully operational 2022. Planned 10+ year life.</td><td class="status-active">Active</td></tr>
+      <tr><td class="yr">2025+</td><td class="name">Axiom Station</td><td><span class="ag ag-private">Axiom Space</span></td><td>First commercial space station. Modules attaching to ISS from 2025 then separating after ISS retirement. Will serve as primary LEO lab post-ISS.</td><td class="status-planned">In development</td></tr>
+      <tr><td class="yr">2025+</td><td class="name">Gateway (Lunar)</td><td><span class="ag ag-nasa">NASA</span> <span class="ag ag-esa">ESA</span> <span class="ag ag-jaxa">JAXA</span></td><td>Lunar orbital station. Staging point for Moon landings. First modules (PPE + HALO) launch ~2025. Will orbit near-rectilinear halo orbit around Moon.</td><td class="status-planned">In development</td></tr>
+    </table>
+
+    <!-- ============================================================ -->
+    <h2 id="commercial">8. Commercial &amp; New Space</h2>
+
+    <p>Since 2010, private launch companies have fundamentally changed the economics of space access. SpaceX reduced launch costs by ~10× through reusable rockets. A new wave of commercial stations, lunar landers, and interplanetary vehicles is now in development.</p>
+
+    <table class="mission-table">
+      <tr><th>Year</th><th>Mission / Vehicle</th><th>Operator</th><th>Achievement</th><th>Status</th></tr>
+      <tr><td class="yr">2010</td><td class="name">Falcon 9 / Dragon</td><td><span class="ag ag-spacex">SpaceX</span></td><td>First commercial ISS resupply (2012). First propulsive booster landing (2015). Crew Dragon first commercial crewed ISS flight (2020). 200+ Falcon 9 launches by 2026.</td><td class="status-active">Active</td></tr>
+      <tr><td class="yr">2019</td><td class="name">Crew Dragon Demo-2</td><td><span class="ag ag-spacex">SpaceX</span> <span class="ag ag-nasa">NASA</span></td><td>First crewed commercial spacecraft to reach ISS. Ended US dependence on Soyuz for crew transport.</td><td class="status-past">Complete</td></tr>
+      <tr><td class="yr">2021</td><td class="name">Inspiration4</td><td><span class="ag ag-spacex">SpaceX</span></td><td>First all-civilian crew. Jared Isaacman funded. Highest orbit for Dragon (590 km). 3-day mission.</td><td class="status-past">Complete</td></tr>
+      <tr><td class="yr">2021</td><td class="name">Blue Origin New Shepard</td><td><span class="ag ag-private">Blue Origin</span></td><td>Jeff Bezos reached space. First paying passenger (90-year-old Wally Funk). 20 flights total before 2022 failure, resumed 2024.</td><td class="status-active">Active</td></tr>
+      <tr><td class="yr">2023</td><td class="name">Starship IFT-1 → IFT-6</td><td><span class="ag ag-spacex">SpaceX</span></td><td>World's largest rocket (121m). Progressive test flights. IFT-5 (Oct 2024): booster caught by tower arms (mechazilla). IFT-6 (Jan 2025): ship splashed down successfully.</td><td class="status-active">Testing</td></tr>
+      <tr><td class="yr">2024</td><td class="name">Polaris Dawn</td><td><span class="ag ag-spacex">SpaceX</span></td><td>Highest Earth orbit since Apollo (1,408 km). First commercial spacewalk (Sarah Gillis, Anna Menon). Studied space radiation.</td><td class="status-past">Complete</td></tr>
+      <tr><td class="yr">2024</td><td class="name">New Glenn</td><td><span class="ag ag-private">Blue Origin</span></td><td>First orbital launch of New Glenn heavy-lift rocket. Successful orbit, booster ocean landing failed on first attempt.</td><td class="status-active">Active</td></tr>
+      <tr><td class="yr">2025+</td><td class="name">Starlink V2 / Gen3</td><td><span class="ag ag-spacex">SpaceX</span></td><td>4,000+ operational satellites (2026). Direct-to-cell service. ~$10B revenue/year. Largest satellite constellation ever by far.</td><td class="status-active">Active</td></tr>
+      <tr><td class="yr">2025+</td><td class="name">Rocket Lab Neutron</td><td><span class="ag ag-private">Rocket Lab</span></td><td>Medium-lift partially reusable rocket. 13-tonne LEO capacity. Targeting 2025–2026 debut to complement Electron.</td><td class="status-planned">Development</td></tr>
+      <tr><td class="yr">2025+</td><td class="name">ULA Vulcan Centaur</td><td><span class="ag ag-private">ULA</span></td><td>Replaced Atlas V. First flight Jan 2024 (Peregrine lunar lander). Will launch Dream Chaser spaceplane.</td><td class="status-active">Active</td></tr>
+    </table>
+
+    <!-- ============================================================ -->
+    <h2 id="future">9. Planned Missions 2025–2040s</h2>
+
+    <table class="mission-table">
+      <tr><th>Target Date</th><th>Mission</th><th>Agency</th><th>Goal</th></tr>
+      <tr><td class="yr">2025</td><td class="name">IMAP</td><td><span class="ag ag-nasa">NASA</span></td><td>Interstellar Mapping and Acceleration Probe — study heliopause and local interstellar medium.</td></tr>
+      <tr><td class="yr">2025</td><td class="name">Artemis II</td><td><span class="ag ag-nasa">NASA</span></td><td>First crewed Orion flight, lunar flyby with 4 astronauts.</td></tr>
+      <tr><td class="yr">2026</td><td class="name">Chang'e 7</td><td><span class="ag ag-cnsa">CNSA</span></td><td>South pole orbiter + lander + rover + mini-flying probe to search for water ice.</td></tr>
+      <tr><td class="yr">2026</td><td class="name">Lunar Flashlight (follow-on)</td><td><span class="ag ag-nasa">NASA</span></td><td>Map water ice deposits at lunar south pole for future ISRU (in-situ resource utilisation).</td></tr>
+      <tr><td class="yr">2026</td><td class="name">Mars Sample Return (ESO)</td><td><span class="ag ag-esa">ESA</span></td><td>Earth Return Orbiter departs — first leg of returning Perseverance samples.</td></tr>
+      <tr><td class="yr">2026+</td><td class="name">Artemis III</td><td><span class="ag ag-nasa">NASA</span></td><td>First crewed Moon landing since 1972. Starship HLS at south pole.</td></tr>
+      <tr><td class="yr">2027</td><td class="name">Roman Space Telescope</td><td><span class="ag ag-nasa">NASA</span></td><td>Dark energy, microlensing, direct exoplanet imaging tech demo.</td></tr>
+      <tr><td class="yr">2028</td><td class="name">Dragonfly</td><td><span class="ag ag-nasa">NASA</span></td><td>Rotorcraft lander to Titan. Chemistry of pre-life organics in hydrocarbon seas.</td></tr>
+      <tr><td class="yr">2028</td><td class="name">LUPEX (Lunar Polar Exploration)</td><td><span class="ag ag-jaxa">JAXA</span> <span class="ag ag-isro">ISRO</span></td><td>Joint rover mission to lunar south pole. Drill to confirm water ice quantity and accessibility.</td></tr>
+      <tr><td class="yr">2028</td><td class="name">Mars Ice Mapper</td><td><span class="ag ag-nasa">NASA</span> <span class="ag ag-esa">ESA</span> <span class="ag ag-jaxa">JAXA</span> <span class="ag ag-cnsa">CNSA</span></td><td>Map shallow ground ice to select human landing sites.</td></tr>
+      <tr><td class="yr">2030</td><td class="name">Europa Clipper (arrives)</td><td><span class="ag ag-nasa">NASA</span></td><td>49 Europa flybys, full habitability assessment of subsurface ocean.</td></tr>
+      <tr><td class="yr">2031</td><td class="name">JUICE (arrives)</td><td><span class="ag ag-esa">ESA</span></td><td>Jupiter system tour, then Ganymede orbit — first moon orbiter other than our own.</td></tr>
+      <tr><td class="yr">2032</td><td class="name">Uranus Orbiter &amp; Probe</td><td><span class="ag ag-nasa">NASA</span></td><td>Highest priority Planetary Science Decadal Survey 2023–2032. First dedicated Uranus mission. Atmospheric probe + orbiter.</td></tr>
+      <tr><td class="yr">2034</td><td class="name">LISA</td><td><span class="ag ag-esa">ESA</span></td><td>Space gravitational wave observatory. Three spacecraft in solar orbit, 2.5 million km baseline.</td></tr>
+      <tr><td class="yr">2035+</td><td class="name">Enceladus Orbilander</td><td><span class="ag ag-nasa">NASA</span></td><td>Proposed orbiter + lander for Saturn's moon Enceladus. Sample the plumes for biosignatures.</td></tr>
+      <tr><td class="yr">2035+</td><td class="name">Habitable Worlds Observatory</td><td><span class="ag ag-nasa">NASA</span></td><td>~6m UV/optical/IR; direct imaging of Earth twins around nearby stars.</td></tr>
+      <tr><td class="yr">2040s</td><td class="name">Human Mars Mission</td><td><span class="ag ag-nasa">NASA</span> <span class="ag ag-spacex">SpaceX</span></td><td>NASA's Moon-to-Mars roadmap targets humans at Mars by late 2030s. SpaceX Starship independent path targets earlier.</td></tr>
+    </table>
+
+    <!-- ============================================================ -->
+    <h2 id="agencies">10. Agency Profiles</h2>
+
+    <div class="defn"><strong>NASA — National Aeronautics and Space Administration</strong> (USA, est. 1958)<br>
+    Budget ~$25B/year (2026). Leads planetary science, human spaceflight (Artemis), and flagship telescopes. Partners extensively with ESA, JAXA, and commercial providers. Operates JPL (robotic missions), Johnson SC (human spaceflight), Goddard (satellites/telescopes).</div>
+
+    <div class="defn"><strong>ESA — European Space Agency</strong> (22 nations, est. 1975)<br>
+    Budget ~€7.8B/year. Ariane 6 launch vehicle after Ariane 5 retirement. Major missions: Rosetta (comet lander), Gaia (stellar mapping), Mars Express, JUICE, LISA. Strong science programme; partners with NASA on Hubble, JWST, Mars Sample Return.</div>
+
+    <div class="defn"><strong>Roscosmos</strong> (Russia, successor to Soviet space programme)<br>
+    Operated Soyuz crew vehicles to ISS until 2022 relations deteriorated. Launched Luna-25 (crashed 2023). Programme under strain due to sanctions and brain drain post-2022. Partnering with CNSA for joint lunar base programme (ILRS).</div>
+
+    <div class="defn"><strong>CNSA — China National Space Administration</strong> (est. 1993)<br>
+    Most rapidly expanding programme. Chang'e lunar series, Tianwen Mars mission, Tiangong space station, Beidou navigation system (35 satellites). Targeting crewed Moon landing by 2030. Planning ILRS (International Lunar Research Station) with Russia. BeiDou: global navigation rival to GPS.</div>
+
+    <div class="defn"><strong>ISRO — Indian Space Research Organisation</strong> (est. 1969)<br>
+    Budget ~$1.5B/year — extremely high value-per-dollar. Chandrayaan-3 landed at south pole 2023. Gaganyaan crewed mission planned 2025. Aditya-L1 solar observatory launched 2023. Commercial arm NewSpace India growing rapidly.</div>
+
+    <div class="defn"><strong>JAXA — Japan Aerospace Exploration Agency</strong> (est. 2003)<br>
+    Known for precision engineering. Hayabusa series (asteroid sample return), H3 rocket, Kibo module on ISS, SLIM precision Moon lander (2024 — landed at 55m from target). Partnering with NASA on Artemis Gateway.</div>
+
+    <div class="defn"><strong>SpaceX</strong> (USA, est. 2002, Elon Musk)<br>
+    Transformed launch economics. Falcon 9: 250+ flights, ~60% reuse rate, $67M per launch vs $450M for Atlas V. Starship: world's largest rocket ever, fully reusable, targets Mars colonisation. Starlink: 4,000+ operational satellites. Crew Dragon sole US crew vehicle for ISS as of 2026.</div>
+
+    <div class="defn"><strong>Blue Origin</strong> (USA, est. 2000, Jeff Bezos)<br>
+    New Shepard suborbital tourism. New Glenn heavy-lift rocket debuted 2024. Working on Blue Moon lunar lander for Artemis. Long-term goal: O'Neill-style space colonies and moving heavy industry off Earth.</div>
+
+  </article>
+</div>
+
+<script defer src="../assets/js/search-index.js"></script>
+<script defer src="../assets/js/search.js"></script>
+</body>
+</html>
