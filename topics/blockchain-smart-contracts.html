@@ -81,6 +81,51 @@
 
     <p>The EVM is a <strong>256-bit stack machine</strong>. Every integer operand is a 256-bit (32-byte) word. The architecture has five data regions:</p>
 
+    <p>Ethereum has two types of accounts. <strong>Externally Owned Accounts (EOAs)</strong> are controlled by private keys — wallets like MetaMask. They have a nonce (transaction counter) and an ETH balance, but no code and no storage. <strong>Contract accounts</strong> are controlled by their deployed bytecode. They have a nonce, a balance, a <code>codeHash</code> pointing to their bytecode, and a <code>storageRoot</code> — the root of a Merkle Patricia trie holding all their persistent state.</p>
+
+    <div class="viz-3d">
+      <div class="viz-title">EVM Account Model — EOA vs Contract Account</div>
+      <svg viewBox="0 0 600 200" style="width:100%;max-width:600px;display:block;margin:0 auto">
+        <defs>
+          <marker id="acct-arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L8,3 z" fill="#7c5cff"/>
+          </marker>
+          <marker id="acct-arrow2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L8,3 z" fill="#22d3ee"/>
+          </marker>
+        </defs>
+        <!-- EOA box -->
+        <rect x="20" y="20" width="240" height="160" rx="8" fill="#1a1d2e" stroke="#7c5cff" stroke-width="1.5"/>
+        <text x="140" y="44" text-anchor="middle" fill="#7c5cff" font-size="13" font-weight="bold" font-family="monospace">EOA (Externally Owned)</text>
+        <line x1="20" y1="52" x2="260" y2="52" stroke="#7c5cff" stroke-width="0.8" opacity="0.4"/>
+        <text x="36" y="74" fill="#94a3b8" font-size="11" font-family="monospace">nonce</text>
+        <text x="160" y="74" fill="#e2e8f0" font-size="11" font-family="monospace">tx count (replay protect)</text>
+        <text x="36" y="97" fill="#94a3b8" font-size="11" font-family="monospace">balance</text>
+        <text x="160" y="97" fill="#e2e8f0" font-size="11" font-family="monospace">ETH in wei</text>
+        <text x="36" y="120" fill="#94a3b8" font-size="11" font-family="monospace">codeHash</text>
+        <text x="160" y="120" fill="#64748b" font-size="11" font-family="monospace">∅ (empty)</text>
+        <text x="36" y="143" fill="#94a3b8" font-size="11" font-family="monospace">storageRoot</text>
+        <text x="160" y="143" fill="#64748b" font-size="11" font-family="monospace">∅ (empty)</text>
+        <text x="36" y="168" fill="#64748b" font-size="10" font-family="sans-serif" font-style="italic">controlled by private key</text>
+        <!-- Contract box -->
+        <rect x="340" y="20" width="240" height="160" rx="8" fill="#1a1d2e" stroke="#22d3ee" stroke-width="1.5"/>
+        <text x="460" y="44" text-anchor="middle" fill="#22d3ee" font-size="13" font-weight="bold" font-family="monospace">Contract Account</text>
+        <line x1="340" y1="52" x2="580" y2="52" stroke="#22d3ee" stroke-width="0.8" opacity="0.4"/>
+        <text x="356" y="74" fill="#94a3b8" font-size="11" font-family="monospace">nonce</text>
+        <text x="456" y="74" fill="#e2e8f0" font-size="11" font-family="monospace">contract create count</text>
+        <text x="356" y="97" fill="#94a3b8" font-size="11" font-family="monospace">balance</text>
+        <text x="456" y="97" fill="#e2e8f0" font-size="11" font-family="monospace">ETH in wei</text>
+        <text x="356" y="120" fill="#94a3b8" font-size="11" font-family="monospace">codeHash</text>
+        <text x="456" y="120" fill="#34d399" font-size="11" font-family="monospace">→ EVM bytecode</text>
+        <text x="356" y="143" fill="#94a3b8" font-size="11" font-family="monospace">storageRoot</text>
+        <text x="456" y="143" fill="#34d399" font-size="11" font-family="monospace">→ Patricia trie</text>
+        <text x="356" y="168" fill="#64748b" font-size="10" font-family="sans-serif" font-style="italic">controlled by bytecode logic</text>
+        <!-- divider label -->
+        <text x="300" y="105" text-anchor="middle" fill="#475569" font-size="11" font-family="sans-serif">vs</text>
+      </svg>
+      <div class="viz-caption">Both account types share the same four fields in the Ethereum state trie. EOAs have empty code and storage; contracts have both. A contract's <code>storageRoot</code> is the root of a Merkle Patricia trie mapping 256-bit slot keys to 256-bit values.</div>
+    </div>
+
     <div class="math-glossary">
       <div class="mg-title">EVM Memory Model</div>
       <dl>
@@ -288,6 +333,66 @@ contract Counter {
     <h2 id="erc20">4. A complete ERC-20 token</h2>
 
     <p>ERC-20 is Ethereum's token standard, defined in <a class="ext" href="https://eips.ethereum.org/EIPS/eip-20" target="_blank">EIP-20</a>. Every fungible token — USDC, DAI, UNI, LINK — implements this interface. The standard ensures any wallet or exchange can interact with any token without token-specific logic.</p>
+
+    <div class="viz-3d">
+      <div class="viz-title">ERC-20 Transfer Flow</div>
+      <svg viewBox="0 0 640 200" style="width:100%;max-width:640px;display:block;margin:0 auto">
+        <defs>
+          <marker id="erc20-arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L8,3 z" fill="#7c5cff"/>
+          </marker>
+          <marker id="erc20-arrow-g" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L8,3 z" fill="#34d399"/>
+          </marker>
+          <marker id="erc20-arrow-y" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L8,3 z" fill="#fbbf24"/>
+          </marker>
+        </defs>
+        <!-- Row 1: direct transfer path -->
+        <!-- Alice box -->
+        <rect x="10" y="20" width="90" height="44" rx="6" fill="#1a1d2e" stroke="#7c5cff" stroke-width="1.5"/>
+        <text x="55" y="38" text-anchor="middle" fill="#7c5cff" font-size="12" font-weight="bold" font-family="monospace">Alice</text>
+        <text x="55" y="54" text-anchor="middle" fill="#94a3b8" font-size="10" font-family="monospace">0xA1…</text>
+        <!-- arrow Alice -> contract -->
+        <line x1="100" y1="42" x2="228" y2="42" stroke="#7c5cff" stroke-width="1.5" marker-end="url(#erc20-arrow)"/>
+        <text x="164" y="36" text-anchor="middle" fill="#7c5cff" font-size="10" font-family="monospace">transfer(Bob, 100)</text>
+        <!-- ERC-20 contract box -->
+        <rect x="228" y="10" width="184" height="64" rx="6" fill="#1a1d2e" stroke="#22d3ee" stroke-width="1.5"/>
+        <text x="320" y="30" text-anchor="middle" fill="#22d3ee" font-size="12" font-weight="bold" font-family="monospace">ERC-20 Contract</text>
+        <text x="320" y="46" text-anchor="middle" fill="#94a3b8" font-size="10" font-family="monospace">balances[Alice] -= 100</text>
+        <text x="320" y="62" text-anchor="middle" fill="#94a3b8" font-size="10" font-family="monospace">balances[Bob]  += 100</text>
+        <!-- arrow contract -> event -->
+        <line x1="412" y1="42" x2="490" y2="42" stroke="#34d399" stroke-width="1.5" marker-end="url(#erc20-arrow-g)"/>
+        <text x="451" y="36" text-anchor="middle" fill="#34d399" font-size="10" font-family="monospace">Transfer event</text>
+        <!-- Bob box -->
+        <rect x="490" y="20" width="90" height="44" rx="6" fill="#1a1d2e" stroke="#34d399" stroke-width="1.5"/>
+        <text x="535" y="38" text-anchor="middle" fill="#34d399" font-size="12" font-weight="bold" font-family="monospace">Bob</text>
+        <text x="535" y="54" text-anchor="middle" fill="#94a3b8" font-size="10" font-family="monospace">0xB2…</text>
+        <!-- Row 2: approve / transferFrom path -->
+        <text x="10" y="102" fill="#fbbf24" font-size="10" font-family="sans-serif" font-weight="bold">approve / transferFrom path:</text>
+        <!-- Alice box row2 -->
+        <rect x="10" y="112" width="90" height="44" rx="6" fill="#1a1d2e" stroke="#7c5cff" stroke-width="1.2"/>
+        <text x="55" y="130" text-anchor="middle" fill="#7c5cff" font-size="12" font-weight="bold" font-family="monospace">Alice</text>
+        <text x="55" y="146" text-anchor="middle" fill="#94a3b8" font-size="10" font-family="monospace">owner</text>
+        <!-- arrow to contract -->
+        <line x1="100" y1="134" x2="228" y2="134" stroke="#fbbf24" stroke-width="1.5" marker-end="url(#erc20-arrow-y)"/>
+        <text x="164" y="128" text-anchor="middle" fill="#fbbf24" font-size="10" font-family="monospace">approve(Spender,amt)</text>
+        <!-- contract row2 -->
+        <rect x="228" y="104" width="184" height="52" rx="6" fill="#1a1d2e" stroke="#22d3ee" stroke-width="1.2"/>
+        <text x="320" y="124" text-anchor="middle" fill="#22d3ee" font-size="12" font-weight="bold" font-family="monospace">ERC-20 Contract</text>
+        <text x="320" y="142" text-anchor="middle" fill="#94a3b8" font-size="10" font-family="monospace">allowances[Alice][Spender]=amt</text>
+        <!-- arrow spender calls transferFrom -->
+        <line x1="490" y1="134" x2="413" y2="134" stroke="#fbbf24" stroke-width="1.5" marker-end="url(#erc20-arrow-y)"/>
+        <text x="451" y="128" text-anchor="middle" fill="#fbbf24" font-size="10" font-family="monospace">transferFrom(…)</text>
+        <!-- spender box -->
+        <rect x="490" y="112" width="90" height="44" rx="6" fill="#1a1d2e" stroke="#fbbf24" stroke-width="1.2"/>
+        <text x="535" y="130" text-anchor="middle" fill="#fbbf24" font-size="12" font-weight="bold" font-family="monospace">Spender</text>
+        <text x="535" y="146" text-anchor="middle" fill="#94a3b8" font-size="10" font-family="monospace">DEX / protocol</text>
+        <!-- label row 1 -->
+        <text x="320" y="192" text-anchor="middle" fill="#475569" font-size="10" font-family="sans-serif">Top path: direct transfer. Bottom path: approve then transferFrom (used by DEXes, lending protocols).</text>
+      </svg>
+      <div class="viz-caption">The <code>transfer()</code> path lets Alice send tokens directly. The <code>approve()</code> + <code>transferFrom()</code> path lets Alice authorise a smart contract (Spender) to pull tokens on her behalf — the mechanism behind every DEX trade and DeFi deposit.</div>
+    </div>
 
     <h3>The IERC20 interface</h3>
     <details class="algo-code">
@@ -625,6 +730,55 @@ contract Vault is ReentrancyGuard {
       <li><strong>Beacon Proxy</strong> — many proxy instances all point to a single "beacon" contract that holds the implementation address. One upgrade updates all instances simultaneously. Used for factory-deployed contracts (e.g., Uniswap v3 pools).</li>
     </ul>
 
+    <div class="viz-3d">
+      <div class="viz-title">Proxy Storage Layout &amp; EIP-1967 Fix</div>
+      <svg viewBox="0 0 620 220" style="width:100%;max-width:620px;display:block;margin:0 auto">
+        <defs>
+          <marker id="prx-arrow-r" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L8,3 z" fill="#ef4444"/>
+          </marker>
+          <marker id="prx-arrow-g" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L8,3 z" fill="#34d399"/>
+          </marker>
+        </defs>
+        <!-- COLUMN 1: Implementation contract -->
+        <text x="115" y="18" text-anchor="middle" fill="#94a3b8" font-size="11" font-family="sans-serif" font-weight="bold">Implementation</text>
+        <!-- slot rows -->
+        <rect x="10" y="24" width="210" height="28" rx="4" fill="#1a1d2e" stroke="#475569" stroke-width="1"/>
+        <text x="20" y="38" fill="#64748b" font-size="10" font-family="monospace">slot 0</text>
+        <text x="80" y="38" fill="#7c5cff" font-size="11" font-family="monospace">owner</text>
+        <text x="175" y="38" fill="#94a3b8" font-size="10" font-family="monospace">address</text>
+        <rect x="10" y="54" width="210" height="28" rx="4" fill="#1a1d2e" stroke="#475569" stroke-width="1"/>
+        <text x="20" y="68" fill="#64748b" font-size="10" font-family="monospace">slot 1</text>
+        <text x="80" y="68" fill="#7c5cff" font-size="11" font-family="monospace">balance</text>
+        <text x="175" y="68" fill="#94a3b8" font-size="10" font-family="monospace">uint256</text>
+        <rect x="10" y="84" width="210" height="28" rx="4" fill="#1a1d2e" stroke="#475569" stroke-width="1"/>
+        <text x="20" y="98" fill="#64748b" font-size="10" font-family="monospace">slot 2</text>
+        <text x="80" y="98" fill="#7c5cff" font-size="11" font-family="monospace">data</text>
+        <text x="175" y="98" fill="#94a3b8" font-size="10" font-family="monospace">bytes32</text>
+        <!-- COLUMN 2: Proxy (naive, clash) -->
+        <text x="380" y="18" text-anchor="middle" fill="#94a3b8" font-size="11" font-family="sans-serif" font-weight="bold">Proxy (naive — CLASH)</text>
+        <rect x="270" y="24" width="220" height="28" rx="4" fill="#2d1a1a" stroke="#ef4444" stroke-width="1.5"/>
+        <text x="280" y="38" fill="#64748b" font-size="10" font-family="monospace">slot 0</text>
+        <text x="340" y="38" fill="#ef4444" font-size="11" font-family="monospace">_implementation</text>
+        <text x="280" y="52" fill="#ef4444" font-size="9" font-family="sans-serif" font-style="italic">  ← overwrites impl's slot 0!</text>
+        <rect x="270" y="54" width="220" height="28" rx="4" fill="#2d1a1a" stroke="#ef4444" stroke-width="1"/>
+        <text x="280" y="68" fill="#64748b" font-size="10" font-family="monospace">slot 1</text>
+        <text x="340" y="68" fill="#ef4444" font-size="11" font-family="monospace">_admin</text>
+        <!-- clash arrow -->
+        <line x1="220" y1="38" x2="268" y2="38" stroke="#ef4444" stroke-width="2" stroke-dasharray="4,3" marker-end="url(#prx-arrow-r)"/>
+        <text x="244" y="33" text-anchor="middle" fill="#ef4444" font-size="9" font-family="sans-serif">CLASH</text>
+        <!-- EIP-1967 fix box -->
+        <rect x="10" y="128" width="590" height="76" rx="6" fill="#0f1d17" stroke="#34d399" stroke-width="1.5"/>
+        <text x="305" y="148" text-anchor="middle" fill="#34d399" font-size="12" font-weight="bold" font-family="sans-serif">EIP-1967 Fix — pseudo-random storage slot</text>
+        <text x="30" y="168" fill="#94a3b8" font-size="11" font-family="monospace">Implementation slot =</text>
+        <text x="195" y="168" fill="#22d3ee" font-size="11" font-family="monospace">keccak256("eip1967.proxy.implementation") - 1</text>
+        <text x="30" y="188" fill="#64748b" font-size="10" font-family="monospace">= 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc</text>
+        <text x="30" y="205" fill="#475569" font-size="10" font-family="sans-serif">Chosen specifically to avoid any Solidity sequential slot. Admin slot uses a different keccak256 seed.</text>
+      </svg>
+      <div class="viz-caption">A naive proxy stores <code>_implementation</code> in slot 0 — clashing with the implementation's slot 0 variable. EIP-1967 solves this by storing the implementation address at a pseudo-random slot derived from a keccak256 hash, which will never be assigned by the Solidity sequential slot allocator.</div>
+    </div>
+
     <!-- ========================================================== -->
     <h2 id="security">6. Security vulnerabilities</h2>
 
@@ -707,6 +861,154 @@ contract Attacker {
     </details>
 
     <p>The attacker's <code>receive()</code> fallback fires whenever the victim sends ETH. Because the victim hadn't zeroed the balance yet, the check <code>amount > 0</code> still passes on re-entry. The attack runs until the vault is empty or gas runs out.</p>
+
+    <div class="viz-3d">
+      <div class="viz-title">Reentrancy Attack — Call Stack Animation</div>
+      <svg id="re-svg" viewBox="0 0 580 280" style="width:100%;max-width:580px;display:block;margin:0 auto"></svg>
+      <div class="viz-caption" id="re-caption">Press Play to animate the reentrancy call stack.</div>
+      <div class="viz-controls">
+        <button id="re-play-btn" onclick="rePlay()">Play ▶</button>
+        <button onclick="reReset()">↺ Reset</button>
+      </div>
+    </div>
+    <script>
+    (function() {
+      const svg = document.getElementById('re-svg');
+      const cap = document.getElementById('re-caption');
+      const NS = 'http://www.w3.org/2000/svg';
+      const mk = (tag, attrs) => {
+        const el = document.createElementNS(NS, tag);
+        Object.entries(attrs).forEach(([k,v]) => el.setAttribute(k,v));
+        return el;
+      };
+
+      // Define arrowhead markers
+      const defs = mk('defs', {});
+      const mkMarker = (id, color) => {
+        const m = mk('marker', {id, markerWidth:'8', markerHeight:'8', refX:'6', refY:'3', orient:'auto'});
+        const p = mk('path', {d:'M0,0 L0,6 L8,3 z', fill:color});
+        m.appendChild(p); return m;
+      };
+      defs.appendChild(mkMarker('re-red', '#ef4444'));
+      defs.appendChild(mkMarker('re-gray', '#475569'));
+      svg.appendChild(defs);
+
+      const steps = [
+        {
+          label: '1. Attacker deposits 1 ETH into Victim contract',
+          boxes: [
+            {x:20,  y:20,  w:160, h:44, color:'#ef4444', title:'Attacker Contract', sub:'deposit{value:1 ether}()'},
+            {x:400, y:20,  w:160, h:44, color:'#22d3ee', title:'Victim Contract',   sub:'balances[Attacker]+=1 ETH'},
+          ],
+          arrows: [{x1:180,y1:42,x2:398,y2:42,color:'#ef4444',label:'deposit()'}],
+        },
+        {
+          label: '2. Attacker calls withdraw() — Victim sends ETH back before zeroing balance',
+          boxes: [
+            {x:20,  y:20,  w:160, h:44, color:'#ef4444', title:'Attacker Contract', sub:'attack() → withdraw()'},
+            {x:400, y:20,  w:160, h:44, color:'#22d3ee', title:'Victim Contract',   sub:'balance NOT zeroed yet!'},
+          ],
+          arrows: [{x1:180,y1:42,x2:398,y2:42,color:'#ef4444',label:'withdraw()'}],
+        },
+        {
+          label: '3. Victim sends ETH → triggers Attacker\'s receive() fallback',
+          boxes: [
+            {x:20,  y:20,  w:160, h:44, color:'#ef4444', title:'Attacker Contract', sub:'receive() triggered!'},
+            {x:400, y:20,  w:160, h:44, color:'#22d3ee', title:'Victim Contract',   sub:'call{value}("") ← here'},
+          ],
+          arrows: [{x1:398,y1:42,x2:182,y2:42,color:'#fbbf24',label:'ETH sent (call)'}],
+        },
+        {
+          label: '4. Fallback re-enters withdraw() — balance still non-zero!',
+          boxes: [
+            {x:20,  y:20,  w:160, h:44, color:'#ef4444', title:'Attacker Contract', sub:'receive() → withdraw()'},
+            {x:400, y:20,  w:160, h:44, color:'#22d3ee', title:'Victim Contract',   sub:'re-entry: amount>0 PASSES'},
+            {x:20,  y:100, w:160, h:44, color:'#ef4444', title:'Attacker (frame 2)', sub:'draining funds…'},
+            {x:400, y:100, w:160, h:44, color:'#22d3ee', title:'Victim (frame 2)',   sub:'still not zeroed'},
+          ],
+          arrows: [
+            {x1:180,y1:42,x2:398,y2:42,color:'#ef4444',label:'withdraw() again'},
+            {x1:398,y1:120,x2:182,y2:120,color:'#fbbf24',label:'ETH sent again'},
+          ],
+        },
+        {
+          label: '5. Recursive loop repeats until Victim is empty — only then balance zeroed',
+          boxes: [
+            {x:20,  y:20,  w:160, h:44, color:'#ef4444', title:'Attacker Contract', sub:'count++ until empty'},
+            {x:400, y:20,  w:160, h:44, color:'#22d3ee', title:'Victim Contract',   sub:'DRAINED'},
+            {x:20,  y:100, w:160, h:44, color:'#ef4444', title:'frame 2', sub:''},
+            {x:400, y:100, w:160, h:44, color:'#22d3ee', title:'frame 2', sub:''},
+            {x:20,  y:180, w:160, h:44, color:'#7c5cff', title:'FIX: zero balance FIRST', sub:'balances[msg.sender]=0'},
+            {x:400, y:180, w:160, h:44, color:'#34d399', title:'Then send ETH', sub:'re-entry blocked ✓'},
+          ],
+          arrows: [
+            {x1:180,y1:42,x2:398,y2:42,color:'#ef4444',label:'withdraw() #N'},
+            {x1:180,y1:120,x2:398,y2:120,color:'#475569',label:'(recursive)'},
+            {x1:180,y1:200,x2:398,y2:200,color:'#34d399',label:'safe order'},
+          ],
+        },
+      ];
+
+      let step = -1;
+      let timer = null;
+
+      function render(s) {
+        // clear svg content except defs
+        while (svg.children.length > 1) svg.removeChild(svg.lastChild);
+        const d = steps[s];
+        cap.textContent = d.label;
+        // draw boxes
+        d.boxes.forEach(b => {
+          const g = mk('g', {});
+          g.appendChild(mk('rect', {x:b.x, y:b.y, width:b.w, height:b.h, rx:'6', fill:'#1a1d2e', stroke:b.color, 'stroke-width':'1.8'}));
+          const t = mk('text', {x:b.x+b.w/2, y:b.y+17, 'text-anchor':'middle', fill:b.color, 'font-size':'11', 'font-weight':'bold', 'font-family':'monospace'});
+          t.textContent = b.title;
+          g.appendChild(t);
+          if (b.sub) {
+            const t2 = mk('text', {x:b.x+b.w/2, y:b.y+34, 'text-anchor':'middle', fill:'#94a3b8', 'font-size':'9.5', 'font-family':'monospace'});
+            t2.textContent = b.sub;
+            g.appendChild(t2);
+          }
+          svg.appendChild(g);
+        });
+        // draw arrows
+        d.arrows.forEach(a => {
+          const mid = (a.y1 !== undefined ? a.y1 : a.y2);
+          const markId = a.color === '#ef4444' ? 're-red' : a.color === '#34d399' ? 're-red' : 're-gray';
+          // pick correct marker
+          const mId = a.color === '#ef4444' ? 're-red' : (a.color === '#34d399' ? 're-red' : 're-gray');
+          // ensure marker exists for green
+          svg.appendChild(mk('line', {x1:a.x1,y1:a.y1,x2:a.x2,y2:a.y2, stroke:a.color, 'stroke-width':'2', 'marker-end':`url(#re-red)`}));
+          const lx = (a.x1+a.x2)/2, ly = a.y1 - 8;
+          const lt = mk('text', {x:lx, y:ly, 'text-anchor':'middle', fill:a.color, 'font-size':'10', 'font-family':'monospace'});
+          lt.textContent = a.label;
+          svg.appendChild(lt);
+        });
+      }
+
+      window.rePlay = function() {
+        if (timer) return;
+        step = 0;
+        render(step);
+        timer = setInterval(() => {
+          step++;
+          if (step >= steps.length) { clearInterval(timer); timer = null; return; }
+          render(step);
+        }, 1800);
+      };
+
+      window.reReset = function() {
+        if (timer) { clearInterval(timer); timer = null; }
+        step = -1;
+        while (svg.children.length > 1) svg.removeChild(svg.lastChild);
+        cap.textContent = 'Press Play to animate the reentrancy call stack.';
+      };
+
+      // initial blank state
+      const bg = mk('rect', {x:0,y:0,width:580,height:280,fill:'#0f1117',opacity:'0'});
+      svg.appendChild(bg);
+    })();
+    </script>
 
     <h3>Integer overflow / underflow</h3>
     <p>Before Solidity 0.8.0, arithmetic silently wrapped. A classic exploit: if a contract decremented a <code>uint256</code> past zero, you'd get $2^{256} - 1$ — an astronomically large number that could give you unlimited token balance.</p>

@@ -41,7 +41,7 @@
     <div class="meta-tags">
       <span>Prereq: basic number theory, modular arithmetic</span>
       <span>Time to read: ~35 min</span>
-      <span>Interactive figures: 1</span>
+      <span>Interactive figures: 2</span>
     </div>
 
     <!-- ========================================================== -->
@@ -274,6 +274,115 @@
       <p style="margin:6px 0">The Merkle root is cryptographically bound to all transactions in the block. If an attacker modifies even one byte of any transaction, every hash on the path from that leaf to the root changes — and the root no longer matches the block header that miners have committed to via proof-of-work.</p>
     </div>
 
+    <div class="viz-3d" id="merkle-interactive" style="padding:16px;">
+  <p style="font-family:monospace;font-size:11px;color:var(--text-dim);margin:0 0 8px;">Click any transaction leaf to see its Merkle proof path.</p>
+  <svg id="merkle-proof-svg" viewBox="0 0 560 260" width="100%" style="display:block;cursor:pointer;"></svg>
+  <p id="merkle-proof-text" style="font-family:monospace;font-size:11px;color:var(--text-dim);margin:8px 0 0;min-height:2em;"></p>
+</div>
+<script>
+(function(){
+  const svg = document.getElementById('merkle-proof-svg');
+  const info = document.getElementById('merkle-proof-text');
+  if (!svg) return;
+  const NS = 'http://www.w3.org/2000/svg';
+
+  // Node positions: [x, y, label, shortHash]
+  const nodes = {
+    root: { x:280, y:20,  label:'Root',   h:'H(AB|CD)', id:'root' },
+    ab:   { x:140, y:90,  label:'H(AB)',  h:'H(tx0|tx1)', id:'hab' },
+    cd:   { x:420, y:90,  label:'H(CD)',  h:'H(tx2|tx3)', id:'hcd' },
+    tx0:  { x:70,  y:170, label:'H(tx0)', h:'tx 0', id:'tx0', leaf:0 },
+    tx1:  { x:210, y:170, label:'H(tx1)', h:'tx 1', id:'tx1', leaf:1 },
+    tx2:  { x:350, y:170, label:'H(tx2)', h:'tx 2', id:'tx2', leaf:2 },
+    tx3:  { x:490, y:170, label:'H(tx3)', h:'tx 3', id:'tx3', leaf:3 },
+  };
+
+  // Proof paths: for each leaf, which nodes are proof elements (siblings)
+  const proofs = [
+    { target:'tx0', siblings:['tx1','cd'], path:['tx0','hab','root'] },
+    { target:'tx1', siblings:['tx0','cd'], path:['tx1','hab','root'] },
+    { target:'tx2', siblings:['tx3','ab'], path:['tx2','hcd','root'] },
+    { target:'tx3', siblings:['tx2','ab'], path:['tx3','hcd','root'] },
+  ];
+
+  function mk(t,a){ const e=document.createElementNS(NS,t); for(const[k,v] of Object.entries(a)) e.setAttribute(k,v); return e; }
+
+  function draw(selectedLeaf) {
+    svg.innerHTML = '';
+    svg.appendChild(mk('rect',{x:0,y:0,width:560,height:260,fill:'#0b0d12',rx:8}));
+
+    const proof = selectedLeaf !== null ? proofs[selectedLeaf] : null;
+    const proofSet = proof ? new Set(proof.path) : new Set();
+    const sibSet  = proof ? new Set(proof.siblings) : new Set();
+
+    // Edges
+    const edges = [
+      ['root','ab'],['root','cd'],
+      ['ab','tx0'],['ab','tx1'],
+      ['cd','tx2'],['cd','tx3'],
+    ];
+    edges.forEach(([a,b]) => {
+      const A = Object.values(nodes).find(n=>n.id===a);
+      const B = Object.values(nodes).find(n=>n.id===b);
+      const inPath = proof && proofSet.has(a) && proofSet.has(b);
+      svg.appendChild(mk('line',{
+        x1:A.x, y1:A.y+18, x2:B.x, y2:B.y-18,
+        stroke: inPath ? '#34d399' : '#2a3044',
+        'stroke-width': inPath ? 2.5 : 1.2,
+      }));
+    });
+
+    // Nodes
+    Object.values(nodes).forEach(n => {
+      const isTarget = proof && n.id === proof.target;
+      const inPath   = proofSet.has(n.id);
+      const isSib    = sibSet.has(n.id);
+      const fill  = isTarget ? '#1a3320' : inPath ? '#1a2830' : isSib ? '#2a2010' : '#151924';
+      const stroke= isTarget ? '#34d399' : inPath ? '#22d3ee' : isSib ? '#fbbf24' : '#3a4055';
+      const w = 100, h = 36;
+      const rx = n.y > 100 ? 20 : 6; // pill for leaves
+      svg.appendChild(mk('rect',{x:n.x-w/2, y:n.y-h/2, width:w, height:h, rx, fill, stroke, 'stroke-width':inPath||isTarget?2:1}));
+      const lbl = mk('text',{x:n.x, y:n.y-4, 'text-anchor':'middle', 'font-family':'monospace', 'font-size':'10', fill: isTarget?'#34d399': inPath?'#22d3ee': isSib?'#fbbf24':'#8090a8'});
+      lbl.textContent = n.label;
+      svg.appendChild(lbl);
+      const sub = mk('text',{x:n.x, y:n.y+10, 'text-anchor':'middle', 'font-family':'monospace', 'font-size':'8', fill:'#505870'});
+      sub.textContent = n.h;
+      svg.appendChild(sub);
+      // click target for leaves
+      if(n.leaf !== undefined) {
+        const hit = mk('rect',{x:n.x-w/2, y:n.y-h/2, width:w, height:h, rx, fill:'transparent', cursor:'pointer'});
+        hit.addEventListener('click',()=>draw(n.leaf));
+        svg.appendChild(hit);
+      }
+    });
+
+    // Legend
+    svg.appendChild(mk('rect',{x:4,y:220,width:550,height:34,rx:4,fill:'#0d1018'}));
+    const legendItems = [
+      {color:'#34d399', label:'target tx'},
+      {color:'#22d3ee', label:'path nodes'},
+      {color:'#fbbf24', label:'proof siblings'},
+      {color:'#3a4055', label:'not needed'},
+    ];
+    legendItems.forEach((item, i) => {
+      const ox = 20 + i * 130;
+      svg.appendChild(mk('rect',{x:ox,y:230,width:10,height:10,rx:2,fill:item.color}));
+      const t = mk('text',{x:ox+14,y:239,'font-family':'monospace','font-size':'9',fill:'#8090a8'});
+      t.textContent = item.label;
+      svg.appendChild(t);
+    });
+
+    if (proof) {
+      info.textContent = `Proof for tx${selectedLeaf}: provide siblings [${proof.siblings.join(', ')}] + root. Verifier hashes up the path and checks it equals the root.`;
+    } else {
+      info.textContent = 'Click a leaf (tx 0–3) to highlight its proof path and the required sibling hashes.';
+    }
+  }
+
+  draw(null);
+})();
+</script>
+
     <!-- ========================================================== -->
     <h2 id="ecdsa">4. Public-key cryptography (ECDSA)</h2>
 
@@ -308,6 +417,48 @@
       <div class="label">ONE-WAY FUNCTION: ECDLP</div>
       <p style="margin:6px 0">Computing $Q = d \cdot G$ is fast (double-and-add algorithm, $O(\log d)$ point additions). But recovering $d$ from $Q$ — the <strong>Elliptic Curve Discrete Logarithm Problem</strong> (ECDLP) — has no known polynomial-time algorithm on classical computers. The best known attack (Pollard's rho) requires $O(\sqrt{n}) \approx 2^{128}$ operations. This asymmetry is the entire basis of elliptic curve cryptography.</p>
     </div>
+
+    <div class="viz-3d" style="padding:16px;">
+  <svg viewBox="0 0 660 110" width="100%" style="display:block;">
+    <rect width="660" height="110" fill="#0b0d12" rx="8"/>
+    <!-- Step boxes -->
+    <!-- Box 1: Random private key -->
+    <rect x="10" y="30" width="130" height="50" rx="6" fill="#1a1f2e" stroke="#7c5cff" stroke-width="1.5"/>
+    <text x="75" y="50" text-anchor="middle" font-family="monospace" font-size="10" fill="#7c5cff">Private Key k</text>
+    <text x="75" y="65" text-anchor="middle" font-family="monospace" font-size="9" fill="#a0a8c0">256 random bits</text>
+    <text x="75" y="78" text-anchor="middle" font-family="monospace" font-size="8" fill="#505870">e.g. 0x3a7f...</text>
+    <!-- Arrow -->
+    <line x1="140" y1="55" x2="165" y2="55" stroke="#7c5cff" stroke-width="1.5" marker-end="url(#arr1)"/>
+    <defs><marker id="arr1" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="#7c5cff"/></marker></defs>
+    <text x="152" y="48" text-anchor="middle" font-family="monospace" font-size="8" fill="#505870">×G</text>
+    <!-- Box 2: Public key -->
+    <rect x="168" y="30" width="130" height="50" rx="6" fill="#1a1f2e" stroke="#22d3ee" stroke-width="1.5"/>
+    <text x="233" y="50" text-anchor="middle" font-family="monospace" font-size="10" fill="#22d3ee">Public Key K</text>
+    <text x="233" y="65" text-anchor="middle" font-family="monospace" font-size="9" fill="#a0a8c0">K = k·G (point)</text>
+    <text x="233" y="78" text-anchor="middle" font-family="monospace" font-size="8" fill="#505870">64 bytes (x,y)</text>
+    <!-- Arrow -->
+    <line x1="298" y1="55" x2="323" y2="55" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arr2)"/>
+    <defs><marker id="arr2" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="#22d3ee"/></marker></defs>
+    <text x="310" y="48" text-anchor="middle" font-family="monospace" font-size="8" fill="#505870">Keccak256</text>
+    <!-- Box 3: Hash -->
+    <rect x="326" y="30" width="130" height="50" rx="6" fill="#1a1f2e" stroke="#34d399" stroke-width="1.5"/>
+    <text x="391" y="50" text-anchor="middle" font-family="monospace" font-size="10" fill="#34d399">Hash h</text>
+    <text x="391" y="65" text-anchor="middle" font-family="monospace" font-size="9" fill="#a0a8c0">Keccak256(K)</text>
+    <text x="391" y="78" text-anchor="middle" font-family="monospace" font-size="8" fill="#505870">32 bytes</text>
+    <!-- Arrow -->
+    <line x1="456" y1="55" x2="481" y2="55" stroke="#34d399" stroke-width="1.5" marker-end="url(#arr3)"/>
+    <defs><marker id="arr3" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="#34d399"/></marker></defs>
+    <text x="468" y="48" text-anchor="middle" font-family="monospace" font-size="8" fill="#505870">last 20B</text>
+    <!-- Box 4: Address -->
+    <rect x="484" y="30" width="168" height="50" rx="6" fill="#1a1f2e" stroke="#fbbf24" stroke-width="1.5"/>
+    <text x="568" y="50" text-anchor="middle" font-family="monospace" font-size="10" fill="#fbbf24">Ethereum Address</text>
+    <text x="568" y="65" text-anchor="middle" font-family="monospace" font-size="9" fill="#a0a8c0">0x + last 20 bytes</text>
+    <text x="568" y="78" text-anchor="middle" font-family="monospace" font-size="8" fill="#505870">0x71C7656EC7…</text>
+    <!-- one-way labels -->
+    <text x="330" y="100" text-anchor="middle" font-family="monospace" font-size="9" fill="#f87171">← one-way: cannot reverse any step →</text>
+  </svg>
+  <p style="font-family:monospace;font-size:11px;color:var(--text-dim);margin:6px 0 0;">Key derivation is a one-way pipeline: multiply private key by the curve generator G to get the public key, hash the public key, take the last 20 bytes as the address.</p>
+</div>
 
     <h3>ECDSA signing</h3>
 
@@ -348,6 +499,50 @@ P &= s^{-1}(z + rd) \cdot G \\
 \end{aligned}$$</div>
 
     <p>So $P_x = R_x = r$, which is exactly the check. The verification is a proof that whoever produced the signature knew $d$ (without revealing it), because only knowing $d$ allows computing an $s$ that causes $P_x = r$.</p>
+
+    <div class="viz-3d" style="padding:16px;">
+  <svg viewBox="0 0 660 200" width="100%" style="display:block;">
+    <rect width="660" height="200" fill="#0b0d12" rx="8"/>
+    <defs>
+      <marker id="sa1" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="#7c5cff"/></marker>
+      <marker id="sa2" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="#22d3ee"/></marker>
+    </defs>
+    <!-- SIGNING column (left) -->
+    <text x="165" y="22" text-anchor="middle" font-family="monospace" font-size="12" fill="#7c5cff" font-weight="bold">SIGNING (Alice)</text>
+    <rect x="20" y="30" width="130" height="36" rx="5" fill="#1a1f2e" stroke="#7c5cff" stroke-width="1.2"/>
+    <text x="85" y="48" text-anchor="middle" font-family="monospace" font-size="10" fill="#e0e4f0">message m</text>
+    <text x="85" y="60" text-anchor="middle" font-family="monospace" font-size="9" fill="#7c5cff">hash z = H(m)</text>
+    <line x1="85" y1="66" x2="85" y2="82" stroke="#7c5cff" stroke-width="1.2" marker-end="url(#sa1)"/>
+    <rect x="20" y="84" width="130" height="36" rx="5" fill="#1a1f2e" stroke="#7c5cff" stroke-width="1.2"/>
+    <text x="85" y="98" text-anchor="middle" font-family="monospace" font-size="10" fill="#e0e4f0">random nonce k</text>
+    <text x="85" y="112" text-anchor="middle" font-family="monospace" font-size="9" fill="#7c5cff">R = k·G → r = Rₓ</text>
+    <line x1="85" y1="120" x2="85" y2="136" stroke="#7c5cff" stroke-width="1.2" marker-end="url(#sa1)"/>
+    <rect x="20" y="138" width="130" height="36" rx="5" fill="#1a1f2e" stroke="#7c5cff" stroke-width="1.2"/>
+    <text x="85" y="152" text-anchor="middle" font-family="monospace" font-size="10" fill="#e0e4f0">s = k⁻¹(z + r·d)</text>
+    <text x="85" y="166" text-anchor="middle" font-family="monospace" font-size="9" fill="#7c5cff">signature: (r, s)</text>
+    <!-- Middle: send over network -->
+    <rect x="230" y="80" width="200" height="50" rx="6" fill="#111827" stroke="#374151" stroke-width="1" stroke-dasharray="4 3"/>
+    <text x="330" y="100" text-anchor="middle" font-family="monospace" font-size="10" fill="#6b7280">send message m</text>
+    <text x="330" y="115" text-anchor="middle" font-family="monospace" font-size="10" fill="#6b7280">+ signature (r, s)</text>
+    <text x="330" y="130" text-anchor="middle" font-family="monospace" font-size="9" fill="#374151">public channel</text>
+    <line x1="150" y1="156" x2="228" y2="105" stroke="#555" stroke-width="1" stroke-dasharray="3 2"/>
+    <line x1="432" y1="105" x2="510" y2="156" stroke="#555" stroke-width="1" stroke-dasharray="3 2"/>
+    <!-- VERIFICATION column (right) -->
+    <text x="575" y="22" text-anchor="middle" font-family="monospace" font-size="12" fill="#22d3ee" font-weight="bold">VERIFICATION (Bob)</text>
+    <rect x="510" y="30" width="140" height="36" rx="5" fill="#1a1f2e" stroke="#22d3ee" stroke-width="1.2"/>
+    <text x="580" y="48" text-anchor="middle" font-family="monospace" font-size="10" fill="#e0e4f0">has: m, (r,s), Q</text>
+    <text x="580" y="60" text-anchor="middle" font-family="monospace" font-size="9" fill="#22d3ee">z = H(m)</text>
+    <line x1="580" y1="66" x2="580" y2="82" stroke="#22d3ee" stroke-width="1.2" marker-end="url(#sa2)"/>
+    <rect x="510" y="84" width="140" height="36" rx="5" fill="#1a1f2e" stroke="#22d3ee" stroke-width="1.2"/>
+    <text x="580" y="98" text-anchor="middle" font-family="monospace" font-size="10" fill="#e0e4f0">u₁=s⁻¹z, u₂=s⁻¹r</text>
+    <text x="580" y="112" text-anchor="middle" font-family="monospace" font-size="9" fill="#22d3ee">P = u₁G + u₂Q</text>
+    <line x1="580" y1="120" x2="580" y2="136" stroke="#22d3ee" stroke-width="1.2" marker-end="url(#sa2)"/>
+    <rect x="510" y="138" width="140" height="36" rx="5" fill="#1a1f2e" stroke="#34d399" stroke-width="1.2"/>
+    <text x="580" y="152" text-anchor="middle" font-family="monospace" font-size="10" fill="#34d399">✓ valid if Pₓ ≡ r</text>
+    <text x="580" y="166" text-anchor="middle" font-family="monospace" font-size="9" fill="#22d3ee">(mod n)</text>
+  </svg>
+  <p style="font-family:monospace;font-size:11px;color:var(--text-dim);margin:6px 0 0;">Signing uses the private key d; verification uses only the public key Q. The nonce k must be unique per signature — reusing k reveals d.</p>
+</div>
 
     <!-- ========================================================== -->
     <h2 id="wallets">5. Wallets and addresses</h2>
@@ -424,6 +619,49 @@ P &= s^{-1}(z + rd) \cdot G \\
     <p>The Bitcoin Script stack machine concatenates <code>scriptSig</code> and <code>scriptPubKey</code> and executes them. <code>OP_CHECKSIG</code> pops a signature and public key, hashes the current transaction (with the output being spent), and verifies the ECDSA signature. If it returns 1, the UTXO is validly spent.</p>
 
     <p>The transaction hash that is signed (<code>SIGHASH_ALL</code> mode) covers: version, inputs (prev txid + index + sequence), outputs (value + script), and locktime. Crucially it does <em>not</em> include the <code>scriptSig</code> being constructed — otherwise the signature would need to sign itself.</p>
+
+    <div class="viz-3d" style="padding:16px;">
+  <svg viewBox="0 0 640 200" width="100%" style="display:block;">
+    <rect width="640" height="200" fill="#0b0d12" rx="8"/>
+    <defs>
+      <marker id="utxo-arr" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="#22d3ee"/></marker>
+    </defs>
+    <!-- Previous UTXOs (inputs) -->
+    <text x="110" y="18" text-anchor="middle" font-family="monospace" font-size="10" fill="#a0a8c0">INPUTS (UTXOs being spent)</text>
+    <rect x="10" y="26" width="200" height="44" rx="5" fill="#1a1f2e" stroke="#7c5cff" stroke-width="1.2"/>
+    <text x="110" y="42" text-anchor="middle" font-family="monospace" font-size="9" fill="#7c5cff">UTXO #1 — 0.5 BTC</text>
+    <text x="110" y="57" text-anchor="middle" font-family="monospace" font-size="8" fill="#505870">scriptSig: &lt;sig&gt;&lt;pubKey&gt;</text>
+    <text x="110" y="68" text-anchor="middle" font-family="monospace" font-size="8" fill="#505870">← unlocks prev output</text>
+    <rect x="10" y="80" width="200" height="44" rx="5" fill="#1a1f2e" stroke="#7c5cff" stroke-width="1.2"/>
+    <text x="110" y="96" text-anchor="middle" font-family="monospace" font-size="9" fill="#7c5cff">UTXO #2 — 0.3 BTC</text>
+    <text x="110" y="111" text-anchor="middle" font-family="monospace" font-size="8" fill="#505870">scriptSig: &lt;sig&gt;&lt;pubKey&gt;</text>
+    <text x="110" y="122" text-anchor="middle" font-family="monospace" font-size="8" fill="#505870">← unlocks prev output</text>
+    <!-- arrows -->
+    <line x1="210" y1="48" x2="278" y2="80" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#utxo-arr)"/>
+    <line x1="210" y1="102" x2="278" y2="95" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#utxo-arr)"/>
+    <!-- Transaction box -->
+    <rect x="280" y="60" width="100" height="60" rx="6" fill="#111827" stroke="#374151" stroke-width="1.5"/>
+    <text x="330" y="82" text-anchor="middle" font-family="monospace" font-size="10" fill="#e0e4f0">TX</text>
+    <text x="330" y="96" text-anchor="middle" font-family="monospace" font-size="8" fill="#6b7280">version, locktime</text>
+    <text x="330" y="108" text-anchor="middle" font-family="monospace" font-size="9" fill="#fbbf24">fee: 0.01 BTC</text>
+    <!-- New outputs -->
+    <line x1="380" y1="80" x2="438" y2="50" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#utxo-arr)"/>
+    <line x1="380" y1="100" x2="438" y2="120" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#utxo-arr)"/>
+    <text x="530" y="18" text-anchor="middle" font-family="monospace" font-size="10" fill="#a0a8c0">OUTPUTS (new UTXOs)</text>
+    <rect x="440" y="26" width="190" height="44" rx="5" fill="#1a1f2e" stroke="#34d399" stroke-width="1.2"/>
+    <text x="535" y="42" text-anchor="middle" font-family="monospace" font-size="9" fill="#34d399">Output #1 — 0.7 BTC</text>
+    <text x="535" y="57" text-anchor="middle" font-family="monospace" font-size="8" fill="#505870">scriptPubKey: OP_DUP OP_HASH160</text>
+    <text x="535" y="68" text-anchor="middle" font-family="monospace" font-size="8" fill="#505870">&lt;pubKeyHash&gt; (Bob)</text>
+    <rect x="440" y="80" width="190" height="44" rx="5" fill="#1a1f2e" stroke="#34d399" stroke-width="1.2"/>
+    <text x="535" y="96" text-anchor="middle" font-family="monospace" font-size="9" fill="#34d399">Output #2 — 0.09 BTC</text>
+    <text x="535" y="111" text-anchor="middle" font-family="monospace" font-size="8" fill="#505870">scriptPubKey: OP_DUP OP_HASH160</text>
+    <text x="535" y="122" text-anchor="middle" font-family="monospace" font-size="8" fill="#505870">&lt;pubKeyHash&gt; (Alice, change)</text>
+    <!-- Conservation equation -->
+    <text x="320" y="155" text-anchor="middle" font-family="monospace" font-size="10" fill="#a0a8c0">Σ inputs = Σ outputs + fee</text>
+    <text x="320" y="170" text-anchor="middle" font-family="monospace" font-size="10" fill="#fbbf24">0.5 + 0.3 = 0.7 + 0.09 + 0.01  ✓</text>
+    <text x="320" y="186" text-anchor="middle" font-family="monospace" font-size="9" fill="#505870">UTXOs are fully consumed — no partial spend allowed</text>
+  </svg>
+</div>
 
     <h3>Ethereum account model</h3>
 

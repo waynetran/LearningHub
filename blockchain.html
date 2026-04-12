@@ -66,7 +66,7 @@
 <!-- ============================================================ -->
 <div class="hero">
   <div class="hero-inner">
-    <span class="chip">UPDATED Apr 11 2026 18:45</span>
+    <span class="chip">UPDATED Apr 11 2026 19:30</span>
     <h1>Blockchain — Distributed Ledgers, Consensus, and Programmable Money</h1>
     <p class="lede">A pragmatic tour of blockchain technology: what the cryptographic primitives actually are, how distributed consensus works without a trusted centre, what smart contracts can and cannot do, and where DeFi, ZK proofs, and layer-2 scaling fit into the picture. Hover any <span class="term" data-label="Term" data-def="Words with a dotted underline carry hover definitions. Try one throughout the page.">dotted term</span> for a definition. Poke at the interactive figures. Each section is self-contained — skip what you know.</p>
   </div>
@@ -186,6 +186,109 @@
         <p>A blockchain is a <span class="term" data-label="Distributed ledger" data-def="A database replicated across many nodes with no single owner. Each participant holds a copy and must agree on its contents through a consensus protocol.">distributed ledger</span> — a database that is replicated across thousands of independent computers with no single owner. What makes it different from earlier replicated databases is the combination of two ideas: <span class="term" data-label="Byzantine fault tolerance" data-def="The ability of a distributed system to reach agreement even when some participants behave arbitrarily or maliciously — named after the Byzantine Generals Problem formalized by Lamport, Shostak, and Pease (1982).">Byzantine fault tolerance</span> and economic incentives. The first guarantees that the network can still converge on a single version of truth even when some participants lie or crash. The second makes it expensive to attack. Neither idea is new on its own; the achievement of Bitcoin in 2008 was to combine them with cryptographic hash functions in a way that requires no registration, no identity verification, and no trusted authority to bootstrap.</p>
 
         <p>The core data structure is simple: each block contains a batch of transactions plus the hash of the previous block. Because each hash is a short fingerprint of the previous block's contents, altering any past block would change its hash, which would invalidate the next block's hash, which would cascade forward. Replacing history therefore requires recomputing all subsequent blocks faster than the honest network builds new ones — an impractical task once the chain is long enough. This is <span class="term" data-label="Immutability" data-def="The property that recorded data is computationally infeasible to alter retroactively. In blockchain, ensured by the chained-hash structure and the cost of redoing proof-of-work or slashing validators.">immutability</span> by design, not by policy.</p>
+
+        <!-- Block Structure diagram -->
+        <div class="viz-3d">
+          <svg width="660" height="240" viewBox="0 0 660 240" xmlns="http://www.w3.org/2000/svg" aria-label="Block structure diagram showing block header and body fields, and a chain of three blocks">
+            <defs>
+              <marker id="blk-arr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                <path d="M0,0 L8,3 L0,6 Z" fill="#7c5cff"/>
+              </marker>
+            </defs>
+            <rect width="660" height="240" fill="#0a0d12" rx="8"/>
+
+            <!-- ── Single block anatomy (left) ── -->
+            <text x="16" y="22" fill="#8a93a6" font-family="monospace" font-size="10" text-anchor="start" letter-spacing="0.06em">BLOCK ANATOMY</text>
+
+            <!-- Outer block border -->
+            <rect x="16" y="30" width="196" height="194" rx="6" fill="none" stroke="#7c5cff" stroke-width="1.5"/>
+
+            <!-- Header region -->
+            <rect x="16" y="30" width="196" height="116" rx="6" fill="rgba(124,92,255,0.07)" stroke="none"/>
+            <text x="114" y="48" fill="#7c5cff" font-family="monospace" font-size="10" text-anchor="middle" letter-spacing="0.07em">BLOCK HEADER</text>
+            <!-- Header fields -->
+            <rect x="26" y="54" width="176" height="18" rx="3" fill="#111827" stroke="#2a3548" stroke-width="1"/>
+            <text x="34" y="67" fill="#8a93a6" font-family="monospace" font-size="9">previousHash</text>
+            <text x="196" y="67" fill="#22d3ee" font-family="monospace" font-size="9" text-anchor="end">0x3a7f…d4c1</text>
+
+            <rect x="26" y="76" width="176" height="18" rx="3" fill="#111827" stroke="#2a3548" stroke-width="1"/>
+            <text x="34" y="89" fill="#8a93a6" font-family="monospace" font-size="9">merkleRoot</text>
+            <text x="196" y="89" fill="#34d399" font-family="monospace" font-size="9" text-anchor="end">0xb91e…22f0</text>
+
+            <rect x="26" y="98" width="176" height="18" rx="3" fill="#111827" stroke="#2a3548" stroke-width="1"/>
+            <text x="34" y="111" fill="#8a93a6" font-family="monospace" font-size="9">timestamp</text>
+            <text x="196" y="111" fill="#e2e8f0" font-family="monospace" font-size="9" text-anchor="end">1712851200</text>
+
+            <rect x="26" y="120" width="84" height="18" rx="3" fill="#111827" stroke="#2a3548" stroke-width="1"/>
+            <text x="34" y="133" fill="#8a93a6" font-family="monospace" font-size="9">nonce</text>
+            <text x="106" y="133" fill="#fbbf24" font-family="monospace" font-size="9" text-anchor="end">3291468</text>
+
+            <rect x="118" y="120" width="84" height="18" rx="3" fill="#111827" stroke="#2a3548" stroke-width="1"/>
+            <text x="126" y="133" fill="#8a93a6" font-family="monospace" font-size="9">bits</text>
+            <text x="198" y="133" fill="#fbbf24" font-family="monospace" font-size="9" text-anchor="end">1d00ffff</text>
+
+            <!-- Divider -->
+            <line x1="26" y1="148" x2="202" y2="148" stroke="#2a3548" stroke-width="1" stroke-dasharray="4 3"/>
+
+            <!-- Body region -->
+            <text x="114" y="163" fill="#34d399" font-family="monospace" font-size="10" text-anchor="middle" letter-spacing="0.07em">BLOCK BODY</text>
+            <rect x="26" y="169" width="50" height="16" rx="3" fill="rgba(52,211,153,0.1)" stroke="#34d399" stroke-width="1"/>
+            <text x="51" y="181" fill="#34d399" font-family="monospace" font-size="9" text-anchor="middle">Tx 1</text>
+            <rect x="82" y="169" width="50" height="16" rx="3" fill="rgba(52,211,153,0.1)" stroke="#34d399" stroke-width="1"/>
+            <text x="107" y="181" fill="#34d399" font-family="monospace" font-size="9" text-anchor="middle">Tx 2</text>
+            <rect x="138" y="169" width="50" height="16" rx="3" fill="rgba(52,211,153,0.1)" stroke="#34d399" stroke-width="1"/>
+            <text x="163" y="181" fill="#34d399" font-family="monospace" font-size="9" text-anchor="middle">Tx 3</text>
+            <text x="114" y="210" fill="#8a93a6" font-family="monospace" font-size="9" text-anchor="middle">… up to ~2000 txs …</text>
+
+            <!-- ── Chain of three blocks (right) ── -->
+            <text x="244" y="22" fill="#8a93a6" font-family="monospace" font-size="10" letter-spacing="0.06em">CHAIN STRUCTURE — previousHash LINKS EACH BLOCK TO ITS PARENT</text>
+
+            <!-- Block N-1 -->
+            <rect x="244" y="60" width="120" height="120" rx="6" fill="#0d1520" stroke="#384050" stroke-width="1.5"/>
+            <rect x="244" y="60" width="120" height="32" rx="6" fill="rgba(124,92,255,0.1)" stroke="none"/>
+            <text x="304" y="81" fill="#7c5cff" font-family="monospace" font-size="10" text-anchor="middle">Block N−1</text>
+            <text x="254" y="107" fill="#8a93a6" font-family="monospace" font-size="8">prevHash:</text>
+            <text x="358" y="107" fill="#22d3ee" font-family="monospace" font-size="8" text-anchor="end">0x1a2b…</text>
+            <text x="254" y="121" fill="#8a93a6" font-family="monospace" font-size="8">hash(self):</text>
+            <text x="358" y="121" fill="#fbbf24" font-family="monospace" font-size="8" text-anchor="end">0x3a7f…</text>
+            <text x="254" y="138" fill="#8a93a6" font-family="monospace" font-size="8">nonce:</text>
+            <text x="358" y="138" fill="#e2e8f0" font-family="monospace" font-size="8" text-anchor="end">1849201</text>
+            <text x="304" y="166" fill="#34d399" font-family="monospace" font-size="8" text-anchor="middle">[ txs … ]</text>
+
+            <!-- Arrow N-1 → N -->
+            <line x1="364" y1="120" x2="386" y2="120" stroke="#7c5cff" stroke-width="2" marker-end="url(#blk-arr)"/>
+
+            <!-- Block N -->
+            <rect x="388" y="60" width="120" height="120" rx="6" fill="#0d1520" stroke="#7c5cff" stroke-width="2"/>
+            <rect x="388" y="60" width="120" height="32" rx="6" fill="rgba(124,92,255,0.18)" stroke="none"/>
+            <text x="448" y="81" fill="#7c5cff" font-family="monospace" font-size="10" text-anchor="middle" font-weight="bold">Block N</text>
+            <text x="398" y="107" fill="#8a93a6" font-family="monospace" font-size="8">prevHash:</text>
+            <text x="502" y="107" fill="#22d3ee" font-family="monospace" font-size="8" text-anchor="end">0x3a7f…</text>
+            <text x="398" y="121" fill="#8a93a6" font-family="monospace" font-size="8">hash(self):</text>
+            <text x="502" y="121" fill="#fbbf24" font-family="monospace" font-size="8" text-anchor="end">0xc4d8…</text>
+            <text x="398" y="138" fill="#8a93a6" font-family="monospace" font-size="8">nonce:</text>
+            <text x="502" y="138" fill="#e2e8f0" font-family="monospace" font-size="8" text-anchor="end">3291468</text>
+            <text x="448" y="166" fill="#34d399" font-family="monospace" font-size="8" text-anchor="middle">[ txs … ]</text>
+
+            <!-- Arrow N → N+1 -->
+            <line x1="508" y1="120" x2="530" y2="120" stroke="#7c5cff" stroke-width="2" marker-end="url(#blk-arr)"/>
+
+            <!-- Block N+1 -->
+            <rect x="532" y="60" width="120" height="120" rx="6" fill="#0d1520" stroke="#384050" stroke-width="1.5"/>
+            <rect x="532" y="60" width="120" height="32" rx="6" fill="rgba(124,92,255,0.1)" stroke="none"/>
+            <text x="592" y="81" fill="#7c5cff" font-family="monospace" font-size="10" text-anchor="middle">Block N+1</text>
+            <text x="542" y="107" fill="#8a93a6" font-family="monospace" font-size="8">prevHash:</text>
+            <text x="646" y="107" fill="#22d3ee" font-family="monospace" font-size="8" text-anchor="end">0xc4d8…</text>
+            <text x="542" y="121" fill="#8a93a6" font-family="monospace" font-size="8">hash(self):</text>
+            <text x="646" y="121" fill="#fbbf24" font-family="monospace" font-size="8" text-anchor="end">0x9f1e…</text>
+            <text x="542" y="138" fill="#8a93a6" font-family="monospace" font-size="8">nonce:</text>
+            <text x="646" y="138" fill="#e2e8f0" font-family="monospace" font-size="8" text-anchor="end">7042819</text>
+            <text x="592" y="166" fill="#34d399" font-family="monospace" font-size="8" text-anchor="middle">[ txs … ]</text>
+
+            <!-- Callout: changing N invalidates everything after -->
+            <text x="448" y="215" fill="#f97316" font-family="monospace" font-size="9" text-anchor="middle">← alter any block → its hash changes → all subsequent prevHash fields break →</text>
+          </svg>
+        </div>
 
         <p>Beyond simple currency transfers, Ethereum (2015) added a general-purpose virtual machine to the chain. This made it possible to deploy <span class="term" data-label="Smart contract" data-def="A program stored on a blockchain that executes automatically when its conditions are met. Code and state live on-chain; no human can alter them after deployment without a transaction.">smart contracts</span> — programs that live on-chain and execute deterministically across every full node. The same consensus that secures transfers now secures arbitrary computation, enabling decentralized exchanges, lending protocols, and programmable assets — collectively called <span class="term" data-label="DeFi" data-def="Decentralised Finance. Financial primitives — lending, trading, derivatives — implemented as smart contracts on public blockchains, with no custodian or intermediary.">DeFi</span>.</p>
 
@@ -323,6 +426,154 @@
       <section id="consensus">
         <h2>Distributed consensus <span class="era">// agreeing without a boss</span></h2>
         <p>The <span class="term" data-label="Byzantine Generals Problem" data-def="A thought experiment: can distributed actors reach consensus when some may be traitors (sending conflicting messages)? Proved to require 2f+1 nodes to tolerate f Byzantine faults in classic BFT.">Byzantine Generals Problem</span>, formalised by Lamport, Shostak, and Pease in 1982, asks: how can a distributed network of independent actors agree on a single value when some participants may be faulty or malicious? This is the central problem blockchain consensus solves. The three dominant approaches are Proof of Work, Proof of Stake, and classical BFT protocols — each with different tradeoffs in security, decentralisation, and finality.</p>
+
+        <!-- P2P Network Topology diagram -->
+        <div class="viz-3d">
+          <svg id="p2p-svg" width="560" height="280" viewBox="0 0 560 280" xmlns="http://www.w3.org/2000/svg" aria-label="Peer-to-peer network topology animation showing transaction propagation across 8 nodes">
+            <defs>
+              <marker id="p2p-arr" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+                <path d="M0,0 L6,3 L0,6 Z" fill="#7c5cff" opacity="0.6"/>
+              </marker>
+            </defs>
+            <rect width="560" height="280" fill="#0a0d12" rx="8"/>
+            <text x="280" y="22" fill="#8a93a6" font-family="monospace" font-size="10" text-anchor="middle" letter-spacing="0.06em">BITCOIN P2P NETWORK — PARTIAL MESH — TRANSACTION BROADCAST</text>
+            <!-- Edges drawn by JS -->
+            <g id="p2p-edges"></g>
+            <!-- Nodes drawn by JS -->
+            <g id="p2p-nodes"></g>
+            <!-- Travelling message dot -->
+            <circle id="p2p-dot" r="5" fill="#fbbf24" opacity="0"/>
+          </svg>
+        </div>
+        <script>
+        (function () {
+          var svg = document.getElementById('p2p-svg');
+          var NS = 'http://www.w3.org/2000/svg';
+
+          // 8 nodes laid out roughly in a circle with slight variation
+          var cx = 280, cy = 152, rx = 180, ry = 112;
+          var nodeCount = 8;
+          var nodes = [];
+          for (var i = 0; i < nodeCount; i++) {
+            var angle = (i / nodeCount) * Math.PI * 2 - Math.PI / 2;
+            var jx = [0, 18, -12, 22, 0, -20, 14, -8][i];
+            var jy = [0, -10, 14, 6, -16, 8, -12, 20][i];
+            nodes.push({
+              x: cx + rx * Math.cos(angle) + jx,
+              y: cy + ry * Math.sin(angle) + jy,
+              label: 'Node ' + (i + 1)
+            });
+          }
+
+          // Partial mesh — realistic peer connections (not all pairs)
+          var edges = [
+            [0,1],[0,2],[0,4],[1,3],[1,5],[2,3],[2,6],[3,7],[4,5],[4,7],[5,6],[6,7],[1,6],[3,5]
+          ];
+
+          // Build adjacency list
+          var adj = [];
+          for (var n = 0; n < nodeCount; n++) adj.push([]);
+          edges.forEach(function(e) { adj[e[0]].push(e[1]); adj[e[1]].push(e[0]); });
+
+          // Draw edges
+          var edgesG = document.getElementById('p2p-edges');
+          edges.forEach(function(e) {
+            var line = document.createElementNS(NS, 'line');
+            line.setAttribute('x1', nodes[e[0]].x);
+            line.setAttribute('y1', nodes[e[0]].y);
+            line.setAttribute('x2', nodes[e[1]].x);
+            line.setAttribute('y2', nodes[e[1]].y);
+            line.setAttribute('stroke', '#2a3548');
+            line.setAttribute('stroke-width', '1.5');
+            edgesG.appendChild(line);
+          });
+
+          // Draw nodes
+          var nodesG = document.getElementById('p2p-nodes');
+          var nodeEls = [];
+          nodes.forEach(function(n, i) {
+            var g = document.createElementNS(NS, 'g');
+            var circle = document.createElementNS(NS, 'circle');
+            circle.setAttribute('cx', n.x);
+            circle.setAttribute('cy', n.y);
+            circle.setAttribute('r', '14');
+            circle.setAttribute('fill', '#131b26');
+            circle.setAttribute('stroke', '#384050');
+            circle.setAttribute('stroke-width', '2');
+            var label = document.createElementNS(NS, 'text');
+            label.setAttribute('x', n.x);
+            label.setAttribute('y', n.y + 4);
+            label.setAttribute('fill', '#8a93a6');
+            label.setAttribute('font-family', 'monospace');
+            label.setAttribute('font-size', '9');
+            label.setAttribute('text-anchor', 'middle');
+            label.textContent = 'N' + (i + 1);
+            g.appendChild(circle);
+            g.appendChild(label);
+            nodesG.appendChild(g);
+            nodeEls.push({ g: g, circle: circle });
+          });
+
+          var dot = document.getElementById('p2p-dot');
+
+          // Highlight a node (origin of tx or received)
+          function highlightNode(idx, color) {
+            nodeEls[idx].circle.setAttribute('stroke', color);
+            nodeEls[idx].circle.setAttribute('fill', color === '#fbbf24' ? 'rgba(251,191,36,0.18)' : 'rgba(124,92,255,0.18)');
+          }
+          function resetNode(idx) {
+            nodeEls[idx].circle.setAttribute('stroke', '#384050');
+            nodeEls[idx].circle.setAttribute('fill', '#131b26');
+          }
+
+          // Animate dot from node A to node B, then call cb
+          function animateDot(fromIdx, toIdx, duration, cb) {
+            var x0 = nodes[fromIdx].x, y0 = nodes[fromIdx].y;
+            var x1 = nodes[toIdx].x, y1 = nodes[toIdx].y;
+            dot.setAttribute('opacity', '1');
+            var start = null;
+            function step(ts) {
+              if (!start) start = ts;
+              var t = Math.min((ts - start) / duration, 1);
+              dot.setAttribute('cx', x0 + (x1 - x0) * t);
+              dot.setAttribute('cy', y0 + (y1 - y0) * t);
+              if (t < 1) { requestAnimationFrame(step); }
+              else { dot.setAttribute('opacity', '0'); if (cb) cb(); }
+            }
+            requestAnimationFrame(step);
+          }
+
+          // Sequence: pick an origin node, send to its neighbors one by one (broadcast)
+          function runBroadcast() {
+            var origin = Math.floor(Math.random() * nodeCount);
+            var peers = adj[origin].slice();
+            // shuffle peers for visual variety
+            peers.sort(function() { return Math.random() - 0.5; });
+
+            highlightNode(origin, '#fbbf24');
+
+            var i = 0;
+            function sendNext() {
+              if (i >= peers.length) {
+                // pause then reset and restart
+                setTimeout(function() {
+                  [origin].concat(peers).forEach(function(n) { resetNode(n); });
+                  setTimeout(runBroadcast, 800);
+                }, 900);
+                return;
+              }
+              var peer = peers[i++];
+              animateDot(origin, peer, 520, function() {
+                highlightNode(peer, '#7c5cff');
+                setTimeout(sendNext, 180);
+              });
+            }
+            setTimeout(sendNext, 400);
+          }
+
+          runBroadcast();
+        })();
+        </script>
 
         <h3 id="pow">Proof of Work</h3>
         <p>In <span class="term" data-label="Proof of Work" data-def="A consensus mechanism requiring participants to expend computational effort (solve a hash puzzle) to propose a block. The correct chain is the one with the most accumulated work.">PoW</span>, nodes (miners) compete to find a nonce such that the block header's double-SHA-256 hash is below a target value. The target is adjusted every 2,016 blocks (≈2 weeks) so that blocks arrive roughly every 10 minutes regardless of total network hash rate. Finding a valid nonce requires on average <code>2^d</code> hash computations where <code>d</code> is the current difficulty. Verifying a solution is a single hash — asymmetric in the honest party's favour.</p>
