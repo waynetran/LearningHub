@@ -66,7 +66,7 @@
 <!-- ============================================================ -->
 <div class="hero">
   <div class="hero-inner">
-    <span class="chip">UPDATED Apr 11 2026 19:22</span>
+    <span class="chip">UPDATED Apr 11 2026 19:32</span>
     <h1>Blockchain — Distributed Ledgers, Consensus, and Programmable Money</h1>
     <p class="lede">A pragmatic tour of blockchain technology: what the cryptographic primitives actually are, how distributed consensus works without a trusted centre, what smart contracts can and cannot do, and where DeFi, ZK proofs, and layer-2 scaling fit into the picture. Hover any <span class="term" data-label="Term" data-def="Words with a dotted underline carry hover definitions. Try one throughout the page.">dotted term</span> for a definition. Poke at the interactive figures. Each section is self-contained — skip what you know.</p>
   </div>
@@ -171,6 +171,29 @@
         </button>
         <ul class="cat-body">
           <li><a href="#applications">Applications</a></li>
+        </ul>
+      </div>
+
+
+      <div class="cat-group" data-group="chains">
+        <button class="cat cat-toggle" aria-expanded="false">
+          <span class="cat-icon">08</span><span class="cat-title">Popular blockchains</span><span class="cat-chev">▾</span>
+        </button>
+        <ul class="cat-body">
+          <li><a href="#chains">Overview</a>
+            <ul>
+              <li><a href="#chain-bitcoin">Bitcoin</a></li>
+              <li><a href="#chain-ethereum">Ethereum</a></li>
+              <li><a href="#chain-solana">Solana</a></li>
+              <li><a href="#chain-bnb">BNB Chain</a></li>
+              <li><a href="#chain-polygon">Polygon</a></li>
+              <li><a href="#chain-avalanche">Avalanche</a></li>
+              <li><a href="#chain-cardano">Cardano</a></li>
+              <li><a href="#chain-polkadot">Polkadot</a></li>
+              <li><a href="#chain-cosmos">Cosmos</a></li>
+              <li><a href="#chain-near">NEAR</a></li>
+            </ul>
+          </li>
         </ul>
       </div>
 
@@ -997,5 +1020,259 @@ updateActiveNav();
   render();
 })();
 </script>
+
+      <!-- ============================================================ -->
+      <section id="chains">
+        <h2>Popular blockchains <span class="era">// tech, market, and what makes each unique</span></h2>
+        <p>Hundreds of blockchains exist, but a small number dominate by market capitalisation, developer activity, and real usage. Each made a different set of trade-offs across security, decentralisation, throughput, programmability, and ecosystem strategy. This section covers the ten most consequential — what they actually are under the hood, not just marketing descriptions.</p>
+
+        <div class="callout">
+          <div class="label">How to read this section</div>
+          <p style="margin:6px 0"><strong>Tech stack</strong> — consensus mechanism, execution model, language, finality speed.<br>
+          <strong>Main application</strong> — the dominant use case that drives actual value locked and transactions.<br>
+          <strong>Market position</strong> — approximate rank, market cap tier, and TVL (as of early 2026; figures shift).<br>
+          <strong>What makes it unique</strong> — the one or two architectural decisions that differentiate it from the rest.<br>
+          <strong>Impact &amp; trajectory</strong> — what it changed about the industry and where it is heading.</p>
+        </div>
+
+        <!-- ─── Bitcoin ─────────────────────────────────────────────── -->
+        <h3 id="chain-bitcoin">Bitcoin <span class="era">// BTC · #1 by market cap</span></h3>
+
+        <table class="props">
+          <thead><tr><th>Property</th><th>Detail</th></tr></thead>
+          <tbody>
+            <tr><td>Launched</td><td>January 2009 — genesis block mined by Satoshi Nakamoto</td></tr>
+            <tr><td>Consensus</td><td>Nakamoto Proof-of-Work (SHA-256 double-hash). Longest-chain rule. ~10-min block time, 6-block confirmations ≈ 1 hour economic finality.</td></tr>
+            <tr><td>Execution model</td><td>UTXO ledger. Bitcoin Script — intentionally not Turing-complete. Taproot (2021) added Schnorr signatures and MAST for more expressive locking conditions without exposing unused branches.</td></tr>
+            <tr><td>Supply</td><td>Hard-capped at 21 million BTC. ~19.8M mined as of 2026. Halvings every 210,000 blocks cut the block reward in half; next halving ~2028.</td></tr>
+            <tr><td>Throughput</td><td>~3–7 TPS on-chain. Lightning Network (payment channels) handles millions of off-chain micropayments per second with sub-second settlement.</td></tr>
+            <tr><td>Node software</td><td>Bitcoin Core (C++, reference implementation). ~17,000 reachable full nodes globally.</td></tr>
+            <tr><td>Market position</td><td>#1 globally. ~$1.3T market cap (early 2026). ~40–45% of total crypto market cap ("Bitcoin dominance").</td></tr>
+          </tbody>
+        </table>
+
+        <p><strong>Main application:</strong> Digital store of value and censorship-resistant settlement layer. Institutions hold BTC as "digital gold" — a hedge against currency debasement. Spot Bitcoin ETFs approved in the US (January 2024) unlocked regulated exposure, bringing in over $50B in net inflows within the first year. The Lightning Network enables payments: El Salvador made BTC legal tender in 2021 and built a national Lightning wallet (Chivo), and circular Bitcoin economies exist in parts of Latin America and Africa.</p>
+
+        <p><strong>What makes it unique:</strong> Bitcoin's defining choice is ossification by design. The protocol changes extremely slowly — Taproot was the most significant upgrade since SegWit in 2017, and SegWit took years of contentious debate. This conservatism is the point: a monetary system whose rules change unpredictably is less trustworthy as a store of value. The 21-million cap has never been changed and, given the social consensus required, almost certainly never will be. No other blockchain has demonstrated this level of credible immutability.</p>
+
+        <p>The UTXO model provides a natural form of parallelism (non-overlapping UTXOs can be processed concurrently) and makes transaction validation stateless — you only need the UTXO set, not the full transaction history. The trade-off is expressiveness: complex stateful contracts are impossible without moving to a separate layer.</p>
+
+        <div class="callout good">
+          <div class="label">IMPACT</div>
+          <p style="margin:6px 0">Bitcoin invented the field. Every blockchain, DeFi protocol, and NFT platform exists because Satoshi showed that a network with no trusted centre could reach agreement on a shared financial ledger. The specific insight — combining hash-linked blocks with Nakamoto consensus and economic incentives — was the key. Prior to 2009, the Byzantine Generals Problem was considered unsolvable in open, permissionless networks.</p>
+        </div>
+
+        <!-- ─── Ethereum ──────────────────────────────────────────────── -->
+        <h3 id="chain-ethereum">Ethereum <span class="era">// ETH · #2 by market cap</span></h3>
+
+        <table class="props">
+          <thead><tr><th>Property</th><th>Detail</th></tr></thead>
+          <tbody>
+            <tr><td>Launched</td><td>July 2015. Switched from PoW to PoS ("The Merge") on 15 September 2022.</td></tr>
+            <tr><td>Consensus</td><td>Gasper = Casper FFG (finality) + LMD-GHOST (fork choice). 32-ETH minimum stake per validator. Epochs of 32 slots × 12s = ~6.4 min. Finality in ~12.8 min (2 epochs). ~1M validators as of 2026.</td></tr>
+            <tr><td>Execution model</td><td>Account-based (not UTXO). Ethereum Virtual Machine (EVM) — 256-bit stack machine, ~150 opcodes, Turing-complete. Solidity and Vyper as primary languages. EIP-1559 (2021): base fee burned + priority tip to validators; makes ETH potentially deflationary.</td></tr>
+            <tr><td>Throughput</td><td>~15–30 TPS on L1. Rollups (Arbitrum, Optimism, Base, zkSync, Starknet) push aggregate throughput to thousands of TPS while inheriting Ethereum's security.</td></tr>
+            <tr><td>Developer ecosystem</td><td>Largest in the industry. ~4,000–5,000 active monthly developers. Hardhat, Foundry, ethers.js, viem, OpenZeppelin. EVM compatibility adopted by 30+ other chains (Polygon PoS, BNB Chain, Avalanche C-Chain, etc.).</td></tr>
+            <tr><td>Market position</td><td>#2 globally. ~$400–450B market cap. ~$50–70B TVL in DeFi (largest of any chain).</td></tr>
+          </tbody>
+        </table>
+
+        <p><strong>Main application:</strong> Programmable settlement layer. Ethereum is the base layer for the majority of DeFi (Uniswap, Aave, Compound, Maker/Sky), the primary NFT market (OpenSea, Blur), and the anchor of the rollup ecosystem. Most stablecoins (USDC, USDT, DAI) are primarily issued or bridged on Ethereum. It is also the dominant platform for DAOs, ENS names, and on-chain identity.</p>
+
+        <p><strong>What makes it unique:</strong> The EVM's Turing completeness unlocked arbitrary programmable logic on-chain. This was the idea that fractured the space: Bitcoin chose not to do this deliberately; Ethereum chose to do it and accepted the complexity that followed. EIP-1559's fee-burning mechanism made ETH "ultrasound money" in high-activity periods — as of 2026, over 4 million ETH have been burned since the Merge, making the net issuance rate negative during active periods.</p>
+
+        <p>The rollup-centric roadmap (articulated by Vitalik Buterin in 2020) is the other defining strategic bet: rather than scaling L1 directly, Ethereum's long-term throughput comes from L2s that post compressed data + proofs to L1. EIP-4844 ("proto-danksharding", March 2024) introduced blob transactions, cutting L2 data costs by ~10× and setting the stage for full danksharding.</p>
+
+        <div class="callout good">
+          <div class="label">IMPACT</div>
+          <p style="margin:6px 0">Ethereum proved that "programmable money" was not a niche idea. DeFi protocols now handle hundreds of billions of dollars of economic activity with no bank in the loop. The EVM became the industry's de facto standard execution environment — even competing chains largely implement EVM compatibility to access Ethereum's tooling and developer mindshare.</p>
+        </div>
+
+        <!-- ─── Solana ────────────────────────────────────────────────── -->
+        <h3 id="chain-solana">Solana <span class="era">// SOL · #5–6 by market cap</span></h3>
+
+        <table class="props">
+          <thead><tr><th>Property</th><th>Detail</th></tr></thead>
+          <tbody>
+            <tr><td>Launched</td><td>March 2020 (mainnet beta). Founded by Anatoly Yakovenko (ex-Qualcomm).</td></tr>
+            <tr><td>Consensus</td><td>Tower BFT (a PoS variant) + Proof of History (PoH). PoH is a verifiable delay function (SHA-256 chain) that provides a cryptographic clock, letting validators agree on event ordering without all-to-all communication. ~400ms slot time, probabilistic finality in ~1.3s, full finality in ~32 slots (~13s).</td></tr>
+            <tr><td>Execution model</td><td>Account model. Sealevel — parallel execution of non-overlapping transactions (transactions declare which accounts they read/write upfront, enabling GPU-parallelised batch processing). Programs written in Rust or C; compiled to BPF bytecode. No EVM (though Neon EVM provides an EVM compatibility layer).</td></tr>
+            <tr><td>Throughput</td><td>Theoretical 65,000 TPS; real-world sustained ~3,000–5,000 TPS. Sub-cent transaction fees during normal load.</td></tr>
+            <tr><td>Hardware requirements</td><td>Intentionally high for validators: 256GB RAM, NVMe SSDs, 1Gbps+ networking. This is a deliberate trade-off of validator decentralisation for performance.</td></tr>
+            <tr><td>Market position</td><td>#5–6 globally (~$80–100B market cap). Largest NFT market by volume in 2023–2024 (surpassing Ethereum on daily volume). Strong consumer app ecosystem.</td></tr>
+          </tbody>
+        </table>
+
+        <p><strong>Main application:</strong> High-throughput consumer and payments applications. Solana became the dominant chain for NFT retail trading (Magic Eden), meme coins, and retail DeFi (Jupiter aggregator, Raydium AMM). Visa and Shopify piloted USDC payment settlement on Solana. The Firedancer validator client (Jump Crypto) rewrote the entire stack in C++ for 1M+ TPS theoretical throughput, targeting institutional-grade reliability.</p>
+
+        <p><strong>What makes it unique:</strong> Proof of History is the key architectural insight. By pre-agreeing on the passage of time via a cryptographic chain of SHA-256 hashes, validators don't need multiple rounds of message-passing to agree on transaction ordering — they just check the PoH sequence. This, combined with Sealevel's parallel execution, is why Solana's TPS far exceeds other L1s. The trade-off: validators must be powerful machines, and the network has experienced several outages (most notably 17 hours down in September 2021, and partial degradation in 2022–2023) when spam attacks overwhelmed the mempool scheduler.</p>
+
+        <div class="callout warn">
+          <div class="label">THE CENTRALISATION TRADE-OFF</div>
+          <p style="margin:6px 0">Solana's ~1,900 validators (vs ~17,000 Bitcoin full nodes or ~900,000 Ethereum validators) reflects its hardware requirements. The Nakamoto coefficient (minimum validators needed for a supermajority) is ~31 — higher than Ethereum's ~3 by stake-weighted terms, but the absolute validator count is lower. This remains a live debate in the community.</p>
+        </div>
+
+        <!-- ─── BNB Chain ─────────────────────────────────────────────── -->
+        <h3 id="chain-bnb">BNB Chain <span class="era">// BNB · #4 by market cap</span></h3>
+
+        <table class="props">
+          <thead><tr><th>Property</th><th>Detail</th></tr></thead>
+          <tbody>
+            <tr><td>Launched</td><td>September 2020 (BNB Smart Chain, formerly Binance Smart Chain). Operated by Binance ecosystem.</td></tr>
+            <tr><td>Consensus</td><td>Proof of Staked Authority (PoSA) — a hybrid of DPoS and PoA. 21 active validators elected by BNB stakers; validators rotate every 24 hours. ~3-second block time, ~45-second finality.</td></tr>
+            <tr><td>Execution model</td><td>Full EVM compatibility with minor modifications. Identical to Ethereum at the tooling layer — same Solidity contracts, same wallets (MetaMask), same development stack. BEP-20 token standard mirrors ERC-20.</td></tr>
+            <tr><td>Throughput</td><td>~100–300 TPS on L1. Gas fees typically $0.10–$0.50 (vs $1–50+ on Ethereum L1 during peaks).</td></tr>
+            <tr><td>Ecosystem</td><td>PancakeSwap (largest DEX by volume in 2021–2022), Venus Protocol (lending), and a large DeFi ecosystem driven by Binance user base. opBNB (L2 using OP Stack) launched 2023.</td></tr>
+            <tr><td>Market position</td><td>#4 globally (~$85–95B market cap). Historically the #2 or #3 chain by TVL and daily transactions.</td></tr>
+          </tbody>
+        </table>
+
+        <p><strong>Main application:</strong> Retail DeFi and trading, especially for users onboarding through Binance exchange. BNB Chain is effectively the Binance ecosystem's blockchain: users who trade on Binance can bridge funds to BNB Chain cheaply to access DeFi, yield farming, and NFTs. The tight coupling to the world's largest (by volume) crypto exchange gives it enormous user acquisition leverage.</p>
+
+        <p><strong>What makes it unique:</strong> BNB Chain's strategy was explicit: clone Ethereum's interface, slash fees, and lean on Binance's distribution. This worked remarkably well — it handled more daily transactions than Ethereum during 2021–2022. The 21-validator PoSA design is efficient but centralised; all validators are known entities chosen by the Binance ecosystem, which means BNB Chain is better understood as a "trusted consortium chain" than a permissionless one. Critics call it "Binance's private blockchain"; proponents note it is still public and usable by anyone.</p>
+
+        <!-- ─── Polygon ───────────────────────────────────────────────── -->
+        <h3 id="chain-polygon">Polygon <span class="era">// POL (ex-MATIC) · #10–15 by market cap</span></h3>
+
+        <table class="props">
+          <thead><tr><th>Property</th><th>Detail</th></tr></thead>
+          <tbody>
+            <tr><td>Launched</td><td>2017 (as Matic Network), rebranded to Polygon 2021. Pivoted to ZK-centric strategy 2022.</td></tr>
+            <tr><td>Architecture (2026)</td><td>Polygon is now a family of scaling solutions: Polygon PoS (EVM sidechain, ~7,000 TPS, ~2s blocks), Polygon zkEVM (Type 2 ZK rollup, EVM-equivalent), and the AggLayer (a ZK-aggregated interoperability layer connecting multiple chains). MATIC migrated to POL in 2024 as the multi-chain staking token.</td></tr>
+            <tr><td>ZK technology</td><td>Polygon zkEVM uses a custom ZK proving system (Plonky2 + STARK recursion + SNARK wrapper). Plonky2 is a recursive STARK prover that generates proofs in ~170ms on commodity hardware — a significant advance over earlier systems requiring hours.</td></tr>
+            <tr><td>Enterprise adoption</td><td>Reddit (Community Points on Polygon), Starbucks (Odyssey NFT loyalty program), Nike (.SWOOSH digital collectibles), Disney, Stripe payments. More Fortune 500 partnerships than any other blockchain as of 2025.</td></tr>
+            <tr><td>Market position</td><td>#10–15 globally. ~$8–12B market cap. Polygon PoS processes ~3–4M transactions/day, often more than Ethereum mainnet.</td></tr>
+          </tbody>
+        </table>
+
+        <p><strong>Main application:</strong> Enterprise and consumer apps requiring cheap, fast, Ethereum-compatible transactions. Polygon PoS has been the "easy Ethereum" for games, loyalty programs, and NFT drops because gas fees are fractions of a cent. The zkEVM is the production-grade ZK rollup for DeFi and enterprise applications requiring Ethereum-level security with Polygon-level fees.</p>
+
+        <p><strong>What makes it unique:</strong> Polygon is the most aggressive acquirer and builder in the ZK space. In 2022, it spent ~$400M to acquire Hermez (ZK rollup), Mir (recursive ZK proofs), and Nightfall (enterprise ZK). The result is Plonky2 — a ZK proving system that is fast enough for real-time application. The AggLayer vision is to become the "unification layer" across all ZK chains, providing unified liquidity and atomic cross-chain transactions without bridges.</p>
+
+        <!-- ─── Avalanche ─────────────────────────────────────────────── -->
+        <h3 id="chain-avalanche">Avalanche <span class="era">// AVAX · #10–12 by market cap</span></h3>
+
+        <table class="props">
+          <thead><tr><th>Property</th><th>Detail</th></tr></thead>
+          <tbody>
+            <tr><td>Launched</td><td>September 2020. Founded by Emin Gün Sirer (Cornell) and Ava Labs team.</td></tr>
+            <tr><td>Consensus</td><td>Snowball/Avalanche consensus — a metastable Byzantine fault-tolerant protocol based on repeated random sub-sampling. A node queries a small random sample (~20 validators); if a supermajority agrees, it updates its preference and repeats. Converges in O(log n) rounds regardless of network size. Finality in ~1–2 seconds.</td></tr>
+            <tr><td>Architecture</td><td>Three built-in chains: X-Chain (DAG-based asset exchange, UTXO model), C-Chain (EVM-compatible smart contracts — where most DeFi lives), P-Chain (validator coordination and Subnet creation). Custom blockchains called Subnets can run any VM (EVM, custom VM, WASM) with their own validator sets that must be a superset of Primary Network validators.</td></tr>
+            <tr><td>Throughput</td><td>C-Chain: ~4,500 TPS theoretical. The Primary Network + Subnets architecture allows horizontal scaling: each Subnet has its own throughput budget.</td></tr>
+            <tr><td>Market position</td><td>#10–12 globally (~$12–18B market cap). Strong institutional and enterprise Subnet adoption.</td></tr>
+          </tbody>
+        </table>
+
+        <p><strong>Main application:</strong> Enterprise Subnets and institutional DeFi. Avalanche's Subnet model attracted major enterprise use cases: Deloitte built a FEMA disaster relief coordination system on an Avalanche Subnet; gaming companies (DeFi Kingdoms on its own Subnet "Crystalvale") built app-specific chains. Trader Joe, AAVE, and Curve all deployed on the C-Chain. In 2023, Avalanche partnered with JPMorgan and Deloitte for tokenised collateral settlement via the Onyx Digital Assets platform.</p>
+
+        <p><strong>What makes it unique:</strong> Snowball consensus is a genuinely novel protocol — it reaches probabilistic finality in seconds without leader-based rounds, making it resilient to DoS attacks on validators. The Subnet model is the most flexible "appchain" framework: a Subnet can run any VM, set its own gas token, and tune its own security parameters, while still being able to bridge back to the Primary Network.</p>
+
+        <!-- ─── Cardano ───────────────────────────────────────────────── -->
+        <h3 id="chain-cardano">Cardano <span class="era">// ADA · #8–9 by market cap</span></h3>
+
+        <table class="props">
+          <thead><tr><th>Property</th><th>Detail</th></tr></thead>
+          <tbody>
+            <tr><td>Launched</td><td>September 2017 (ADA tradable). Smart contract capability added with Alonzo hard fork, September 2021.</td></tr>
+            <tr><td>Consensus</td><td>Ouroboros Praos — peer-reviewed provably-secure PoS. Slot leaders elected via verifiable random function (VRF). 20-second slots, epochs of 5 days. Finality in ~5–10 minutes (probabilistic) via k-deep confirmation (k≈2160 blocks).</td></tr>
+            <tr><td>Execution model</td><td>UTXO-extended model (eUTXO): each UTXO carries arbitrary data (datum) and a validator script. Smart contracts written in Plutus (Haskell-based) or Aiken (a purpose-built Cardano language), compiled to Untyped Plutus Core. The eUTXO model enables deterministic fee calculation and local transaction validation — a contract can be validated without broadcasting to the network.</td></tr>
+            <tr><td>Philosophy</td><td>Research-first development. IOG (Input Output Global) has published ~170 peer-reviewed academic papers. Every protocol change goes through formal methods and peer review before implementation.</td></tr>
+            <tr><td>Market position</td><td>#8–9 globally (~$15–25B market cap). Strong community in Africa, Japan, and Eastern Europe.</td></tr>
+          </tbody>
+        </table>
+
+        <p><strong>Main application:</strong> Identity, governance, and financial services in emerging markets. The Atala PRISM project (with Ethiopia's Ministry of Education) onboarded 5 million student IDs to Cardano — the largest blockchain identity deployment to date. Cardano's governance upgrade (Conway era, 2024) introduced on-chain governance with a constitutional committee, DRep (delegated representative) voting, and a community treasury governed by ADA holders.</p>
+
+        <p><strong>What makes it unique:</strong> Cardano's eUTXO model gives it properties that account-based chains cannot match: deterministic transaction costs (you know the exact fee before submitting), local transaction validation (valid locally = valid globally), and natural parallelism. The trade-off is that stateful DeFi protocols (like AMMs needing a shared pool state) require concurrency patterns that are more complex than in Ethereum's account model. The research-first approach means Cardano is often slower to ship features but the formal verification gives higher assurance of correctness.</p>
+
+        <!-- ─── Polkadot ──────────────────────────────────────────────── -->
+        <h3 id="chain-polkadot">Polkadot <span class="era">// DOT · #12–15 by market cap</span></h3>
+
+        <table class="props">
+          <thead><tr><th>Property</th><th>Detail</th></tr></thead>
+          <tbody>
+            <tr><td>Launched</td><td>May 2020. Founded by Gavin Wood (Ethereum co-founder, author of the Yellow Paper and Solidity).</td></tr>
+            <tr><td>Architecture</td><td>Relay Chain (central PoS chain providing shared security) + Parachains (independent chains that lease security from the Relay Chain) + bridges. Parachains connect via XCM (cross-consensus message format) — a typed message format for cross-chain calls.</td></tr>
+            <tr><td>Consensus</td><td>BABE (block production, slot-based VRF) + GRANDPA (finality gadget). GRANDPA can finalise entire chains in one round, giving fast finality across all parachains simultaneously.</td></tr>
+            <tr><td>Execution</td><td>Substrate framework (Rust). Parachains compile their state transition function (STF) to WASM, which validators execute on the Relay Chain — enabling on-chain governance to upgrade the runtime without hard forks. Parachains can be EVM-compatible (Moonbeam, Astar) or use custom VMs.</td></tr>
+            <tr><td>Parachain model</td><td>Parachains lease slots via auction (DOT locked, not spent). Polkadot 2.0 (Agile Coretime, 2024) replaced slot auctions with a market for "coretime" — compute time on the Relay Chain — making it easier for smaller projects to access shared security.</td></tr>
+            <tr><td>Market position</td><td>#12–15 globally (~$8–12B market cap). ~50 active parachains.</td></tr>
+          </tbody>
+        </table>
+
+        <p><strong>Main application:</strong> App-specific chains (parachains) requiring shared security without running their own validator set. Acala (DeFi hub with aUSD stablecoin), Moonbeam (EVM parachain), Astar (multi-VM smart contract hub), and Phala (confidential computing) are among the most active. Polkadot's XCM is the most sophisticated cross-chain messaging standard: it can express arbitrary cross-chain calls, not just token transfers.</p>
+
+        <p><strong>What makes it unique:</strong> Shared security is the core value proposition. A new parachain inherits the full security of Polkadot's ~1,000 validators on day one, without bootstrapping its own validator set. This solves the "new chain attack surface" problem. GRANDPA's ability to finalise chains-of-chains in a single round is architecturally elegant: rather than each parachain having independent finality, all parachains finalise together with the Relay Chain.</p>
+
+        <!-- ─── Cosmos ────────────────────────────────────────────────── -->
+        <h3 id="chain-cosmos">Cosmos <span class="era">// ATOM · "the internet of blockchains"</span></h3>
+
+        <table class="props">
+          <thead><tr><th>Property</th><th>Detail</th></tr></thead>
+          <tbody>
+            <tr><td>Launched</td><td>March 2019 (IBC enabled April 2021). Founded by Jae Kwon and Ethan Buchman.</td></tr>
+            <tr><td>Architecture</td><td>Hub-and-zone model. Cosmos Hub (the flagship chain) + sovereign "zones" (independent chains). Zones connect via IBC (Inter-Blockchain Communication Protocol) — a TCP/IP-like transport layer for blockchains.</td></tr>
+            <tr><td>Consensus</td><td>CometBFT (formerly Tendermint Core) — a PBFT-derived BFT consensus engine. 1/3 Byzantine fault tolerance, instant finality (no probabilistic rollback after commit), ~2–7 second block times depending on zone configuration.</td></tr>
+            <tr><td>Framework</td><td>Cosmos SDK (Go). Building a new Cosmos chain is a matter of composing existing SDK modules (bank, staking, governance, IBC) and adding custom modules. This is the most-used app-chain framework: Binance Chain, Terra, Osmosis, Celestia, dYdX v4, and ~100+ others built on it.</td></tr>
+            <tr><td>IBC</td><td>IBC is the open standard for sovereign blockchain interoperability. As of 2026: ~120 chains connected, ~$3B transferred monthly. Unlike bridges (which have trusted relayers or multisigs), IBC uses light client verification — each chain maintains a light client of the counterparty chain, and transfers are proven with Merkle proofs, not assumptions about relayer honesty.</td></tr>
+            <tr><td>Market position</td><td>ATOM itself is ~#20–25. But the "Cosmos ecosystem" (all IBC chains) has a combined market cap exceeding $50B and is arguably the second-largest L1 ecosystem after Ethereum.</td></tr>
+          </tbody>
+        </table>
+
+        <p><strong>Main application:</strong> Sovereign app-chains — blockchains optimised for a single application domain. Osmosis (IBC-native DEX, largest by IBC volume), dYdX v4 (on-chain perpetuals order book), Celestia (modular data availability layer), Injective (financial derivatives), and Akash (decentralised cloud compute) are all Cosmos SDK chains. The Cosmos thesis is that application-specific chains outperform general-purpose chains for their specific use case.</p>
+
+        <p><strong>What makes it unique:</strong> IBC is the only cross-chain communication standard that achieves trustless interoperability through light client verification — not trusted relayers, not multisig bridges. This is a fundamental architectural difference from Ethereum bridges (which were the source of the ~$2.4B in bridge hacks through 2022). The app-chain thesis also means Cosmos chains have sovereignty: they choose their own validators, governance, and token economics, which is impossible on Ethereum rollups that inherit Ethereum's governance.</p>
+
+        <!-- ─── NEAR ──────────────────────────────────────────────────── -->
+        <h3 id="chain-near">NEAR Protocol <span class="era">// NEAR · sharding + UX focus</span></h3>
+
+        <table class="props">
+          <thead><tr><th>Property</th><th>Detail</th></tr></thead>
+          <tbody>
+            <tr><td>Launched</td><td>April 2020. Founded by Illia Polosukhin (Google Brain) and Alex Skidmore.</td></tr>
+            <tr><td>Consensus</td><td>Nightshade sharding + Doomslug block production + Epoch-based BFT finality. Nightshade treats each shard as a piece of a single block — validators only process their shard's transactions, and each block's header commits to all shards' state roots. Currently 4 shards; Stateless Validation (2024) removed the need for validators to hold full shard state, enabling more shards without hardware scaling.</td></tr>
+            <tr><td>Execution model</td><td>Account model. Smart contracts in Rust or JavaScript (via NEAR SDK), compiled to WASM. Human-readable account names (alice.near instead of 0xabc…123). Account abstraction is native — accounts can have multiple keys with different permission levels. Aurora is an EVM runtime deployed as a NEAR smart contract, providing full EVM compatibility.</td></tr>
+            <tr><td>UX features</td><td>Named accounts, function-call access keys (dApps get a limited key that can only call specific methods — no "approve everything" wallet prompts), meta-transactions (gas relayers pay fees on behalf of users — enabling gasless UX). FastAuth (email/passkey onboarding) removes seed phrases entirely for new users.</td></tr>
+            <tr><td>AI integration</td><td>Illia Polosukhin co-authored the "Attention Is All You Need" paper (Transformer architecture). NEAR has leaned into the AI × blockchain thesis: NEAR AI is a research lab building open-source AI models, and the chain is positioning as infrastructure for AI agent payments and on-chain AI inference.</td></tr>
+            <tr><td>Market position</td><td>#20–30 globally (~$5–8B market cap). Strong developer presence in Asia and Eastern Europe.</td></tr>
+          </tbody>
+        </table>
+
+        <p><strong>Main application:</strong> Consumer applications requiring Web2-like UX. NEAR's account model and named accounts make it significantly easier to onboard non-crypto users than Ethereum. Sweat Economy (SweatCoin's blockchain layer, 13M+ users), KaiKai (retail loyalty), and several gaming projects built on NEAR specifically because of the UX tooling. Aurora's EVM compatibility layer attracts Ethereum-native projects.</p>
+
+        <p><strong>What makes it unique:</strong> NEAR is the only major L1 to solve account abstraction at the protocol level rather than as a layer-2 bolt-on (ERC-4337 on Ethereum, Starknet's AA). The combination of named accounts, granular key permissions, and meta-transactions means a NEAR dApp can feel like a normal web app — the user never sees a wallet popup for routine interactions. This is a genuine UX differentiation, not just marketing. Stateless validation is also a technically ambitious sharding approach: validators attest to shard transitions using only state witnesses (Merkle proofs of the accessed state), not the full state — enabling shards to scale independently of validator storage capacity.</p>
+
+        <!-- ─── Comparison table ──────────────────────────────────────── -->
+        <h3 id="chains-comparison">At a glance <span class="era">// comparison across dimensions</span></h3>
+
+        <div style="overflow-x:auto;">
+        <table class="props" style="min-width:720px;">
+          <thead>
+            <tr>
+              <th>Chain</th>
+              <th>Consensus</th>
+              <th>Finality</th>
+              <th>TPS (L1)</th>
+              <th>Smart contracts</th>
+              <th>Key trade-off</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>Bitcoin</td><td>Nakamoto PoW</td><td>~60 min (6 blocks)</td><td>3–7</td><td>Script only (Taproot)</td><td>Security &amp; immutability vs. programmability</td></tr>
+            <tr><td>Ethereum</td><td>Gasper (PoS)</td><td>~12.8 min</td><td>15–30</td><td>EVM / Solidity</td><td>Decentralisation vs. base-layer throughput</td></tr>
+            <tr><td>Solana</td><td>Tower BFT + PoH</td><td>~1.3s</td><td>3,000–5,000</td><td>Sealevel / Rust BPF</td><td>Throughput vs. validator decentralisation</td></tr>
+            <tr><td>BNB Chain</td><td>PoSA (21 validators)</td><td>~45s</td><td>100–300</td><td>EVM clone</td><td>Speed/cost vs. centralisation</td></tr>
+            <tr><td>Polygon</td><td>PoS + ZK rollup (zkEVM)</td><td>~2s (PoS) / ~1h (ZK)</td><td>7,000 (PoS)</td><td>EVM / Solidity</td><td>Two different security models in one brand</td></tr>
+            <tr><td>Avalanche</td><td>Snowball BFT</td><td>~1–2s</td><td>4,500 (C-Chain)</td><td>EVM (C-Chain)</td><td>Subnet flexibility vs. fragmented liquidity</td></tr>
+            <tr><td>Cardano</td><td>Ouroboros Praos PoS</td><td>~5–10 min</td><td>~7 (Hydra: ~1M)</td><td>eUTXO / Plutus (Haskell)</td><td>Formal correctness vs. ecosystem maturity</td></tr>
+            <tr><td>Polkadot</td><td>BABE + GRANDPA</td><td>~1 block (~6s)</td><td>~1,000/parachain</td><td>Substrate WASM / EVM parachains</td><td>Shared security vs. parachain slot cost</td></tr>
+            <tr><td>Cosmos</td><td>CometBFT (PBFT)</td><td>Instant (per chain)</td><td>~10,000 (per zone)</td><td>CosmWasm / EVM (Evmos)</td><td>Sovereignty vs. bootstrapped security</td></tr>
+            <tr><td>NEAR</td><td>Nightshade + Doomslug</td><td>~2–3s</td><td>~100,000 (sharded)</td><td>WASM / Rust, JS, Aurora EVM</td><td>UX/sharding ambition vs. ecosystem size</td></tr>
+          </tbody>
+        </table>
+        </div>
+
+      </section>
+
 </body>
 </html>
