@@ -531,11 +531,11 @@ function renderTimeline() {
 
   // Estimated label footprint (px) — allow two events to share a slot only
   // if they're farther apart than this.
-  const estimateLabelWidth = (ev) => Math.max(80, ev.name.length * 5.8 + 30);
+  const estimateLabelWidth = (ev) => Math.max(100, 40 + ev.name.length * 6.5);
 
   // 4 vertical slots: -2 (far above), -1 (close above), 1 (close below), 2 (far below)
   // Prefer inner slots first (closer to the axis) so the silhouette stays tight.
-  const slotOrder = [-1, 1, -2, 2];
+  const slotOrder = [-1, 1, -2, 2, -3, 3];
   const placed = [];
 
   enriched.forEach((ev) => {

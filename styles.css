@@ -340,14 +340,14 @@ a.plain { border-bottom: none; }
 .timeline-scroll::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 4px; }
 .timeline {
   position: relative;
-  height: 86px;
-  min-width: 2800px;
+  height: 172px;
+  min-width: 4200px;
   padding-top: 0;
 }
 .timeline .axis {
   position: absolute;
   left: 0; right: 0;
-  top: 41px;
+  top: 82px;
   height: 2px;
   background: linear-gradient(90deg, var(--border), var(--accent), var(--accent-2), var(--accent-3));
   border-radius: 2px;
@@ -355,7 +355,7 @@ a.plain { border-bottom: none; }
 .timeline .year-marks {
   position: absolute;
   left: 0; right: 0;
-  top: 45px;
+  top: 87px;
   height: 10px;
   font-family: var(--mono);
   font-size: 8px;
@@ -370,13 +370,13 @@ a.plain { border-bottom: none; }
   position: absolute;
   top: 0;
   width: 0;
-  height: 86px;
+  height: 172px;
   cursor: pointer;
 }
 .timeline .event .dot {
   position: absolute;
   left: 50%;
-  top: 37px;
+  top: 78px;
   width: 9px;
   height: 9px;
   background: var(--accent);
@@ -416,12 +416,14 @@ a.plain { border-bottom: none; }
 }
 .timeline .event .label .org { display: none; }
 .timeline .event:hover .label .name { color: var(--accent-3); }
-/* 4-slot vertical positioning (populated via data-slot by JS) */
-.timeline .event[data-slot="-2"] .label { top: 1px; }
-.timeline .event[data-slot="-1"] .label { top: 19px; }
-.timeline .event[data-slot="1"]  .label { top: 55px; }
-.timeline .event[data-slot="2"]  .label { top: 71px; }
-/* Connector lines from label to dot */
+/* 6-slot vertical positioning (populated via data-slot by JS) */
+.timeline .event[data-slot="-3"] .label { top: 2px; }
+.timeline .event[data-slot="-2"] .label { top: 24px; }
+.timeline .event[data-slot="-1"] .label { top: 50px; }
+.timeline .event[data-slot="1"]  .label { top: 88px; }
+.timeline .event[data-slot="2"]  .label { top: 112px; }
+.timeline .event[data-slot="3"]  .label { top: 136px; }
+/* Connector lines from label to dot (dot center at top: 83px) */
 .timeline .event .label::after {
   content: '';
   position: absolute;
@@ -430,10 +432,12 @@ a.plain { border-bottom: none; }
   background: var(--border);
   opacity: 0.55;
 }
-.timeline .event[data-slot="-2"] .label::after { top: 13px; height: 23px; }
-.timeline .event[data-slot="-1"] .label::after { top: 13px; height: 23px; }
-.timeline .event[data-slot="1"]  .label::after { top: -6px; height: 6px; }
-.timeline .event[data-slot="2"]  .label::after { top: -22px; height: 22px; }
+.timeline .event[data-slot="-3"] .label::after { top: 22px; height: 54px; }
+.timeline .event[data-slot="-2"] .label::after { top: 22px; height: 32px; }
+.timeline .event[data-slot="-1"] .label::after { top: 22px; height: 8px; }
+.timeline .event[data-slot="1"]  .label::after { top: -5px; height: 5px; }
+.timeline .event[data-slot="2"]  .label::after { top: -29px; height: 29px; }
+.timeline .event[data-slot="3"]  .label::after { top: -53px; height: 53px; }
 .timeline .event:hover .label::after { background: var(--accent-3); opacity: 1; }
 
 /* =========================================================================
@@ -1933,7 +1937,7 @@ details.algo-code .code-tabs {
   .timeline-header .timeline-inner { padding: 0 14px; }
   .timeline-header h3 { font-size: 9px; }
   .timeline-header .sub { font-size: 8px; margin-bottom: 4px; }
-  .timeline { height: 82px; min-width: 2400px; }
+  .timeline { height: 150px; min-width: 3200px; }
   .timeline .event .label .name { font-size: 9px; }
 
   /* Demos */
