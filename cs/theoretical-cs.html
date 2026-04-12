@@ -111,6 +111,365 @@
 
     <p>Why this minimal model and not, say, a Python interpreter? Because Turing wanted to argue mathematically about <em>all possible</em> computations, and you can't reason cleanly about "all programming languages." A TM is small enough to fit on a chalkboard but expressive enough that nothing has ever been shown to outdo it.</p>
 
+    <details class="algo-code">
+  <summary>Source — Turing Machine Simulator</summary>
+  <div class="code-tabs">
+    <div class="ct-header">
+      <button class="ct-tab active" data-tab="tm-pseudo">Pseudocode</button>
+      <button class="ct-tab" data-tab="tm-py">Python</button>
+      <button class="ct-tab" data-tab="tm-js">JavaScript</button>
+      <button class="ct-tab" data-tab="tm-c">C</button>
+      <button class="ct-tab" data-tab="tm-cpp">C++</button>
+      <button class="ct-tab" data-tab="tm-java">Java</button>
+      <button class="ct-tab" data-tab="tm-go">Go</button>
+    </div>
+    <div class="ct-panel active" data-tab="tm-pseudo"><pre><code>-- Turing Machine that accepts {0^n 1^n | n >= 1}
+-- Tape alphabet: {0, 1, X, Y, _}  (X = marked 0, Y = marked 1)
+
+TM for {0^n 1^n}:
+  States: q0, q1, q2, q3, q4, q_accept, q_reject
+  Start:  q0
+
+  q0: scan right looking for the leftmost 0
+    read 0 -> write X, move R, go to q1   (mark a 0, now hunt for a 1)
+    read Y -> move R, go to q3            (all 0s matched, sweep past Ys)
+    read _ -> go to q_reject              (empty or no 0)
+    read X -> move R, stay q0             (skip already-marked)
+
+  q1: move right past 0s and Ys, looking for a 1
+    read 0 -> move R, stay q1
+    read Y -> move R, stay q1
+    read 1 -> write Y, move L, go to q2   (mark matching 1, go back left)
+    read _ -> go to q_reject              (ran out of 1s)
+
+  q2: move left back to the leftmost X or start
+    read 0 -> move L, stay q2
+    read Y -> move L, stay q2
+    read X -> move R, go to q0            (found the boundary, loop)
+    read _ -> move R, go to q0
+
+  q3: finishing sweep — only Ys and _ allowed
+    read Y -> move R, stay q3
+    read _ -> go to q_accept
+    read anything else -> go to q_reject
+
+  q_accept: HALT accept
+  q_reject: HALT reject
+
+run_tm(tape):
+  head = 0, state = q0
+  loop:
+    (new_state, new_sym, dir) = delta[state][tape[head]]
+    tape[head] = new_sym
+    head += (dir == R) ? 1 : -1
+    state = new_state
+    if state in {q_accept, q_reject}: break
+  return state == q_accept</code></pre></div>
+    <div class="ct-panel" data-tab="tm-py"><pre><code>def run_tm(tape, transitions, start='q0', accept='q_accept', reject='q_reject', blank='_'):
+    """
+    Run a Turing machine.
+    tape:        list of symbols (will be modified in place)
+    transitions: dict mapping (state, symbol) -> (new_state, new_symbol, direction)
+                 direction is 'L' or 'R'
+    Returns True if accepted, False if rejected.
+    """
+    tape = list(tape) + [blank] * 20
+    head = 0
+    state = start
+
+    for _ in range(10_000):  # step limit to catch infinite loops
+        if state == accept:
+            return True
+        if state == reject:
+            return False
+        sym = tape[head]
+        key = (state, sym)
+        if key not in transitions:
+            return False  # implicit reject
+        new_state, new_sym, direction = transitions[key]
+        tape[head] = new_sym
+        state = new_state
+        if direction == 'R':
+            head += 1
+            if head &gt;= len(tape):
+                tape.append(blank)
+        else:
+            head = max(0, head - 1)
+
+    return False  # ran out of steps
+
+# TM for {0^n 1^n}: mark a 0 with X, find matching 1, mark it Y, repeat
+delta_0n1n = {
+    ('q0', '0'): ('q1', 'X', 'R'),
+    ('q0', 'Y'): ('q3', 'Y', 'R'),
+    ('q0', '_'): ('q_reject', '_', 'R'),
+    ('q1', '0'): ('q1', '0', 'R'),
+    ('q1', 'Y'): ('q1', 'Y', 'R'),
+    ('q1', '1'): ('q2', 'Y', 'L'),
+    ('q1', '_'): ('q_reject', '_', 'R'),
+    ('q2', '0'): ('q2', '0', 'L'),
+    ('q2', 'Y'): ('q2', 'Y', 'L'),
+    ('q2', 'X'): ('q0', 'X', 'R'),
+    ('q2', '_'): ('q0', '_', 'R'),
+    ('q3', 'Y'): ('q3', 'Y', 'R'),
+    ('q3', '_'): ('q_accept', '_', 'R'),
+}
+
+tests = [('01', True), ('0011', True), ('001', False), ('0001111', False), ('', False)]
+for inp, expected in tests:
+    result = run_tm(list(inp), delta_0n1n)
+    status = 'OK' if result == expected else 'FAIL'
+    print(f"{status}  '{inp}' -> {result}  (expected {expected})")</code></pre></div>
+    <div class="ct-panel" data-tab="tm-js"><pre><code>function runTM(tape, transitions, start = 'q0', accept = 'q_accept', reject = 'q_reject', blank = '_') {
+    tape = [...tape, ...Array(20).fill(blank)];
+    let head = 0;
+    let state = start;
+
+    for (let step = 0; step &lt; 10000; step++) {
+        if (state === accept) return true;
+        if (state === reject) return false;
+        const sym = tape[head];
+        const key = `${state},${sym}`;
+        if (!(key in transitions)) return false;
+        const [newState, newSym, dir] = transitions[key];
+        tape[head] = newSym;
+        state = newState;
+        if (dir === 'R') {
+            head++;
+            if (head &gt;= tape.length) tape.push(blank);
+        } else {
+            head = Math.max(0, head - 1);
+        }
+    }
+    return false;
+}
+
+// TM for {0^n 1^n}
+const delta = {
+    'q0,0': ['q1', 'X', 'R'],
+    'q0,Y': ['q3', 'Y', 'R'],
+    'q0,_': ['q_reject', '_', 'R'],
+    'q1,0': ['q1', '0', 'R'],
+    'q1,Y': ['q1', 'Y', 'R'],
+    'q1,1': ['q2', 'Y', 'L'],
+    'q1,_': ['q_reject', '_', 'R'],
+    'q2,0': ['q2', '0', 'L'],
+    'q2,Y': ['q2', 'Y', 'L'],
+    'q2,X': ['q0', 'X', 'R'],
+    'q2,_': ['q0', '_', 'R'],
+    'q3,Y': ['q3', 'Y', 'R'],
+    'q3,_': ['q_accept', '_', 'R'],
+};
+
+const tests = [['01', true], ['0011', true], ['001', false], ['0001111', false]];
+for (const [inp, expected] of tests) {
+    const result = runTM(inp.split(''), delta);
+    console.log(`${result === expected ? 'OK' : 'FAIL'}  '${inp}' -&gt; ${result}`);
+}</code></pre></div>
+    <div class="ct-panel" data-tab="tm-c"><pre><code>#include &lt;stdio.h&gt;
+#include &lt;string.h&gt;
+#include &lt;stdlib.h&gt;
+
+#define TAPE_SIZE 200
+#define MAX_STEPS 10000
+
+typedef struct { const char *state; char read; const char *new_state; char write; int dir; } Rule;
+
+// dir: +1 = R, -1 = L
+static Rule rules[] = {
+    {"q0",'0',"q1",'X',+1}, {"q0",'Y',"q3",'Y',+1}, {"q0",'_',"qR",'_',+1},
+    {"q1",'0',"q1",'0',+1}, {"q1",'Y',"q1",'Y',+1}, {"q1",'1',"q2",'Y',-1},
+    {"q1",'_',"qR",'_',+1},
+    {"q2",'0',"q2",'0',-1}, {"q2",'Y',"q2",'Y',-1}, {"q2",'X',"q0",'X',+1},
+    {"q2",'_',"q0",'_',+1},
+    {"q3",'Y',"q3",'Y',+1}, {"q3",'_',"qA",'_',+1},
+};
+static int nrules = sizeof(rules)/sizeof(rules[0]);
+
+int run_tm(const char *input) {
+    char tape[TAPE_SIZE];
+    memset(tape, '_', TAPE_SIZE);
+    int n = strlen(input);
+    memcpy(tape, input, n);
+    int head = 0;
+    const char *state = "q0";
+    for (int s = 0; s &lt; MAX_STEPS; s++) {
+        if (strcmp(state,"qA")==0) return 1;
+        if (strcmp(state,"qR")==0) return 0;
+        char sym = tape[head];
+        int matched = 0;
+        for (int i = 0; i &lt; nrules; i++) {
+            if (strcmp(rules[i].state, state)==0 &amp;&amp; rules[i].read == sym) {
+                tape[head] = rules[i].write;
+                state = rules[i].new_state;
+                head += rules[i].dir;
+                if (head &lt; 0) head = 0;
+                matched = 1; break;
+            }
+        }
+        if (!matched) return 0;
+    }
+    return 0;
+}
+
+int main(void) {
+    const char *tests[] = {"01","0011","001","0001111",""};
+    int expected[]       = {1,   1,     0,    0,         0};
+    for (int i = 0; i &lt; 5; i++) {
+        int r = run_tm(tests[i]);
+        printf("%s  '%s' -&gt; %d\n", r==expected[i]?"OK":"FAIL", tests[i], r);
+    }
+    return 0;
+}</code></pre></div>
+    <div class="ct-panel" data-tab="tm-cpp"><pre><code>#include &lt;iostream&gt;
+#include &lt;string&gt;
+#include &lt;unordered_map&gt;
+#include &lt;tuple&gt;
+
+using Transition = std::tuple&lt;std::string, char, int&gt;;  // (new_state, write, dir)
+
+bool runTM(std::string tape,
+           const std::unordered_map&lt;std::string, Transition&gt;&amp; delta,
+           const std::string&amp; start = "q0",
+           const std::string&amp; accept = "qA",
+           const std::string&amp; reject = "qR") {
+    tape += std::string(20, '_');
+    int head = 0;
+    std::string state = start;
+    for (int step = 0; step &lt; 10000; step++) {
+        if (state == accept) return true;
+        if (state == reject) return false;
+        std::string key = state + "," + tape[head];
+        auto it = delta.find(key);
+        if (it == delta.end()) return false;
+        auto [ns, w, dir] = it-&gt;second;
+        tape[head] = w;
+        state = ns;
+        head = std::max(0, head + dir);
+        if (head &gt;= (int)tape.size()) tape += '_';
+    }
+    return false;
+}
+
+int main() {
+    std::unordered_map&lt;std::string, Transition&gt; delta = {
+        {"q0,0",{"q1",'X',+1}}, {"q0,Y",{"q3",'Y',+1}}, {"q0,_",{"qR",'_',+1}},
+        {"q1,0",{"q1",'0',+1}}, {"q1,Y",{"q1",'Y',+1}}, {"q1,1",{"q2",'Y',-1}},
+        {"q1,_",{"qR",'_',+1}},
+        {"q2,0",{"q2",'0',-1}}, {"q2,Y",{"q2",'Y',-1}}, {"q2,X",{"q0",'X',+1}},
+        {"q2,_",{"q0",'_',+1}},
+        {"q3,Y",{"q3",'Y',+1}}, {"q3,_",{"qA",'_',+1}},
+    };
+    std::pair&lt;std::string,bool&gt; tests[] = {{"01",true},{"0011",true},{"001",false},{"",false}};
+    for (auto&amp; [inp, exp] : tests) {
+        bool r = runTM(inp, delta);
+        std::cout &lt;&lt; (r==exp?"OK":"FAIL") &lt;&lt; "  '" &lt;&lt; inp &lt;&lt; "' -&gt; " &lt;&lt; r &lt;&lt; "\n";
+    }
+}</code></pre></div>
+    <div class="ct-panel" data-tab="tm-java"><pre><code>import java.util.*;
+
+public class TuringMachine {
+    record Rule(String newState, char write, int dir) {}
+
+    static boolean runTM(String input, Map&lt;String, Rule&gt; delta,
+                         String start, String accept, String reject) {
+        StringBuilder tape = new StringBuilder(input);
+        for (int i = 0; i &lt; 20; i++) tape.append('_');
+        int head = 0;
+        String state = start;
+        for (int step = 0; step &lt; 10000; step++) {
+            if (state.equals(accept)) return true;
+            if (state.equals(reject)) return false;
+            char sym = tape.charAt(head);
+            String key = state + "," + sym;
+            Rule r = delta.get(key);
+            if (r == null) return false;
+            tape.setCharAt(head, r.write());
+            state = r.newState();
+            head = Math.max(0, head + r.dir());
+            if (head &gt;= tape.length()) tape.append('_');
+        }
+        return false;
+    }
+
+    public static void main(String[] args) {
+        Map&lt;String, Rule&gt; delta = new HashMap&lt;&gt;();
+        delta.put("q0,0", new Rule("q1", 'X', +1));
+        delta.put("q0,Y", new Rule("q3", 'Y', +1));
+        delta.put("q0,_", new Rule("qR", '_', +1));
+        delta.put("q1,0", new Rule("q1", '0', +1));
+        delta.put("q1,Y", new Rule("q1", 'Y', +1));
+        delta.put("q1,1", new Rule("q2", 'Y', -1));
+        delta.put("q1,_", new Rule("qR", '_', +1));
+        delta.put("q2,0", new Rule("q2", '0', -1));
+        delta.put("q2,Y", new Rule("q2", 'Y', -1));
+        delta.put("q2,X", new Rule("q0", 'X', +1));
+        delta.put("q2,_", new Rule("q0", '_', +1));
+        delta.put("q3,Y", new Rule("q3", 'Y', +1));
+        delta.put("q3,_", new Rule("qA", '_', +1));
+
+        String[][] tests = {{"01","true"},{"0011","true"},{"001","false"},{"","false"}};
+        for (String[] t : tests) {
+            boolean r = runTM(t[0], delta, "q0", "qA", "qR");
+            System.out.println((r == Boolean.parseBoolean(t[1]) ? "OK" : "FAIL") +
+                "  '" + t[0] + "' -&gt; " + r);
+        }
+    }
+}</code></pre></div>
+    <div class="ct-panel" data-tab="tm-go"><pre><code>package main
+
+import (
+	"fmt"
+	"strings"
+)
+
+type Rule struct {
+	newState string
+	write    byte
+	dir      int
+}
+
+func runTM(input string, delta map[string]Rule, start, accept, reject string) bool {
+	tape := []byte(input + strings.Repeat("_", 20))
+	head := 0
+	state := start
+	for step := 0; step &lt; 10000; step++ {
+		if state == accept { return true }
+		if state == reject { return false }
+		sym := tape[head]
+		key := state + "," + string(sym)
+		r, ok := delta[key]
+		if !ok { return false }
+		tape[head] = r.write
+		state = r.newState
+		head += r.dir
+		if head &lt; 0 { head = 0 }
+		if head &gt;= len(tape) { tape = append(tape, '_') }
+	}
+	return false
+}
+
+func main() {
+	delta := map[string]Rule{
+		"q0,0": {"q1", 'X', +1}, "q0,Y": {"q3", 'Y', +1}, "q0,_": {"qR", '_', +1},
+		"q1,0": {"q1", '0', +1}, "q1,Y": {"q1", 'Y', +1}, "q1,1": {"q2", 'Y', -1},
+		"q1,_": {"qR", '_', +1},
+		"q2,0": {"q2", '0', -1}, "q2,Y": {"q2", 'Y', -1}, "q2,X": {"q0", 'X', +1},
+		"q2,_": {"q0", '_', +1},
+		"q3,Y": {"q3", 'Y', +1}, "q3,_": {"qA", '_', +1},
+	}
+	type tc struct { inp string; exp bool }
+	tests := []tc{{"01", true}, {"0011", true}, {"001", false}, {"0001111", false}, {"", false}}
+	for _, t := range tests {
+		r := runTM(t.inp, delta, "q0", "qA", "qR")
+		status := "OK"
+		if r != t.exp { status = "FAIL" }
+		fmt.Printf("%s  '%s' -&gt; %v\n", status, t.inp, r)
+	}
+}</code></pre></div>
+  </div>
+</details>
+
     <!-- ========================================================== -->
     <h2 id="s3">3. The Church-Turing thesis</h2>
 
@@ -173,6 +532,186 @@
       <p>The set of Turing machines is countable: each TM is a finite string over a finite alphabet, and finite strings can be enumerated $1, 2, 3, \dots$ The set of all subsets of $\{0,1\}^*$ — that is, the set of all languages — has cardinality $2^{\aleph_0}$, strictly larger by Cantor's theorem. So the function "which language does this TM decide?" cannot possibly be onto. There must exist languages no TM decides. We don't even need to look at a specific one to know they exist.</p>
     </div>
 
+    <details class="algo-code">
+  <summary>Source — Decidability Examples</summary>
+  <div class="code-tabs">
+    <div class="ct-header">
+      <button class="ct-tab active" data-tab="dec-pseudo">Pseudocode</button>
+      <button class="ct-tab" data-tab="dec-py">Python</button>
+      <button class="ct-tab" data-tab="dec-js">JavaScript</button>
+      <button class="ct-tab" data-tab="dec-c">C</button>
+      <button class="ct-tab" data-tab="dec-cpp">C++</button>
+      <button class="ct-tab" data-tab="dec-java">Java</button>
+      <button class="ct-tab" data-tab="dec-go">Go</button>
+    </div>
+    <div class="ct-panel active" data-tab="dec-pseudo"><pre><code>-- Two examples of DECIDABLE problems.
+-- "Decidable" means: a program that ALWAYS halts and outputs yes or no.
+
+-- (a) Palindrome checker — O(n)
+is_palindrome(s):
+  left = 0, right = len(s) - 1
+  while left &lt; right:
+    if s[left] != s[right]: return NO
+    left++, right--
+  return YES
+
+-- (b) Even-length string checker — O(n)
+is_even_length(s):
+  count = 0
+  for each symbol in s: count++
+  if count mod 2 == 0: return YES
+  else: return NO
+
+-- Both always halt in linear time. No infinite loops possible.
+-- This is exactly what "decidable" means in computability theory.</code></pre></div>
+    <div class="ct-panel" data-tab="dec-py"><pre><code>def is_palindrome(s: str) -&gt; bool:
+    """
+    Decidable in O(n). Always halts and answers yes/no.
+    Illustrates: a Turing machine that accepts exactly the palindromes
+    over some alphabet is a *decider* for that language.
+    """
+    left, right = 0, len(s) - 1
+    while left &lt; right:
+        if s[left] != s[right]:
+            return False
+        left += 1
+        right -= 1
+    return True
+
+
+def is_even_length(s: str) -&gt; bool:
+    """
+    Decidable in O(n). Accepts strings whose length is even.
+    The simplest nontrivial regular language — even a 2-state DFA decides it.
+    """
+    return len(s) % 2 == 0
+
+
+# Demonstrate both
+for word in ["racecar", "hello", "abba", "ab", "a", ""]:
+    print(f"  '{word}'  palindrome={is_palindrome(word)}  even_len={is_even_length(word)}")
+
+# Key point: neither function can loop forever. Every string gets a definitive
+# answer in O(n) steps. That's the hallmark of a decidable language.</code></pre></div>
+    <div class="ct-panel" data-tab="dec-js"><pre><code>function isPalindrome(s) {
+    // Always halts. Decides the palindrome language in O(n).
+    let left = 0, right = s.length - 1;
+    while (left &lt; right) {
+        if (s[left] !== s[right]) return false;
+        left++; right--;
+    }
+    return true;
+}
+
+function isEvenLength(s) {
+    // Always halts. Decides {strings of even length} in O(n).
+    return s.length % 2 === 0;
+}
+
+const words = ['racecar', 'hello', 'abba', 'ab', 'a', ''];
+for (const w of words) {
+    console.log(`'${w}'  palindrome=${isPalindrome(w)}  evenLen=${isEvenLength(w)}`);
+}</code></pre></div>
+    <div class="ct-panel" data-tab="dec-c"><pre><code>#include &lt;stdio.h&gt;
+#include &lt;string.h&gt;
+
+int is_palindrome(const char *s) {
+    int left = 0, right = (int)strlen(s) - 1;
+    while (left &lt; right) {
+        if (s[left] != s[right]) return 0;
+        left++; right--;
+    }
+    return 1;
+}
+
+int is_even_length(const char *s) {
+    return strlen(s) % 2 == 0;
+}
+
+int main(void) {
+    const char *words[] = {"racecar", "hello", "abba", "ab", "a", ""};
+    for (int i = 0; i &lt; 6; i++) {
+        printf("'%s'  palindrome=%d  even_len=%d\n",
+               words[i], is_palindrome(words[i]), is_even_length(words[i]));
+    }
+    return 0;
+}</code></pre></div>
+    <div class="ct-panel" data-tab="dec-cpp"><pre><code>#include &lt;iostream&gt;
+#include &lt;string&gt;
+#include &lt;algorithm&gt;
+
+bool isPalindrome(const std::string&amp; s) {
+    int left = 0, right = (int)s.size() - 1;
+    while (left &lt; right) {
+        if (s[left] != s[right]) return false;
+        left++; right--;
+    }
+    return true;
+}
+
+bool isEvenLength(const std::string&amp; s) {
+    return s.size() % 2 == 0;
+}
+
+int main() {
+    for (auto&amp; w : {"racecar", "hello", "abba", "ab", "a", ""}) {
+        std::string s(w);
+        std::cout &lt;&lt; "'" &lt;&lt; s &lt;&lt; "'  palindrome=" &lt;&lt; isPalindrome(s)
+                  &lt;&lt; "  even_len=" &lt;&lt; isEvenLength(s) &lt;&lt; "\n";
+    }
+}</code></pre></div>
+    <div class="ct-panel" data-tab="dec-java"><pre><code>public class Decidability {
+    static boolean isPalindrome(String s) {
+        int left = 0, right = s.length() - 1;
+        while (left &lt; right) {
+            if (s.charAt(left) != s.charAt(right)) return false;
+            left++; right--;
+        }
+        return true;
+    }
+
+    static boolean isEvenLength(String s) {
+        return s.length() % 2 == 0;
+    }
+
+    public static void main(String[] args) {
+        String[] words = {"racecar", "hello", "abba", "ab", "a", ""};
+        for (String w : words) {
+            System.out.printf("'%s'  palindrome=%b  evenLen=%b%n",
+                w, isPalindrome(w), isEvenLength(w));
+        }
+    }
+}</code></pre></div>
+    <div class="ct-panel" data-tab="dec-go"><pre><code>package main
+
+import "fmt"
+
+func isPalindrome(s string) bool {
+	runes := []rune(s)
+	left, right := 0, len(runes)-1
+	for left &lt; right {
+		if runes[left] != runes[right] {
+			return false
+		}
+		left++
+		right--
+	}
+	return true
+}
+
+func isEvenLength(s string) bool {
+	return len([]rune(s))%2 == 0
+}
+
+func main() {
+	words := []string{"racecar", "hello", "abba", "ab", "a", ""}
+	for _, w := range words {
+		fmt.Printf("'%s'  palindrome=%v  evenLen=%v\n", w, isPalindrome(w), isEvenLength(w))
+	}
+}</code></pre></div>
+  </div>
+</details>
+
     <!-- ========================================================== -->
     <h2 id="s6">6. The halting problem</h2>
 
@@ -229,6 +768,245 @@
 
     <div class="problem-set" data-topic="theory-undecidable"></div>
 
+    <details class="algo-code">
+  <summary>Source — Halting Problem (Self-Reference Paradox)</summary>
+  <div class="code-tabs">
+    <div class="ct-header">
+      <button class="ct-tab active" data-tab="halt-pseudo">Pseudocode</button>
+      <button class="ct-tab" data-tab="halt-py">Python</button>
+      <button class="ct-tab" data-tab="halt-js">JavaScript</button>
+      <button class="ct-tab" data-tab="halt-c">C</button>
+      <button class="ct-tab" data-tab="halt-cpp">C++</button>
+      <button class="ct-tab" data-tab="halt-java">Java</button>
+      <button class="ct-tab" data-tab="halt-go">Go</button>
+    </div>
+    <div class="ct-panel active" data-tab="halt-pseudo"><pre><code>-- The diagonalization / self-reference argument.
+-- We show that a hypothetical halts(f, x) oracle leads to a contradiction.
+
+-- Step 1: Assume an oracle exists
+oracle halts(f, x):
+  -- Returns TRUE  if f(x) terminates
+  -- Returns FALSE if f(x) runs forever
+  -- This oracle ALWAYS terminates. That's its defining property.
+
+-- Step 2: Build confuse() using the oracle
+function confuse(f):
+  if halts(f, f):      -- ask "does f halt when given itself as input?"
+    loop forever       -- if yes, we loop
+  else:
+    return             -- if no, we halt
+
+-- Step 3: Run confuse on itself: confuse(confuse)
+-- Case A: confuse(confuse) halts
+--   => halts(confuse, confuse) returned TRUE
+--   => the if-branch ran => we looped forever => CONTRADICTION
+-- Case B: confuse(confuse) loops forever
+--   => halts(confuse, confuse) returned FALSE
+--   => the else-branch ran => we returned => CONTRADICTION
+-- Both cases are impossible. Therefore the oracle cannot exist.</code></pre></div>
+    <div class="ct-panel" data-tab="halt-py"><pre><code># Python: the self-reference argument in runnable (but broken-by-design) form.
+# We cannot actually write halts() — that's the whole point.
+# But we can show the logical structure clearly.
+
+# --- Hypothetical oracle (does NOT exist) ---
+def halts(f, x) -&gt; bool:
+    """
+    HYPOTHETICAL: returns True if f(x) terminates, False if it loops forever.
+    No real implementation is possible for all f and x.
+    If you inspect f's source with `import inspect; src = inspect.getsource(f)`
+    you still cannot decide in general — this is what Turing proved.
+    """
+    raise NotImplementedError("This oracle cannot exist!")
+
+# --- The confuse function that breaks the oracle ---
+def confuse(f):
+    """
+    If halts(f, f) says 'yes, f halts on itself':  we loop forever.
+    If halts(f, f) says 'no, f loops on itself':   we return immediately.
+    Running confuse(confuse) produces a contradiction either way.
+    """
+    if halts(f, f):      # oracle says f(f) halts
+        while True:      # so we deliberately loop — contradiction!
+            pass
+    else:                # oracle says f(f) loops
+        return           # so we deliberately halt — contradiction!
+
+# --- What happens at confuse(confuse)? ---
+# confuse(confuse) halts  =>  halts(confuse, confuse) was True
+#                         =>  the while True ran  =>  it loops  =>  CONTRADICTION
+# confuse(confuse) loops  =>  halts(confuse, confuse) was False
+#                         =>  the return ran       =>  it halts =>  CONTRADICTION
+#
+# Conclusion: halts() cannot exist as a total computable function.
+print("The contradiction shows no total halts() oracle can exist.")
+print("The halting problem is undecidable.")</code></pre></div>
+    <div class="ct-panel" data-tab="halt-js"><pre><code>// JavaScript: same logical argument.
+
+// Hypothetical oracle — cannot be implemented for all programs
+function halts(f, x) {
+    // HYPOTHETICAL: returns true if f(x) terminates.
+    // No universal implementation exists. This is the statement of undecidability.
+    throw new Error("This oracle cannot exist!");
+}
+
+// The confuse function
+function confuse(f) {
+    if (halts(f, f)) {
+        // Oracle says f halts on itself — so we loop forever (contradiction)
+        while (true) { /* infinite loop */ }
+    } else {
+        // Oracle says f loops on itself — so we return immediately (contradiction)
+        return;
+    }
+}
+
+// Trace the contradiction:
+// confuse(confuse) halts?
+//   TRUE  => halts(confuse,confuse) returned true
+//         => while(true) executed => it loops => CONTRADICTION
+//   FALSE => halts(confuse,confuse) returned false
+//         => return executed => it halts => CONTRADICTION
+//
+// Therefore no such oracle can exist.
+console.log("No total halts() oracle can exist — the halting problem is undecidable.");</code></pre></div>
+    <div class="ct-panel" data-tab="halt-c"><pre><code>/* C: the self-reference argument.
+   We cannot write a real halts() for arbitrary programs in C either.
+   We show the logical structure with function pointers. */
+
+#include &lt;stdio.h&gt;
+#include &lt;stdnoreturn.h&gt;
+
+typedef void (*Fn)(void*);
+
+/* Hypothetical oracle — cannot be implemented */
+int halts(Fn f, void *x) {
+    /* If this existed and were total, confuse() below produces a contradiction. */
+    (void)f; (void)x;
+    return 0; /* placeholder — any return value leads to contradiction */
+}
+
+noreturn void loop_forever(void) { for (;;) {} }
+
+/* confuse: if halts says f(f) halts, we loop; if it says loop, we halt */
+void confuse(Fn f) {
+    if (halts(f, (void*)f))
+        loop_forever();   /* contradiction path A */
+    else
+        return;           /* contradiction path B */
+}
+
+int main(void) {
+    /* confuse((Fn)confuse) leads to contradiction either way. */
+    printf("Logical structure: halts() cannot be a total computable function.\n");
+    printf("The halting problem is undecidable.\n");
+    return 0;
+}</code></pre></div>
+    <div class="ct-panel" data-tab="halt-cpp"><pre><code>// C++: same argument with std::function for clarity.
+#include &lt;iostream&gt;
+#include &lt;functional&gt;
+#include &lt;stdexcept&gt;
+
+using AnyFn = std::function&lt;void(std::any)&gt;;
+
+// Hypothetical oracle
+bool halts(AnyFn f, std::any x) {
+    // Cannot be implemented for all f, x.
+    // Proof by contradiction: if it existed, confuse() below is a paradox.
+    throw std::logic_error("This oracle cannot exist!");
+}
+
+// The contradiction machine
+void confuse(AnyFn f) {
+    if (halts(f, f)) {
+        // Oracle says f(f) halts -&gt; we loop forever
+        while (true) {}  // contradiction
+    } else {
+        // Oracle says f(f) loops -&gt; we return
+        return;          // contradiction
+    }
+}
+
+// Calling confuse(confuse) produces a paradox:
+//   If it halts:  halts() said true, so we loop  =&gt; does NOT halt  =&gt; contradiction
+//   If it loops:  halts() said false, so we halt =&gt; DOES halt      =&gt; contradiction
+// Therefore halts() cannot exist as a total function.
+
+int main() {
+    std::cout &lt;&lt; "No total halts() oracle can exist.\n";
+    std::cout &lt;&lt; "The halting problem is undecidable.\n";
+}</code></pre></div>
+    <div class="ct-panel" data-tab="halt-java"><pre><code>import java.util.function.Consumer;
+
+/**
+ * Java: the self-reference / diagonalization argument.
+ * We model programs as Consumer&lt;Object&gt; and show halts() leads to paradox.
+ */
+public class HaltingProblem {
+
+    /** Hypothetical oracle — cannot be implemented for all programs. */
+    static boolean halts(Consumer&lt;Object&gt; f, Object x) {
+        // If this were a real total function, confuse() below is a paradox.
+        throw new UnsupportedOperationException("This oracle cannot exist!");
+    }
+
+    /**
+     * confuse: designed to do the opposite of what halts() predicts.
+     * Running confuse(confuse) is the contradiction.
+     */
+    static void confuse(Consumer&lt;Object&gt; f) {
+        if (halts(f, f)) {
+            // Oracle says f halts on itself — we loop forever
+            //noinspection InfiniteLoopStatement
+            while (true) { /* contradiction path A */ }
+        } else {
+            // Oracle says f loops on itself — we halt immediately
+            return; // contradiction path B
+        }
+    }
+
+    public static void main(String[] args) {
+        // confuse(confuse):
+        //   Halts?  =&gt; halts() returned true  =&gt; while(true) runs  =&gt; loops  =&gt; CONTRADICTION
+        //   Loops?  =&gt; halts() returned false =&gt; return runs       =&gt; halts  =&gt; CONTRADICTION
+        System.out.println("halts() cannot be a total computable function.");
+        System.out.println("The halting problem is undecidable.");
+    }
+}</code></pre></div>
+    <div class="ct-panel" data-tab="halt-go"><pre><code>package main
+
+import "fmt"
+
+// halts is a hypothetical oracle.
+// It cannot be implemented for all programs — that is exactly the theorem.
+func halts(f func(interface{}), x interface{}) bool {
+	// Any implementation leads to contradiction via confuse below.
+	panic("This oracle cannot exist!")
+}
+
+// confuse does the opposite of what halts predicts.
+func confuse(f func(interface{})) {
+	if halts(f, f) {
+		// Oracle says f(f) halts — we loop forever (contradiction)
+		for { /* infinite loop */ }
+	} else {
+		// Oracle says f(f) loops — we return immediately (contradiction)
+		return
+	}
+}
+
+// Running confuse(confuse) is the paradox:
+//   If confuse(confuse) halts:
+//     halts(confuse,confuse) returned true =&gt; for{} executed =&gt; loops =&gt; CONTRADICTION
+//   If confuse(confuse) loops:
+//     halts(confuse,confuse) returned false =&gt; return executed =&gt; halts =&gt; CONTRADICTION
+
+func main() {
+	fmt.Println("No total halts() oracle can exist.")
+	fmt.Println("The halting problem is undecidable.")
+}</code></pre></div>
+  </div>
+</details>
+
     <!-- ========================================================== -->
     <h2 id="s7">7. Reductions — the tool for comparing problems</h2>
 
@@ -251,6 +1029,353 @@
     </div>
 
     <p>A polynomial-time reduction lets you say: if $B$ has a polynomial-time algorithm, then so does $A$ (just compose the reduction with $B$'s solver — polynomial composed with polynomial is still polynomial). And contrapositively, if $A$ is hard, then so is $B$. This is the engine that powers the next several sections.</p>
+
+    <details class="algo-code">
+  <summary>Source — Polynomial Reduction (SAT → 3-SAT)</summary>
+  <div class="code-tabs">
+    <div class="ct-header">
+      <button class="ct-tab active" data-tab="red-pseudo">Pseudocode</button>
+      <button class="ct-tab" data-tab="red-py">Python</button>
+      <button class="ct-tab" data-tab="red-js">JavaScript</button>
+      <button class="ct-tab" data-tab="red-c">C</button>
+      <button class="ct-tab" data-tab="red-cpp">C++</button>
+      <button class="ct-tab" data-tab="red-java">Java</button>
+      <button class="ct-tab" data-tab="red-go">Go</button>
+    </div>
+    <div class="ct-panel active" data-tab="red-pseudo"><pre><code>-- Polynomial reduction: convert a general SAT formula to 3-SAT.
+-- Every clause must have exactly 3 literals.
+
+-- Case 1: clause has 1 literal (a)
+--   Add two fresh variables z1, z2.
+--   Replace with: (a v z1 v z2) ^ (a v z1 v ~z2) ^ (a v ~z1 v z2) ^ (a v ~z1 v ~z2)
+--   Satisfiable iff a is true (the z variables can always be set to make 3 of 4 clauses happy,
+--   but all 4 are satisfiable simultaneously only when a is true).
+
+-- Case 2: clause has 2 literals (a v b)
+--   Add one fresh variable z.
+--   Replace with: (a v b v z) ^ (a v b v ~z)
+--   Satisfiable iff at least one of a,b is true.
+--   Proof: if a or b is true, set z freely. If both false, no z works.
+
+-- Case 3: clause already has 3 literals — keep as-is.
+
+-- Case 4: clause has k &gt; 3 literals (a1 v a2 v ... v ak)
+--   Introduce fresh variables z1 ... z_{k-3}.
+--   (a1 v a2 v z1) ^ (~z1 v a3 v z2) ^ (~z2 v a4 v z3) ^ ... ^ (~z_{k-3} v a_{k-1} v ak)
+--   This chain is satisfiable iff at least one ai is true.
+
+sat_to_3sat(formula):
+  new_formula = []
+  fresh_counter = 0
+  for clause in formula:
+    new_formula += expand_clause(clause, fresh_counter)
+  return new_formula</code></pre></div>
+    <div class="ct-panel" data-tab="red-py"><pre><code>from itertools import count as _count
+
+def sat_to_3sat(formula: list[list[int]]) -&gt; list[list[int]]:
+    """
+    Reduce a SAT formula (list of clauses, each a list of ints) to 3-SAT.
+    Positive int k  = variable x_k.
+    Negative int -k = negation ~x_k.
+    Fresh variables start at max_var + 1.
+    """
+    if not formula:
+        return formula
+    max_var = max(abs(lit) for clause in formula for lit in clause)
+    fresh = _count(max_var + 1)
+
+    result = []
+    for clause in formula:
+        k = len(clause)
+        if k == 1:
+            # (a) -&gt; (a v z v ~z) style — use 4 clauses with 2 fresh vars
+            z1, z2 = next(fresh), next(fresh)
+            result.extend([
+                [clause[0],  z1,  z2],
+                [clause[0],  z1, -z2],
+                [clause[0], -z1,  z2],
+                [clause[0], -z1, -z2],
+            ])
+        elif k == 2:
+            # (a v b) -&gt; (a v b v z) ^ (a v b v ~z)
+            z = next(fresh)
+            result.append([clause[0], clause[1],  z])
+            result.append([clause[0], clause[1], -z])
+        elif k == 3:
+            result.append(list(clause))
+        else:
+            # k &gt; 3: chain of 3-literal clauses
+            # (a1 v a2 v z1) ^ (~z1 v a3 v z2) ^ ... ^ (~z_{k-3} v a_{k-1} v ak)
+            zs = [next(fresh) for _ in range(k - 3)]
+            # First clause
+            result.append([clause[0], clause[1], zs[0]])
+            # Middle clauses
+            for i in range(1, k - 3):
+                result.append([-zs[i-1], clause[i+1], zs[i]])
+            # Last clause
+            result.append([-zs[-1], clause[-2], clause[-1]])
+
+    return result
+
+
+# Demo: (x1) ^ (x2 v x3) ^ (x1 v ~x2 v x3 v x4)
+formula = [[1], [2, 3], [1, -2, 3, 4]]
+three_sat = sat_to_3sat(formula)
+print(f"Original: {formula}")
+print(f"3-SAT:    {three_sat}")
+print(f"Clause count: {len(formula)} -&gt; {len(three_sat)}")</code></pre></div>
+    <div class="ct-panel" data-tab="red-js"><pre><code>/**
+ * Reduce a SAT formula to 3-SAT.
+ * Formula: array of clauses, each clause an array of signed integers.
+ * Positive k = x_k, negative -k = NOT x_k.
+ */
+function satTo3Sat(formula) {
+    if (formula.length === 0) return formula;
+    let maxVar = 0;
+    for (const clause of formula)
+        for (const lit of clause)
+            maxVar = Math.max(maxVar, Math.abs(lit));
+    let fresh = maxVar + 1;
+
+    const result = [];
+    for (const clause of formula) {
+        const k = clause.length;
+        if (k === 1) {
+            const [z1, z2] = [fresh++, fresh++];
+            result.push([clause[0],  z1,  z2]);
+            result.push([clause[0],  z1, -z2]);
+            result.push([clause[0], -z1,  z2]);
+            result.push([clause[0], -z1, -z2]);
+        } else if (k === 2) {
+            const z = fresh++;
+            result.push([clause[0], clause[1],  z]);
+            result.push([clause[0], clause[1], -z]);
+        } else if (k === 3) {
+            result.push([...clause]);
+        } else {
+            // Chain reduction for k &gt; 3
+            const zs = Array.from({length: k - 3}, () =&gt; fresh++);
+            result.push([clause[0], clause[1], zs[0]]);
+            for (let i = 1; i &lt; k - 3; i++)
+                result.push([-zs[i-1], clause[i+1], zs[i]]);
+            result.push([-zs[zs.length-1], clause[k-2], clause[k-1]]);
+        }
+    }
+    return result;
+}
+
+const formula = [[1], [2, 3], [1, -2, 3, 4]];
+console.log("Original:", JSON.stringify(formula));
+console.log("3-SAT:   ", JSON.stringify(satTo3Sat(formula)));</code></pre></div>
+    <div class="ct-panel" data-tab="red-c"><pre><code>#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+
+/* Represent a formula as a flat array of clauses; each clause is
+   a length-3 array of signed ints (the 3-SAT output). */
+
+typedef struct { int lits[3]; } Clause3;
+
+static int fresh_var;
+
+static void emit(Clause3 **out, int *n, int a, int b, int c) {
+    *out = realloc(*out, (*n + 1) * sizeof(Clause3));
+    (*out)[*n].lits[0] = a;
+    (*out)[*n].lits[1] = b;
+    (*out)[*n].lits[2] = c;
+    (*n)++;
+}
+
+/* Expand a single clause of arbitrary length into 3-SAT clauses. */
+void expand_clause(int *lits, int k, Clause3 **out, int *n) {
+    if (k == 1) {
+        int z1 = fresh_var++, z2 = fresh_var++;
+        emit(out, n, lits[0],  z1,  z2);
+        emit(out, n, lits[0],  z1, -z2);
+        emit(out, n, lits[0], -z1,  z2);
+        emit(out, n, lits[0], -z1, -z2);
+    } else if (k == 2) {
+        int z = fresh_var++;
+        emit(out, n, lits[0], lits[1],  z);
+        emit(out, n, lits[0], lits[1], -z);
+    } else if (k == 3) {
+        emit(out, n, lits[0], lits[1], lits[2]);
+    } else {
+        /* Chain for k &gt; 3 */
+        int *zs = malloc((k - 3) * sizeof(int));
+        for (int i = 0; i &lt; k - 3; i++) zs[i] = fresh_var++;
+        emit(out, n, lits[0], lits[1], zs[0]);
+        for (int i = 1; i &lt; k - 3; i++)
+            emit(out, n, -zs[i-1], lits[i+1], zs[i]);
+        emit(out, n, -zs[k-4], lits[k-2], lits[k-1]);
+        free(zs);
+    }
+}
+
+int main(void) {
+    fresh_var = 5; /* variables x1..x4 already used */
+    int c1[] = {1};          /* (x1) */
+    int c2[] = {2, 3};       /* (x2 v x3) */
+    int c3[] = {1,-2,3,4};   /* (x1 v ~x2 v x3 v x4) */
+
+    Clause3 *out = NULL; int n = 0;
+    expand_clause(c1, 1, &amp;out, &amp;n);
+    expand_clause(c2, 2, &amp;out, &amp;n);
+    expand_clause(c3, 4, &amp;out, &amp;n);
+
+    printf("3-SAT has %d clauses:\n", n);
+    for (int i = 0; i &lt; n; i++)
+        printf("  (%d v %d v %d)\n", out[i].lits[0], out[i].lits[1], out[i].lits[2]);
+    free(out);
+    return 0;
+}</code></pre></div>
+    <div class="ct-panel" data-tab="red-cpp"><pre><code>#include &lt;iostream&gt;
+#include &lt;vector&gt;
+#include &lt;algorithm&gt;
+
+using Clause = std::vector&lt;int&gt;;
+using Formula = std::vector&lt;Clause&gt;;
+
+Formula satTo3Sat(const Formula&amp; f) {
+    int maxVar = 0;
+    for (auto&amp; c : f) for (int l : c) maxVar = std::max(maxVar, std::abs(l));
+    int fresh = maxVar + 1;
+    Formula result;
+
+    for (auto&amp; clause : f) {
+        int k = clause.size();
+        if (k == 1) {
+            int z1 = fresh++, z2 = fresh++;
+            result.push_back({ clause[0],  z1,  z2});
+            result.push_back({ clause[0],  z1, -z2});
+            result.push_back({ clause[0], -z1,  z2});
+            result.push_back({ clause[0], -z1, -z2});
+        } else if (k == 2) {
+            int z = fresh++;
+            result.push_back({clause[0], clause[1],  z});
+            result.push_back({clause[0], clause[1], -z});
+        } else if (k == 3) {
+            result.push_back(clause);
+        } else {
+            std::vector&lt;int&gt; zs(k - 3);
+            for (auto&amp; z : zs) z = fresh++;
+            result.push_back({clause[0], clause[1], zs[0]});
+            for (int i = 1; i &lt; k - 3; i++)
+                result.push_back({-zs[i-1], clause[i+1], zs[i]});
+            result.push_back({-zs.back(), clause[k-2], clause[k-1]});
+        }
+    }
+    return result;
+}
+
+int main() {
+    Formula f = {{1}, {2,3}, {1,-2,3,4}};
+    auto f3 = satTo3Sat(f);
+    std::cout &lt;&lt; "3-SAT clauses: " &lt;&lt; f3.size() &lt;&lt; "\n";
+    for (auto&amp; c : f3)
+        std::cout &lt;&lt; "  (" &lt;&lt; c[0] &lt;&lt; " v " &lt;&lt; c[1] &lt;&lt; " v " &lt;&lt; c[2] &lt;&lt; ")\n";
+}</code></pre></div>
+    <div class="ct-panel" data-tab="red-java"><pre><code>import java.util.*;
+
+public class SatTo3Sat {
+    static int fresh;
+
+    static List&lt;int[]&gt; satTo3Sat(List&lt;int[]&gt; formula) {
+        fresh = formula.stream()
+            .flatMapToInt(c -&gt; Arrays.stream(c).map(Math::abs))
+            .max().orElse(0) + 1;
+
+        List&lt;int[]&gt; result = new ArrayList&lt;&gt;();
+        for (int[] clause : formula) {
+            int k = clause.length;
+            if (k == 1) {
+                int z1 = fresh++, z2 = fresh++;
+                result.add(new int[]{clause[0],  z1,  z2});
+                result.add(new int[]{clause[0],  z1, -z2});
+                result.add(new int[]{clause[0], -z1,  z2});
+                result.add(new int[]{clause[0], -z1, -z2});
+            } else if (k == 2) {
+                int z = fresh++;
+                result.add(new int[]{clause[0], clause[1],  z});
+                result.add(new int[]{clause[0], clause[1], -z});
+            } else if (k == 3) {
+                result.add(clause.clone());
+            } else {
+                int[] zs = new int[k - 3];
+                for (int i = 0; i &lt; zs.length; i++) zs[i] = fresh++;
+                result.add(new int[]{clause[0], clause[1], zs[0]});
+                for (int i = 1; i &lt; k - 3; i++)
+                    result.add(new int[]{-zs[i-1], clause[i+1], zs[i]});
+                result.add(new int[]{-zs[zs.length-1], clause[k-2], clause[k-1]});
+            }
+        }
+        return result;
+    }
+
+    public static void main(String[] args) {
+        List&lt;int[]&gt; f = Arrays.asList(new int[]{1}, new int[]{2,3}, new int[]{1,-2,3,4});
+        List&lt;int[]&gt; f3 = satTo3Sat(f);
+        System.out.println("3-SAT clauses: " + f3.size());
+        for (int[] c : f3)
+            System.out.printf("  (%d v %d v %d)%n", c[0], c[1], c[2]);
+    }
+}</code></pre></div>
+    <div class="ct-panel" data-tab="red-go"><pre><code>package main
+
+import (
+	"fmt"
+)
+
+func satTo3Sat(formula [][]int) [][]int {
+	maxVar := 0
+	for _, clause := range formula {
+		for _, lit := range clause {
+			if v := lit; v &lt; 0 { v = -v }; maxVar = func(a,b int) int { if a&gt;b {return a}; return b }(maxVar, func() int { if lit &lt; 0 { return -lit }; return lit }())
+		}
+	}
+	fresh := maxVar + 1
+	newFresh := func() int { v := fresh; fresh++; return v }
+
+	var result [][]int
+	for _, clause := range formula {
+		k := len(clause)
+		switch {
+		case k == 1:
+			z1, z2 := newFresh(), newFresh()
+			result = append(result,
+				[]int{clause[0],  z1,  z2},
+				[]int{clause[0],  z1, -z2},
+				[]int{clause[0], -z1,  z2},
+				[]int{clause[0], -z1, -z2})
+		case k == 2:
+			z := newFresh()
+			result = append(result,
+				[]int{clause[0], clause[1],  z},
+				[]int{clause[0], clause[1], -z})
+		case k == 3:
+			result = append(result, append([]int{}, clause...))
+		default:
+			zs := make([]int, k-3)
+			for i := range zs { zs[i] = newFresh() }
+			result = append(result, []int{clause[0], clause[1], zs[0]})
+			for i := 1; i &lt; k-3; i++ {
+				result = append(result, []int{-zs[i-1], clause[i+1], zs[i]})
+			}
+			result = append(result, []int{-zs[len(zs)-1], clause[k-2], clause[k-1]})
+		}
+	}
+	return result
+}
+
+func main() {
+	f := [][]int{{1}, {2, 3}, {1, -2, 3, 4}}
+	f3 := satTo3Sat(f)
+	fmt.Printf("3-SAT clauses: %d\n", len(f3))
+	for _, c := range f3 {
+		fmt.Printf("  (%d v %d v %d)\n", c[0], c[1], c[2])
+	}
+}</code></pre></div>
+  </div>
+</details>
 
     <!-- ========================================================== -->
     <h2 id="s8">8. Complexity classes — sorting problems by difficulty</h2>
@@ -353,6 +1478,292 @@
 
     <p>Once you have one NP-complete problem, you get more by reduction. If you reduce SAT to your favorite problem $X$ in polynomial time, then $X$ is NP-hard too. And if $X$ is also in NP, it's NP-complete. Within a year of Cook-Levin, Richard Karp published a paper showing 21 problems are NP-complete by chains of reductions from SAT — the famous "Karp's 21." That paper is the reason most computer scientists believe NP-completeness is everywhere.</p>
 
+    <details class="algo-code">
+  <summary>Source — SAT Solver (DPLL Brute Force)</summary>
+  <div class="code-tabs">
+    <div class="ct-header">
+      <button class="ct-tab active" data-tab="npco-pseudo">Pseudocode</button>
+      <button class="ct-tab" data-tab="npco-py">Python</button>
+      <button class="ct-tab" data-tab="npco-js">JavaScript</button>
+      <button class="ct-tab" data-tab="npco-c">C</button>
+      <button class="ct-tab" data-tab="npco-cpp">C++</button>
+      <button class="ct-tab" data-tab="npco-java">Java</button>
+      <button class="ct-tab" data-tab="npco-go">Go</button>
+    </div>
+    <div class="ct-panel active" data-tab="npco-pseudo"><pre><code>-- DPLL-style SAT solver with unit propagation.
+-- formula: list of clauses (each clause is a set of literals)
+-- assignment: dict var -&gt; True/False
+
+dpll(formula, assignment):
+  -- Unit propagation: if a clause has one unassigned literal, force it
+  changed = True
+  while changed:
+    changed = False
+    for each clause in formula:
+      unassigned = [lit for lit in clause if var(lit) not in assignment]
+      if len(unassigned) == 0:
+        if no literal in clause is satisfied: return UNSAT
+      elif len(unassigned) == 1:
+        force assignment[var(unassigned[0])] = polarity(unassigned[0])
+        changed = True
+
+  -- Check if all clauses are satisfied
+  if all clauses have at least one satisfied literal: return SAT, assignment
+
+  -- Choose an unassigned variable and branch
+  v = pick any unassigned variable
+  for value in [True, False]:
+    result = dpll(formula, assignment + {v: value})
+    if result == SAT: return SAT, result.assignment
+  return UNSAT</code></pre></div>
+    <div class="ct-panel" data-tab="npco-py"><pre><code>from typing import Optional
+
+def dpll(clauses: list[list[int]], assignment: dict[int, bool] = None) -&gt; Optional[dict[int, bool]]:
+    """
+    DPLL SAT solver with unit propagation.
+    Literals: positive int k = x_k, negative int -k = NOT x_k.
+    Returns a satisfying assignment dict or None if UNSAT.
+    """
+    if assignment is None:
+        assignment = {}
+
+    # Unit propagation loop
+    changed = True
+    while changed:
+        changed = False
+        for clause in clauses:
+            true_lits  = [l for l in clause if  (l &gt; 0) == assignment.get(abs(l), None if True else False)
+                          if abs(l) in assignment]
+            # Simpler approach: evaluate each literal
+            sat_lits   = [l for l in clause if _lit_val(l, assignment) is True]
+            undef_lits = [l for l in clause if _lit_val(l, assignment) is None]
+            false_lits = [l for l in clause if _lit_val(l, assignment) is False]
+            if sat_lits:
+                continue  # clause already satisfied
+            if not undef_lits:
+                return None  # all literals false -&gt; UNSAT
+            if len(undef_lits) == 1:
+                # Unit clause: force this literal
+                lit = undef_lits[0]
+                assignment = dict(assignment)  # copy before mutating
+                assignment[abs(lit)] = (lit &gt; 0)
+                changed = True
+                break  # restart loop with updated assignment
+
+    # Check if all clauses satisfied
+    if all(any(_lit_val(l, assignment) is True for l in c) for c in clauses):
+        return assignment
+
+    # Find an unassigned variable
+    all_vars = {abs(l) for c in clauses for l in c}
+    unassigned = [v for v in all_vars if v not in assignment]
+    if not unassigned:
+        return None  # no solution
+
+    v = unassigned[0]
+    for val in (True, False):
+        new_assign = dict(assignment)
+        new_assign[v] = val
+        result = dpll(clauses, new_assign)
+        if result is not None:
+            return result
+    return None
+
+
+def _lit_val(lit: int, assignment: dict) -&gt; Optional[bool]:
+    v = abs(lit)
+    if v not in assignment:
+        return None
+    return assignment[v] if lit &gt; 0 else not assignment[v]
+
+
+# Example: (x1 v ~x2) ^ (~x1 v x2 v x3) ^ (~x3)
+formula = [[1, -2], [-1, 2, 3], [-3]]
+result = dpll(formula)
+if result:
+    print("SAT:", {f"x{k}": v for k, v in sorted(result.items())})
+else:
+    print("UNSAT")
+# Expected: SAT with some assignment like x1=False, x2=False, x3=False</code></pre></div>
+    <div class="ct-panel" data-tab="npco-js"><pre><code>/**
+ * Brute-force SAT solver: enumerate all 2^n assignments.
+ * Simple but exponential — the point is to show the baseline.
+ */
+function bruteForce3Sat(clauses, nVars) {
+    // Try all 2^nVars assignments using a bitmask
+    for (let mask = 0; mask &lt; (1 &lt;&lt; nVars); mask++) {
+        const assignment = {};
+        for (let i = 0; i &lt; nVars; i++)
+            assignment[i + 1] = !!(mask &amp; (1 &lt;&lt; i));
+
+        let allSat = true;
+        for (const clause of clauses) {
+            const clauseSat = clause.some(lit =&gt;
+                lit &gt; 0 ? assignment[lit] : !assignment[-lit]);
+            if (!clauseSat) { allSat = false; break; }
+        }
+        if (allSat) return assignment;
+    }
+    return null;
+}
+
+const formula = [[1, -2], [-1, 2, 3], [-3]];
+const result = bruteForce3Sat(formula, 3);
+if (result) {
+    console.log("SAT:", Object.entries(result).map(([k,v]) =&gt; `x${k}=${v}`).join(", "));
+} else {
+    console.log("UNSAT");
+}</code></pre></div>
+    <div class="ct-panel" data-tab="npco-c"><pre><code>#include &lt;stdio.h&gt;
+#include &lt;string.h&gt;
+
+/* Brute-force SAT via bitmask over 2^n assignments. */
+#define MAX_VARS 20
+
+typedef struct { int lits[3]; int len; } Clause;
+
+int eval_lit(int lit, int mask) {
+    int var = (lit &gt; 0 ? lit : -lit) - 1;   /* 0-indexed */
+    int val = (mask &gt;&gt; var) &amp; 1;             /* 1 = true */
+    return lit &gt; 0 ? val : !val;
+}
+
+int solve(Clause *clauses, int nclauses, int nvars, int *out_mask) {
+    for (int mask = 0; mask &lt; (1 &lt;&lt; nvars); mask++) {
+        int ok = 1;
+        for (int i = 0; i &lt; nclauses; i++) {
+            int sat = 0;
+            for (int j = 0; j &lt; clauses[i].len; j++)
+                if (eval_lit(clauses[i].lits[j], mask)) { sat = 1; break; }
+            if (!sat) { ok = 0; break; }
+        }
+        if (ok) { *out_mask = mask; return 1; }
+    }
+    return 0;
+}
+
+int main(void) {
+    /* (x1 v ~x2) ^ (~x1 v x2 v x3) ^ (~x3) */
+    Clause f[] = {
+        {{1,-2,0},2}, {{-1,2,3},3}, {{-3,0,0},1}
+    };
+    int mask;
+    if (solve(f, 3, 3, &amp;mask)) {
+        printf("SAT: x1=%d x2=%d x3=%d\n",
+               (mask&gt;&gt;0)&amp;1, (mask&gt;&gt;1)&amp;1, (mask&gt;&gt;2)&amp;1);
+    } else {
+        printf("UNSAT\n");
+    }
+    return 0;
+}</code></pre></div>
+    <div class="ct-panel" data-tab="npco-cpp"><pre><code>#include &lt;iostream&gt;
+#include &lt;vector&gt;
+
+using Clause = std::vector&lt;int&gt;;
+
+bool evalLit(int lit, int mask) {
+    int v = std::abs(lit) - 1;
+    bool val = (mask &gt;&gt; v) &amp; 1;
+    return lit &gt; 0 ? val : !val;
+}
+
+std::pair&lt;bool,int&gt; bruteForce(const std::vector&lt;Clause&gt;&amp; clauses, int nVars) {
+    for (int mask = 0; mask &lt; (1 &lt;&lt; nVars); mask++) {
+        bool ok = true;
+        for (auto&amp; c : clauses) {
+            bool sat = false;
+            for (int l : c) if (evalLit(l, mask)) { sat = true; break; }
+            if (!sat) { ok = false; break; }
+        }
+        if (ok) return {true, mask};
+    }
+    return {false, -1};
+}
+
+int main() {
+    std::vector&lt;Clause&gt; f = {{1,-2},{-1,2,3},{-3}};
+    auto [sat, mask] = bruteForce(f, 3);
+    if (sat)
+        std::cout &lt;&lt; "SAT: x1=" &lt;&lt; (mask&amp;1) &lt;&lt; " x2=" &lt;&lt; ((mask&gt;&gt;1)&amp;1)
+                  &lt;&lt; " x3=" &lt;&lt; ((mask&gt;&gt;2)&amp;1) &lt;&lt; "\n";
+    else
+        std::cout &lt;&lt; "UNSAT\n";
+}</code></pre></div>
+    <div class="ct-panel" data-tab="npco-java"><pre><code>import java.util.*;
+
+public class BruteForceSAT {
+    static boolean evalLit(int lit, int mask) {
+        int v = Math.abs(lit) - 1;
+        boolean val = ((mask &gt;&gt; v) &amp; 1) == 1;
+        return lit &gt; 0 ? val : !val;
+    }
+
+    static int bruteForce(int[][] clauses, int nVars) {
+        for (int mask = 0; mask &lt; (1 &lt;&lt; nVars); mask++) {
+            boolean ok = true;
+            for (int[] clause : clauses) {
+                boolean sat = false;
+                for (int lit : clause) if (evalLit(lit, mask)) { sat = true; break; }
+                if (!sat) { ok = false; break; }
+            }
+            if (ok) return mask;
+        }
+        return -1;
+    }
+
+    public static void main(String[] args) {
+        int[][] f = {{1, -2}, {-1, 2, 3}, {-3}};
+        int mask = bruteForce(f, 3);
+        if (mask &gt;= 0)
+            System.out.printf("SAT: x1=%d x2=%d x3=%d%n",
+                mask &amp; 1, (mask &gt;&gt; 1) &amp; 1, (mask &gt;&gt; 2) &amp; 1);
+        else
+            System.out.println("UNSAT");
+    }
+}</code></pre></div>
+    <div class="ct-panel" data-tab="npco-go"><pre><code>package main
+
+import (
+	"fmt"
+)
+
+func evalLit(lit, mask int) bool {
+	v := lit
+	if v &lt; 0 { v = -v }
+	v-- // 0-indexed
+	val := (mask&gt;&gt;v)&amp;1 == 1
+	if lit &gt; 0 { return val }
+	return !val
+}
+
+func bruteForce(clauses [][]int, nVars int) int {
+	for mask := 0; mask &lt; (1 &lt;&lt; nVars); mask++ {
+		ok := true
+		for _, clause := range clauses {
+			sat := false
+			for _, lit := range clause {
+				if evalLit(lit, mask) { sat = true; break }
+			}
+			if !sat { ok = false; break }
+		}
+		if ok { return mask }
+	}
+	return -1
+}
+
+func main() {
+	// (x1 v ~x2) ^ (~x1 v x2 v x3) ^ (~x3)
+	f := [][]int{{1, -2}, {-1, 2, 3}, {-3}}
+	mask := bruteForce(f, 3)
+	if mask &gt;= 0 {
+		fmt.Printf("SAT: x1=%d x2=%d x3=%d\n", mask&amp;1, (mask&gt;&gt;1)&amp;1, (mask&gt;&gt;2)&amp;1)
+	} else {
+		fmt.Println("UNSAT")
+	}
+}</code></pre></div>
+  </div>
+</details>
+
     <!-- ========================================================== -->
     <h2 id="s11">11. Canonical NP-complete problems</h2>
 
@@ -381,6 +1792,354 @@
     <p>That's a lot to take in the first time. The key intuition: the gadget for each clause acts like a tiny puzzle that can only be solved if at least one literal in the clause is true. The variable gadget guarantees consistent truth assignments. Stack everything together and you get a graph whose colorability mirrors the formula's satisfiability.</p>
 
     <p>Reductions like this are the everyday work of complexity theory. They're confusing the first time. They're confusing the fifth time. The skill develops from doing them by hand. Sipser's textbook (linked at the bottom) walks through several in detail.</p>
+
+    <details class="algo-code">
+  <summary>Source — NP-Hard Problems (Exact Solvers)</summary>
+  <div class="code-tabs">
+    <div class="ct-header">
+      <button class="ct-tab active" data-tab="npc-pseudo">Pseudocode</button>
+      <button class="ct-tab" data-tab="npc-py">Python</button>
+      <button class="ct-tab" data-tab="npc-js">JavaScript</button>
+      <button class="ct-tab" data-tab="npc-c">C</button>
+      <button class="ct-tab" data-tab="npc-cpp">C++</button>
+      <button class="ct-tab" data-tab="npc-java">Java</button>
+      <button class="ct-tab" data-tab="npc-go">Go</button>
+    </div>
+    <div class="ct-panel active" data-tab="npc-pseudo"><pre><code>-- (a) Hamiltonian Path (brute force) — NP-complete
+-- Check every permutation of vertices; see if any is a valid path.
+
+hamiltonian_path(graph, n):
+  for each permutation P of vertices [0..n-1]:
+    valid = True
+    for i in 0..n-2:
+      if edge(P[i], P[i+1]) not in graph:
+        valid = False; break
+    if valid: return P   -- found a Hamiltonian path
+  return NONE            -- no path exists
+
+-- Time: O(n!) — infeasible for n &gt; ~12 without pruning.
+
+-- (b) 0/1 Knapsack (dynamic programming) — pseudo-polynomial O(n * W)
+-- items: list of (weight, value) pairs
+-- W: maximum weight capacity
+
+knapsack_dp(items, W):
+  n = len(items)
+  dp[0..n][0..W] = 0   -- dp[i][w] = best value using first i items with weight &lt;= w
+
+  for i in 1..n:
+    for w in 0..W:
+      dp[i][w] = dp[i-1][w]                            -- skip item i
+      if items[i-1].weight &lt;= w:
+        take = dp[i-1][w - items[i-1].weight] + items[i-1].value
+        dp[i][w] = max(dp[i][w], take)                 -- take item i
+
+  return dp[n][W]   -- maximum achievable value</code></pre></div>
+    <div class="ct-panel" data-tab="npc-py"><pre><code>from itertools import permutations
+
+# ---- (a) Hamiltonian Path — brute force ----
+def hamiltonian_path(adj: list[list[int]]) -&gt; list[int] | None:
+    """
+    adj: adjacency matrix (adj[i][j] = 1 if edge exists).
+    Returns a Hamiltonian path as a list of vertices, or None.
+    Time: O(n!) — NP-complete, no known polynomial algorithm.
+    """
+    n = len(adj)
+    for perm in permutations(range(n)):
+        if all(adj[perm[i]][perm[i+1]] for i in range(n - 1)):
+            return list(perm)
+    return None
+
+# Example: a path graph 0-1-2-3
+adj4 = [
+    [0, 1, 0, 0],
+    [1, 0, 1, 0],
+    [0, 1, 0, 1],
+    [0, 0, 1, 0],
+]
+print("Hamiltonian path:", hamiltonian_path(adj4))  # e.g. [0, 1, 2, 3]
+
+# No Hamiltonian path: disconnected
+adj_bad = [[0,1,0,0],[1,0,0,0],[0,0,0,1],[0,0,1,0]]
+print("Hamiltonian path:", hamiltonian_path(adj_bad))  # None
+
+
+# ---- (b) 0/1 Knapsack — O(n * W) DP ----
+def knapsack(items: list[tuple[int,int]], W: int) -&gt; tuple[int, list[int]]:
+    """
+    items: list of (weight, value) pairs.
+    W: maximum weight.
+    Returns (best_value, list of chosen item indices).
+    Pseudo-polynomial: O(n * W). Not polynomial in input *bit-length*.
+    """
+    n = len(items)
+    # dp[i][w] = max value using first i items with total weight &lt;= w
+    dp = [[0] * (W + 1) for _ in range(n + 1)]
+    for i in range(1, n + 1):
+        wt, val = items[i - 1]
+        for w in range(W + 1):
+            dp[i][w] = dp[i-1][w]
+            if wt &lt;= w:
+                dp[i][w] = max(dp[i][w], dp[i-1][w - wt] + val)
+
+    # Backtrack to find chosen items
+    chosen, w = [], W
+    for i in range(n, 0, -1):
+        if dp[i][w] != dp[i-1][w]:
+            chosen.append(i - 1)
+            w -= items[i-1][0]
+
+    return dp[n][W], chosen[::-1]
+
+items = [(2, 6), (2, 10), (3, 12), (1, 3)]  # (weight, value)
+W = 5
+value, chosen = knapsack(items, W)
+print(f"Knapsack: best value = {value}, items = {chosen}")
+# Expected: value=22, items=[1,2] (weights 2+3=5, values 10+12=22)</code></pre></div>
+    <div class="ct-panel" data-tab="npc-js"><pre><code>// (a) Hamiltonian path — brute force
+function hamiltonianPath(adj) {
+    const n = adj.length;
+    const perm = Array.from({length: n}, (_, i) =&gt; i);
+
+    function* permutations(arr) {
+        if (arr.length &lt;= 1) { yield arr; return; }
+        for (let i = 0; i &lt; arr.length; i++) {
+            const rest = [...arr.slice(0,i), ...arr.slice(i+1)];
+            for (const p of permutations(rest)) yield [arr[i], ...p];
+        }
+    }
+
+    for (const p of permutations(perm)) {
+        let ok = true;
+        for (let i = 0; i &lt; n - 1; i++)
+            if (!adj[p[i]][p[i+1]]) { ok = false; break; }
+        if (ok) return p;
+    }
+    return null;
+}
+
+// (b) 0/1 knapsack DP
+function knapsack(items, W) {
+    const n = items.length;
+    const dp = Array.from({length: n+1}, () =&gt; new Array(W+1).fill(0));
+    for (let i = 1; i &lt;= n; i++) {
+        const [wt, val] = items[i-1];
+        for (let w = 0; w &lt;= W; w++) {
+            dp[i][w] = dp[i-1][w];
+            if (wt &lt;= w) dp[i][w] = Math.max(dp[i][w], dp[i-1][w-wt] + val);
+        }
+    }
+    return dp[n][W];
+}
+
+const adj = [[0,1,0,0],[1,0,1,0],[0,1,0,1],[0,0,1,0]];
+console.log("Ham. path:", hamiltonianPath(adj));
+
+const items = [[2,6],[2,10],[3,12],[1,3]];
+console.log("Knapsack:", knapsack(items, 5));  // 22</code></pre></div>
+    <div class="ct-panel" data-tab="npc-c"><pre><code>#include &lt;stdio.h&gt;
+#include &lt;string.h&gt;
+
+/* (a) Hamiltonian path — brute force with Heap's permutation algorithm */
+#define MAXN 8
+int adj[MAXN][MAXN], n_nodes;
+int perm[MAXN];
+
+int check_ham(void) {
+    for (int i = 0; i &lt; n_nodes - 1; i++)
+        if (!adj[perm[i]][perm[i+1]]) return 0;
+    return 1;
+}
+
+void swap(int *a, int *b) { int t=*a; *a=*b; *b=t; }
+
+int heap_perm(int k) {
+    if (k == 1) return check_ham();
+    for (int i = 0; i &lt; k; i++) {
+        if (heap_perm(k - 1)) return 1;
+        if (k % 2 == 0) swap(&amp;perm[i], &amp;perm[k-1]);
+        else             swap(&amp;perm[0], &amp;perm[k-1]);
+    }
+    return 0;
+}
+
+/* (b) 0/1 knapsack DP */
+int knapsack(int *wts, int *vals, int n, int W) {
+    static int dp[100][1001];
+    memset(dp, 0, sizeof(dp));
+    for (int i = 1; i &lt;= n; i++)
+        for (int w = 0; w &lt;= W; w++) {
+            dp[i][w] = dp[i-1][w];
+            if (wts[i-1] &lt;= w) {
+                int take = dp[i-1][w-wts[i-1]] + vals[i-1];
+                if (take &gt; dp[i][w]) dp[i][w] = take;
+            }
+        }
+    return dp[n][W];
+}
+
+int main(void) {
+    n_nodes = 4;
+    int a[4][4] = {{0,1,0,0},{1,0,1,0},{0,1,0,1},{0,0,1,0}};
+    for (int i=0;i&lt;4;i++) for(int j=0;j&lt;4;j++) adj[i][j]=a[i][j];
+    for (int i=0;i&lt;4;i++) perm[i]=i;
+    printf("Hamiltonian path found: %s\n", heap_perm(n_nodes)?"yes":"no");
+
+    int wts[]={2,2,3,1}, vals[]={6,10,12,3};
+    printf("Knapsack best value: %d\n", knapsack(wts,vals,4,5));  /* 22 */
+    return 0;
+}</code></pre></div>
+    <div class="ct-panel" data-tab="npc-cpp"><pre><code>#include &lt;iostream&gt;
+#include &lt;vector&gt;
+#include &lt;algorithm&gt;
+#include &lt;numeric&gt;
+
+// (a) Hamiltonian path
+bool hamiltonianPath(const std::vector&lt;std::vector&lt;int&gt;&gt;&amp; adj) {
+    int n = adj.size();
+    std::vector&lt;int&gt; perm(n);
+    std::iota(perm.begin(), perm.end(), 0);
+    do {
+        bool ok = true;
+        for (int i = 0; i &lt; n - 1; i++)
+            if (!adj[perm[i]][perm[i+1]]) { ok = false; break; }
+        if (ok) return true;
+    } while (std::next_permutation(perm.begin(), perm.end()));
+    return false;
+}
+
+// (b) 0/1 Knapsack DP
+int knapsack(const std::vector&lt;std::pair&lt;int,int&gt;&gt;&amp; items, int W) {
+    int n = items.size();
+    std::vector&lt;std::vector&lt;int&gt;&gt; dp(n+1, std::vector&lt;int&gt;(W+1, 0));
+    for (int i = 1; i &lt;= n; i++) {
+        auto [wt, val] = items[i-1];
+        for (int w = 0; w &lt;= W; w++) {
+            dp[i][w] = dp[i-1][w];
+            if (wt &lt;= w) dp[i][w] = std::max(dp[i][w], dp[i-1][w-wt] + val);
+        }
+    }
+    return dp[n][W];
+}
+
+int main() {
+    std::vector&lt;std::vector&lt;int&gt;&gt; adj = {{0,1,0,0},{1,0,1,0},{0,1,0,1},{0,0,1,0}};
+    std::cout &lt;&lt; "Ham. path: " &lt;&lt; (hamiltonianPath(adj) ? "yes" : "no") &lt;&lt; "\n";
+
+    std::vector&lt;std::pair&lt;int,int&gt;&gt; items = {{2,6},{2,10},{3,12},{1,3}};
+    std::cout &lt;&lt; "Knapsack best: " &lt;&lt; knapsack(items, 5) &lt;&lt; "\n";  // 22
+}</code></pre></div>
+    <div class="ct-panel" data-tab="npc-java"><pre><code>import java.util.*;
+
+public class NpHardSolvers {
+
+    // (a) Hamiltonian path — brute force
+    static boolean hamiltonianPath(int[][] adj) {
+        int n = adj.length;
+        int[] perm = new int[n];
+        for (int i = 0; i &lt; n; i++) perm[i] = i;
+        do {
+            boolean ok = true;
+            for (int i = 0; i &lt; n - 1; i++)
+                if (adj[perm[i]][perm[i+1]] == 0) { ok = false; break; }
+            if (ok) return true;
+        } while (nextPermutation(perm));
+        return false;
+    }
+
+    static boolean nextPermutation(int[] arr) {
+        int n = arr.length, i = n - 2;
+        while (i &gt;= 0 &amp;&amp; arr[i] &gt;= arr[i+1]) i--;
+        if (i &lt; 0) return false;
+        int j = n - 1;
+        while (arr[j] &lt;= arr[i]) j--;
+        int tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
+        for (int l=i+1, r=n-1; l &lt; r; l++, r--) { tmp=arr[l]; arr[l]=arr[r]; arr[r]=tmp; }
+        return true;
+    }
+
+    // (b) 0/1 Knapsack DP
+    static int knapsack(int[] wts, int[] vals, int W) {
+        int n = wts.length;
+        int[][] dp = new int[n+1][W+1];
+        for (int i = 1; i &lt;= n; i++)
+            for (int w = 0; w &lt;= W; w++) {
+                dp[i][w] = dp[i-1][w];
+                if (wts[i-1] &lt;= w)
+                    dp[i][w] = Math.max(dp[i][w], dp[i-1][w-wts[i-1]] + vals[i-1]);
+            }
+        return dp[n][W];
+    }
+
+    public static void main(String[] args) {
+        int[][] adj = {{0,1,0,0},{1,0,1,0},{0,1,0,1},{0,0,1,0}};
+        System.out.println("Ham. path: " + hamiltonianPath(adj));
+
+        int[] wts = {2,2,3,1}, vals = {6,10,12,3};
+        System.out.println("Knapsack best: " + knapsack(wts, vals, 5));  // 22
+    }
+}</code></pre></div>
+    <div class="ct-panel" data-tab="npc-go"><pre><code>package main
+
+import (
+	"fmt"
+)
+
+// (a) Hamiltonian path — brute force permutations
+func hamiltonianPath(adj [][]int) bool {
+	n := len(adj)
+	perm := make([]int, n)
+	for i := range perm { perm[i] = i }
+
+	var check func([]int) bool
+	check = func(p []int) bool {
+		for i := 0; i &lt; len(p)-1; i++ {
+			if adj[p[i]][p[i+1]] == 0 { return false }
+		}
+		return true
+	}
+
+	var permute func([]int, int) bool
+	permute = func(p []int, k int) bool {
+		if k == len(p) { return check(p) }
+		for i := k; i &lt; len(p); i++ {
+			p[k], p[i] = p[i], p[k]
+			if permute(p, k+1) { return true }
+			p[k], p[i] = p[i], p[k]
+		}
+		return false
+	}
+	return permute(perm, 0)
+}
+
+// (b) 0/1 Knapsack DP
+func knapsack(wts, vals []int, W int) int {
+	n := len(wts)
+	dp := make([][]int, n+1)
+	for i := range dp { dp[i] = make([]int, W+1) }
+	for i := 1; i &lt;= n; i++ {
+		for w := 0; w &lt;= W; w++ {
+			dp[i][w] = dp[i-1][w]
+			if wts[i-1] &lt;= w {
+				if v := dp[i-1][w-wts[i-1]] + vals[i-1]; v &gt; dp[i][w] {
+					dp[i][w] = v
+				}
+			}
+		}
+	}
+	return dp[n][W]
+}
+
+func main() {
+	adj := [][]int{{0,1,0,0},{1,0,1,0},{0,1,0,1},{0,0,1,0}}
+	fmt.Println("Ham. path:", hamiltonianPath(adj))
+
+	wts := []int{2, 2, 3, 1}
+	vals := []int{6, 10, 12, 3}
+	fmt.Println("Knapsack best:", knapsack(wts, vals, 5))  // 22
+}</code></pre></div>
+  </div>
+</details>
 
     <!-- ========================================================== -->
     <h2 id="s12">12. Why P vs NP matters</h2>
@@ -437,6 +2196,275 @@
 
     <p>Different problems have wildly different approximation behavior. TSP on a metric (where distances satisfy the triangle inequality) has a $\rho = 3/2$ algorithm by Christofides. General TSP can't be approximated within <em>any</em> constant unless P = NP. MAX-3-SAT has a $\rho = 8/7$ algorithm. The PCP theorem (a deep result from 1992) says many problems can't be approximated within better than some constant, ever.</p>
 
+    <details class="algo-code">
+  <summary>Source — 2-Approx Vertex Cover</summary>
+  <div class="code-tabs">
+    <div class="ct-header">
+      <button class="ct-tab active" data-tab="approx-pseudo">Pseudocode</button>
+      <button class="ct-tab" data-tab="approx-py">Python</button>
+      <button class="ct-tab" data-tab="approx-js">JavaScript</button>
+      <button class="ct-tab" data-tab="approx-c">C</button>
+      <button class="ct-tab" data-tab="approx-cpp">C++</button>
+      <button class="ct-tab" data-tab="approx-java">Java</button>
+      <button class="ct-tab" data-tab="approx-go">Go</button>
+    </div>
+    <div class="ct-panel active" data-tab="approx-pseudo"><pre><code>-- 2-APPROXIMATION FOR VERTEX COVER via maximal matching
+-- A vertex cover is a set S such that every edge has at least one endpoint in S.
+-- OPT = minimum vertex cover size. This gives |cover| &lt;= 2 * OPT.
+
+vertex_cover_2approx(graph):
+  cover = empty set
+  edges = copy of all edges
+  while edges is not empty:
+    pick any edge (u, v) from edges
+    add u and v to cover         -- always take BOTH endpoints
+    remove all edges touching u or v from edges
+  return cover
+
+-- Why ratio = 2: the matched edges form a matching M.
+-- OPT must include at least one endpoint per matched edge, so |OPT| &gt;= |M|.
+-- Our cover has exactly 2|M| vertices, so |cover| = 2|M| &lt;= 2*|OPT|.
+
+-- GREEDY SET COVER (ln n approximation)
+-- Universe U of n elements, collection of sets. Cover U with fewest sets.
+
+greedy_set_cover(U, sets):
+  covered = empty
+  chosen = []
+  while covered != U:
+    S = argmax_{S in sets} |S \ covered|   -- set that covers most new elements
+    chosen.append(S)
+    covered = covered union S
+  return chosen
+-- Approximation ratio: H(max_set_size) ~= ln(n) where H is the harmonic number.</code></pre></div>
+    <div class="ct-panel" data-tab="approx-py"><pre><code>def vertex_cover_2approx(n: int, edges: list[tuple[int,int]]) -&gt; set[int]:
+    """
+    2-approximation for minimum vertex cover via maximal matching.
+    n: number of vertices (0-indexed).
+    edges: list of (u, v) pairs.
+    Returns a vertex cover S with |S| &lt;= 2 * OPT.
+    """
+    cover = set()
+    remaining = list(edges)
+    while remaining:
+        u, v = remaining.pop()      # pick any uncovered edge
+        cover.add(u)
+        cover.add(v)
+        # remove all edges touching u or v
+        remaining = [(a, b) for a, b in remaining if a != u and a != v and b != u and b != v]
+    return cover
+
+
+def greedy_set_cover(universe: set, sets: list[set]) -&gt; list[int]:
+    """
+    Greedy set cover: always pick the set that covers the most uncovered elements.
+    Approximation ratio: H(|max_set|) ≈ ln(n).
+    Returns list of chosen set indices.
+    """
+    covered = set()
+    chosen = []
+    remaining = list(range(len(sets)))
+    while covered != universe:
+        # find the set that covers the most new elements
+        best = max(remaining, key=lambda i: len(sets[i] - covered))
+        chosen.append(best)
+        covered |= sets[best]
+        remaining.remove(best)
+    return chosen
+
+
+# Demo: vertex cover on a small graph
+edges = [(0,1),(0,2),(1,3),(2,3),(3,4)]
+cover = vertex_cover_2approx(5, edges)
+print("Vertex cover:", cover)
+# Verify every edge is covered
+assert all(u in cover or v in cover for u,v in edges), "Not a valid cover!"
+print("All edges covered: OK")
+
+# Demo: set cover
+U = {1,2,3,4,5,6,7,8,9,10}
+sets = [{1,2,3,4},{3,4,5},{5,6,7},{7,8,9,10},{1,5,9}]
+chosen = greedy_set_cover(U, sets)
+print("Set cover indices:", chosen, "-> sets:", [sets[i] for i in chosen])</code></pre></div>
+    <div class="ct-panel" data-tab="approx-js"><pre><code>function vertexCover2Approx(n, edges) {
+    const cover = new Set();
+    let remaining = edges.map(e =&gt; [...e]);  // copy
+    while (remaining.length &gt; 0) {
+        const [u, v] = remaining.pop();
+        cover.add(u);
+        cover.add(v);
+        remaining = remaining.filter(([a, b]) =&gt; a !== u &amp;&amp; a !== v &amp;&amp; b !== u &amp;&amp; b !== v);
+    }
+    return cover;
+}
+
+function greedySetCover(universe, sets) {
+    const covered = new Set();
+    const chosen = [];
+    const remaining = new Set(sets.keys());
+    while (covered.size &lt; universe.size) {
+        let best = -1, bestCount = -1;
+        for (const i of remaining) {
+            const count = [...sets[i]].filter(x =&gt; !covered.has(x)).length;
+            if (count &gt; bestCount) { bestCount = count; best = i; }
+        }
+        chosen.push(best);
+        for (const x of sets[best]) covered.add(x);
+        remaining.delete(best);
+    }
+    return chosen;
+}
+
+const edges = [[0,1],[0,2],[1,3],[2,3],[3,4]];
+const cover = vertexCover2Approx(5, edges);
+console.log("Vertex cover:", [...cover]);
+
+const U = new Set([1,2,3,4,5,6,7,8,9,10]);
+const sets = [[1,2,3,4],[3,4,5],[5,6,7],[7,8,9,10],[1,5,9]].map(a =&gt; new Set(a));
+console.log("Set cover:", greedySetCover(U, sets));</code></pre></div>
+    <div class="ct-panel" data-tab="approx-c"><pre><code>#include &lt;stdio.h&gt;
+#include &lt;string.h&gt;
+
+#define MAXV 100
+#define MAXE 1000
+
+/* 2-approximation vertex cover */
+void vertex_cover_2approx(int eu[], int ev[], int ne, int cover[], int *nc) {
+    int used[MAXE] = {0};
+    *nc = 0;
+    int in_cover[MAXV] = {0};
+    for (int i = 0; i &lt; ne; i++) {
+        if (used[i]) continue;
+        int u = eu[i], v = ev[i];
+        if (!in_cover[u]) { cover[(*nc)++] = u; in_cover[u] = 1; }
+        if (!in_cover[v]) { cover[(*nc)++] = v; in_cover[v] = 1; }
+        /* mark all edges touching u or v */
+        for (int j = i; j &lt; ne; j++)
+            if (eu[j]==u||eu[j]==v||ev[j]==u||ev[j]==v) used[j]=1;
+    }
+}
+
+int main(void) {
+    int eu[] = {0,0,1,2,3};
+    int ev[] = {1,2,3,3,4};
+    int ne = 5;
+    int cover[MAXV], nc = 0;
+    vertex_cover_2approx(eu, ev, ne, cover, &amp;nc);
+    printf("Vertex cover (%d vertices):", nc);
+    for (int i = 0; i &lt; nc; i++) printf(" %d", cover[i]);
+    printf("\n");
+
+    /* Verify every edge is covered */
+    for (int i = 0; i &lt; ne; i++) {
+        int ok = 0;
+        for (int j = 0; j &lt; nc; j++)
+            if (cover[j]==eu[i]||cover[j]==ev[i]) { ok=1; break; }
+        if (!ok) { printf("ERROR: edge (%d,%d) not covered!\n",eu[i],ev[i]); return 1; }
+    }
+    printf("All edges covered: OK\n");
+    return 0;
+}</code></pre></div>
+    <div class="ct-panel" data-tab="approx-cpp"><pre><code>#include &lt;iostream&gt;
+#include &lt;vector&gt;
+#include &lt;set&gt;
+#include &lt;algorithm&gt;
+
+using Edge = std::pair&lt;int,int&gt;;
+
+std::set&lt;int&gt; vertexCover2Approx(const std::vector&lt;Edge&gt;&amp; edges) {
+    std::set&lt;int&gt; cover;
+    std::vector&lt;Edge&gt; rem = edges;
+    while (!rem.empty()) {
+        auto [u, v] = rem.back(); rem.pop_back();
+        cover.insert(u); cover.insert(v);
+        rem.erase(std::remove_if(rem.begin(), rem.end(),
+            [&amp;](const Edge&amp; e){ return e.first==u||e.first==v||e.second==u||e.second==v; }),
+            rem.end());
+    }
+    return cover;
+}
+
+int main() {
+    std::vector&lt;Edge&gt; edges = {{0,1},{0,2},{1,3},{2,3},{3,4}};
+    auto cover = vertexCover2Approx(edges);
+    std::cout &lt;&lt; "Vertex cover:";
+    for (int v : cover) std::cout &lt;&lt; " " &lt;&lt; v;
+    std::cout &lt;&lt; "\n";
+
+    for (auto&amp; [u,v] : edges)
+        if (!cover.count(u) &amp;&amp; !cover.count(v)) { std::cout &lt;&lt; "ERROR\n"; return 1; }
+    std::cout &lt;&lt; "All edges covered: OK\n";
+}</code></pre></div>
+    <div class="ct-panel" data-tab="approx-java"><pre><code>import java.util.*;
+
+public class VertexCover {
+    static Set&lt;Integer&gt; vertexCover2Approx(int n, int[][] edges) {
+        Set&lt;Integer&gt; cover = new HashSet&lt;&gt;();
+        List&lt;int[]&gt; rem = new ArrayList&lt;&gt;(Arrays.asList(edges));
+        while (!rem.isEmpty()) {
+            int[] e = rem.remove(rem.size() - 1);
+            int u = e[0], v = e[1];
+            cover.add(u); cover.add(v);
+            rem.removeIf(x -&gt; x[0]==u || x[0]==v || x[1]==u || x[1]==v);
+        }
+        return cover;
+    }
+
+    public static void main(String[] args) {
+        int[][] edges = {{0,1},{0,2},{1,3},{2,3},{3,4}};
+        Set&lt;Integer&gt; cover = vertexCover2Approx(5, edges);
+        System.out.println("Vertex cover: " + cover);
+
+        for (int[] e : edges)
+            if (!cover.contains(e[0]) &amp;&amp; !cover.contains(e[1]))
+                throw new RuntimeException("Edge not covered: " + Arrays.toString(e));
+        System.out.println("All edges covered: OK");
+    }
+}</code></pre></div>
+    <div class="ct-panel" data-tab="approx-go"><pre><code>package main
+
+import "fmt"
+
+type Edge struct{ u, v int }
+
+func vertexCover2Approx(edges []Edge) map[int]bool {
+	cover := map[int]bool{}
+	rem := append([]Edge{}, edges...)
+	for len(rem) &gt; 0 {
+		e := rem[len(rem)-1]
+		rem = rem[:len(rem)-1]
+		u, v := e.u, e.v
+		cover[u] = true
+		cover[v] = true
+		filtered := rem[:0]
+		for _, x := range rem {
+			if x.u != u &amp;&amp; x.u != v &amp;&amp; x.v != u &amp;&amp; x.v != v {
+				filtered = append(filtered, x)
+			}
+		}
+		rem = filtered
+	}
+	return cover
+}
+
+func main() {
+	edges := []Edge{{0,1},{0,2},{1,3},{2,3},{3,4}}
+	cover := vertexCover2Approx(edges)
+	fmt.Print("Vertex cover:")
+	for v := range cover { fmt.Print(" ", v) }
+	fmt.Println()
+
+	for _, e := range edges {
+		if !cover[e.u] &amp;&amp; !cover[e.v] {
+			fmt.Printf("ERROR: edge (%d,%d) not covered\n", e.u, e.v)
+			return
+		}
+	}
+	fmt.Println("All edges covered: OK")
+}</code></pre></div>
+  </div>
+</details>
+
     <!-- ========================================================== -->
     <h2 id="s14">14. Randomized complexity</h2>
 
@@ -459,6 +2487,319 @@
 
     <p>The big question in randomized complexity is whether randomness <em>actually helps</em>. For decades it looked like BPP might be strictly larger than P. But starting in the 1990s, derandomization results piled up: under reasonable hardness assumptions, $\text{P} = \text{BPP}$. Most theorists now believe the equality holds, even though it's not proven. The intuitive picture: pseudo-random generators are good enough that "real" randomness rarely buys you more than constant-factor speedup.</p>
 
+    <details class="algo-code">
+  <summary>Source — Miller-Rabin Primality Test</summary>
+  <div class="code-tabs">
+    <div class="ct-header">
+      <button class="ct-tab active" data-tab="rand-pseudo">Pseudocode</button>
+      <button class="ct-tab" data-tab="rand-py">Python</button>
+      <button class="ct-tab" data-tab="rand-js">JavaScript</button>
+      <button class="ct-tab" data-tab="rand-c">C</button>
+      <button class="ct-tab" data-tab="rand-cpp">C++</button>
+      <button class="ct-tab" data-tab="rand-java">Java</button>
+      <button class="ct-tab" data-tab="rand-go">Go</button>
+    </div>
+    <div class="ct-panel active" data-tab="rand-pseudo"><pre><code>-- Miller-Rabin probabilistic primality test.
+-- An example of an RP (Randomized Polynomial) algorithm.
+-- If n is composite, each random witness a catches it with probability >= 3/4.
+-- k rounds -&gt; error probability &lt;= (1/4)^k.
+
+miller_rabin(n, k=20):
+  if n &lt; 2: return COMPOSITE
+  if n == 2 or n == 3: return PRIME
+  if n is even: return COMPOSITE
+
+  -- Write n-1 as 2^r * d, where d is odd
+  r = 0, d = n - 1
+  while d is even: r++, d /= 2
+
+  -- k rounds with random witnesses
+  repeat k times:
+    a = random integer in [2, n-2]
+    x = a^d mod n
+
+    if x == 1 or x == n-1: continue  -- probably prime for this witness
+
+    -- Square x up to r-1 times
+    repeat r-1 times:
+      x = x^2 mod n
+      if x == n-1: break (go to next witness)
+    else:
+      return COMPOSITE  -- n is definitely composite
+
+  return PROBABLY_PRIME  -- no witness found it composite</code></pre></div>
+    <div class="ct-panel" data-tab="rand-py"><pre><code>import random
+
+def miller_rabin(n: int, k: int = 20) -&gt; bool:
+    """
+    Miller-Rabin probabilistic primality test.
+    Returns True if n is probably prime, False if definitely composite.
+    Error probability: at most (1/4)^k per call.
+    This is an RP-class algorithm: no false negatives, possible false positives.
+    """
+    if n &lt; 2:   return False
+    if n == 2:  return True
+    if n == 3:  return True
+    if n % 2 == 0: return False
+
+    # Write n-1 as 2^r * d with d odd
+    r, d = 0, n - 1
+    while d % 2 == 0:
+        r += 1
+        d //= 2
+
+    for _ in range(k):
+        a = random.randrange(2, n - 1)
+        x = pow(a, d, n)          # Python's built-in modular exponentiation
+
+        if x == 1 or x == n - 1:
+            continue               # probably prime for this witness
+
+        for _ in range(r - 1):
+            x = pow(x, 2, n)
+            if x == n - 1:
+                break
+        else:
+            return False           # definitely composite
+
+    return True                    # probably prime
+
+
+# Test on some known primes and composites
+primes    = [2, 3, 5, 7, 11, 13, 17, 104729, 15485863, 32452843]
+composites = [4, 9, 25, 100, 104730, 15485864]
+
+for p in primes:
+    assert miller_rabin(p), f"False negative: {p} should be prime"
+for c in composites:
+    assert not miller_rabin(c), f"False positive: {c} should be composite"
+
+print("All tests passed. Miller-Rabin error rate per round: &lt;= 1/4")</code></pre></div>
+    <div class="ct-panel" data-tab="rand-js"><pre><code>/**
+ * Miller-Rabin primality test in JavaScript.
+ * Note: JavaScript's Number is a 64-bit float; for large primes use BigInt.
+ */
+function millerRabin(n, k = 20) {
+    if (n &lt; 2n) return false;
+    if (n === 2n || n === 3n) return true;
+    if (n % 2n === 0n) return false;
+
+    // Write n-1 as 2^r * d
+    let r = 0n, d = n - 1n;
+    while (d % 2n === 0n) { r++; d /= 2n; }
+
+    function modpow(base, exp, mod) {
+        let result = 1n;
+        base %= mod;
+        while (exp &gt; 0n) {
+            if (exp % 2n === 1n) result = result * base % mod;
+            exp /= 2n;
+            base = base * base % mod;
+        }
+        return result;
+    }
+
+    for (let i = 0; i &lt; k; i++) {
+        // Random witness in [2, n-2]
+        const a = 2n + BigInt(Math.floor(Math.random() * Number(n - 4n)));
+        let x = modpow(a, d, n);
+        if (x === 1n || x === n - 1n) continue;
+
+        let composite = true;
+        for (let j = 0n; j &lt; r - 1n; j++) {
+            x = modpow(x, 2n, n);
+            if (x === n - 1n) { composite = false; break; }
+        }
+        if (composite) return false;
+    }
+    return true;
+}
+
+const tests = [2n, 3n, 7n, 104729n, 15485863n, 4n, 9n, 104730n];
+for (const n of tests)
+    console.log(`${n}: ${millerRabin(n) ? "probably prime" : "composite"}`);</code></pre></div>
+    <div class="ct-panel" data-tab="rand-c"><pre><code>#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;time.h&gt;
+#include &lt;stdint.h&gt;
+
+/* 64-bit modular multiplication to avoid overflow */
+typedef unsigned long long ull;
+
+ull mulmod(ull a, ull b, ull m) {
+    return (__uint128_t)a * b % m;
+}
+
+ull powmod(ull base, ull exp, ull m) {
+    ull result = 1;
+    base %= m;
+    while (exp &gt; 0) {
+        if (exp &amp; 1) result = mulmod(result, base, m);
+        exp &gt;&gt;= 1;
+        base = mulmod(base, base, m);
+    }
+    return result;
+}
+
+int miller_rabin(ull n, int k) {
+    if (n &lt; 2) return 0;
+    if (n == 2 || n == 3) return 1;
+    if (n % 2 == 0) return 0;
+
+    ull d = n - 1; int r = 0;
+    while (d % 2 == 0) { d /= 2; r++; }
+
+    for (int i = 0; i &lt; k; i++) {
+        ull a = 2 + rand() % (n - 4);
+        ull x = powmod(a, d, n);
+        if (x == 1 || x == n - 1) continue;
+        int maybe_prime = 0;
+        for (int j = 0; j &lt; r - 1; j++) {
+            x = mulmod(x, x, n);
+            if (x == n - 1) { maybe_prime = 1; break; }
+        }
+        if (!maybe_prime) return 0;  /* composite */
+    }
+    return 1;  /* probably prime */
+}
+
+int main(void) {
+    srand((unsigned)time(NULL));
+    ull tests[] = {2,3,7,104729,15485863,4,9,104730};
+    for (int i = 0; i &lt; 8; i++)
+        printf("%llu: %s\n", tests[i], miller_rabin(tests[i],20)?"probably prime":"composite");
+    return 0;
+}</code></pre></div>
+    <div class="ct-panel" data-tab="rand-cpp"><pre><code>#include &lt;iostream&gt;
+#include &lt;cstdint&gt;
+#include &lt;random&gt;
+
+using ull = unsigned long long;
+using u128 = __uint128_t;
+
+ull mulmod(ull a, ull b, ull m) { return (u128)a * b % m; }
+
+ull powmod(ull b, ull e, ull m) {
+    ull r = 1; b %= m;
+    for (; e; e &gt;&gt;= 1, b = mulmod(b,b,m))
+        if (e &amp; 1) r = mulmod(r, b, m);
+    return r;
+}
+
+bool millerRabin(ull n, int k = 20) {
+    if (n &lt; 2) return false;
+    if (n == 2 || n == 3) return true;
+    if (n % 2 == 0) return false;
+
+    ull d = n - 1; int r = 0;
+    while (!(d &amp; 1)) { d &gt;&gt;= 1; r++; }
+
+    std::mt19937_64 rng(std::random_device{}());
+    std::uniform_int_distribution&lt;ull&gt; dist(2, n - 2);
+
+    for (int i = 0; i &lt; k; i++) {
+        ull a = dist(rng);
+        ull x = powmod(a, d, n);
+        if (x == 1 || x == n - 1) continue;
+        bool ok = false;
+        for (int j = 0; j &lt; r - 1; j++) {
+            x = mulmod(x, x, n);
+            if (x == n - 1) { ok = true; break; }
+        }
+        if (!ok) return false;
+    }
+    return true;
+}
+
+int main() {
+    for (ull n : {2ULL,3ULL,7ULL,104729ULL,15485863ULL,4ULL,9ULL,104730ULL})
+        std::cout &lt;&lt; n &lt;&lt; ": " &lt;&lt; (millerRabin(n) ? "probably prime" : "composite") &lt;&lt; "\n";
+}</code></pre></div>
+    <div class="ct-panel" data-tab="rand-java"><pre><code>import java.math.BigInteger;
+import java.util.Random;
+
+public class MillerRabin {
+    static Random rng = new Random();
+
+    static boolean millerRabin(long n, int k) {
+        if (n &lt; 2) return false;
+        if (n == 2 || n == 3) return true;
+        if (n % 2 == 0) return false;
+
+        long d = n - 1; int r = 0;
+        while (d % 2 == 0) { d /= 2; r++; }
+
+        BigInteger N = BigInteger.valueOf(n);
+        BigInteger D = BigInteger.valueOf(d);
+        BigInteger N1 = N.subtract(BigInteger.ONE);
+
+        for (int i = 0; i &lt; k; i++) {
+            long aLong = 2 + Math.abs(rng.nextLong()) % (n - 3);
+            BigInteger a = BigInteger.valueOf(aLong);
+            BigInteger x = a.modPow(D, N);
+            if (x.equals(BigInteger.ONE) || x.equals(N1)) continue;
+            boolean ok = false;
+            for (int j = 0; j &lt; r - 1; j++) {
+                x = x.multiply(x).mod(N);
+                if (x.equals(N1)) { ok = true; break; }
+            }
+            if (!ok) return false;
+        }
+        return true;
+    }
+
+    public static void main(String[] args) {
+        long[] tests = {2,3,7,104729L,15485863L,4,9,104730L};
+        for (long n : tests)
+            System.out.println(n + ": " + (millerRabin(n, 20) ? "probably prime" : "composite"));
+    }
+}</code></pre></div>
+    <div class="ct-panel" data-tab="rand-go"><pre><code>package main
+
+import (
+	"fmt"
+	"math/big"
+	"math/rand"
+)
+
+func millerRabin(n int64, k int) bool {
+	if n &lt; 2 { return false }
+	if n == 2 || n == 3 { return true }
+	if n%2 == 0 { return false }
+
+	d, r := n-1, 0
+	for d%2 == 0 { d /= 2; r++ }
+
+	N := big.NewInt(n)
+	D := big.NewInt(d)
+	N1 := new(big.Int).Sub(N, big.NewInt(1))
+	one := big.NewInt(1)
+
+	for i := 0; i &lt; k; i++ {
+		a := big.NewInt(2 + rand.Int63n(n-3))
+		x := new(big.Int).Exp(a, D, N)
+		if x.Cmp(one) == 0 || x.Cmp(N1) == 0 { continue }
+		ok := false
+		for j := 0; j &lt; r-1; j++ {
+			x.Mul(x, x).Mod(x, N)
+			if x.Cmp(N1) == 0 { ok = true; break }
+		}
+		if !ok { return false }
+	}
+	return true
+}
+
+func main() {
+	tests := []int64{2, 3, 7, 104729, 15485863, 4, 9, 104730}
+	for _, n := range tests {
+		s := "composite"
+		if millerRabin(n, 20) { s = "probably prime" }
+		fmt.Printf("%d: %s\n", n, s)
+	}
+}</code></pre></div>
+  </div>
+</details>
+
     <!-- ========================================================== -->
     <h2 id="s15">15. Quantum, briefly</h2>
 
@@ -480,6 +2821,333 @@
     <div class="callout">
       <p><strong>What quantum doesn't do.</strong> Quantum computers are not magic NP solvers. The general consensus is BQP does not contain NP — Grover is the best general quantum speedup we expect for NP problems, and it's quadratic, not exponential. Quantum specifically helps with structured problems like factoring, discrete log, and certain simulation tasks. It does not give you a free pass on the entire NP-completeness wall.</p>
     </div>
+
+    <details class="algo-code">
+  <summary>Source — Quantum Gate Simulation</summary>
+  <div class="code-tabs">
+    <div class="ct-header">
+      <button class="ct-tab active" data-tab="qc-pseudo">Pseudocode</button>
+      <button class="ct-tab" data-tab="qc-py">Python</button>
+      <button class="ct-tab" data-tab="qc-js">JavaScript</button>
+      <button class="ct-tab" data-tab="qc-c">C</button>
+      <button class="ct-tab" data-tab="qc-cpp">C++</button>
+      <button class="ct-tab" data-tab="qc-java">Java</button>
+      <button class="ct-tab" data-tab="qc-go">Go</button>
+    </div>
+    <div class="ct-panel active" data-tab="qc-pseudo"><pre><code>-- Simulate quantum gates on a classical computer using complex-number vectors.
+-- A 1-qubit state is a 2-component complex vector [alpha, beta]
+--   where |alpha|^2 + |beta|^2 = 1.
+-- |0&gt; = [1, 0],  |1&gt; = [0, 1]
+
+-- Hadamard gate H: creates superposition from a basis state
+H = (1/sqrt(2)) * [[1,  1],
+                    [1, -1]]
+
+H|0&gt; = (1/sqrt(2))[1, 1]   -- equal superposition of |0&gt; and |1&gt;
+H|1&gt; = (1/sqrt(2))[1,-1]
+
+-- CNOT gate (2-qubit): flips the target qubit if the control is |1&gt;
+-- Basis order: |00&gt;, |01&gt;, |10&gt;, |11&gt;
+CNOT = [[1,0,0,0],
+        [0,1,0,0],
+        [0,0,0,1],
+        [0,0,1,0]]
+
+-- Bell state |Phi+&gt; = (|00&gt; + |11&gt;) / sqrt(2)
+-- Circuit: start with |00&gt;, apply H to qubit 0, then CNOT
+
+|00&gt; --[H on q0]--> (1/sqrt(2))(|00&gt; + |10&gt;) --[CNOT]--> (1/sqrt(2))(|00&gt; + |11&gt;)
+
+result = CNOT * (H tensor I) * |00&gt;
+       = [1/sqrt(2), 0, 0, 1/sqrt(2)]   -- Bell state |Phi+&gt;</code></pre></div>
+    <div class="ct-panel" data-tab="qc-py"><pre><code>import numpy as np
+
+# Single-qubit states
+ket0 = np.array([1.0+0j, 0.0+0j])  # |0&gt;
+ket1 = np.array([0.0+0j, 1.0+0j])  # |1&gt;
+
+# Hadamard gate
+H = np.array([[1, 1],
+              [1,-1]], dtype=complex) / np.sqrt(2)
+
+# Pauli-X (NOT) gate
+X = np.array([[0,1],[1,0]], dtype=complex)
+
+# CNOT gate (4x4, acts on 2-qubit state space)
+CNOT = np.array([[1,0,0,0],
+                 [0,1,0,0],
+                 [0,0,0,1],
+                 [0,0,1,0]], dtype=complex)
+
+def tensor(A, B):
+    """Kronecker product — combines two gate matrices."""
+    return np.kron(A, B)
+
+def apply(gate, state):
+    """Apply a gate (matrix) to a state vector."""
+    return gate @ state
+
+# --- Demo 1: Hadamard on |0&gt; ---
+h0 = apply(H, ket0)
+print("H|0&gt; =", h0)                    # [0.707, 0.707] — equal superposition
+
+# --- Demo 2: Bell state |Phi+&gt; = (|00&gt; + |11&gt;) / sqrt(2) ---
+# Start from |00&gt; = tensor product of |0&gt; and |0&gt;
+state_00 = np.kron(ket0, ket0)          # [1,0,0,0]
+
+# Apply H to qubit 0 and identity I to qubit 1
+I = np.eye(2, dtype=complex)
+H_I = tensor(H, I)                      # 4x4 gate
+
+after_H = apply(H_I, state_00)          # (|00&gt; + |10&gt;) / sqrt(2)
+bell = apply(CNOT, after_H)             # (|00&gt; + |11&gt;) / sqrt(2)
+
+print("Bell |Phi+&gt;:", np.round(bell, 4))
+# Expected: [0.7071, 0, 0, 0.7071]
+
+# Verify normalization
+print("Norm:", np.round(np.linalg.norm(bell)**2, 10))  # should be 1.0
+
+# --- Demo 3: measure probabilities ---
+probs = np.abs(bell)**2
+labels = ["|00&gt;", "|01&gt;", "|10&gt;", "|11&gt;"]
+for label, p in zip(labels, probs):
+    print(f"  P({label}) = {p:.4f}")
+# P(|00&gt;) = 0.5000, P(|11&gt;) = 0.5000 — the signature of entanglement</code></pre></div>
+    <div class="ct-panel" data-tab="qc-js"><pre><code>/**
+ * Quantum gate simulation in JavaScript.
+ * States and gates are represented as flat arrays of [real, imag] pairs.
+ * We use a simple 2x2 and 4x4 matrix multiply — no external library.
+ */
+
+// Complex number helpers
+const mul = ([ar,ai],[br,bi]) =&gt; [ar*br-ai*bi, ar*bi+ai*br];
+const add = ([ar,ai],[br,bi]) =&gt; [ar+br, ai+bi];
+
+// Matrix-vector multiply (n x n matrix, n-vector; entries are [re,im] pairs)
+function matvec(M, v) {
+    const n = v.length;
+    return Array.from({length: n}, (_, i) =&gt;
+        v.reduce((acc, vj, j) =&gt; add(acc, mul(M[i][j], vj)), [0,0]));
+}
+
+// Kronecker product of two matrices
+function kron(A, B) {
+    const na = A.length, nb = B.length, n = na * nb;
+    return Array.from({length: n}, (_, i) =&gt;
+        Array.from({length: n}, (_, j) =&gt;
+            mul(A[Math.floor(i/nb)][Math.floor(j/nb)], B[i%nb][j%nb])));
+}
+
+const s = 1/Math.sqrt(2);
+const H    = [[[s,0],[s,0]], [[s,0],[-s,0]]];
+const I2   = [[[1,0],[0,0]], [[0,0],[1,0]]];
+const CNOT = [[[1,0],[0,0],[0,0],[0,0]],
+              [[0,0],[1,0],[0,0],[0,0]],
+              [[0,0],[0,0],[0,0],[1,0]],
+              [[0,0],[0,0],[1,0],[0,0]]];
+
+// |00&gt; state
+const ket00 = [[1,0],[0,0],[0,0],[0,0]];
+
+// Apply H tensor I, then CNOT
+const H_I      = kron(H, I2);
+const afterH   = matvec(H_I, ket00);
+const bell     = matvec(CNOT, afterH);
+
+console.log("Bell |Phi+&gt;:");
+["|00&gt;","|01&gt;","|10&gt;","|11&gt;"].forEach((label,i) =&gt; {
+    const [re,im] = bell[i];
+    const prob = re*re + im*im;
+    console.log(`  ${label}: re=${re.toFixed(4)} im=${im.toFixed(4)} P=${prob.toFixed(4)}`);
+});</code></pre></div>
+    <div class="ct-panel" data-tab="qc-c"><pre><code>#include &lt;stdio.h&gt;
+#include &lt;math.h&gt;
+
+/* Complex number as (re, im) pair */
+typedef struct { double re, im; } C;
+static C cadd(C a,C b){return (C){a.re+b.re,a.im+b.im};}
+static C cmul(C a,C b){return (C){a.re*b.re-a.im*b.im,a.re*b.im+a.im*b.re};}
+static double cabs2(C a){return a.re*a.re+a.im*a.im;}
+
+/* 4-vector state: |00&gt;, |01&gt;, |10&gt;, |11&gt; */
+static void matvec4(C M[4][4], C v[4], C out[4]) {
+    for (int i=0;i&lt;4;i++) {
+        out[i]=(C){0,0};
+        for (int j=0;j&lt;4;j++) out[i]=cadd(out[i],cmul(M[i][j],v[j]));
+    }
+}
+
+int main(void) {
+    double s = 1.0/sqrt(2.0);
+    /* H tensor I — 4x4 */
+    C HI[4][4] = {
+        {{ s,0},{ 0,0},{ s,0},{ 0,0}},
+        {{ 0,0},{ s,0},{ 0,0},{ s,0}},
+        {{ s,0},{ 0,0},{-s,0},{ 0,0}},
+        {{ 0,0},{ s,0},{ 0,0},{-s,0}},
+    };
+    /* CNOT */
+    C CNOT[4][4] = {
+        {{1,0},{0,0},{0,0},{0,0}},
+        {{0,0},{1,0},{0,0},{0,0}},
+        {{0,0},{0,0},{0,0},{1,0}},
+        {{0,0},{0,0},{1,0},{0,0}},
+    };
+    /* |00&gt; */
+    C state[4] = {{1,0},{0,0},{0,0},{0,0}};
+    C tmp[4], bell[4];
+
+    matvec4(HI,   state, tmp);
+    matvec4(CNOT, tmp,   bell);
+
+    const char *labels[] = {"|00&gt;","|01&gt;","|10&gt;","|11&gt;"};
+    printf("Bell |Phi+&gt;:\n");
+    for (int i=0;i&lt;4;i++)
+        printf("  %s re=%.4f im=%.4f P=%.4f\n",
+               labels[i], bell[i].re, bell[i].im, cabs2(bell[i]));
+    return 0;
+}</code></pre></div>
+    <div class="ct-panel" data-tab="qc-cpp"><pre><code>#include &lt;iostream&gt;
+#include &lt;complex&gt;
+#include &lt;array&gt;
+#include &lt;cmath&gt;
+
+using C = std::complex&lt;double&gt;;
+using State4 = std::array&lt;C,4&gt;;
+using Gate4  = std::array&lt;std::array&lt;C,4&gt;,4&gt;;
+
+State4 apply(const Gate4&amp; M, const State4&amp; v) {
+    State4 out{};
+    for (int i=0;i&lt;4;i++) for (int j=0;j&lt;4;j++) out[i]+=M[i][j]*v[j];
+    return out;
+}
+
+int main() {
+    const double s = 1.0/std::sqrt(2.0);
+    // H tensor I
+    Gate4 HI = {{
+        {{{ s,0},{ 0,0},{ s,0},{ 0,0}}},
+        {{{ 0,0},{ s,0},{ 0,0},{ s,0}}},
+        {{{ s,0},{ 0,0},{-s,0},{ 0,0}}},
+        {{{ 0,0},{ s,0},{ 0,0},{-s,0}}},
+    }};
+    // CNOT
+    Gate4 CNOT = {{
+        {{{1,0},{0,0},{0,0},{0,0}}},
+        {{{0,0},{1,0},{0,0},{0,0}}},
+        {{{0,0},{0,0},{0,0},{1,0}}},
+        {{{0,0},{0,0},{1,0},{0,0}}},
+    }};
+
+    State4 state = {C(1,0),C(0,0),C(0,0),C(0,0)};  // |00&gt;
+    state = apply(CNOT, apply(HI, state));
+
+    const char* labels[] = {"|00&gt;","|01&gt;","|10&gt;","|11&gt;"};
+    for (int i=0;i&lt;4;i++)
+        std::cout &lt;&lt; labels[i] &lt;&lt; " re=" &lt;&lt; state[i].real()
+                  &lt;&lt; " P=" &lt;&lt; std::norm(state[i]) &lt;&lt; "\n";
+}</code></pre></div>
+    <div class="ct-panel" data-tab="qc-java"><pre><code>public class QuantumGates {
+    // Complex multiply and add
+    static double[] cmul(double[] a, double[] b) {
+        return new double[]{a[0]*b[0]-a[1]*b[1], a[0]*b[1]+a[1]*b[0]};
+    }
+    static double[] cadd(double[] a, double[] b) {
+        return new double[]{a[0]+b[0], a[1]+b[1]};
+    }
+
+    static double[][] matvec(double[][][] M, double[][] v) {
+        int n = v.length;
+        double[][] out = new double[n][2];
+        for (int i = 0; i &lt; n; i++)
+            for (int j = 0; j &lt; n; j++)
+                out[i] = cadd(out[i], cmul(M[i][j], v[j]));
+        return out;
+    }
+
+    public static void main(String[] args) {
+        double s = 1.0 / Math.sqrt(2.0);
+        // H tensor I (4x4)
+        double[][][] HI = {
+            {{s,0},{0,0},{s,0},{0,0}},
+            {{0,0},{s,0},{0,0},{s,0}},
+            {{s,0},{0,0},{-s,0},{0,0}},
+            {{0,0},{s,0},{0,0},{-s,0}},
+        };
+        // CNOT
+        double[][][] CNOT = {
+            {{1,0},{0,0},{0,0},{0,0}},
+            {{0,0},{1,0},{0,0},{0,0}},
+            {{0,0},{0,0},{0,0},{1,0}},
+            {{0,0},{0,0},{1,0},{0,0}},
+        };
+
+        // |00&gt; state
+        double[][] state = {{1,0},{0,0},{0,0},{0,0}};
+        state = matvec(HI,   state);
+        state = matvec(CNOT, state);
+
+        String[] labels = {"|00&gt;","|01&gt;","|10&gt;","|11&gt;"};
+        System.out.println("Bell |Phi+&gt;:");
+        for (int i = 0; i &lt; 4; i++) {
+            double p = state[i][0]*state[i][0] + state[i][1]*state[i][1];
+            System.out.printf("  %s re=%.4f im=%.4f P=%.4f%n",
+                labels[i], state[i][0], state[i][1], p);
+        }
+    }
+}</code></pre></div>
+    <div class="ct-panel" data-tab="qc-go"><pre><code>package main
+
+import (
+	"fmt"
+	"math"
+	"math/cmplx"
+)
+
+type State4 [4]complex128
+type Gate4  [4][4]complex128
+
+func apply(M Gate4, v State4) State4 {
+	var out State4
+	for i := 0; i &lt; 4; i++ {
+		for j := 0; j &lt; 4; j++ {
+			out[i] += M[i][j] * v[j]
+		}
+	}
+	return out
+}
+
+func main() {
+	s := complex(1.0/math.Sqrt(2), 0)
+	// H tensor I (4x4)
+	HI := Gate4{
+		{s, 0, s, 0},
+		{0, s, 0, s},
+		{s, 0, -s, 0},
+		{0, s, 0, -s},
+	}
+	// CNOT
+	CNOT := Gate4{
+		{1, 0, 0, 0},
+		{0, 1, 0, 0},
+		{0, 0, 0, 1},
+		{0, 0, 1, 0},
+	}
+
+	state := State4{1, 0, 0, 0} // |00&gt;
+	state = apply(HI, state)
+	state = apply(CNOT, state)
+
+	labels := []string{"|00&gt;", "|01&gt;", "|10&gt;", "|11&gt;"}
+	fmt.Println("Bell |Phi+&gt;:")
+	for i, amp := range state {
+		fmt.Printf("  %s re=%.4f im=%.4f P=%.4f\n",
+			labels[i], real(amp), imag(amp), cmplx.Abs(amp)*cmplx.Abs(amp))
+	}
+}</code></pre></div>
+  </div>
+</details>
 
     <!-- ========================================================== -->
     <h2 id="s16">16. Other interesting classes — and a real theorem</h2>
@@ -525,11 +3193,14 @@
 
     <p>Two pieces of working Python: a Turing machine simulator (the same one as the SVG above, but in code), and a small recursive SAT solver demonstrating the brute-force baseline that polynomial-time algorithms try to beat.</p>
 
+    <details class="algo-code">
+  <summary>Source — Compiled Examples</summary>
     <div class="code-tabs" id="ct-tcs">
       <div class="ct-header">
         <button class="ct-tab active" data-tab="tm">Turing machine simulator</button>
         <button class="ct-tab" data-tab="sat">Brute-force SAT</button>
         <button class="ct-tab" data-tab="red">3-SAT to clauses</button>
+        <button class="ct-tab" data-tab="s18-go">Go</button>
         <span class="ct-label">Python · pedagogical, not optimized</span>
       </div>
 
@@ -672,7 +3343,112 @@ edges, labels = <span class="fn">three_sat_to_three_color</span>(clauses, n_vars
 <span class="fn">print</span>(<span class="fn">len</span>(edges), <span class="str">"edges in the reduced graph"</span>)
 <span class="cmt"># The graph is 3-colorable iff the formula is satisfiable.</span>
 </code></pre></div>
+
+      <div class="ct-panel" data-tab="s18-go"><pre><code>package main
+
+// Go: unary-increment TM + brute-force SAT, mirroring the Python above.
+
+import (
+	"fmt"
+	"strings"
+)
+
+// --- Turing machine (unary increment) ---
+type Rule struct {
+	newState string
+	write    byte
+	dir      int
+}
+
+func runTM(input string, delta map[string]Rule) (bool, string) {
+	tape := []byte(input + strings.Repeat("_", 10))
+	head, state := 0, "q0"
+	for i := 0; i &lt; 1000; i++ {
+		if state == "qA" {
+			return true, strings.TrimRight(string(tape), "_")
+		}
+		if state == "qR" {
+			return false, ""
+		}
+		sym := tape[head]
+		key := state + "," + string(sym)
+		r, ok := delta[key]
+		if !ok {
+			return false, ""
+		}
+		tape[head] = r.write
+		state = r.newState
+		head += r.dir
+		if head &lt; 0 {
+			head = 0
+		}
+		if head &gt;= len(tape) {
+			tape = append(tape, '_')
+		}
+	}
+	return false, ""
+}
+
+// --- Brute-force SAT (bitmask over 2^n) ---
+func evalClause(clause []int, mask int) bool {
+	for _, lit := range clause {
+		v := lit
+		if v &lt; 0 {
+			v = -v
+		}
+		v-- // 0-indexed
+		val := (mask&gt;&gt;v)&amp;1 == 1
+		if lit &gt; 0 {
+			if val {
+				return true
+			}
+		} else {
+			if !val {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func bruteForceSAT(clauses [][]int, nVars int) (bool, int) {
+	for mask := 0; mask &lt; (1 &lt;&lt; nVars); mask++ {
+		ok := true
+		for _, c := range clauses {
+			if !evalClause(c, mask) {
+				ok = false
+				break
+			}
+		}
+		if ok {
+			return true, mask
+		}
+	}
+	return false, -1
+}
+
+func main() {
+	// TM: unary increment
+	delta := map[string]Rule{
+		"q0,1": {"q0", '1', +1},
+		"q0,_": {"q1", '_', -1},
+		"q1,1": {"q2", '1', +1},
+		"q2,_": {"qA", '1', +1},
+	}
+	ok, tape := runTM("1111", delta)
+	fmt.Printf("TM: accepted=%v tape=%q\n", ok, tape) // accepted=true tape="11111"
+
+	// SAT: (x1 OR NOT x2) AND (NOT x1 OR x2 OR x3) AND (NOT x3)
+	formula := [][]int{{1, -2}, {-1, 2, 3}, {-3}}
+	sat, mask := bruteForceSAT(formula, 3)
+	if sat {
+		fmt.Printf("SAT: x1=%d x2=%d x3=%d\n", mask&amp;1, (mask&gt;&gt;1)&amp;1, (mask&gt;&gt;2)&amp;1)
+	} else {
+		fmt.Println("UNSAT")
+	}
+}</code></pre></div>
     </div>
+  </details>
 
     <!-- ========================================================== -->
     <h2 id="s19">19. Open problems</h2>

@@ -103,6 +103,78 @@
       <p>$1.5 > 0$, so $f(\mathbf{x}) = 1$. The perceptron classifies $[1.5, 0.5]$ as class 1.</p>
     </div>
 
+    <details class="algo-code">
+      <summary>Source — Perceptron Forward Pass</summary>
+      <div class="code-tabs">
+        <div class="ct-header">
+          <button class="ct-tab active" data-tab="pct-fwd-pseudo">Pseudocode</button>
+          <button class="ct-tab" data-tab="pct-fwd-py">Python</button>
+          <button class="ct-tab" data-tab="pct-fwd-js">JavaScript</button>
+          <button class="ct-tab" data-tab="pct-fwd-c">C</button>
+          <button class="ct-tab" data-tab="pct-fwd-cpp">C++</button>
+          <button class="ct-tab" data-tab="pct-fwd-java">Java</button>
+          <button class="ct-tab" data-tab="pct-fwd-go">Go</button>
+        </div>
+        <div class="ct-panel active" data-tab="pct-fwd-pseudo"><pre><code>function predict(x, w, b):
+    z = dot(w, x) + b
+    if z > 0:
+        return +1
+    else:
+        return -1</code></pre></div>
+        <div class="ct-panel" data-tab="pct-fwd-py"><pre><code>def predict(x, w, b):
+    """Perceptron forward pass.
+    x, w: lists or arrays of the same length
+    b: scalar bias
+    Returns +1 or -1.
+    """
+    z = sum(wi * xi for wi, xi in zip(w, x)) + b
+    return 1 if z > 0 else -1</code></pre></div>
+        <div class="ct-panel" data-tab="pct-fwd-js"><pre><code>function predict(x, w, b) {
+  // x, w: arrays of the same length; b: scalar bias
+  const z = w.reduce((acc, wi, i) =&gt; acc + wi * x[i], 0) + b;
+  return z &gt; 0 ? 1 : -1;
+}</code></pre></div>
+        <div class="ct-panel" data-tab="pct-fwd-c"><pre><code>#include &lt;stddef.h&gt;
+
+/* Returns +1 or -1. n is the number of features. */
+int predict(const float *x, const float *w, float b, int n) {
+    float z = b;
+    for (int i = 0; i &lt; n; i++) z += w[i] * x[i];
+    return z &gt; 0.0f ? 1 : -1;
+}</code></pre></div>
+        <div class="ct-panel" data-tab="pct-fwd-cpp"><pre><code>#include &lt;vector&gt;
+#include &lt;numeric&gt;
+
+// Returns +1 or -1.
+int predict(const std::vector&lt;float&gt;&amp; x,
+            const std::vector&lt;float&gt;&amp; w,
+            float b) {
+    float z = b;
+    for (size_t i = 0; i &lt; w.size(); ++i) z += w[i] * x[i];
+    return z &gt; 0.0f ? 1 : -1;
+}</code></pre></div>
+        <div class="ct-panel" data-tab="pct-fwd-java"><pre><code>public class Perceptron {
+    /** Returns +1 or -1. */
+    public static int predict(double[] x, double[] w, double b) {
+        double z = b;
+        for (int i = 0; i &lt; w.length; i++) z += w[i] * x[i];
+        return z &gt; 0.0 ? 1 : -1;
+    }
+}</code></pre></div>
+        <div class="ct-panel" data-tab="pct-fwd-go"><pre><code>// Predict returns +1 or -1 for the perceptron forward pass.
+func Predict(x, w []float64, b float64) int {
+    z := b
+    for i, wi := range w {
+        z += wi * x[i]
+    }
+    if z &gt; 0 {
+        return 1
+    }
+    return -1
+}</code></pre></div>
+      </div>
+    </details>
+
     <!-- ========================================================== -->
     <h2 id="geometry">5. Geometric picture</h2>
 
@@ -244,6 +316,188 @@
       </div>
     </div>
 
+    <details class="algo-code">
+      <summary>Source — Perceptron Learning Rule</summary>
+      <div class="code-tabs">
+        <div class="ct-header">
+          <button class="ct-tab active" data-tab="pct-learn-pseudo">Pseudocode</button>
+          <button class="ct-tab" data-tab="pct-learn-py">Python</button>
+          <button class="ct-tab" data-tab="pct-learn-js">JavaScript</button>
+          <button class="ct-tab" data-tab="pct-learn-c">C</button>
+          <button class="ct-tab" data-tab="pct-learn-cpp">C++</button>
+          <button class="ct-tab" data-tab="pct-learn-java">Java</button>
+          <button class="ct-tab" data-tab="pct-learn-go">Go</button>
+        </div>
+        <div class="ct-panel active" data-tab="pct-learn-pseudo"><pre><code>function train(X, y, lr, epochs):
+    n = length(X[0])   // number of features
+    w = zeros(n)
+    b = 0
+    for epoch in 1..epochs:
+        mistakes = 0
+        for each (xi, yi) in (X, y):
+            yhat = predict(xi, w, b)   // +1 or -1
+            if yhat != yi:
+                w = w + lr * yi * xi
+                b = b + lr * yi
+                mistakes += 1
+        if mistakes == 0:
+            break   // converged
+    return w, b</code></pre></div>
+        <div class="ct-panel" data-tab="pct-learn-py"><pre><code>def train(X, y, lr=1.0, epochs=100):
+    """Perceptron learning rule.
+    X: list of feature vectors (lists)
+    y: list of labels in {+1, -1}
+    Returns (w, b) after training.
+    """
+    n = len(X[0])
+    w = [0.0] * n
+    b = 0.0
+    for _ in range(epochs):
+        mistakes = 0
+        for xi, yi in zip(X, y):
+            yhat = 1 if sum(wi * xij for wi, xij in zip(w, xi)) + b &gt; 0 else -1
+            if yhat != yi:
+                w = [wi + lr * yi * xij for wi, xij in zip(w, xi)]
+                b += lr * yi
+                mistakes += 1
+        if mistakes == 0:
+            break
+    return w, b</code></pre></div>
+        <div class="ct-panel" data-tab="pct-learn-js"><pre><code>function train(X, y, lr = 1.0, epochs = 100) {
+  const n = X[0].length;
+  let w = new Array(n).fill(0);
+  let b = 0;
+
+  for (let e = 0; e &lt; epochs; e++) {
+    let mistakes = 0;
+    for (let i = 0; i &lt; X.length; i++) {
+      const z = w.reduce((s, wi, j) =&gt; s + wi * X[i][j], 0) + b;
+      const yhat = z &gt; 0 ? 1 : -1;
+      if (yhat !== y[i]) {
+        w = w.map((wi, j) =&gt; wi + lr * y[i] * X[i][j]);
+        b += lr * y[i];
+        mistakes++;
+      }
+    }
+    if (mistakes === 0) break;
+  }
+  return { w, b };
+}</code></pre></div>
+        <div class="ct-panel" data-tab="pct-learn-c"><pre><code>#include &lt;string.h&gt;
+
+/* X: m*n row-major; y: m labels (+1/-1); w_out: n weights; b_out: bias */
+void train(const float *X, const int *y, int m, int n,
+           float lr, int epochs, float *w_out, float *b_out) {
+    float w[n];
+    memset(w, 0, sizeof(float) * n);
+    float b = 0.0f;
+
+    for (int e = 0; e &lt; epochs; e++) {
+        int mistakes = 0;
+        for (int i = 0; i &lt; m; i++) {
+            float z = b;
+            for (int j = 0; j &lt; n; j++) z += w[j] * X[i*n + j];
+            int yhat = z &gt; 0.0f ? 1 : -1;
+            if (yhat != y[i]) {
+                for (int j = 0; j &lt; n; j++)
+                    w[j] += lr * y[i] * X[i*n + j];
+                b += lr * y[i];
+                mistakes++;
+            }
+        }
+        if (mistakes == 0) break;
+    }
+    for (int j = 0; j &lt; n; j++) w_out[j] = w[j];
+    *b_out = b;
+}</code></pre></div>
+        <div class="ct-panel" data-tab="pct-learn-cpp"><pre><code>#include &lt;vector&gt;
+
+std::pair&lt;std::vector&lt;float&gt;, float&gt;
+train(const std::vector&lt;std::vector&lt;float&gt;&gt;&amp; X,
+      const std::vector&lt;int&gt;&amp; y,
+      float lr = 1.0f, int epochs = 100) {
+    int n = X[0].size();
+    std::vector&lt;float&gt; w(n, 0.0f);
+    float b = 0.0f;
+
+    for (int e = 0; e &lt; epochs; e++) {
+        int mistakes = 0;
+        for (size_t i = 0; i &lt; X.size(); i++) {
+            float z = b;
+            for (int j = 0; j &lt; n; j++) z += w[j] * X[i][j];
+            int yhat = z &gt; 0.0f ? 1 : -1;
+            if (yhat != y[i]) {
+                for (int j = 0; j &lt; n; j++)
+                    w[j] += lr * y[i] * X[i][j];
+                b += lr * y[i];
+                mistakes++;
+            }
+        }
+        if (mistakes == 0) break;
+    }
+    return {w, b};
+}</code></pre></div>
+        <div class="ct-panel" data-tab="pct-learn-java"><pre><code>public class Perceptron {
+    public double[] w;
+    public double b;
+
+    public void train(double[][] X, int[] y, double lr, int epochs) {
+        int m = X.length, n = X[0].length;
+        w = new double[n];
+        b = 0.0;
+        for (int e = 0; e &lt; epochs; e++) {
+            int mistakes = 0;
+            for (int i = 0; i &lt; m; i++) {
+                double z = b;
+                for (int j = 0; j &lt; n; j++) z += w[j] * X[i][j];
+                int yhat = z &gt; 0 ? 1 : -1;
+                if (yhat != y[i]) {
+                    for (int j = 0; j &lt; n; j++)
+                        w[j] += lr * y[i] * X[i][j];
+                    b += lr * y[i];
+                    mistakes++;
+                }
+            }
+            if (mistakes == 0) break;
+        }
+    }
+}</code></pre></div>
+        <div class="ct-panel" data-tab="pct-learn-go"><pre><code>// Train runs the perceptron learning rule.
+// X is m x n, y contains +1/-1 labels.
+// Returns weights w and bias b.
+func Train(X [][]float64, y []int, lr float64, epochs int) ([]float64, float64) {
+    n := len(X[0])
+    w := make([]float64, n)
+    var b float64
+
+    for e := 0; e &lt; epochs; e++ {
+        mistakes := 0
+        for i, xi := range X {
+            z := b
+            for j, wj := range w {
+                z += wj * xi[j]
+            }
+            yhat := 1
+            if z &lt;= 0 {
+                yhat = -1
+            }
+            if yhat != y[i] {
+                for j := range w {
+                    w[j] += lr * float64(y[i]) * xi[j]
+                }
+                b += lr * float64(y[i])
+                mistakes++
+            }
+        }
+        if mistakes == 0 {
+            break
+        }
+    }
+    return w, b
+}</code></pre></div>
+      </div>
+    </details>
+
     <!-- ========================================================== -->
     <h2 id="convergence">7. The convergence theorem</h2>
 
@@ -317,6 +571,179 @@ $$\begin{array}{|c|c|c|} \hline x_1 & x_2 & y = x_1 \oplus x_2 \\ \hline
       <p>Verify all four inputs: $(0,0) \to 0$, $(0,1) \to 1$, $(1,0) \to 1$, $(1,1) \to 0$. Exactly XOR.</p>
     </div>
 
+    <details class="algo-code">
+      <summary>Source — MLP Forward Pass</summary>
+      <div class="code-tabs">
+        <div class="ct-header">
+          <button class="ct-tab active" data-tab="pct-mlp-pseudo">Pseudocode</button>
+          <button class="ct-tab" data-tab="pct-mlp-py">Python</button>
+          <button class="ct-tab" data-tab="pct-mlp-js">JavaScript</button>
+          <button class="ct-tab" data-tab="pct-mlp-c">C</button>
+          <button class="ct-tab" data-tab="pct-mlp-cpp">C++</button>
+          <button class="ct-tab" data-tab="pct-mlp-java">Java</button>
+          <button class="ct-tab" data-tab="pct-mlp-go">Go</button>
+        </div>
+        <div class="ct-panel active" data-tab="pct-mlp-pseudo"><pre><code>// 2-layer MLP: input -> hidden -> output
+// sigmoid(z) = 1 / (1 + exp(-z))
+
+function mlp_forward(x, W1, b1, W2, b2):
+    // Hidden layer
+    z1 = matmul(W1, x) + b1
+    a1 = sigmoid(z1)        // element-wise sigmoid
+
+    // Output layer
+    z2 = matmul(W2, a1) + b2
+    a2 = sigmoid(z2)        // final activation
+    return a2</code></pre></div>
+        <div class="ct-panel" data-tab="pct-mlp-py"><pre><code>import math
+
+def sigmoid(z):
+    return 1.0 / (1.0 + math.exp(-z))
+
+def matvec(W, x):
+    """Multiply matrix W (list of rows) by vector x."""
+    return [sum(Wij * xj for Wij, xj in zip(row, x)) for row in W]
+
+def vec_add(a, b):
+    return [ai + bi for ai, bi in zip(a, b)]
+
+def mlp_forward(x, W1, b1, W2, b2):
+    """2-layer MLP with sigmoid activations.
+    x:  input vector (n,)
+    W1: hidden weight matrix (h, n)
+    b1: hidden bias (h,)
+    W2: output weight matrix (o, h)
+    b2: output bias (o,)
+    Returns output vector (o,).
+    """
+    z1 = vec_add(matvec(W1, x), b1)
+    a1 = [sigmoid(z) for z in z1]
+    z2 = vec_add(matvec(W2, a1), b2)
+    a2 = [sigmoid(z) for z in z2]
+    return a2</code></pre></div>
+        <div class="ct-panel" data-tab="pct-mlp-js"><pre><code>function sigmoid(z) { return 1 / (1 + Math.exp(-z)); }
+
+// W: 2-D array [rows][cols], x: 1-D array
+function matvec(W, x) {
+  return W.map(row =&gt; row.reduce((s, w, j) =&gt; s + w * x[j], 0));
+}
+
+function mlpForward(x, W1, b1, W2, b2) {
+  const z1 = matvec(W1, x).map((v, i) =&gt; v + b1[i]);
+  const a1 = z1.map(sigmoid);
+  const z2 = matvec(W2, a1).map((v, i) =&gt; v + b2[i]);
+  const a2 = z2.map(sigmoid);
+  return a2;
+}</code></pre></div>
+        <div class="ct-panel" data-tab="pct-mlp-c"><pre><code>#include &lt;math.h&gt;
+#include &lt;string.h&gt;
+
+static float sigmoid(float z) { return 1.0f / (1.0f + expf(-z)); }
+
+/* 2-layer MLP forward pass.
+   n=input dim, h=hidden dim, o=output dim.
+   W1[h*n], b1[h], W2[o*h], b2[o], a2_out[o]. */
+void mlp_forward(const float *x, int n,
+                 const float *W1, const float *b1, int h,
+                 const float *W2, const float *b2, int o,
+                 float *a2_out) {
+    float a1[h];
+    // Hidden layer
+    for (int i = 0; i &lt; h; i++) {
+        float z = b1[i];
+        for (int j = 0; j &lt; n; j++) z += W1[i*n + j] * x[j];
+        a1[i] = sigmoid(z);
+    }
+    // Output layer
+    for (int i = 0; i &lt; o; i++) {
+        float z = b2[i];
+        for (int j = 0; j &lt; h; j++) z += W2[i*h + j] * a1[j];
+        a2_out[i] = sigmoid(z);
+    }
+}</code></pre></div>
+        <div class="ct-panel" data-tab="pct-mlp-cpp"><pre><code>#include &lt;vector&gt;
+#include &lt;cmath&gt;
+
+static float sigmoid(float z) { return 1.0f / (1.0f + std::exp(-z)); }
+
+std::vector&lt;float&gt; mlpForward(
+    const std::vector&lt;float&gt;&amp; x,
+    const std::vector&lt;std::vector&lt;float&gt;&gt;&amp; W1, const std::vector&lt;float&gt;&amp; b1,
+    const std::vector&lt;std::vector&lt;float&gt;&gt;&amp; W2, const std::vector&lt;float&gt;&amp; b2) {
+
+    // Hidden layer
+    std::vector&lt;float&gt; a1(W1.size());
+    for (size_t i = 0; i &lt; W1.size(); i++) {
+        float z = b1[i];
+        for (size_t j = 0; j &lt; x.size(); j++) z += W1[i][j] * x[j];
+        a1[i] = sigmoid(z);
+    }
+    // Output layer
+    std::vector&lt;float&gt; a2(W2.size());
+    for (size_t i = 0; i &lt; W2.size(); i++) {
+        float z = b2[i];
+        for (size_t j = 0; j &lt; a1.size(); j++) z += W2[i][j] * a1[j];
+        a2[i] = sigmoid(z);
+    }
+    return a2;
+}</code></pre></div>
+        <div class="ct-panel" data-tab="pct-mlp-java"><pre><code>public class MLP {
+    private static double sigmoid(double z) {
+        return 1.0 / (1.0 + Math.exp(-z));
+    }
+
+    /** 2-layer MLP forward pass.
+     *  W1[h][n], b1[h], W2[o][h], b2[o]. Returns a2[o]. */
+    public static double[] forward(double[] x,
+                                    double[][] W1, double[] b1,
+                                    double[][] W2, double[] b2) {
+        int h = W1.length, o = W2.length;
+        double[] a1 = new double[h];
+        for (int i = 0; i &lt; h; i++) {
+            double z = b1[i];
+            for (int j = 0; j &lt; x.length; j++) z += W1[i][j] * x[j];
+            a1[i] = sigmoid(z);
+        }
+        double[] a2 = new double[o];
+        for (int i = 0; i &lt; o; i++) {
+            double z = b2[i];
+            for (int j = 0; j &lt; h; j++) z += W2[i][j] * a1[j];
+            a2[i] = sigmoid(z);
+        }
+        return a2;
+    }
+}</code></pre></div>
+        <div class="ct-panel" data-tab="pct-mlp-go"><pre><code>import "math"
+
+func sigmoid(z float64) float64 { return 1.0 / (1.0 + math.Exp(-z)) }
+
+// MLPForward runs a 2-layer MLP (hidden + output) with sigmoid activations.
+// W1 is h x n, W2 is o x h.
+func MLPForward(x []float64, W1 [][]float64, b1 []float64,
+                W2 [][]float64, b2 []float64) []float64 {
+    h := len(W1)
+    a1 := make([]float64, h)
+    for i, row := range W1 {
+        z := b1[i]
+        for j, wij := range row {
+            z += wij * x[j]
+        }
+        a1[i] = sigmoid(z)
+    }
+    o := len(W2)
+    a2 := make([]float64, o)
+    for i, row := range W2 {
+        z := b2[i]
+        for j, wij := range row {
+            z += wij * a1[j]
+        }
+        a2[i] = sigmoid(z)
+    }
+    return a2
+}</code></pre></div>
+      </div>
+    </details>
+
     <!-- ========================================================== -->
     <h2 id="death">9. The winter of 1969</h2>
 
@@ -342,6 +769,131 @@ $$\begin{array}{|c|c|c|} \hline x_1 & x_2 & y = x_1 \oplus x_2 \\ \hline
       <li><strong>Locally simple, globally powerful.</strong> Each unit does almost nothing. Stack enough of them together and you can learn to classify handwritten digits, translate languages, generate images.</li>
       <li><strong>Geometry matters.</strong> Linear separability in the raw feature space is a strong constraint. Deep networks can be seen as learning a <em>new representation</em> in which the data becomes linearly separable — the final layer is still essentially a perceptron, but the features it sees have been transformed by all the layers below it.</li>
     </ul>
+
+    <details class="algo-code">
+      <summary>Source — Activation Functions</summary>
+      <div class="code-tabs">
+        <div class="ct-header">
+          <button class="ct-tab active" data-tab="pct-act-pseudo">Pseudocode</button>
+          <button class="ct-tab" data-tab="pct-act-py">Python</button>
+          <button class="ct-tab" data-tab="pct-act-js">JavaScript</button>
+          <button class="ct-tab" data-tab="pct-act-c">C</button>
+          <button class="ct-tab" data-tab="pct-act-cpp">C++</button>
+          <button class="ct-tab" data-tab="pct-act-java">Java</button>
+          <button class="ct-tab" data-tab="pct-act-go">Go</button>
+        </div>
+        <div class="ct-panel active" data-tab="pct-act-pseudo"><pre><code>// All functions applied element-wise to a scalar z.
+
+sigmoid(z)     = 1 / (1 + exp(-z))          // output in (0, 1)
+tanh(z)        = (exp(z) - exp(-z)) /
+                 (exp(z) + exp(-z))           // output in (-1, 1)
+relu(z)        = max(0, z)                   // output in [0, +inf)
+leaky_relu(z, alpha=0.01)
+               = z      if z &gt;= 0
+                 alpha*z if z &lt; 0            // alpha &lt;&lt; 1, small negative slope</code></pre></div>
+        <div class="ct-panel" data-tab="pct-act-py"><pre><code>import math
+
+def sigmoid(z):
+    return 1.0 / (1.0 + math.exp(-z))
+
+def tanh_act(z):
+    return math.tanh(z)
+
+def relu(z):
+    return max(0.0, z)
+
+def leaky_relu(z, alpha=0.01):
+    return z if z &gt;= 0 else alpha * z
+
+# --- Derivatives (needed for backprop) ---
+
+def sigmoid_deriv(z):
+    s = sigmoid(z)
+    return s * (1.0 - s)
+
+def tanh_deriv(z):
+    return 1.0 - math.tanh(z) ** 2
+
+def relu_deriv(z):
+    return 1.0 if z &gt; 0 else 0.0
+
+def leaky_relu_deriv(z, alpha=0.01):
+    return 1.0 if z &gt;= 0 else alpha</code></pre></div>
+        <div class="ct-panel" data-tab="pct-act-js"><pre><code>const sigmoid     = z =&gt; 1 / (1 + Math.exp(-z));
+const tanhAct     = z =&gt; Math.tanh(z);
+const relu        = z =&gt; Math.max(0, z);
+const leakyRelu   = (z, alpha = 0.01) =&gt; z &gt;= 0 ? z : alpha * z;
+
+// Derivatives
+const sigmoidD    = z =&gt; { const s = sigmoid(z); return s * (1 - s); };
+const tanhD       = z =&gt; 1 - Math.tanh(z) ** 2;
+const reluD       = z =&gt; z &gt; 0 ? 1 : 0;
+const leakyReluD  = (z, alpha = 0.01) =&gt; z &gt;= 0 ? 1 : alpha;</code></pre></div>
+        <div class="ct-panel" data-tab="pct-act-c"><pre><code>#include &lt;math.h&gt;
+
+float sigmoid(float z)   { return 1.0f / (1.0f + expf(-z)); }
+float tanh_act(float z)  { return tanhf(z); }
+float relu(float z)      { return z &gt; 0.0f ? z : 0.0f; }
+float leaky_relu(float z, float alpha) { return z &gt;= 0.0f ? z : alpha * z; }
+
+/* Derivatives */
+float sigmoid_d(float z) { float s = sigmoid(z); return s * (1.0f - s); }
+float tanh_d(float z)    { float t = tanhf(z); return 1.0f - t * t; }
+float relu_d(float z)    { return z &gt; 0.0f ? 1.0f : 0.0f; }
+float leaky_relu_d(float z, float alpha) { return z &gt;= 0.0f ? 1.0f : alpha; }</code></pre></div>
+        <div class="ct-panel" data-tab="pct-act-cpp"><pre><code>#include &lt;cmath&gt;
+#include &lt;algorithm&gt;
+
+inline float sigmoid(float z)   { return 1.0f / (1.0f + std::exp(-z)); }
+inline float tanhAct(float z)   { return std::tanh(z); }
+inline float relu(float z)      { return std::max(0.0f, z); }
+inline float leakyRelu(float z, float alpha = 0.01f) {
+    return z &gt;= 0.0f ? z : alpha * z;
+}
+
+// Derivatives
+inline float sigmoidD(float z)  { float s = sigmoid(z); return s * (1.0f - s); }
+inline float tanhD(float z)     { float t = std::tanh(z); return 1.0f - t * t; }
+inline float reluD(float z)     { return z &gt; 0.0f ? 1.0f : 0.0f; }
+inline float leakyReluD(float z, float alpha = 0.01f) {
+    return z &gt;= 0.0f ? 1.0f : alpha;
+}</code></pre></div>
+        <div class="ct-panel" data-tab="pct-act-java"><pre><code>public class Activations {
+    public static double sigmoid(double z)  { return 1.0 / (1.0 + Math.exp(-z)); }
+    public static double tanh(double z)     { return Math.tanh(z); }
+    public static double relu(double z)     { return Math.max(0.0, z); }
+    public static double leakyRelu(double z, double alpha) {
+        return z &gt;= 0 ? z : alpha * z;
+    }
+
+    // Derivatives
+    public static double sigmoidD(double z) { double s = sigmoid(z); return s * (1 - s); }
+    public static double tanhD(double z)    { double t = Math.tanh(z); return 1 - t * t; }
+    public static double reluD(double z)    { return z &gt; 0 ? 1.0 : 0.0; }
+    public static double leakyReluD(double z, double alpha) {
+        return z &gt;= 0 ? 1.0 : alpha;
+    }
+}</code></pre></div>
+        <div class="ct-panel" data-tab="pct-act-go"><pre><code>import "math"
+
+func Sigmoid(z float64) float64 { return 1.0 / (1.0 + math.Exp(-z)) }
+func TanhAct(z float64) float64 { return math.Tanh(z) }
+func ReLU(z float64) float64    { return math.Max(0, z) }
+func LeakyReLU(z, alpha float64) float64 {
+    if z &gt;= 0 { return z }
+    return alpha * z
+}
+
+// Derivatives
+func SigmoidD(z float64) float64 { s := Sigmoid(z); return s * (1 - s) }
+func TanhD(z float64) float64    { t := math.Tanh(z); return 1 - t*t }
+func ReLUD(z float64) float64    { if z &gt; 0 { return 1 }; return 0 }
+func LeakyReLUD(z, alpha float64) float64 {
+    if z &gt;= 0 { return 1 }
+    return alpha
+}</code></pre></div>
+      </div>
+    </details>
 
     <!-- ========================================================== -->
     <h2 id="summary">11. Summary</h2>

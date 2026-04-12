@@ -163,6 +163,226 @@
       <figcaption>An RNN unrolled over four time steps. The cell is physically one function with one set of weights; the "depth" is illusory — we're just applying it repeatedly, threading the hidden state through.</figcaption>
     </figure>
 
+    <details class="algo-code">
+      <summary>Source — RNN Forward Pass</summary>
+      <div class="code-tabs">
+        <div class="ct-header">
+          <button class="ct-tab active" data-tab="rnn-fwd-pseudo">Pseudocode</button>
+          <button class="ct-tab" data-tab="rnn-fwd-py">Python</button>
+          <button class="ct-tab" data-tab="rnn-fwd-js">JavaScript</button>
+          <button class="ct-tab" data-tab="rnn-fwd-c">C</button>
+          <button class="ct-tab" data-tab="rnn-fwd-cpp">C++</button>
+          <button class="ct-tab" data-tab="rnn-fwd-java">Java</button>
+          <button class="ct-tab" data-tab="rnn-fwd-go">Go</button>
+        </div>
+        <div class="ct-panel active" data-tab="rnn-fwd-pseudo"><pre><code>// RNN cell: h_t = tanh(W_h * h_{t-1} + W_x * x_t + b_h)
+//           y_t = W_y * h_t + b_y
+
+function rnn_cell(x_t, h_prev, W_x, W_h, b_h):
+    return tanh(matmul(W_h, h_prev) + matmul(W_x, x_t) + b_h)
+
+function rnn_forward(xs, h0, W_x, W_h, W_y, b_h, b_y):
+    h = h0
+    ys = []
+    hs = []
+    for x_t in xs:
+        h = rnn_cell(x_t, h, W_x, W_h, b_h)
+        y = matmul(W_y, h) + b_y
+        ys.append(y)
+        hs.append(h)
+    return ys, hs</code></pre></div>
+        <div class="ct-panel" data-tab="rnn-fwd-py"><pre><code>import math
+
+def tanh_vec(v):
+    return [math.tanh(z) for z in v]
+
+def matvec(W, x):
+    return [sum(Wij * xj for Wij, xj in zip(row, x)) for row in W]
+
+def vec_add(*vecs):
+    return [sum(vals) for vals in zip(*vecs)]
+
+def rnn_cell(x_t, h_prev, Wxh, Whh, bh):
+    """Single RNN step. Returns new hidden state h_t."""
+    return tanh_vec(vec_add(matvec(Whh, h_prev), matvec(Wxh, x_t), bh))
+
+def rnn_forward(xs, h0, Wxh, Whh, Why, bh, by):
+    """Unrolled RNN forward pass over a sequence of inputs.
+    xs:  list of input vectors
+    h0:  initial hidden state (zeros usually)
+    Returns (list of outputs, list of hidden states).
+    """
+    h = h0
+    ys, hs = [], []
+    for x_t in xs:
+        h = rnn_cell(x_t, h, Wxh, Whh, bh)
+        y = vec_add(matvec(Why, h), by)
+        ys.append(y)
+        hs.append(h)
+    return ys, hs</code></pre></div>
+        <div class="ct-panel" data-tab="rnn-fwd-js"><pre><code>function matvec(W, x) {
+  return W.map(row =&gt; row.reduce((s, w, j) =&gt; s + w * x[j], 0));
+}
+function vecAdd(a, b) { return a.map((v, i) =&gt; v + b[i]); }
+
+function rnnCell(xt, hPrev, Wxh, Whh, bh) {
+  const z = vecAdd(vecAdd(matvec(Whh, hPrev), matvec(Wxh, xt)), bh);
+  return z.map(v =&gt; Math.tanh(v));
+}
+
+function rnnForward(xs, h0, Wxh, Whh, Why, bh, by) {
+  let h = h0.slice();
+  const ys = [], hs = [];
+  for (const xt of xs) {
+    h = rnnCell(xt, h, Wxh, Whh, bh);
+    ys.push(vecAdd(matvec(Why, h), by));
+    hs.push(h.slice());
+  }
+  return { ys, hs };
+}</code></pre></div>
+        <div class="ct-panel" data-tab="rnn-fwd-c"><pre><code>#include &lt;math.h&gt;
+#include &lt;string.h&gt;
+
+/* Single RNN step. I=input dim, H=hidden dim.
+   Wxh[H*I], Whh[H*H], bh[H], h_out[H]. */
+void rnn_cell(const float *x, const float *h_prev,
+              const float *Wxh, const float *Whh, const float *bh,
+              int I, int H, float *h_out) {
+    for (int k = 0; k &lt; H; k++) {
+        float z = bh[k];
+        for (int j = 0; j &lt; H; j++) z += Whh[k*H + j] * h_prev[j];
+        for (int j = 0; j &lt; I; j++) z += Wxh[k*I + j] * x[j];
+        h_out[k] = tanhf(z);
+    }
+}
+
+/* Full forward pass. xs[T*I], ys_out[T*O], hs_out[T*H]. */
+void rnn_forward(const float *xs, int T, int I,
+                 const float *Wxh, const float *Whh,
+                 const float *Why, const float *bh, const float *by,
+                 int H, int O,
+                 float *ys_out, float *hs_out) {
+    float h[H];
+    memset(h, 0, sizeof(float) * H);
+    for (int t = 0; t &lt; T; t++) {
+        float h_new[H];
+        rnn_cell(xs + t*I, h, Wxh, Whh, bh, I, H, h_new);
+        memcpy(h, h_new, sizeof(float) * H);
+        memcpy(hs_out + t*H, h, sizeof(float) * H);
+        for (int k = 0; k &lt; O; k++) {
+            float z = by[k];
+            for (int j = 0; j &lt; H; j++) z += Why[k*H + j] * h[j];
+            ys_out[t*O + k] = z;
+        }
+    }
+}</code></pre></div>
+        <div class="ct-panel" data-tab="rnn-fwd-cpp"><pre><code>#include &lt;vector&gt;
+#include &lt;cmath&gt;
+
+using Vec = std::vector&lt;float&gt;;
+using Mat = std::vector&lt;Vec&gt;;
+
+Vec matvec(const Mat&amp; W, const Vec&amp; x) {
+    Vec out(W.size(), 0.0f);
+    for (size_t i = 0; i &lt; W.size(); i++)
+        for (size_t j = 0; j &lt; x.size(); j++)
+            out[i] += W[i][j] * x[j];
+    return out;
+}
+
+Vec rnnCell(const Vec&amp; xt, const Vec&amp; hPrev,
+            const Mat&amp; Wxh, const Mat&amp; Whh, const Vec&amp; bh) {
+    Vec z(bh.size());
+    auto a = matvec(Whh, hPrev), b = matvec(Wxh, xt);
+    for (size_t i = 0; i &lt; z.size(); i++)
+        z[i] = std::tanh(a[i] + b[i] + bh[i]);
+    return z;
+}
+
+std::pair&lt;std::vector&lt;Vec&gt;, std::vector&lt;Vec&gt;&gt;
+rnnForward(const std::vector&lt;Vec&gt;&amp; xs, Vec h,
+           const Mat&amp; Wxh, const Mat&amp; Whh,
+           const Mat&amp; Why, const Vec&amp; bh, const Vec&amp; by) {
+    std::vector&lt;Vec&gt; ys, hs;
+    for (const auto&amp; xt : xs) {
+        h = rnnCell(xt, h, Wxh, Whh, bh);
+        auto y = matvec(Why, h);
+        for (size_t i = 0; i &lt; y.size(); i++) y[i] += by[i];
+        ys.push_back(y);
+        hs.push_back(h);
+    }
+    return {ys, hs};
+}</code></pre></div>
+        <div class="ct-panel" data-tab="rnn-fwd-java"><pre><code>public class VanillaRNN {
+    private static double[] matvec(double[][] W, double[] x) {
+        double[] out = new double[W.length];
+        for (int i = 0; i &lt; W.length; i++)
+            for (int j = 0; j &lt; x.length; j++)
+                out[i] += W[i][j] * x[j];
+        return out;
+    }
+
+    public static double[] rnnCell(double[] xt, double[] hPrev,
+                                    double[][] Wxh, double[][] Whh, double[] bh) {
+        double[] a = matvec(Whh, hPrev), b = matvec(Wxh, xt);
+        double[] h = new double[bh.length];
+        for (int i = 0; i &lt; h.length; i++)
+            h[i] = Math.tanh(a[i] + b[i] + bh[i]);
+        return h;
+    }
+
+    public static double[][][] forward(double[][] xs, double[] h0,
+                                        double[][] Wxh, double[][] Whh,
+                                        double[][] Why, double[] bh, double[] by) {
+        double[] h = h0.clone();
+        double[][] ys = new double[xs.length][], hs = new double[xs.length][];
+        for (int t = 0; t &lt; xs.length; t++) {
+            h = rnnCell(xs[t], h, Wxh, Whh, bh);
+            hs[t] = h.clone();
+            double[] y = matvec(Why, h);
+            for (int i = 0; i &lt; y.length; i++) y[i] += by[i];
+            ys[t] = y;
+        }
+        return new double[][][] {ys, hs};
+    }
+}</code></pre></div>
+        <div class="ct-panel" data-tab="rnn-fwd-go"><pre><code>import "math"
+
+func matvec(W [][]float64, x []float64) []float64 {
+    out := make([]float64, len(W))
+    for i, row := range W {
+        for j, wij := range row {
+            out[i] += wij * x[j]
+        }
+    }
+    return out
+}
+
+func rnnCell(xt, hPrev []float64, Wxh, Whh [][]float64, bh []float64) []float64 {
+    a, b := matvec(Whh, hPrev), matvec(Wxh, xt)
+    h := make([]float64, len(bh))
+    for i := range h {
+        h[i] = math.Tanh(a[i] + b[i] + bh[i])
+    }
+    return h
+}
+
+func RNNForward(xs [][]float64, h0 []float64,
+    Wxh, Whh, Why [][]float64, bh, by []float64) ([][]float64, [][]float64) {
+    h := append([]float64{}, h0...)
+    var ys, hs [][]float64
+    for _, xt := range xs {
+        h = rnnCell(xt, h, Wxh, Whh, bh)
+        y := matvec(Why, h)
+        for i := range y { y[i] += by[i] }
+        ys = append(ys, y)
+        hs = append(hs, append([]float64{}, h...))
+    }
+    return ys, hs
+}</code></pre></div>
+      </div>
+    </details>
+
     <!-- ========================================================== -->
     <h2 id="bptt">3. Backprop through time (BPTT)</h2>
 
@@ -190,6 +410,388 @@
       <p class="mg-analogy"><strong>Analogy</strong> Think of gradient signal like a whisper passed down a line of people. Each person garbles the message a bit (multiplies it by their local Jacobian). After 50 people the original whisper is either deafening (exploded) or inaudible (vanished). BPTT is the whisper game, and the Jacobian product is why the message rarely survives intact over long distances.</p>
     </div>
 
+    <details class="algo-code">
+      <summary>Source — BPTT</summary>
+      <div class="code-tabs">
+        <div class="ct-header">
+          <button class="ct-tab active" data-tab="rnn-bptt-pseudo">Pseudocode</button>
+          <button class="ct-tab" data-tab="rnn-bptt-py">Python</button>
+          <button class="ct-tab" data-tab="rnn-bptt-js">JavaScript</button>
+          <button class="ct-tab" data-tab="rnn-bptt-c">C</button>
+          <button class="ct-tab" data-tab="rnn-bptt-cpp">C++</button>
+          <button class="ct-tab" data-tab="rnn-bptt-java">Java</button>
+          <button class="ct-tab" data-tab="rnn-bptt-go">Go</button>
+        </div>
+        <div class="ct-panel active" data-tab="rnn-bptt-pseudo"><pre><code>// Truncated BPTT for a sequence of length T.
+// Loss: mean squared error between y_t and target t_t.
+
+forward_pass(xs, h0) -&gt; (ys, hs)        // store all hidden states
+
+dWhh = 0, dWxh = 0, dWhy = 0
+dbh  = 0, dby   = 0
+dh_next = zeros(H)
+
+for t = T-1 downto 0:
+    dy = 2 * (ys[t] - targets[t]) / T    // dL/dy_t
+    dWhy += outer(dy, hs[t])
+    dby  += dy
+    dh = matmul(Why.T, dy) + dh_next     // gradient into hidden state
+    dh_raw = dh * (1 - hs[t]^2)          // tanh derivative
+    dbh  += dh_raw
+    dWxh += outer(dh_raw, xs[t])
+    dWhh += outer(dh_raw, hs[t-1])       // hs[-1] = h0
+    dh_next = matmul(Whh.T, dh_raw)
+    clip gradients to [-clip, clip]      // prevent explosion
+
+update: W -= lr * dW for each W</code></pre></div>
+        <div class="ct-panel" data-tab="rnn-bptt-py"><pre><code>import math
+
+def clip(v, threshold=5.0):
+    return max(-threshold, min(threshold, v))
+
+def bptt(xs, targets, Wxh, Whh, Why, bh, by, h0, lr=1e-2):
+    """Minimal truncated BPTT for a vanilla RNN.
+    xs, targets: lists of vectors (same length T).
+    Returns updated (Wxh, Whh, Why, bh, by).
+    """
+    T = len(xs)
+    H = len(bh)
+    O = len(by)
+
+    # Forward pass — store hidden states
+    hs = [None] * (T + 1)
+    ys = [None] * T
+    hs[-1] = h0[:]
+    for t in range(T):
+        z = [sum(Whh[k][j] * hs[t-1][j] for j in range(H)) +
+             sum(Wxh[k][j] * xs[t][j]   for j in range(len(xs[t]))) +
+             bh[k] for k in range(H)]
+        hs[t] = [math.tanh(z[k]) for k in range(H)]
+        ys[t] = [sum(Why[k][j] * hs[t][j] for j in range(H)) + by[k]
+                 for k in range(O)]
+
+    # Backward pass
+    dWhh = [[0.0]*H   for _ in range(H)]
+    dWxh = [[0.0]*len(xs[0]) for _ in range(H)]
+    dWhy = [[0.0]*H   for _ in range(O)]
+    dbh  = [0.0] * H
+    dby  = [0.0] * O
+    dh_next = [0.0] * H
+
+    for t in reversed(range(T)):
+        dy = [(ys[t][k] - targets[t][k]) * 2.0 / T for k in range(O)]
+        for k in range(O):
+            dby[k] += dy[k]
+            for j in range(H):
+                dWhy[k][j] += dy[k] * hs[t][j]
+
+        dh = [sum(Why[k][j] * dy[k] for k in range(O)) + dh_next[j]
+              for j in range(H)]
+        dh_raw = [dh[k] * (1.0 - hs[t][k] ** 2) for k in range(H)]
+
+        for k in range(H):
+            dbh[k] += dh_raw[k]
+            for j in range(len(xs[t])):
+                dWxh[k][j] += dh_raw[k] * xs[t][j]
+            for j in range(H):
+                dWhh[k][j] += dh_raw[k] * hs[t-1][j]
+
+        dh_next = [sum(Whh[j][k] * dh_raw[j] for j in range(H))
+                   for k in range(H)]
+
+    # Gradient clipping + SGD update (in-place)
+    for W, dW in [(Whh, dWhh), (Wxh, dWxh), (Why, dWhy)]:
+        for i in range(len(W)):
+            for j in range(len(W[i])):
+                W[i][j] -= lr * clip(dW[i][j])
+    for b, db in [(bh, dbh), (by, dby)]:
+        for i in range(len(b)):
+            b[i] -= lr * clip(db[i])
+
+    return Wxh, Whh, Why, bh, by</code></pre></div>
+        <div class="ct-panel" data-tab="rnn-bptt-js"><pre><code>function bptt(xs, targets, params, lr = 1e-2, clip = 5) {
+  const { Wxh, Whh, Why, bh, by } = params;
+  const T = xs.length, H = bh.length, O = by.length;
+
+  // Forward
+  const hs = [new Array(H).fill(0)];
+  const ys = [];
+  for (let t = 0; t &lt; T; t++) {
+    const z = bh.map((b, k) =&gt;
+      Whh[k].reduce((s, w, j) =&gt; s + w * hs[t][j], 0) +
+      Wxh[k].reduce((s, w, j) =&gt; s + w * xs[t][j], 0) + b);
+    hs.push(z.map(Math.tanh));
+    ys.push(Why.map((row, k) =&gt; row.reduce((s, w, j) =&gt; s + w * hs[t+1][j], 0) + by[k]));
+  }
+
+  // Backward
+  const dWhh = Whh.map(r =&gt; r.map(() =&gt; 0));
+  const dWxh = Wxh.map(r =&gt; r.map(() =&gt; 0));
+  const dWhy = Why.map(r =&gt; r.map(() =&gt; 0));
+  const dbh = new Array(H).fill(0), dby = new Array(O).fill(0);
+  let dhNext = new Array(H).fill(0);
+
+  for (let t = T - 1; t &gt;= 0; t--) {
+    const dy = ys[t].map((y, k) =&gt; 2 * (y - targets[t][k]) / T);
+    dy.forEach((d, k) =&gt; {
+      dby[k] += d;
+      Why[k].forEach((_, j) =&gt; { dWhy[k][j] += d * hs[t+1][j]; });
+    });
+    const dh = hs[t+1].map((_, j) =&gt;
+      Why.reduce((s, row, k) =&gt; s + row[j] * dy[k], 0) + dhNext[j]);
+    const dhRaw = dh.map((d, k) =&gt; d * (1 - hs[t+1][k] ** 2));
+    dhRaw.forEach((d, k) =&gt; {
+      dbh[k] += d;
+      xs[t].forEach((x, j) =&gt; { dWxh[k][j] += d * x; });
+      hs[t].forEach((h, j) =&gt; { dWhh[k][j] += d * h; });
+    });
+    dhNext = hs[t].map((_, j) =&gt;
+      Whh.reduce((s, row, k) =&gt; s + row[j] * dhRaw[k], 0));
+  }
+
+  const c = v =&gt; Math.max(-clip, Math.min(clip, v));
+  const update = (W, dW) =&gt; W.forEach((r, i) =&gt; r.forEach((_, j) =&gt; { W[i][j] -= lr * c(dW[i][j]); }));
+  [Whh, dWhh, Wxh, dWxh, Why, dWhy].reduce((_, v, i, a) =&gt; i % 2 === 0 ? update(a[i], a[i+1]) : null);
+  [bh, dbh, by, dby].reduce((_, v, i, a) =&gt; i % 2 === 0 ? a[i].forEach((_, j) =&gt; { a[i][j] -= lr * c(a[i+1][j]); }) : null);
+  return params;
+}</code></pre></div>
+        <div class="ct-panel" data-tab="rnn-bptt-c"><pre><code>/* Truncated BPTT — conceptual C sketch.
+   For brevity, matrix allocs use VLAs; clip applied per gradient. */
+#include &lt;math.h&gt;
+#include &lt;string.h&gt;
+
+static float clamp(float v, float t) {
+    return v &gt; t ? t : (v &lt; -t ? -t : v);
+}
+
+/* Assumes forward pass has already stored hs[0..T] and ys[0..T-1].
+   Updates Whh, Wxh, Why, bh, by in-place. */
+void bptt_update(
+    const float *xs,      /* [T*I] */
+    const float *targets, /* [T*O] */
+    const float *hs,      /* [(T+1)*H] — hs[0] = h0 */
+    const float *ys,      /* [T*O] */
+    float *Wxh, float *Whh, float *Why,
+    float *bh, float *by,
+    int T, int I, int H, int O,
+    float lr, float clip_val) {
+
+    float dWhh[H*H], dWxh[H*I], dWhy[O*H], dbh[H], dby[O];
+    memset(dWhh, 0, sizeof dWhh);  memset(dWxh, 0, sizeof dWxh);
+    memset(dWhy, 0, sizeof dWhy);  memset(dbh,  0, sizeof dbh);
+    memset(dby,  0, sizeof dby);
+    float dh_next[H];
+    memset(dh_next, 0, sizeof dh_next);
+
+    for (int t = T-1; t &gt;= 0; t--) {
+        const float *ht  = hs + (t+1)*H;
+        const float *htm = hs + t*H;
+        const float *xt  = xs + t*I;
+        const float *tgt = targets + t*O;
+        const float *yt  = ys + t*O;
+
+        float dy[O];
+        for (int k = 0; k &lt; O; k++) {
+            dy[k] = 2.0f * (yt[k] - tgt[k]) / T;
+            dby[k] += dy[k];
+            for (int j = 0; j &lt; H; j++) dWhy[k*H+j] += dy[k] * ht[j];
+        }
+        float dh[H];
+        for (int j = 0; j &lt; H; j++) {
+            dh[j] = dh_next[j];
+            for (int k = 0; k &lt; O; k++) dh[j] += Why[k*H+j] * dy[k];
+        }
+        float dh_raw[H];
+        for (int k = 0; k &lt; H; k++) {
+            dh_raw[k] = dh[k] * (1.0f - ht[k]*ht[k]);
+            dbh[k] += dh_raw[k];
+            for (int j = 0; j &lt; I; j++) dWxh[k*I+j] += dh_raw[k] * xt[j];
+            for (int j = 0; j &lt; H; j++) dWhh[k*H+j] += dh_raw[k] * htm[j];
+        }
+        for (int j = 0; j &lt; H; j++) {
+            dh_next[j] = 0;
+            for (int k = 0; k &lt; H; k++) dh_next[j] += Whh[k*H+j] * dh_raw[k];
+        }
+    }
+    /* SGD update with gradient clipping */
+    for (int i = 0; i &lt; H*H; i++) Whh[i] -= lr * clamp(dWhh[i], clip_val);
+    for (int i = 0; i &lt; H*I; i++) Wxh[i] -= lr * clamp(dWxh[i], clip_val);
+    for (int i = 0; i &lt; O*H; i++) Why[i] -= lr * clamp(dWhy[i], clip_val);
+    for (int i = 0; i &lt; H;   i++) bh[i]  -= lr * clamp(dbh[i],  clip_val);
+    for (int i = 0; i &lt; O;   i++) by[i]  -= lr * clamp(dby[i],  clip_val);
+}</code></pre></div>
+        <div class="ct-panel" data-tab="rnn-bptt-cpp"><pre><code>// C++ BPTT — mirrors the pseudocode closely using std::vector.
+// Forward pass is assumed; this function takes stored hs and ys.
+#include &lt;vector&gt;
+#include &lt;cmath&gt;
+#include &lt;algorithm&gt;
+
+using Vec = std::vector&lt;float&gt;;
+using Mat = std::vector&lt;Vec&gt;;
+
+static float clamp(float v, float t) { return std::max(-t, std::min(t, v)); }
+
+void bptt(const std::vector&lt;Vec&gt;&amp; xs, const std::vector&lt;Vec&gt;&amp; targets,
+          const std::vector&lt;Vec&gt;&amp; hs,  // hs[0]=h0, hs[1..T]=step outputs
+          const std::vector&lt;Vec&gt;&amp; ys,
+          Mat&amp; Wxh, Mat&amp; Whh, Mat&amp; Why,
+          Vec&amp; bh,  Vec&amp; by,
+          float lr = 1e-2f, float clipVal = 5.0f) {
+    int T = xs.size(), H = bh.size(), O = by.size();
+    Mat dWhh(H, Vec(H, 0)), dWxh(H, Vec(xs[0].size(), 0)), dWhy(O, Vec(H, 0));
+    Vec dbh(H, 0), dby(O, 0), dhNext(H, 0);
+
+    for (int t = T-1; t &gt;= 0; t--) {
+        Vec dy(O);
+        for (int k = 0; k &lt; O; k++) {
+            dy[k] = 2.0f * (ys[t][k] - targets[t][k]) / T;
+            dby[k] += dy[k];
+            for (int j = 0; j &lt; H; j++) dWhy[k][j] += dy[k] * hs[t+1][j];
+        }
+        Vec dh(H, 0);
+        for (int j = 0; j &lt; H; j++) {
+            dh[j] = dhNext[j];
+            for (int k = 0; k &lt; O; k++) dh[j] += Why[k][j] * dy[k];
+        }
+        Vec dhRaw(H);
+        for (int k = 0; k &lt; H; k++) {
+            dhRaw[k] = dh[k] * (1.0f - hs[t+1][k] * hs[t+1][k]);
+            dbh[k] += dhRaw[k];
+            for (size_t j = 0; j &lt; xs[t].size(); j++) dWxh[k][j] += dhRaw[k] * xs[t][j];
+            for (int j = 0; j &lt; H; j++) dWhh[k][j] += dhRaw[k] * hs[t][j];
+        }
+        std::fill(dhNext.begin(), dhNext.end(), 0);
+        for (int j = 0; j &lt; H; j++)
+            for (int k = 0; k &lt; H; k++)
+                dhNext[j] += Whh[k][j] * dhRaw[k];
+    }
+    auto applyUpdate = [&amp;](Mat&amp; W, const Mat&amp; dW) {
+        for (size_t i = 0; i &lt; W.size(); i++)
+            for (size_t j = 0; j &lt; W[i].size(); j++)
+                W[i][j] -= lr * clamp(dW[i][j], clipVal);
+    };
+    applyUpdate(Whh, dWhh); applyUpdate(Wxh, dWxh); applyUpdate(Why, dWhy);
+    for (int i = 0; i &lt; H; i++) bh[i] -= lr * clamp(dbh[i], clipVal);
+    for (int i = 0; i &lt; O; i++) by[i] -= lr * clamp(dby[i], clipVal);
+}</code></pre></div>
+        <div class="ct-panel" data-tab="rnn-bptt-java"><pre><code>/** Truncated BPTT for a vanilla RNN.
+ *  Assumes rnnForward has already been called to produce hs and ys. */
+public class BPTT {
+    static float clamp(float v, float t) { return Math.max(-t, Math.min(t, v)); }
+
+    public static void update(float[][] xs, float[][] targets,
+                               float[][] hs,   // hs[0]=h0 .. hs[T]=h_T
+                               float[][] ys,
+                               float[][] Wxh, float[][] Whh, float[][] Why,
+                               float[] bh, float[] by,
+                               float lr, float clipVal) {
+        int T = xs.length, H = bh.length, O = by.length, I = xs[0].length;
+        float[][] dWhh = new float[H][H], dWxh = new float[H][I],
+                  dWhy = new float[O][H];
+        float[] dbh = new float[H], dby = new float[O], dhNext = new float[H];
+
+        for (int t = T-1; t &gt;= 0; t--) {
+            float[] dy = new float[O];
+            for (int k = 0; k &lt; O; k++) {
+                dy[k] = 2f * (ys[t][k] - targets[t][k]) / T;
+                dby[k] += dy[k];
+                for (int j = 0; j &lt; H; j++) dWhy[k][j] += dy[k] * hs[t+1][j];
+            }
+            float[] dh = new float[H];
+            for (int j = 0; j &lt; H; j++) {
+                dh[j] = dhNext[j];
+                for (int k = 0; k &lt; O; k++) dh[j] += Why[k][j] * dy[k];
+            }
+            float[] dhRaw = new float[H];
+            for (int k = 0; k &lt; H; k++) {
+                dhRaw[k] = dh[k] * (1f - hs[t+1][k] * hs[t+1][k]);
+                dbh[k] += dhRaw[k];
+                for (int j = 0; j &lt; I; j++) dWxh[k][j] += dhRaw[k] * xs[t][j];
+                for (int j = 0; j &lt; H; j++) dWhh[k][j] += dhRaw[k] * hs[t][j];
+            }
+            dhNext = new float[H];
+            for (int j = 0; j &lt; H; j++)
+                for (int k = 0; k &lt; H; k++)
+                    dhNext[j] += Whh[k][j] * dhRaw[k];
+        }
+        for (int i = 0; i &lt; H; i++) for (int j = 0; j &lt; H; j++) Whh[i][j] -= lr * clamp(dWhh[i][j], clipVal);
+        for (int i = 0; i &lt; H; i++) for (int j = 0; j &lt; I; j++) Wxh[i][j] -= lr * clamp(dWxh[i][j], clipVal);
+        for (int i = 0; i &lt; O; i++) for (int j = 0; j &lt; H; j++) Why[i][j] -= lr * clamp(dWhy[i][j], clipVal);
+        for (int i = 0; i &lt; H; i++) bh[i] -= lr * clamp(dbh[i], clipVal);
+        for (int i = 0; i &lt; O; i++) by[i] -= lr * clamp(dby[i], clipVal);
+    }
+}</code></pre></div>
+        <div class="ct-panel" data-tab="rnn-bptt-go"><pre><code>import (
+    "math"
+)
+
+func clamp(v, t float64) float64 {
+    if v &gt; t { return t }
+    if v &lt; -t { return -t }
+    return v
+}
+
+// BPTTUpdate performs one truncated-BPTT update step.
+// hs has length T+1 (hs[0] = h0).
+func BPTTUpdate(xs, targets [][]float64,
+    hs, ys [][]float64,
+    Wxh, Whh, Why [][]float64,
+    bh, by []float64,
+    lr, clipVal float64) {
+    T, H, O := len(xs), len(bh), len(by)
+    I := len(xs[0])
+
+    dWhh := make2D(H, H); dWxh := make2D(H, I); dWhy := make2D(O, H)
+    dbh := make([]float64, H); dby := make([]float64, O)
+    dhNext := make([]float64, H)
+
+    for t := T - 1; t &gt;= 0; t-- {
+        dy := make([]float64, O)
+        for k := 0; k &lt; O; k++ {
+            dy[k] = 2 * (ys[t][k] - targets[t][k]) / float64(T)
+            dby[k] += dy[k]
+            for j := 0; j &lt; H; j++ { dWhy[k][j] += dy[k] * hs[t+1][j] }
+        }
+        dh := make([]float64, H)
+        for j := 0; j &lt; H; j++ {
+            dh[j] = dhNext[j]
+            for k := 0; k &lt; O; k++ { dh[j] += Why[k][j] * dy[k] }
+        }
+        dhRaw := make([]float64, H)
+        for k := 0; k &lt; H; k++ {
+            dhRaw[k] = dh[k] * (1 - hs[t+1][k]*hs[t+1][k])
+            dbh[k] += dhRaw[k]
+            for j := 0; j &lt; I; j++ { dWxh[k][j] += dhRaw[k] * xs[t][j] }
+            for j := 0; j &lt; H; j++ { dWhh[k][j] += dhRaw[k] * hs[t][j] }
+        }
+        dhNext = make([]float64, H)
+        for j := 0; j &lt; H; j++ {
+            for k := 0; k &lt; H; k++ { dhNext[j] += Whh[k][j] * dhRaw[k] }
+        }
+    }
+    applyUpdate(Whh, dWhh, lr, clipVal)
+    applyUpdate(Wxh, dWxh, lr, clipVal)
+    applyUpdate(Why, dWhy, lr, clipVal)
+    for i := range bh { bh[i] -= lr * clamp(dbh[i], clipVal) }
+    for i := range by { by[i] -= lr * clamp(dby[i], clipVal) }
+}
+
+func make2D(r, c int) [][]float64 {
+    m := make([][]float64, r)
+    for i := range m { m[i] = make([]float64, c) }
+    return m
+}
+
+func applyUpdate(W, dW [][]float64, lr, clipVal float64) {
+    for i := range W {
+        for j := range W[i] { W[i][j] -= lr * clamp(dW[i][j], clipVal) }
+    }
+}
+
+var _ = math.Tanh // import used in rnnCell</code></pre></div>
+      </div>
+    </details>
+
     <!-- ========================================================== -->
     <h2 id="vanishing">4. The vanishing-gradient problem</h2>
 
@@ -201,6 +803,170 @@
       <span class="label">The vanishing-gradient problem</span>
       <p>In a recurrent network, gradients flowing back through time pass through a product of Jacobians. Unless those Jacobians hover very near the identity, the product shrinks (or grows) exponentially with distance. Long-range dependencies therefore receive no useful learning signal.</p>
     </div>
+
+    <details class="algo-code">
+      <summary>Source — Vanishing Gradient Demo</summary>
+      <div class="code-tabs">
+        <div class="ct-header">
+          <button class="ct-tab active" data-tab="rnn-vg-pseudo">Pseudocode</button>
+          <button class="ct-tab" data-tab="rnn-vg-py">Python</button>
+          <button class="ct-tab" data-tab="rnn-vg-js">JavaScript</button>
+          <button class="ct-tab" data-tab="rnn-vg-c">C</button>
+          <button class="ct-tab" data-tab="rnn-vg-cpp">C++</button>
+          <button class="ct-tab" data-tab="rnn-vg-java">Java</button>
+          <button class="ct-tab" data-tab="rnn-vg-go">Go</button>
+        </div>
+        <div class="ct-panel active" data-tab="rnn-vg-pseudo"><pre><code>// Show how gradient magnitude shrinks (or grows) over T steps
+// for the scalar recurrence  h_t = w * h_{t-1}  (simplest RNN).
+// The gradient of h_T w.r.t. h_0 is exactly w^T.
+
+function vanishing_grad_demo(w, T):
+    grad = 1.0
+    for t in 1..T:
+        grad = grad * w    // dh_T / dh_0 = w^T
+        print(t, abs(grad))
+
+// With |w| &lt; 1  →  grad → 0 (vanishing)
+// With |w| &gt; 1  →  grad → ∞ (exploding)</code></pre></div>
+        <div class="ct-panel" data-tab="rnn-vg-py"><pre><code>def vanishing_gradient_demo(w=0.9, T=50):
+    """
+    Demonstrate gradient magnitude for the scalar RNN h_t = w * h_{t-1}.
+    dL/dh_0 = dL/dh_T * w^T.
+    """
+    print(f"w = {w}, T = {T}")
+    print(f"{'step':&gt;5}  {'|grad|':&gt;12}  {'note':&lt;20}")
+    grad = 1.0
+    for t in range(1, T + 1):
+        grad *= w
+        note = ''
+        if abs(grad) &lt; 1e-4:
+            note = '&lt;-- near zero'
+        elif abs(grad) &gt; 1e4:
+            note = '&lt;-- exploded!'
+        if t &lt;= 10 or t % 10 == 0:
+            print(f"{t:&gt;5}  {abs(grad):&gt;12.6f}  {note}")
+
+# Try different w values:
+vanishing_gradient_demo(w=0.9,  T=50)   # vanishes
+vanishing_gradient_demo(w=1.05, T=50)   # explodes
+vanishing_gradient_demo(w=1.0,  T=50)   # constant — perfect transmission</code></pre></div>
+        <div class="ct-panel" data-tab="rnn-vg-js"><pre><code">function vanishingGradDemo(w = 0.9, T = 50) {
+  console.log(`w = ${w}, T = ${T}`);
+  let grad = 1.0;
+  for (let t = 1; t &lt;= T; t++) {
+    grad *= w;
+    if (t &lt;= 10 || t % 10 === 0) {
+      const note = Math.abs(grad) &lt; 1e-4 ? ' &lt;-- near zero'
+                 : Math.abs(grad) &gt; 1e4  ? ' &lt;-- exploded!'
+                 : '';
+      console.log(`step ${String(t).padStart(3)}: |grad| = ${Math.abs(grad).toFixed(6)}${note}`);
+    }
+  }
+}
+
+vanishingGradDemo(0.9,  50);
+vanishingGradDemo(1.05, 50);
+vanishingGradDemo(1.0,  50);</code></pre></div>
+        <div class="ct-panel" data-tab="rnn-vg-c"><pre><code>#include &lt;stdio.h&gt;
+#include &lt;math.h&gt;
+
+void vanishing_grad_demo(float w, int T) {
+    printf("w = %.3f, T = %d\n", w, T);
+    float grad = 1.0f;
+    for (int t = 1; t &lt;= T; t++) {
+        grad *= w;
+        if (t &lt;= 10 || t % 10 == 0) {
+            const char *note = fabsf(grad) &lt; 1e-4f ? " &lt;-- near zero"
+                             : fabsf(grad) &gt; 1e4f  ? " &lt;-- exploded!"
+                             : "";
+            printf("  step %3d: |grad| = %12.6f%s\n", t, fabsf(grad), note);
+        }
+    }
+}
+
+int main(void) {
+    vanishing_grad_demo(0.90f, 50);
+    vanishing_grad_demo(1.05f, 50);
+    vanishing_grad_demo(1.00f, 50);
+    return 0;
+}</code></pre></div>
+        <div class="ct-panel" data-tab="rnn-vg-cpp"><pre><code>#include &lt;iostream&gt;
+#include &lt;iomanip&gt;
+#include &lt;cmath&gt;
+
+void vanishingGradDemo(float w, int T) {
+    std::cout &lt;&lt; "w = " &lt;&lt; w &lt;&lt; ", T = " &lt;&lt; T &lt;&lt; "\n";
+    float grad = 1.0f;
+    for (int t = 1; t &lt;= T; t++) {
+        grad *= w;
+        if (t &lt;= 10 || t % 10 == 0) {
+            std::string note;
+            if (std::abs(grad) &lt; 1e-4f) note = " &lt;-- near zero";
+            else if (std::abs(grad) &gt; 1e4f) note = " &lt;-- exploded!";
+            std::cout &lt;&lt; "  step " &lt;&lt; std::setw(3) &lt;&lt; t
+                      &lt;&lt; ": |grad| = " &lt;&lt; std::fixed &lt;&lt; std::setprecision(6)
+                      &lt;&lt; std::abs(grad) &lt;&lt; note &lt;&lt; "\n";
+        }
+    }
+}
+
+int main() {
+    vanishingGradDemo(0.90f, 50);
+    vanishingGradDemo(1.05f, 50);
+    vanishingGradDemo(1.00f, 50);
+}</code></pre></div>
+        <div class="ct-panel" data-tab="rnn-vg-java"><pre><code>public class VanishingGrad {
+    public static void demo(double w, int T) {
+        System.out.printf("w = %.3f, T = %d%n", w, T);
+        double grad = 1.0;
+        for (int t = 1; t &lt;= T; t++) {
+            grad *= w;
+            if (t &lt;= 10 || t % 10 == 0) {
+                String note = Math.abs(grad) &lt; 1e-4 ? " &lt;-- near zero"
+                            : Math.abs(grad) &gt; 1e4  ? " &lt;-- exploded!" : "";
+                System.out.printf("  step %3d: |grad| = %12.6f%s%n",
+                                  t, Math.abs(grad), note);
+            }
+        }
+    }
+
+    public static void main(String[] args) {
+        demo(0.90, 50);
+        demo(1.05, 50);
+        demo(1.00, 50);
+    }
+}</code></pre></div>
+        <div class="ct-panel" data-tab="rnn-vg-go"><pre><code>package main
+
+import (
+    "fmt"
+    "math"
+)
+
+func vanishingGradDemo(w float64, T int) {
+    fmt.Printf("w = %.3f, T = %d\n", w, T)
+    grad := 1.0
+    for t := 1; t &lt;= T; t++ {
+        grad *= w
+        if t &lt;= 10 || t%10 == 0 {
+            note := ""
+            if math.Abs(grad) &lt; 1e-4 {
+                note = " &lt;-- near zero"
+            } else if math.Abs(grad) &gt; 1e4 {
+                note = " &lt;-- exploded!"
+            }
+            fmt.Printf("  step %3d: |grad| = %12.6f%s\n", t, math.Abs(grad), note)
+        }
+    }
+}
+
+func main() {
+    vanishingGradDemo(0.90, 50)
+    vanishingGradDemo(1.05, 50)
+    vanishingGradDemo(1.00, 50)
+}</code></pre></div>
+      </div>
+    </details>
 
     <!-- ========================================================== -->
     <h2 id="lstm">5. The LSTM cell</h2>
@@ -277,6 +1043,234 @@
 
     <p>The key equation to stare at is the cell-state update: $c_t = f_t \odot c_{t-1} + i_t \odot \tilde{c}_t$. If the forget gate learns to be close to 1 for a particular memory slot, information in that slot gets copied forward unchanged, step after step. Gradients flowing backward through that slot are multiplied by roughly 1 at every step — no vanishing. This is the "constant error carousel" that Hochreiter & Schmidhuber were building toward.</p>
 
+    <details class="algo-code">
+      <summary>Source — LSTM Cell</summary>
+      <div class="code-tabs">
+        <div class="ct-header">
+          <button class="ct-tab active" data-tab="lstm-cell-pseudo">Pseudocode</button>
+          <button class="ct-tab" data-tab="lstm-cell-py">Python</button>
+          <button class="ct-tab" data-tab="lstm-cell-js">JavaScript</button>
+          <button class="ct-tab" data-tab="lstm-cell-c">C</button>
+          <button class="ct-tab" data-tab="lstm-cell-cpp">C++</button>
+          <button class="ct-tab" data-tab="lstm-cell-java">Java</button>
+          <button class="ct-tab" data-tab="lstm-cell-go">Go</button>
+        </div>
+        <div class="ct-panel active" data-tab="lstm-cell-pseudo"><pre><code>// LSTM cell equations (Hochreiter &amp; Schmidhuber, 1997)
+// concat = [h_{t-1}, x_t]   (concatenate vectors)
+
+f_t = sigmoid(W_f * concat + b_f)        // forget gate
+i_t = sigmoid(W_i * concat + b_i)        // input gate
+g_t = tanh(W_g * concat + b_g)           // candidate cell values
+o_t = sigmoid(W_o * concat + b_o)        // output gate
+
+c_t = f_t ⊙ c_{t-1} + i_t ⊙ g_t        // cell state update  (⊙ = elementwise)
+h_t = o_t ⊙ tanh(c_t)                   // hidden state output</code></pre></div>
+        <div class="ct-panel" data-tab="lstm-cell-py"><pre><code>import math
+
+def sigmoid(z): return 1.0 / (1.0 + math.exp(-z))
+
+def matvec(W, x):
+    return [sum(w * xi for w, xi in zip(row, x)) for row in W]
+
+def lstm_cell(x_t, h_prev, c_prev,
+              Wf, bf, Wi, bi, Wg, bg, Wo, bo):
+    """Single LSTM step.
+    x_t:    input vector
+    h_prev: previous hidden state
+    c_prev: previous cell state
+    W*:     weight matrices (hidden+input rows)
+    b*:     bias vectors
+    Returns (h_t, c_t).
+    """
+    concat = h_prev + x_t          # concatenate vectors
+
+    f = [sigmoid(z) for z in [sum(w*v for w,v in zip(row, concat)) + b
+                               for row, b in zip(Wf, bf)]]
+    i = [sigmoid(z) for z in [sum(w*v for w,v in zip(row, concat)) + b
+                               for row, b in zip(Wi, bi)]]
+    g = [math.tanh(z) for z in [sum(w*v for w,v in zip(row, concat)) + b
+                                 for row, b in zip(Wg, bg)]]
+    o = [sigmoid(z) for z in [sum(w*v for w,v in zip(row, concat)) + b
+                               for row, b in zip(Wo, bo)]]
+
+    c_t = [f_k * c_k + i_k * g_k for f_k, c_k, i_k, g_k in zip(f, c_prev, i, g)]
+    h_t = [o_k * math.tanh(c_k)  for o_k, c_k in zip(o, c_t)]
+    return h_t, c_t</code></pre></div>
+        <div class="ct-panel" data-tab="lstm-cell-js"><pre><code>const sigmoid = z =&gt; 1 / (1 + Math.exp(-z));
+
+function matvec(W, x) {
+  return W.map(row =&gt; row.reduce((s, w, j) =&gt; s + w * x[j], 0));
+}
+
+function lstmCell(xt, hPrev, cPrev,
+                  Wf, bf, Wi, bi, Wg, bg, Wo, bo) {
+  const concat = [...hPrev, ...xt];
+  const apply  = (W, b, fn) =&gt; matvec(W, concat).map((z, k) =&gt; fn(z + b[k]));
+
+  const f = apply(Wf, bf, sigmoid);
+  const i = apply(Wi, bi, sigmoid);
+  const g = apply(Wg, bg, Math.tanh);
+  const o = apply(Wo, bo, sigmoid);
+
+  const cT = cPrev.map((c, k) =&gt; f[k] * c + i[k] * g[k]);
+  const hT = cT.map((c, k) =&gt; o[k] * Math.tanh(c));
+  return { hT, cT };
+}</code></pre></div>
+        <div class="ct-panel" data-tab="lstm-cell-c"><pre><code>#include &lt;math.h&gt;
+#include &lt;string.h&gt;
+
+static float sig(float z) { return 1.0f / (1.0f + expf(-z)); }
+
+/* H = hidden dim, I = input dim.
+   Wf/Wi/Wg/Wo: [H * (H+I)] each.  bf/bi/bg/bo: [H] each.
+   h_out[H], c_out[H]. */
+void lstm_cell(const float *x, const float *h_prev, const float *c_prev,
+               const float *Wf, const float *bf,
+               const float *Wi, const float *bi,
+               const float *Wg, const float *bg,
+               const float *Wo, const float *bo,
+               int H, int I,
+               float *h_out, float *c_out) {
+    int HI = H + I;
+    float cat[HI];
+    memcpy(cat,     h_prev, sizeof(float) * H);
+    memcpy(cat + H, x,      sizeof(float) * I);
+
+    float f[H], ig[H], g[H], o[H], c[H];
+    for (int k = 0; k &lt; H; k++) {
+        float zf = bf[k], zi = bi[k], zg = bg[k], zo = bo[k];
+        for (int j = 0; j &lt; HI; j++) {
+            zf += Wf[k*HI + j] * cat[j];
+            zi += Wi[k*HI + j] * cat[j];
+            zg += Wg[k*HI + j] * cat[j];
+            zo += Wo[k*HI + j] * cat[j];
+        }
+        f[k]  = sig(zf);
+        ig[k] = sig(zi);
+        g[k]  = tanhf(zg);
+        o[k]  = sig(zo);
+        c[k]  = f[k] * c_prev[k] + ig[k] * g[k];
+        h_out[k] = o[k] * tanhf(c[k]);
+        c_out[k] = c[k];
+    }
+}</code></pre></div>
+        <div class="ct-panel" data-tab="lstm-cell-cpp"><pre><code>#include &lt;vector&gt;
+#include &lt;cmath&gt;
+
+using Vec = std::vector&lt;float&gt;;
+using Mat = std::vector&lt;Vec&gt;;
+
+static float sig(float z) { return 1.0f / (1.0f + std::exp(-z)); }
+
+static Vec gateOutput(const Mat&amp; W, const Vec&amp; b,
+                       const Vec&amp; cat, float (*fn)(float)) {
+    Vec out(W.size());
+    for (size_t k = 0; k &lt; W.size(); k++) {
+        float z = b[k];
+        for (size_t j = 0; j &lt; cat.size(); j++) z += W[k][j] * cat[j];
+        out[k] = fn(z);
+    }
+    return out;
+}
+
+std::pair&lt;Vec, Vec&gt; lstmCell(const Vec&amp; xt, const Vec&amp; hPrev, const Vec&amp; cPrev,
+    const Mat&amp; Wf, const Vec&amp; bf,
+    const Mat&amp; Wi, const Vec&amp; bi,
+    const Mat&amp; Wg, const Vec&amp; bg,
+    const Mat&amp; Wo, const Vec&amp; bo) {
+
+    Vec cat;
+    cat.insert(cat.end(), hPrev.begin(), hPrev.end());
+    cat.insert(cat.end(), xt.begin(), xt.end());
+
+    auto f = gateOutput(Wf, bf, cat, sig);
+    auto i = gateOutput(Wi, bi, cat, sig);
+    auto g = gateOutput(Wg, bg, cat, std::tanh);
+    auto o = gateOutput(Wo, bo, cat, sig);
+
+    Vec cT(cPrev.size()), hT(cPrev.size());
+    for (size_t k = 0; k &lt; cT.size(); k++) {
+        cT[k] = f[k] * cPrev[k] + i[k] * g[k];
+        hT[k] = o[k] * std::tanh(cT[k]);
+    }
+    return {hT, cT};
+}</code></pre></div>
+        <div class="ct-panel" data-tab="lstm-cell-java"><pre><code>public class LSTMCell {
+    static double sig(double z) { return 1.0 / (1.0 + Math.exp(-z)); }
+
+    static double[] matvec(double[][] W, double[] x) {
+        double[] out = new double[W.length];
+        for (int i = 0; i &lt; W.length; i++)
+            for (int j = 0; j &lt; x.length; j++)
+                out[i] += W[i][j] * x[j];
+        return out;
+    }
+
+    /** Returns [h_t, c_t] where each is a double[H]. */
+    public static double[][] cell(double[] xt, double[] hPrev, double[] cPrev,
+                                   double[][] Wf, double[] bf,
+                                   double[][] Wi, double[] bi,
+                                   double[][] Wg, double[] bg,
+                                   double[][] Wo, double[] bo) {
+        int H = hPrev.length, I = xt.length;
+        double[] cat = new double[H + I];
+        System.arraycopy(hPrev, 0, cat, 0, H);
+        System.arraycopy(xt,    0, cat, H, I);
+
+        double[] zf = matvec(Wf, cat), zi = matvec(Wi, cat),
+                 zg = matvec(Wg, cat), zo = matvec(Wo, cat);
+        double[] cT = new double[H], hT = new double[H];
+        for (int k = 0; k &lt; H; k++) {
+            double f = sig(zf[k] + bf[k]);
+            double ig = sig(zi[k] + bi[k]);
+            double g  = Math.tanh(zg[k] + bg[k]);
+            double o  = sig(zo[k] + bo[k]);
+            cT[k] = f * cPrev[k] + ig * g;
+            hT[k] = o * Math.tanh(cT[k]);
+        }
+        return new double[][] {hT, cT};
+    }
+}</code></pre></div>
+        <div class="ct-panel" data-tab="lstm-cell-go"><pre><code>import "math"
+
+func sigm(z float64) float64 { return 1.0 / (1.0 + math.Exp(-z)) }
+
+func gateOut(W [][]float64, b, cat []float64, fn func(float64) float64) []float64 {
+    out := make([]float64, len(W))
+    for k, row := range W {
+        z := b[k]
+        for j, w := range row { z += w * cat[j] }
+        out[k] = fn(z)
+    }
+    return out
+}
+
+// LSTMCell computes one LSTM step.
+// Returns (h_t, c_t).
+func LSTMCell(xt, hPrev, cPrev []float64,
+    Wf [][]float64, bf []float64,
+    Wi [][]float64, bi []float64,
+    Wg [][]float64, bg []float64,
+    Wo [][]float64, bo []float64) ([]float64, []float64) {
+
+    cat := append(append([]float64{}, hPrev...), xt...)
+    f := gateOut(Wf, bf, cat, sigm)
+    ig := gateOut(Wi, bi, cat, sigm)
+    g := gateOut(Wg, bg, cat, math.Tanh)
+    o := gateOut(Wo, bo, cat, sigm)
+
+    H := len(cPrev)
+    cT := make([]float64, H)
+    hT := make([]float64, H)
+    for k := 0; k &lt; H; k++ {
+        cT[k] = f[k]*cPrev[k] + ig[k]*g[k]
+        hT[k] = o[k] * math.Tanh(cT[k])
+    }
+    return hT, cT
+}</code></pre></div>
+      </div>
+    </details>
+
     <!-- Interactive demo -->
     <h3 id="lstm-demo">Interactive: watch an LSTM carry information forward</h3>
 
@@ -349,20 +1343,237 @@
 
     <p>Empirically, GRUs tend to match LSTMs on most tasks while being lighter and faster. The Transformer era has largely made both of them historical, but if you're running an RNN on a microcontroller, the GRU is usually the right pick.</p>
 
+    <details class="algo-code">
+      <summary>Source — GRU Cell</summary>
+      <div class="code-tabs">
+        <div class="ct-header">
+          <button class="ct-tab active" data-tab="gru-cell-pseudo">Pseudocode</button>
+          <button class="ct-tab" data-tab="gru-cell-py">Python</button>
+          <button class="ct-tab" data-tab="gru-cell-js">JavaScript</button>
+          <button class="ct-tab" data-tab="gru-cell-c">C</button>
+          <button class="ct-tab" data-tab="gru-cell-cpp">C++</button>
+          <button class="ct-tab" data-tab="gru-cell-java">Java</button>
+          <button class="ct-tab" data-tab="gru-cell-go">Go</button>
+        </div>
+        <div class="ct-panel active" data-tab="gru-cell-pseudo"><pre><code>// GRU cell (Cho et al., 2014)
+// concat(a, b) = concatenate two vectors
+
+z_t = sigmoid(W_z * [h_{t-1}, x_t])        // update gate
+r_t = sigmoid(W_r * [h_{t-1}, x_t])        // reset gate
+
+// candidate: note r_t ⊙ h_{t-1} before concatenating with x_t
+h_cand = tanh(W_h * [r_t ⊙ h_{t-1}, x_t]) // candidate hidden state
+
+h_t = (1 - z_t) ⊙ h_{t-1} + z_t ⊙ h_cand // interpolate old and new</code></pre></div>
+        <div class="ct-panel" data-tab="gru-cell-py"><pre><code>import math
+
+def sigmoid(z): return 1.0 / (1.0 + math.exp(-z))
+
+def gru_cell(x_t, h_prev, Wz, Wr, Wh):
+    """Single GRU step.
+    x_t:    input vector (list)
+    h_prev: previous hidden state (list)
+    Wz, Wr, Wh: weight matrices (list of rows); biases absorbed into last column.
+    Returns h_t.
+    """
+    cat = h_prev + x_t       # [h_prev | x_t]
+
+    def gate(W, fn):
+        return [fn(sum(w * v for w, v in zip(row, cat))) for row in W]
+
+    z = gate(Wz, sigmoid)
+    r = gate(Wr, sigmoid)
+
+    # reset-gated concat
+    r_h = [ri * hi for ri, hi in zip(r, h_prev)]
+    cat2 = r_h + x_t
+    h_cand = [math.tanh(sum(w * v for w, v in zip(row, cat2))) for row in Wh]
+
+    h_t = [(1 - zi) * hi + zi * hc
+           for zi, hi, hc in zip(z, h_prev, h_cand)]
+    return h_t</code></pre></div>
+        <div class="ct-panel" data-tab="gru-cell-js"><pre><code>const sigmoid = z =&gt; 1 / (1 + Math.exp(-z));
+
+function matvec(W, x) {
+  return W.map(row =&gt; row.reduce((s, w, j) =&gt; s + w * x[j], 0));
+}
+
+function gruCell(xt, hPrev, Wz, Wr, Wh) {
+  const cat  = [...hPrev, ...xt];
+  const z    = matvec(Wz, cat).map(sigmoid);
+  const r    = matvec(Wr, cat).map(sigmoid);
+  const rh   = hPrev.map((h, k) =&gt; r[k] * h);
+  const cat2 = [...rh, ...xt];
+  const hCand = matvec(Wh, cat2).map(Math.tanh);
+  return hPrev.map((h, k) =&gt; (1 - z[k]) * h + z[k] * hCand[k]);
+}</code></pre></div>
+        <div class="ct-panel" data-tab="gru-cell-c"><pre><code>#include &lt;math.h&gt;
+#include &lt;string.h&gt;
+
+static float sig(float x) { return 1.0f / (1.0f + expf(-x)); }
+
+/* H = hidden dim, I = input dim.
+   Wz, Wr, Wh: [H * (H+I)] each.  h_out[H]. */
+void gru_cell(const float *x, const float *h_prev,
+              const float *Wz, const float *Wr, const float *Wh,
+              int H, int I, float *h_out) {
+    int HI = H + I;
+    float cat[HI], z[H], r[H], rh[H], cat2[HI], hcand[H];
+    memcpy(cat,     h_prev, sizeof(float) * H);
+    memcpy(cat + H, x,      sizeof(float) * I);
+
+    for (int k = 0; k &lt; H; k++) {
+        float zz = 0, zr = 0;
+        for (int j = 0; j &lt; HI; j++) { zz += Wz[k*HI+j]*cat[j]; zr += Wr[k*HI+j]*cat[j]; }
+        z[k] = sig(zz);
+        r[k] = sig(zr);
+        rh[k] = r[k] * h_prev[k];
+    }
+
+    memcpy(cat2,     rh, sizeof(float) * H);
+    memcpy(cat2 + H, x,  sizeof(float) * I);
+
+    for (int k = 0; k &lt; H; k++) {
+        float zh = 0;
+        for (int j = 0; j &lt; HI; j++) zh += Wh[k*HI+j] * cat2[j];
+        hcand[k] = tanhf(zh);
+        h_out[k] = (1.0f - z[k]) * h_prev[k] + z[k] * hcand[k];
+    }
+}</code></pre></div>
+        <div class="ct-panel" data-tab="gru-cell-cpp"><pre><code>#include &lt;vector&gt;
+#include &lt;cmath&gt;
+
+using Vec = std::vector&lt;float&gt;;
+using Mat = std::vector&lt;Vec&gt;;
+
+static float sig(float z) { return 1.0f / (1.0f + std::exp(-z)); }
+static Vec matvec(const Mat&amp; W, const Vec&amp; x) {
+    Vec o(W.size(), 0);
+    for (size_t i = 0; i &lt; W.size(); i++)
+        for (size_t j = 0; j &lt; x.size(); j++) o[i] += W[i][j] * x[j];
+    return o;
+}
+
+Vec gruCell(const Vec&amp; xt, const Vec&amp; hPrev,
+            const Mat&amp; Wz, const Mat&amp; Wr, const Mat&amp; Wh) {
+    Vec cat;
+    cat.insert(cat.end(), hPrev.begin(), hPrev.end());
+    cat.insert(cat.end(), xt.begin(), xt.end());
+
+    auto applyGate = [&amp;](const Mat&amp; W, float (*fn)(float)) {
+        auto z = matvec(W, cat);
+        for (auto&amp; v : z) v = fn(v);
+        return z;
+    };
+    auto z = applyGate(Wz, sig);
+    auto r = applyGate(Wr, sig);
+
+    Vec rh(hPrev.size());
+    for (size_t k = 0; k &lt; hPrev.size(); k++) rh[k] = r[k] * hPrev[k];
+    Vec cat2;
+    cat2.insert(cat2.end(), rh.begin(), rh.end());
+    cat2.insert(cat2.end(), xt.begin(), xt.end());
+
+    auto hCandRaw = matvec(Wh, cat2);
+    Vec hT(hPrev.size());
+    for (size_t k = 0; k &lt; hT.size(); k++) {
+        float hc = std::tanh(hCandRaw[k]);
+        hT[k] = (1.0f - z[k]) * hPrev[k] + z[k] * hc;
+    }
+    return hT;
+}</code></pre></div>
+        <div class="ct-panel" data-tab="gru-cell-java"><pre><code>public class GRUCell {
+    static double sig(double z) { return 1.0 / (1.0 + Math.exp(-z)); }
+
+    static double[] matvec(double[][] W, double[] x) {
+        double[] out = new double[W.length];
+        for (int i = 0; i &lt; W.length; i++)
+            for (int j = 0; j &lt; x.length; j++)
+                out[i] += W[i][j] * x[j];
+        return out;
+    }
+
+    public static double[] cell(double[] xt, double[] hPrev,
+                                 double[][] Wz, double[][] Wr, double[][] Wh) {
+        int H = hPrev.length, I = xt.length;
+        double[] cat = new double[H + I];
+        System.arraycopy(hPrev, 0, cat, 0, H);
+        System.arraycopy(xt,    0, cat, H, I);
+
+        double[] zRaw = matvec(Wz, cat), rRaw = matvec(Wr, cat);
+        double[] z = new double[H], r = new double[H];
+        for (int k = 0; k &lt; H; k++) { z[k] = sig(zRaw[k]); r[k] = sig(rRaw[k]); }
+
+        double[] cat2 = new double[H + I];
+        for (int k = 0; k &lt; H; k++) cat2[k] = r[k] * hPrev[k];
+        System.arraycopy(xt, 0, cat2, H, I);
+
+        double[] hcRaw = matvec(Wh, cat2);
+        double[] hT = new double[H];
+        for (int k = 0; k &lt; H; k++) {
+            double hc = Math.tanh(hcRaw[k]);
+            hT[k] = (1 - z[k]) * hPrev[k] + z[k] * hc;
+        }
+        return hT;
+    }
+}</code></pre></div>
+        <div class="ct-panel" data-tab="gru-cell-go"><pre><code>import "math"
+
+func sigm64(z float64) float64 { return 1.0 / (1.0 + math.Exp(-z)) }
+
+func mv(W [][]float64, x []float64) []float64 {
+    out := make([]float64, len(W))
+    for i, row := range W {
+        for j, w := range row { out[i] += w * x[j] }
+    }
+    return out
+}
+
+// GRUCell computes one GRU step and returns h_t.
+func GRUCell(xt, hPrev []float64,
+    Wz, Wr, Wh [][]float64) []float64 {
+    cat := append(append([]float64{}, hPrev...), xt...)
+
+    applyGate := func(W [][]float64, fn func(float64) float64) []float64 {
+        out := mv(W, cat)
+        for i := range out { out[i] = fn(out[i]) }
+        return out
+    }
+
+    z := applyGate(Wz, sigm64)
+    r := applyGate(Wr, sigm64)
+
+    rh := make([]float64, len(hPrev))
+    for k := range rh { rh[k] = r[k] * hPrev[k] }
+    cat2 := append(append([]float64{}, rh...), xt...)
+
+    hcRaw := mv(Wh, cat2)
+    hT := make([]float64, len(hPrev))
+    for k := range hT {
+        hc := math.Tanh(hcRaw[k])
+        hT[k] = (1-z[k])*hPrev[k] + z[k]*hc
+    }
+    return hT
+}</code></pre></div>
+      </div>
+    </details>
+
     <!-- ========================================================== -->
     <h2 id="code">7. Source code — build one yourself</h2>
 
     <p>A vanilla RNN fits in a dozen lines in almost any language. Here is the same minimal forward pass written four ways. The inputs are the same in each: a list of token vectors <code>xs</code>, learned matrices <code>Wxh</code>, <code>Whh</code>, <code>Why</code>, and bias vectors.</p>
 
+    <details class="algo-code">
+      <summary>Source — Character-Level RNN</summary>
     <div class="code-tabs" id="ct-rnn">
       <div class="ct-header">
-        <button class="ct-tab active" data-tab="py">Python / NumPy</button>
-        <button class="ct-tab" data-tab="pt">PyTorch</button>
-        <button class="ct-tab" data-tab="jax">JAX</button>
-        <button class="ct-tab" data-tab="c">C (pedagogical)</button>
+        <button class="ct-tab active" data-tab="rnn-seq-py">Python / NumPy</button>
+        <button class="ct-tab" data-tab="rnn-seq-pt">PyTorch</button>
+        <button class="ct-tab" data-tab="rnn-seq-jax">JAX</button>
+        <button class="ct-tab" data-tab="rnn-seq-c">C (pedagogical)</button>
         <span class="ct-label">rnn · forward pass</span>
       </div>
-      <div class="ct-panel active" data-tab="py"><pre><code><span class="kw">import</span> numpy <span class="kw">as</span> np
+      <div class="ct-panel active" data-tab="rnn-seq-py"><pre><code><span class="kw">import</span> numpy <span class="kw">as</span> np
 
 <span class="kw">def</span> <span class="fn">rnn_forward</span>(xs, h0, Wxh, Whh, Why, bh, by):
     <span class="cmt"># xs: list of input vectors, one per time step</span>
@@ -376,7 +1587,7 @@
     <span class="kw">return</span> ys, h
 </code></pre></div>
 
-      <div class="ct-panel" data-tab="pt"><pre><code><span class="kw">import</span> torch
+      <div class="ct-panel" data-tab="rnn-seq-pt"><pre><code><span class="kw">import</span> torch
 <span class="kw">import</span> torch.nn <span class="kw">as</span> nn
 
 <span class="kw">class</span> <span class="fn">VanillaRNN</span>(nn.Module):
@@ -398,7 +1609,7 @@
         <span class="kw">return</span> torch.stack(ys), h
 </code></pre></div>
 
-      <div class="ct-panel" data-tab="jax"><pre><code><span class="kw">import</span> jax, jax.numpy <span class="kw">as</span> jnp
+      <div class="ct-panel" data-tab="rnn-seq-jax"><pre><code><span class="kw">import</span> jax, jax.numpy <span class="kw">as</span> jnp
 <span class="kw">from</span> jax <span class="kw">import</span> lax
 
 <span class="kw">def</span> <span class="fn">rnn_forward</span>(params, xs, h0):
@@ -414,7 +1625,7 @@
     <span class="kw">return</span> ys, h_final
 </code></pre></div>
 
-      <div class="ct-panel" data-tab="c"><pre><code><span class="cmt">/* Pedagogical C — no BLAS, one matrix-vector at a time. */</span>
+      <div class="ct-panel" data-tab="rnn-seq-c"><pre><code><span class="cmt">/* Pedagogical C — no BLAS, one matrix-vector at a time. */</span>
 <span class="kw">void</span> <span class="fn">rnn_forward</span>(
     <span class="kw">const float</span> *xs,   <span class="cmt">// [T][I]</span>
     <span class="kw">const float</span> *Wxh,  <span class="cmt">// [H][I]</span>
@@ -448,6 +1659,7 @@
 }
 </code></pre></div>
     </div>
+    </details>
 
     <p>Note the shared structure: three matrix-vector multiplies, a $\tanh$, and a loop over time. Everything else — GPU tiling, batching, mixed-precision — is performance dressing around this three-line inner loop.</p>
 

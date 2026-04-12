@@ -58,6 +58,206 @@
       <p style="margin:6px 0">Before GANs, generating images meant either explicitly modelling a pixel-level probability distribution (slow, blurry results) or training an autoencoder (also blurry, because L2 loss averages). GANs sidestepped the likelihood entirely and asked "can another network tell the difference?" That's a vastly more sensitive loss signal than "is the pixel value within 0.01 of the target?"</p>
     </div>
 
+    <details class="algo-code">
+  <summary>Source — GAN Generator</summary>
+  <div class="code-tabs">
+    <div class="ct-header">
+      <button class="ct-tab active" data-tab="gan-gen-pseudo">Pseudocode</button>
+      <button class="ct-tab" data-tab="gan-gen-py">Python</button>
+      <button class="ct-tab" data-tab="gan-gen-js">JavaScript</button>
+      <button class="ct-tab" data-tab="gan-gen-c">C</button>
+      <button class="ct-tab" data-tab="gan-gen-cpp">C++</button>
+      <button class="ct-tab" data-tab="gan-gen-java">Java</button>
+      <button class="ct-tab" data-tab="gan-gen-go">Go</button>
+    </div>
+    <div class="ct-panel active" data-tab="gan-gen-pseudo"><pre><code>// MLP Generator: z in R^latent_dim -> fake image in R^output_dim
+// Architecture: Linear -> ReLU -> Linear -> Tanh
+
+function Generator(z, W1, b1, W2, b2):
+    h = relu(W1 @ z + b1)   // hidden layer
+    x = tanh(W2 @ h + b2)   // output in [-1, 1]
+    return x
+
+// W1: shape (hidden_dim, latent_dim)
+// b1: shape (hidden_dim,)
+// W2: shape (output_dim, hidden_dim)
+// b2: shape (output_dim,)
+</code></pre></div>
+    <div class="ct-panel" data-tab="gan-gen-py"><pre><code>import numpy as np
+
+def relu(x):
+    return np.maximum(0, x)
+
+def tanh(x):
+    return np.tanh(x)
+
+class Generator:
+    def __init__(self, latent_dim, hidden_dim, output_dim):
+        # Xavier initialisation
+        scale1 = np.sqrt(2.0 / latent_dim)
+        scale2 = np.sqrt(2.0 / hidden_dim)
+        self.W1 = np.random.randn(hidden_dim, latent_dim) * scale1
+        self.b1 = np.zeros(hidden_dim)
+        self.W2 = np.random.randn(output_dim, hidden_dim) * scale2
+        self.b2 = np.zeros(output_dim)
+
+    def forward(self, z):
+        # z: (batch, latent_dim)
+        h = relu(z @ self.W1.T + self.b1)   # (batch, hidden_dim)
+        x = tanh(h @ self.W2.T + self.b2)   # (batch, output_dim)
+        return x
+
+# Example
+G = Generator(latent_dim=100, hidden_dim=256, output_dim=784)
+z = np.random.randn(16, 100)   # batch of 16 noise vectors
+fake = G.forward(z)            # (16, 784) fake images in [-1, 1]
+</code></pre></div>
+    <div class="ct-panel" data-tab="gan-gen-js"><pre><code>// Minimal MLP generator in plain JS (no framework)
+
+function relu(x) { return x.map(v => Math.max(0, v)); }
+function tanh(x) { return x.map(v => Math.tanh(v)); }
+
+// matMulAdd: y = x @ W^T + b
+// x: Float64Array length n, W: Float64Array length (m*n), b: Float64Array length m
+function matMulAdd(x, W, b, m, n) {
+  const y = new Float64Array(m);
+  for (let i = 0; i &lt; m; i++) {
+    let s = b[i];
+    for (let j = 0; j &lt; n; j++) s += W[i * n + j] * x[j];
+    y[i] = s;
+  }
+  return y;
+}
+
+function generatorForward(z, W1, b1, W2, b2, hiddenDim, outputDim, latentDim) {
+  const h = relu(Array.from(matMulAdd(z, W1, b1, hiddenDim, latentDim)));
+  const x = tanh(Array.from(matMulAdd(h, W2, b2, outputDim, hiddenDim)));
+  return x;
+}
+</code></pre></div>
+    <div class="ct-panel" data-tab="gan-gen-c"><pre><code>#include &lt;math.h&gt;
+#include &lt;stdlib.h&gt;
+
+static void mat_mul_add(const float *x, const float *W, const float *b,
+                        float *y, int m, int n) {
+    for (int i = 0; i &lt; m; i++) {
+        float s = b[i];
+        for (int j = 0; j &lt; n; j++) s += W[i * n + j] * x[j];
+        y[i] = s;
+    }
+}
+
+/* Generator forward: z (latent_dim) -&gt; fake (output_dim) */
+void generator_forward(const float *z,
+                       const float *W1, const float *b1,
+                       const float *W2, const float *b2,
+                       float *hidden, float *out,
+                       int latent, int hidden_dim, int out_dim) {
+    mat_mul_add(z, W1, b1, hidden, hidden_dim, latent);
+    for (int i = 0; i &lt; hidden_dim; i++)
+        hidden[i] = hidden[i] &gt; 0.f ? hidden[i] : 0.f;  /* ReLU */
+
+    mat_mul_add(hidden, W2, b2, out, out_dim, hidden_dim);
+    for (int i = 0; i &lt; out_dim; i++)
+        out[i] = tanhf(out[i]);   /* Tanh */
+}
+</code></pre></div>
+    <div class="ct-panel" data-tab="gan-gen-cpp"><pre><code>#include &lt;vector&gt;
+#include &lt;cmath&gt;
+#include &lt;numeric&gt;
+
+struct Generator {
+    int latent, hidden, output;
+    std::vector&lt;float&gt; W1, b1, W2, b2;
+
+    Generator(int latent, int hidden, int output)
+        : latent(latent), hidden(hidden), output(output),
+          W1(hidden * latent), b1(hidden),
+          W2(output * hidden), b2(output) { /* init weights here */ }
+
+    std::vector&lt;float&gt; forward(const std::vector&lt;float&gt; &amp;z) const {
+        std::vector&lt;float&gt; h(hidden), x(output);
+        for (int i = 0; i &lt; hidden; i++) {
+            float s = b1[i];
+            for (int j = 0; j &lt; latent; j++) s += W1[i * latent + j] * z[j];
+            h[i] = s &gt; 0.f ? s : 0.f;   // ReLU
+        }
+        for (int i = 0; i &lt; output; i++) {
+            float s = b2[i];
+            for (int j = 0; j &lt; hidden; j++) s += W2[i * hidden + j] * h[j];
+            x[i] = std::tanh(s);   // Tanh
+        }
+        return x;
+    }
+};
+</code></pre></div>
+    <div class="ct-panel" data-tab="gan-gen-java"><pre><code>public class Generator {
+    private final int latentDim, hiddenDim, outputDim;
+    private final float[] W1, b1, W2, b2;
+
+    public Generator(int latentDim, int hiddenDim, int outputDim) {
+        this.latentDim = latentDim;
+        this.hiddenDim = hiddenDim;
+        this.outputDim = outputDim;
+        W1 = new float[hiddenDim * latentDim];
+        b1 = new float[hiddenDim];
+        W2 = new float[outputDim * hiddenDim];
+        b2 = new float[outputDim];
+        // TODO: initialise weights (Xavier / He)
+    }
+
+    public float[] forward(float[] z) {
+        float[] h = new float[hiddenDim];
+        for (int i = 0; i &lt; hiddenDim; i++) {
+            float s = b1[i];
+            for (int j = 0; j &lt; latentDim; j++) s += W1[i * latentDim + j] * z[j];
+            h[i] = Math.max(0f, s);   // ReLU
+        }
+        float[] x = new float[outputDim];
+        for (int i = 0; i &lt; outputDim; i++) {
+            float s = b2[i];
+            for (int j = 0; j &lt; hiddenDim; j++) s += W2[i * hiddenDim + j] * h[j];
+            x[i] = (float) Math.tanh(s);   // Tanh
+        }
+        return x;
+    }
+}
+</code></pre></div>
+    <div class="ct-panel" data-tab="gan-gen-go"><pre><code>package main
+
+import "math"
+
+type Generator struct {
+    LatentDim, HiddenDim, OutputDim int
+    W1, b1, W2, b2                  []float64
+}
+
+func (g *Generator) Forward(z []float64) []float64 {
+    h := make([]float64, g.HiddenDim)
+    for i := range h {
+        s := g.b1[i]
+        for j, zj := range z {
+            s += g.W1[i*g.LatentDim+j] * zj
+        }
+        if s &lt; 0 {
+            s = 0 // ReLU
+        }
+        h[i] = s
+    }
+    x := make([]float64, g.OutputDim)
+    for i := range x {
+        s := g.b2[i]
+        for j, hj := range h {
+            s += g.W2[i*g.HiddenDim+j] * hj
+        }
+        x[i] = math.Tanh(s) // Tanh
+    }
+    return x
+}
+</code></pre></div>
+  </div>
+</details>
+
     <!-- ========================================================== -->
     <h2 id="framework">2. The adversarial framework</h2>
 
@@ -118,6 +318,171 @@
       </svg>
       <figcaption>Architecture sketch. Noise $z$ is piped through $G$ to produce a fake. Real data flows directly in. $D$ classifies each — its output is the gradient source for both networks.</figcaption>
     </figure>
+
+    <details class="algo-code">
+  <summary>Source — GAN Discriminator</summary>
+  <div class="code-tabs">
+    <div class="ct-header">
+      <button class="ct-tab active" data-tab="gan-disc-pseudo">Pseudocode</button>
+      <button class="ct-tab" data-tab="gan-disc-py">Python</button>
+      <button class="ct-tab" data-tab="gan-disc-js">JavaScript</button>
+      <button class="ct-tab" data-tab="gan-disc-c">C</button>
+      <button class="ct-tab" data-tab="gan-disc-cpp">C++</button>
+      <button class="ct-tab" data-tab="gan-disc-java">Java</button>
+      <button class="ct-tab" data-tab="gan-disc-go">Go</button>
+    </div>
+    <div class="ct-panel active" data-tab="gan-disc-pseudo"><pre><code>// MLP Discriminator: image in R^input_dim -> probability in [0,1]
+// Architecture: Linear -> LeakyReLU -> Linear -> Sigmoid
+
+function Discriminator(x, W1, b1, W2, b2):
+    h = leaky_relu(W1 @ x + b1, alpha=0.2)
+    logit = W2 @ h + b2          // scalar
+    prob  = sigmoid(logit)       // in (0, 1)
+    return prob
+</code></pre></div>
+    <div class="ct-panel" data-tab="gan-disc-py"><pre><code>import numpy as np
+
+def leaky_relu(x, alpha=0.2):
+    return np.where(x &gt; 0, x, alpha * x)
+
+def sigmoid(x):
+    return 1.0 / (1.0 + np.exp(-x))
+
+class Discriminator:
+    def __init__(self, input_dim, hidden_dim):
+        scale1 = np.sqrt(2.0 / input_dim)
+        scale2 = np.sqrt(2.0 / hidden_dim)
+        self.W1 = np.random.randn(hidden_dim, input_dim)  * scale1
+        self.b1 = np.zeros(hidden_dim)
+        self.W2 = np.random.randn(1, hidden_dim) * scale2
+        self.b2 = np.zeros(1)
+
+    def forward(self, x):
+        # x: (batch, input_dim)
+        h      = leaky_relu(x @ self.W1.T + self.b1)   # (batch, hidden_dim)
+        logit  = h @ self.W2.T + self.b2                # (batch, 1)
+        return sigmoid(logit)                            # probability in (0, 1)
+
+# Example
+D = Discriminator(input_dim=784, hidden_dim=256)
+images = np.random.randn(16, 784)
+probs  = D.forward(images)   # (16, 1), each in (0, 1)
+</code></pre></div>
+    <div class="ct-panel" data-tab="gan-disc-js"><pre><code>function leakyRelu(x, alpha = 0.2) {
+  return x.map(v => v &gt; 0 ? v : alpha * v);
+}
+function sigmoid(x) {
+  return x.map(v => 1 / (1 + Math.exp(-v)));
+}
+
+function discriminatorForward(x, W1, b1, W2, b2, inputDim, hiddenDim) {
+  const h  = leakyRelu(Array.from(matMulAdd(x, W1, b1, hiddenDim, inputDim)));
+  const lg = matMulAdd(h, W2, b2, 1, hiddenDim);
+  return sigmoid(Array.from(lg))[0];   // scalar probability
+}
+// matMulAdd defined in Generator snippet
+</code></pre></div>
+    <div class="ct-panel" data-tab="gan-disc-c"><pre><code>#include &lt;math.h&gt;
+
+/* Discriminator forward: x (input_dim) -&gt; probability in (0,1) */
+float discriminator_forward(const float *x,
+                             const float *W1, const float *b1,
+                             const float *W2, const float *b2,
+                             float *hidden,
+                             int input_dim, int hidden_dim) {
+    /* Layer 1: LeakyReLU */
+    for (int i = 0; i &lt; hidden_dim; i++) {
+        float s = b1[i];
+        for (int j = 0; j &lt; input_dim; j++) s += W1[i * input_dim + j] * x[j];
+        hidden[i] = s &gt; 0.f ? s : 0.2f * s;
+    }
+    /* Layer 2: linear + sigmoid */
+    float logit = b2[0];
+    for (int j = 0; j &lt; hidden_dim; j++) logit += W2[j] * hidden[j];
+    return 1.f / (1.f + expf(-logit));
+}
+</code></pre></div>
+    <div class="ct-panel" data-tab="gan-disc-cpp"><pre><code>#include &lt;vector&gt;
+#include &lt;cmath&gt;
+
+struct Discriminator {
+    int inputDim, hiddenDim;
+    std::vector&lt;float&gt; W1, b1, W2, b2;
+
+    Discriminator(int inputDim, int hiddenDim)
+        : inputDim(inputDim), hiddenDim(hiddenDim),
+          W1(hiddenDim * inputDim), b1(hiddenDim),
+          W2(hiddenDim), b2(1) { /* init weights */ }
+
+    float forward(const std::vector&lt;float&gt; &amp;x) const {
+        std::vector&lt;float&gt; h(hiddenDim);
+        for (int i = 0; i &lt; hiddenDim; i++) {
+            float s = b1[i];
+            for (int j = 0; j &lt; inputDim; j++) s += W1[i * inputDim + j] * x[j];
+            h[i] = s &gt; 0.f ? s : 0.2f * s;   // Leaky ReLU
+        }
+        float logit = b2[0];
+        for (int j = 0; j &lt; hiddenDim; j++) logit += W2[j] * h[j];
+        return 1.f / (1.f + std::exp(-logit));   // Sigmoid
+    }
+};
+</code></pre></div>
+    <div class="ct-panel" data-tab="gan-disc-java"><pre><code>public class Discriminator {
+    private final int inputDim, hiddenDim;
+    private final float[] W1, b1, W2, b2;
+
+    public Discriminator(int inputDim, int hiddenDim) {
+        this.inputDim  = inputDim;
+        this.hiddenDim = hiddenDim;
+        W1 = new float[hiddenDim * inputDim];
+        b1 = new float[hiddenDim];
+        W2 = new float[hiddenDim];
+        b2 = new float[1];
+    }
+
+    public float forward(float[] x) {
+        float[] h = new float[hiddenDim];
+        for (int i = 0; i &lt; hiddenDim; i++) {
+            float s = b1[i];
+            for (int j = 0; j &lt; inputDim; j++) s += W1[i * inputDim + j] * x[j];
+            h[i] = s &gt; 0f ? s : 0.2f * s;   // Leaky ReLU
+        }
+        float logit = b2[0];
+        for (int j = 0; j &lt; hiddenDim; j++) logit += W2[j] * h[j];
+        return (float)(1.0 / (1.0 + Math.exp(-logit)));   // Sigmoid
+    }
+}
+</code></pre></div>
+    <div class="ct-panel" data-tab="gan-disc-go"><pre><code>package main
+
+import "math"
+
+type Discriminator struct {
+    InputDim, HiddenDim int
+    W1, b1, W2, b2      []float64
+}
+
+func (d *Discriminator) Forward(x []float64) float64 {
+    h := make([]float64, d.HiddenDim)
+    for i := range h {
+        s := d.b1[i]
+        for j, xj := range x {
+            s += d.W1[i*d.InputDim+j] * xj
+        }
+        if s &lt; 0 {
+            s = 0.2 * s // Leaky ReLU
+        }
+        h[i] = s
+    }
+    logit := d.b2[0]
+    for j, hj := range h {
+        logit += d.W2[j] * hj
+    }
+    return 1.0 / (1.0 + math.Exp(-logit)) // Sigmoid
+}
+</code></pre></div>
+  </div>
+</details>
 
     <!-- ========================================================== -->
     <h2 id="objective">3. The minimax objective</h2>
@@ -232,6 +597,276 @@ for number_of_training_iterations:
       </div>
     </div>
 
+    <details class="algo-code">
+  <summary>Source — GAN Training Loop</summary>
+  <div class="code-tabs">
+    <div class="ct-header">
+      <button class="ct-tab active" data-tab="gan-train-pseudo">Pseudocode</button>
+      <button class="ct-tab" data-tab="gan-train-py">Python</button>
+      <button class="ct-tab" data-tab="gan-train-js">JavaScript</button>
+      <button class="ct-tab" data-tab="gan-train-c">C</button>
+      <button class="ct-tab" data-tab="gan-train-cpp">C++</button>
+      <button class="ct-tab" data-tab="gan-train-java">Java</button>
+      <button class="ct-tab" data-tab="gan-train-go">Go</button>
+    </div>
+    <div class="ct-panel active" data-tab="gan-train-pseudo"><pre><code>// Alternating D / G updates with binary cross-entropy loss
+// BCE(y_hat, y) = -[ y*log(y_hat) + (1-y)*log(1-y_hat) ]
+
+for epoch in 1..num_epochs:
+    for real_batch in dataloader:
+        // ---- Train Discriminator ----
+        z = sample_noise(batch_size, latent_dim)   // z ~ N(0,I)
+        fake = G.forward(z)                        // generated samples
+
+        d_real = D.forward(real_batch)
+        d_fake = D.forward(fake)                   // detach G gradient
+
+        d_loss = BCE(d_real, ones) + BCE(d_fake, zeros)
+        D.backward(d_loss)
+        D.step()
+
+        // ---- Train Generator (non-saturating loss) ----
+        z = sample_noise(batch_size, latent_dim)
+        fake = G.forward(z)
+        d_fake = D.forward(fake)
+
+        g_loss = BCE(d_fake, ones)   // fool D: label fakes as real
+        G.backward(g_loss)
+        G.step()
+</code></pre></div>
+    <div class="ct-panel" data-tab="gan-train-py"><pre><code>import numpy as np
+
+# Assume Generator and Discriminator classes from above snippets.
+# This is a pure-NumPy training loop (manual backprop sketch).
+
+def bce(y_hat, y, eps=1e-8):
+    """Binary cross-entropy, scalar."""
+    y_hat = np.clip(y_hat, eps, 1 - eps)
+    return -np.mean(y * np.log(y_hat) + (1 - y) * np.log(1 - y_hat))
+
+def train_gan(G, D, data, num_epochs=100, batch_size=64,
+              latent_dim=100, lr=0.0002):
+    n = len(data)
+    for epoch in range(num_epochs):
+        idx = np.random.permutation(n)
+        for i in range(0, n - batch_size, batch_size):
+            real = data[idx[i:i + batch_size]]   # (B, input_dim)
+
+            # --- Discriminator update ---
+            z    = np.random.randn(batch_size, latent_dim)
+            fake = G.forward(z)          # (B, input_dim)  -- detach in autograd frameworks
+
+            d_real = D.forward(real)     # (B, 1)
+            d_fake = D.forward(fake)     # (B, 1)
+
+            d_loss = bce(d_real, np.ones_like(d_real)) \
+                   + bce(d_fake, np.zeros_like(d_fake))
+            # D.backward(d_loss); D.step()   &lt;-- framework-specific
+
+            # --- Generator update ---
+            z    = np.random.randn(batch_size, latent_dim)
+            fake = G.forward(z)
+            d_fake = D.forward(fake)
+
+            g_loss = bce(d_fake, np.ones_like(d_fake))  # non-saturating
+            # G.backward(g_loss); G.step()
+</code></pre></div>
+    <div class="ct-panel" data-tab="gan-train-js"><pre><code>// Conceptual GAN training loop in JavaScript
+// Assumes generatorForward / discriminatorForward from earlier snippets
+
+function bce(yHat, y, eps = 1e-8) {
+  let loss = 0;
+  for (let i = 0; i &lt; yHat.length; i++) {
+    const p = Math.min(Math.max(yHat[i], eps), 1 - eps);
+    loss -= y[i] * Math.log(p) + (1 - y[i]) * Math.log(1 - p);
+  }
+  return loss / yHat.length;
+}
+
+function trainGAN(G, D, data, epochs = 100, batchSize = 64, latentDim = 100) {
+  for (let epoch = 0; epoch &lt; epochs; epoch++) {
+    for (let i = 0; i + batchSize &lt;= data.length; i += batchSize) {
+      const real = data.slice(i, i + batchSize);
+
+      // Discriminator step
+      const z1   = sampleNoise(batchSize, latentDim);
+      const fake1 = z1.map(zi =&gt; G.forward(zi));
+      const dReal = real.map(x  =&gt; D.forward(x));
+      const dFake = fake1.map(f =&gt; D.forward(f));
+      const dLoss = bce(dReal, Array(batchSize).fill(1))
+                  + bce(dFake, Array(batchSize).fill(0));
+      // D.backward(dLoss); D.step();
+
+      // Generator step (non-saturating)
+      const z2   = sampleNoise(batchSize, latentDim);
+      const fake2 = z2.map(zi =&gt; G.forward(zi));
+      const dFake2 = fake2.map(f =&gt; D.forward(f));
+      const gLoss = bce(dFake2, Array(batchSize).fill(1));
+      // G.backward(gLoss); G.step();
+    }
+  }
+}
+</code></pre></div>
+    <div class="ct-panel" data-tab="gan-train-c"><pre><code>/* Conceptual GAN training loop in C (no autograd — shows structure only) */
+#include &lt;math.h&gt;
+#include &lt;stdio.h&gt;
+
+float bce(const float *y_hat, const float *y, int n) {
+    float loss = 0.f;
+    for (int i = 0; i &lt; n; i++) {
+        float p = y_hat[i] &lt; 1e-7f ? 1e-7f : (y_hat[i] &gt; 1-1e-7f ? 1-1e-7f : y_hat[i]);
+        loss -= y[i] * logf(p) + (1.f - y[i]) * logf(1.f - p);
+    }
+    return loss / n;
+}
+
+void train_step(/* G, D weights, gradients, optimiser state ... */
+                const float *real_batch, int batch, int latent, int input_dim) {
+    /* 1. Sample noise */
+    float z[batch * latent];   /* VLA or malloc in practice */
+    sample_normal(z, batch * latent);
+
+    /* 2. Generator forward -&gt; fake */
+    float fake[batch * input_dim];
+    generator_forward_batch(z, fake, batch, latent, input_dim);
+
+    /* 3. Discriminator on real + fake */
+    float d_real[batch], d_fake[batch];
+    discriminator_forward_batch(real_batch, d_real, batch, input_dim);
+    discriminator_forward_batch(fake,       d_fake, batch, input_dim);
+
+    /* 4. D loss and backward (framework-specific) */
+    float ones[batch], zeros[batch];
+    for (int i = 0; i &lt; batch; i++) { ones[i] = 1.f; zeros[i] = 0.f; }
+    float d_loss = bce(d_real, ones, batch) + bce(d_fake, zeros, batch);
+    /* d_backward(d_loss); d_step(); */
+
+    /* 5. G step (non-saturating) */
+    /* generator_forward_batch(z_new, fake_new, ...); */
+    /* float g_loss = bce(d_fake_new, ones, batch); */
+    /* g_backward(g_loss); g_step(); */
+}
+</code></pre></div>
+    <div class="ct-panel" data-tab="gan-train-cpp"><pre><code>#include &lt;vector&gt;
+#include &lt;cmath&gt;
+#include &lt;algorithm&gt;
+
+float bce(const std::vector&lt;float&gt; &amp;yHat,
+          const std::vector&lt;float&gt; &amp;y, float eps = 1e-7f) {
+    float loss = 0.f;
+    for (size_t i = 0; i &lt; yHat.size(); i++) {
+        float p = std::clamp(yHat[i], eps, 1.f - eps);
+        loss -= y[i] * std::log(p) + (1.f - y[i]) * std::log(1.f - p);
+    }
+    return loss / static_cast&lt;float&gt;(yHat.size());
+}
+
+void trainStep(Generator &amp;G, Discriminator &amp;D,
+               const std::vector&lt;std::vector&lt;float&gt;&gt; &amp;realBatch,
+               int latentDim) {
+    int B = static_cast&lt;int&gt;(realBatch.size());
+
+    // Discriminator step
+    auto z    = sampleNoise(B, latentDim);
+    auto fake = G.forwardBatch(z);          // detach from G graph
+    auto dReal = D.forwardBatch(realBatch);
+    auto dFake = D.forwardBatch(fake);
+
+    float dLoss = bce(dReal, std::vector&lt;float&gt;(B, 1.f))
+                + bce(dFake, std::vector&lt;float&gt;(B, 0.f));
+    // D.backward(dLoss); D.step();
+
+    // Generator step (non-saturating)
+    auto z2    = sampleNoise(B, latentDim);
+    auto fake2 = G.forwardBatch(z2);
+    auto dFake2 = D.forwardBatch(fake2);
+    float gLoss = bce(dFake2, std::vector&lt;float&gt;(B, 1.f));
+    // G.backward(gLoss); G.step();
+}
+</code></pre></div>
+    <div class="ct-panel" data-tab="gan-train-java"><pre><code>public class GANTrainer {
+    static float bce(float[] yHat, float[] y) {
+        float loss = 0f;
+        for (int i = 0; i &lt; yHat.length; i++) {
+            float p = Math.max(1e-7f, Math.min(1 - 1e-7f, yHat[i]));
+            loss -= y[i] * Math.log(p) + (1 - y[i]) * Math.log(1 - p);
+        }
+        return loss / yHat.length;
+    }
+
+    public static void trainStep(Generator G, Discriminator D,
+                                  float[][] realBatch, int latentDim) {
+        int B = realBatch.length;
+        float[][] z    = sampleNoise(B, latentDim);
+        float[][] fake = G.forwardBatch(z);   // (B, input_dim)
+
+        float[] dReal = D.forwardBatch(realBatch);
+        float[] dFake = D.forwardBatch(fake);
+
+        float[] ones  = new float[B]; java.util.Arrays.fill(ones,  1f);
+        float[] zeros = new float[B]; java.util.Arrays.fill(zeros, 0f);
+        float dLoss = bce(dReal, ones) + bce(dFake, zeros);
+        // D.backward(dLoss); D.step();
+
+        float[][] z2    = sampleNoise(B, latentDim);
+        float[][] fake2 = G.forwardBatch(z2);
+        float[] dFake2  = D.forwardBatch(fake2);
+        float gLoss = bce(dFake2, ones);
+        // G.backward(gLoss); G.step();
+    }
+}
+</code></pre></div>
+    <div class="ct-panel" data-tab="gan-train-go"><pre><code>package main
+
+import (
+    "math"
+    "math/rand"
+)
+
+func bce(yHat, y []float64) float64 {
+    const eps = 1e-7
+    loss := 0.0
+    for i := range yHat {
+        p := math.Max(eps, math.Min(1-eps, yHat[i]))
+        loss -= y[i]*math.Log(p) + (1-y[i])*math.Log(1-p)
+    }
+    return loss / float64(len(yHat))
+}
+
+func trainStep(G *Generator, D *Discriminator,
+               realBatch [][]float64, latentDim int) {
+    B := len(realBatch)
+    ones  := make([]float64, B); for i := range ones  { ones[i]  = 1 }
+    zeros := make([]float64, B)
+
+    // D step
+    z    := sampleNoise(B, latentDim)
+    fake := G.ForwardBatch(z)   // detach
+    dReal := D.ForwardBatch(realBatch)
+    dFake := D.ForwardBatch(fake)
+    dLoss := bce(dReal, ones) + bce(dFake, zeros)
+    _ = dLoss // D.Backward(dLoss); D.Step()
+
+    // G step
+    z2     := sampleNoise(B, latentDim)
+    fake2  := G.ForwardBatch(z2)
+    dFake2 := D.ForwardBatch(fake2)
+    gLoss  := bce(dFake2, ones)
+    _ = gLoss // G.Backward(gLoss); G.Step()
+}
+
+func sampleNoise(B, dim int) [][]float64 {
+    z := make([][]float64, B)
+    for i := range z {
+        z[i] = make([]float64, dim)
+        for j := range z[i] { z[i][j] = rand.NormFloat64() }
+    }
+    return z
+}
+</code></pre></div>
+  </div>
+</details>
+
     <!-- ========================================================== -->
     <h2 id="tricks">5. Why training is so hard</h2>
 
@@ -272,11 +907,197 @@ for number_of_training_iterations:
 
     <p>WGAN and its successors (WGAN-GP, spectral-norm GAN, StyleGAN) stabilized training enough that GANs powered the first wave of photorealistic face generation. By 2018, StyleGAN could generate faces that fooled humans on the first glance. By 2019, non-existent people on <em>thispersondoesnotexist.com</em> had become a meme.</p>
 
+    <details class="algo-code">
+  <summary>Source — Wasserstein Loss (WGAN)</summary>
+  <div class="code-tabs">
+    <div class="ct-header">
+      <button class="ct-tab active" data-tab="gan-wgan-pseudo">Pseudocode</button>
+      <button class="ct-tab" data-tab="gan-wgan-py">Python</button>
+      <button class="ct-tab" data-tab="gan-wgan-js">JavaScript</button>
+      <button class="ct-tab" data-tab="gan-wgan-c">C</button>
+      <button class="ct-tab" data-tab="gan-wgan-cpp">C++</button>
+      <button class="ct-tab" data-tab="gan-wgan-java">Java</button>
+      <button class="ct-tab" data-tab="gan-wgan-go">Go</button>
+    </div>
+    <div class="ct-panel active" data-tab="gan-wgan-pseudo"><pre><code>// Wasserstein loss (critic has no sigmoid; outputs unbounded reals)
+//   Critic loss = E[D(fake)] - E[D(real)]   (critic maximises the gap)
+//   Generator loss = -E[D(fake)]             (generator minimises critic score on fakes)
+//
+// Enforce 1-Lipschitz via weight clipping (original WGAN):
+//   for each param p in critic:  p = clip(p, -c, c)
+//
+// Or via gradient penalty (WGAN-GP):
+//   x_hat = alpha*real + (1-alpha)*fake,  alpha ~ Uniform(0,1)
+//   gp = (||grad_x_hat D(x_hat)||_2 - 1)^2
+//   critic_loss = E[D(fake)] - E[D(real)] + lambda * gp
+</code></pre></div>
+    <div class="ct-panel" data-tab="gan-wgan-py"><pre><code>import numpy as np
+
+# --- Weight-clipping WGAN ---
+def wgan_critic_loss(d_real, d_fake):
+    """d_real, d_fake: arrays of critic scores (no sigmoid)."""
+    return np.mean(d_fake) - np.mean(d_real)   # critic wants to maximise gap
+
+def wgan_generator_loss(d_fake):
+    return -np.mean(d_fake)                    # G wants critic to score fakes high
+
+def clip_weights(params, c=0.01):
+    return [np.clip(p, -c, c) for p in params]
+
+# --- Gradient penalty (WGAN-GP, NumPy sketch) ---
+def gradient_penalty(D, real, fake, lam=10.0):
+    batch = real.shape[0]
+    alpha = np.random.uniform(0, 1, (batch, 1))
+    x_hat = alpha * real + (1 - alpha) * fake   # interpolated samples
+    # In a real framework you'd compute grad of D(x_hat) w.r.t. x_hat
+    # Here we sketch the formula:
+    # grad = autograd_grad(D(x_hat), x_hat)
+    # grad_norm = np.linalg.norm(grad, axis=1)
+    # gp = lam * np.mean((grad_norm - 1) ** 2)
+    # return gp
+    pass
+
+# Training step (WGAN-GP)
+def wgan_gp_train_step(G, D, real_batch, latent_dim, n_critic=5, lam=10.0, lr=1e-4):
+    B = real_batch.shape[0]
+    # Train critic n_critic times per G step
+    for _ in range(n_critic):
+        z    = np.random.randn(B, latent_dim)
+        fake = G.forward(z)
+        c_loss = wgan_critic_loss(D.forward(real_batch), D.forward(fake))
+        gp     = gradient_penalty(D, real_batch, fake, lam)
+        # D.backward(c_loss + gp); D.step()
+
+    # Train generator once
+    z    = np.random.randn(B, latent_dim)
+    fake = G.forward(z)
+    g_loss = wgan_generator_loss(D.forward(fake))
+    # G.backward(g_loss); G.step()
+</code></pre></div>
+    <div class="ct-panel" data-tab="gan-wgan-js"><pre><code>// WGAN loss functions in JavaScript (no autograd)
+
+function wganCriticLoss(dReal, dFake) {
+  const meanReal = dReal.reduce((a, b) =&gt; a + b, 0) / dReal.length;
+  const meanFake = dFake.reduce((a, b) =&gt; a + b, 0) / dFake.length;
+  return meanFake - meanReal;   // critic wants to maximise; optimiser minimises
+}
+
+function wganGeneratorLoss(dFake) {
+  return -dFake.reduce((a, b) =&gt; a + b, 0) / dFake.length;
+}
+
+function clipWeights(params, c = 0.01) {
+  return params.map(p =&gt; Math.min(Math.max(p, -c), c));
+}
+
+// Gradient penalty sketch (needs autograd in practice):
+// function gradientPenalty(D, real, fake, lambda = 10) {
+//   const alpha = Math.random();
+//   const xHat  = real.map((r, i) =&gt; alpha * r + (1 - alpha) * fake[i]);
+//   const grad  = autograd(D, xHat);     // framework-specific
+//   const norm  = euclideanNorm(grad);
+//   return lambda * (norm - 1) ** 2;
+// }
+</code></pre></div>
+    <div class="ct-panel" data-tab="gan-wgan-c"><pre><code>#include &lt;math.h&gt;
+#include &lt;stdlib.h&gt;
+
+float wgan_critic_loss(const float *d_real, const float *d_fake, int n) {
+    float sum_real = 0.f, sum_fake = 0.f;
+    for (int i = 0; i &lt; n; i++) { sum_real += d_real[i]; sum_fake += d_fake[i]; }
+    return sum_fake / n - sum_real / n;
+}
+
+float wgan_generator_loss(const float *d_fake, int n) {
+    float s = 0.f;
+    for (int i = 0; i &lt; n; i++) s += d_fake[i];
+    return -s / n;
+}
+
+/* Weight clipping after each critic update */
+void clip_weights(float *params, int n, float c) {
+    for (int i = 0; i &lt; n; i++) {
+        if      (params[i] &gt;  c) params[i] =  c;
+        else if (params[i] &lt; -c) params[i] = -c;
+    }
+}
+</code></pre></div>
+    <div class="ct-panel" data-tab="gan-wgan-cpp"><pre><code>#include &lt;vector&gt;
+#include &lt;numeric&gt;
+#include &lt;algorithm&gt;
+
+float wganCriticLoss(const std::vector&lt;float&gt; &amp;dReal,
+                     const std::vector&lt;float&gt; &amp;dFake) {
+    float mReal = std::accumulate(dReal.begin(), dReal.end(), 0.f) / dReal.size();
+    float mFake = std::accumulate(dFake.begin(), dFake.end(), 0.f) / dFake.size();
+    return mFake - mReal;
+}
+
+float wganGeneratorLoss(const std::vector&lt;float&gt; &amp;dFake) {
+    return -std::accumulate(dFake.begin(), dFake.end(), 0.f) / dFake.size();
+}
+
+void clipWeights(std::vector&lt;float&gt; &amp;params, float c = 0.01f) {
+    for (auto &amp;p : params) p = std::clamp(p, -c, c);
+}
+</code></pre></div>
+    <div class="ct-panel" data-tab="gan-wgan-java"><pre><code>public class WGAN {
+    public static float criticLoss(float[] dReal, float[] dFake) {
+        float sumReal = 0f, sumFake = 0f;
+        for (float v : dReal) sumReal += v;
+        for (float v : dFake) sumFake += v;
+        return sumFake / dFake.length - sumReal / dReal.length;
+    }
+
+    public static float generatorLoss(float[] dFake) {
+        float sum = 0f;
+        for (float v : dFake) sum += v;
+        return -sum / dFake.length;
+    }
+
+    public static void clipWeights(float[] params, float c) {
+        for (int i = 0; i &lt; params.length; i++) {
+            if      (params[i] &gt;  c) params[i] =  c;
+            else if (params[i] &lt; -c) params[i] = -c;
+        }
+    }
+}
+</code></pre></div>
+    <div class="ct-panel" data-tab="gan-wgan-go"><pre><code>package main
+
+func wganCriticLoss(dReal, dFake []float64) float64 {
+    sumReal, sumFake := 0.0, 0.0
+    for _, v := range dReal { sumReal += v }
+    for _, v := range dFake { sumFake += v }
+    return sumFake/float64(len(dFake)) - sumReal/float64(len(dReal))
+}
+
+func wganGeneratorLoss(dFake []float64) float64 {
+    sum := 0.0
+    for _, v := range dFake { sum += v }
+    return -sum / float64(len(dFake))
+}
+
+func clipWeights(params []float64, c float64) {
+    for i, p := range params {
+        if p &gt; c {
+            params[i] = c
+        } else if p &lt; -c {
+            params[i] = -c
+        }
+    }
+}
+</code></pre></div>
+  </div>
+</details>
+
     <!-- ========================================================== -->
     <h2 id="code">7. Source code</h2>
 
     <p>A minimal DCGAN training step in three languages. These omit boilerplate (dataset loading, checkpointing) to focus on the core loss computation.</p>
 
+    <details class="algo-code">
+  <summary>Source — GAN Training Step (PyTorch / TF / JAX)</summary>
     <div class="code-tabs" id="ct-gan">
       <div class="ct-header">
         <button class="ct-tab active" data-tab="pt">PyTorch</button>
@@ -370,6 +1191,228 @@ bce = tf.keras.losses.BinaryCrossentropy(from_logits=<span class="kw">True</span
     <span class="kw">return</span> g_params, d_params, g_opt_state, d_opt_state
 </code></pre></div>
     </div>
+  </details>
+
+    <details class="algo-code">
+  <summary>Source — GAN Evaluation (FID Sketch)</summary>
+  <div class="code-tabs">
+    <div class="ct-header">
+      <button class="ct-tab active" data-tab="gan-eval-pseudo">Pseudocode</button>
+      <button class="ct-tab" data-tab="gan-eval-py">Python</button>
+      <button class="ct-tab" data-tab="gan-eval-js">JavaScript</button>
+      <button class="ct-tab" data-tab="gan-eval-c">C</button>
+      <button class="ct-tab" data-tab="gan-eval-cpp">C++</button>
+      <button class="ct-tab" data-tab="gan-eval-java">Java</button>
+      <button class="ct-tab" data-tab="gan-eval-go">Go</button>
+    </div>
+    <div class="ct-panel active" data-tab="gan-eval-pseudo"><pre><code>// Frechet Inception Distance (FID) — simplified sketch
+// 1. Extract feature vectors from a pre-trained Inception-v3
+//    for N real images and N generated images.
+// 2. Compute mean mu and covariance Sigma of each set.
+// 3. FID = ||mu_r - mu_g||^2 + Tr(Sigma_r + Sigma_g - 2*sqrtm(Sigma_r @ Sigma_g))
+//
+// Lower FID = better quality and diversity.
+
+function fid(real_features, fake_features):
+    mu_r, Sigma_r = mean(real_features), cov(real_features)
+    mu_g, Sigma_g = mean(fake_features), cov(fake_features)
+    diff = mu_r - mu_g
+    covmean = sqrtm(Sigma_r @ Sigma_g)   // matrix square root
+    return dot(diff, diff) + trace(Sigma_r + Sigma_g - 2 * covmean)
+</code></pre></div>
+    <div class="ct-panel" data-tab="gan-eval-py"><pre><code>import numpy as np
+
+def compute_fid(real_features, fake_features):
+    """
+    real_features, fake_features: (N, D) arrays of Inception feature vectors.
+    Returns scalar FID score (lower is better).
+    """
+    mu_r = np.mean(real_features, axis=0)
+    mu_g = np.mean(fake_features, axis=0)
+    Sigma_r = np.cov(real_features, rowvar=False)
+    Sigma_g = np.cov(fake_features, rowvar=False)
+
+    diff = mu_r - mu_g
+    # Matrix square root via eigendecomposition
+    eigvals, eigvecs = np.linalg.eigh(Sigma_r @ Sigma_g)
+    eigvals = np.maximum(eigvals, 0)   # numerical stability
+    sqrt_product = eigvecs @ np.diag(np.sqrt(eigvals)) @ eigvecs.T
+
+    fid = diff @ diff + np.trace(Sigma_r + Sigma_g - 2 * sqrt_product)
+    return float(np.real(fid))
+
+# Usage (replace extract_features with real Inception-v3 call):
+# real_feats = extract_features(real_images)   # (N, 2048)
+# fake_feats = extract_features(generated_imgs) # (N, 2048)
+# score = compute_fid(real_feats, fake_feats)
+</code></pre></div>
+    <div class="ct-panel" data-tab="gan-eval-js"><pre><code>// Simplified FID in JavaScript (no Inception; illustrates the formula)
+
+function mean(features) {
+  const D = features[0].length, N = features.length;
+  const mu = new Float64Array(D);
+  for (const f of features) for (let d = 0; d &lt; D; d++) mu[d] += f[d] / N;
+  return mu;
+}
+
+function covariance(features, mu) {
+  const D = mu.length, N = features.length;
+  const cov = Array.from({ length: D }, () =&gt; new Float64Array(D));
+  for (const f of features) {
+    for (let i = 0; i &lt; D; i++) for (let j = 0; j &lt; D; j++)
+      cov[i][j] += (f[i] - mu[i]) * (f[j] - mu[j]) / (N - 1);
+  }
+  return cov;
+}
+
+function fid(realFeatures, fakeFeatures) {
+  const muR = mean(realFeatures), muG = mean(fakeFeatures);
+  const sigR = covariance(realFeatures, muR);
+  const sigG = covariance(fakeFeatures, muG);
+  // Full FID requires matrix sqrt (sqrtm) — omitted here.
+  // Diagonal approximation for illustration:
+  let score = 0;
+  for (let d = 0; d &lt; muR.length; d++) {
+    const diffSq = (muR[d] - muG[d]) ** 2;
+    const trTerm = sigR[d][d] + sigG[d][d] - 2 * Math.sqrt(sigR[d][d] * sigG[d][d]);
+    score += diffSq + trTerm;
+  }
+  return score;
+}
+</code></pre></div>
+    <div class="ct-panel" data-tab="gan-eval-c"><pre><code>#include &lt;math.h&gt;
+#include &lt;stdlib.h&gt;
+
+/* Diagonal approximation of FID (avoids matrix sqrt) */
+float fid_diagonal(const float *mu_r, const float *mu_g,
+                   const float *var_r, const float *var_g, int D) {
+    float score = 0.f;
+    for (int d = 0; d &lt; D; d++) {
+        float diff = mu_r[d] - mu_g[d];
+        float cov_term = var_r[d] + var_g[d]
+                       - 2.f * sqrtf(var_r[d] * var_g[d]);
+        score += diff * diff + cov_term;
+    }
+    return score;
+}
+
+/* Compute per-dimension mean and variance from feature matrix (N x D) */
+void mean_var(const float *features, int N, int D,
+              float *mu, float *var) {
+    for (int d = 0; d &lt; D; d++) mu[d] = 0.f;
+    for (int i = 0; i &lt; N; i++)
+        for (int d = 0; d &lt; D; d++) mu[d] += features[i * D + d] / N;
+    for (int d = 0; d &lt; D; d++) var[d] = 0.f;
+    for (int i = 0; i &lt; N; i++)
+        for (int d = 0; d &lt; D; d++) {
+            float diff = features[i * D + d] - mu[d];
+            var[d] += diff * diff / (N - 1);
+        }
+}
+</code></pre></div>
+    <div class="ct-panel" data-tab="gan-eval-cpp"><pre><code>#include &lt;vector&gt;
+#include &lt;cmath&gt;
+#include &lt;numeric&gt;
+
+// Diagonal FID approximation
+float fidDiagonal(const std::vector&lt;float&gt; &amp;muR,
+                  const std::vector&lt;float&gt; &amp;muG,
+                  const std::vector&lt;float&gt; &amp;varR,
+                  const std::vector&lt;float&gt; &amp;varG) {
+    float score = 0.f;
+    for (size_t d = 0; d &lt; muR.size(); d++) {
+        float diff = muR[d] - muG[d];
+        float cov  = varR[d] + varG[d] - 2.f * std::sqrt(varR[d] * varG[d]);
+        score += diff * diff + cov;
+    }
+    return score;
+}
+
+std::pair&lt;std::vector&lt;float&gt;, std::vector&lt;float&gt;&gt;
+meanVar(const std::vector&lt;std::vector&lt;float&gt;&gt; &amp;feats) {
+    int N = feats.size(), D = feats[0].size();
+    std::vector&lt;float&gt; mu(D, 0.f), var(D, 0.f);
+    for (auto &amp;f : feats) for (int d = 0; d &lt; D; d++) mu[d] += f[d] / N;
+    for (auto &amp;f : feats) for (int d = 0; d &lt; D; d++) {
+        float diff = f[d] - mu[d];
+        var[d] += diff * diff / (N - 1);
+    }
+    return {mu, var};
+}
+</code></pre></div>
+    <div class="ct-panel" data-tab="gan-eval-java"><pre><code>public class FID {
+    public static float[] mean(float[][] features) {
+        int N = features.length, D = features[0].length;
+        float[] mu = new float[D];
+        for (float[] f : features)
+            for (int d = 0; d &lt; D; d++) mu[d] += f[d] / N;
+        return mu;
+    }
+
+    public static float[] variance(float[][] features, float[] mu) {
+        int N = features.length, D = mu.length;
+        float[] var = new float[D];
+        for (float[] f : features)
+            for (int d = 0; d &lt; D; d++) {
+                float diff = f[d] - mu[d];
+                var[d] += diff * diff / (N - 1);
+            }
+        return var;
+    }
+
+    // Diagonal FID approximation
+    public static float fidDiagonal(float[] muR, float[] muG,
+                                     float[] varR, float[] varG) {
+        float score = 0f;
+        for (int d = 0; d &lt; muR.length; d++) {
+            float diff = muR[d] - muG[d];
+            float cov  = varR[d] + varG[d]
+                       - 2f * (float) Math.sqrt(varR[d] * varG[d]);
+            score += diff * diff + cov;
+        }
+        return score;
+    }
+}
+</code></pre></div>
+    <div class="ct-panel" data-tab="gan-eval-go"><pre><code>package main
+
+import "math"
+
+func meanVec(feats [][]float64) []float64 {
+    D, N := len(feats[0]), float64(len(feats))
+    mu := make([]float64, D)
+    for _, f := range feats {
+        for d, v := range f { mu[d] += v / N }
+    }
+    return mu
+}
+
+func varVec(feats [][]float64, mu []float64) []float64 {
+    D := len(mu)
+    N := float64(len(feats) - 1)
+    v := make([]float64, D)
+    for _, f := range feats {
+        for d := range f {
+            diff := f[d] - mu[d]
+            v[d] += diff * diff / N
+        }
+    }
+    return v
+}
+
+// Diagonal FID approximation
+func fidDiagonal(muR, muG, varR, varG []float64) float64 {
+    score := 0.0
+    for d := range muR {
+        diff := muR[d] - muG[d]
+        cov  := varR[d] + varG[d] - 2*math.Sqrt(varR[d]*varG[d])
+        score += diff*diff + cov
+    }
+    return score
+}
+</code></pre></div>
+  </div>
+</details>
 
     <!-- ========================================================== -->
     <h2 id="aftermath">8. What GANs left behind</h2>

@@ -38,9 +38,8 @@
       <li><a href="#convexopt">14. Convex optimization</a></li>
       <li><a href="#nonconvex">15. Non-convex in ML</a></li>
       <li><a href="#duality">16. Duality</a></li>
-      <li><a href="#code">17. Source code</a></li>
-      <li><a href="#ml">18. Connection to ML</a></li>
-      <li><a href="#bib">19. Further reading</a></li>
+      <li><a href="#ml">17. Connection to ML</a></li>
+      <li><a href="#bib">18. Further reading</a></li>
     </ul>
   </aside>
 
@@ -172,6 +171,212 @@
 
     <p>A point $\mathbf{x}^\star$ is a <strong>local minimum</strong> if $f(\mathbf{x}^\star) \leq f(\mathbf{x})$ for all $\mathbf{x}$ in some neighborhood. It's a <strong>global minimum</strong> if the inequality holds for all $\mathbf{x}$ at all. Local minima are easy — just walk downhill until the ground is flat. Global minima can be wildly hard — you might have to check infinitely many local valleys. The single most important question in optimization is: <em>does my problem only have one valley?</em> When the answer is yes, life is good. The technical name for that condition is convexity.</p>
 
+    <details class="algo-code">
+  <summary>Source — Unconstrained Optimization</summary>
+  <div class="code-tabs">
+    <div class="ct-header">
+      <button class="ct-tab active" data-tab="unc-pseudo">Pseudocode</button>
+      <button class="ct-tab" data-tab="unc-py">Python</button>
+      <button class="ct-tab" data-tab="unc-js">JavaScript</button>
+      <button class="ct-tab" data-tab="unc-c">C</button>
+      <button class="ct-tab" data-tab="unc-cpp">C++</button>
+      <button class="ct-tab" data-tab="unc-java">Java</button>
+      <button class="ct-tab" data-tab="unc-go">Go</button>
+    </div>
+    <div class="ct-panel active" data-tab="unc-pseudo"><pre><code>// f(x) = x^2 + 2x + 1 = (x+1)^2, minimum at x = -1
+// f'(x) = 2x + 2
+
+function gradient_descent(x0, lr, n):
+    x = x0
+    for i = 1 to n:
+        grad = 2*x + 2
+        x = x - lr * grad
+    return x
+
+function newton_1d(x0, n):
+    x = x0
+    for i = 1 to n:
+        grad   = 2*x + 2    // f'(x)
+        hess   = 2           // f''(x)
+        x = x - grad / hess  // one Newton step
+    return x
+
+// gradient_descent(-5, 0.1, 50) => ~-1.0
+// newton_1d(-5, 3)              => -1.0 (exact in 1 step for quadratic)</code></pre></div>
+    <div class="ct-panel" data-tab="unc-py"><pre><code>def f(x):
+    return x**2 + 2*x + 1   # (x+1)^2, minimum at x = -1
+
+def f_grad(x):
+    return 2*x + 2
+
+def f_hess(x):
+    return 2.0               # constant second derivative
+
+def gradient_descent(f_grad, x0, lr=0.1, n=50):
+    x = x0
+    history = [x]
+    for _ in range(n):
+        x = x - lr * f_grad(x)
+        history.append(x)
+    return x, history
+
+def newton_1d(f_grad, f_hess, x0, n=10):
+    x = x0
+    for _ in range(n):
+        x = x - f_grad(x) / f_hess(x)
+    return x
+
+x_gd, hist = gradient_descent(f_grad, x0=-5.0, lr=0.1, n=50)
+print(f"GD result: x = {x_gd:.6f}, f(x) = {f(x_gd):.6f}")
+# => x = -1.000000
+
+x_nwt = newton_1d(f_grad, f_hess, x0=-5.0)
+print(f"Newton result: x = {x_nwt:.6f}")
+# => x = -1.000000  (exact for quadratic)</code></pre></div>
+    <div class="ct-panel" data-tab="unc-js"><pre><code>function f(x)      { return x*x + 2*x + 1; }
+function fGrad(x)  { return 2*x + 2; }
+function fHess()   { return 2.0; }
+
+function gradientDescent(fGrad, x0, lr = 0.1, n = 50) {
+  let x = x0;
+  const history = [x];
+  for (let i = 0; i &lt; n; i++) {
+    x = x - lr * fGrad(x);
+    history.push(x);
+  }
+  return { x, history };
+}
+
+function newton1D(fGrad, fHess, x0, n = 10) {
+  let x = x0;
+  for (let i = 0; i &lt; n; i++) {
+    x = x - fGrad(x) / fHess(x);
+  }
+  return x;
+}
+
+const { x: xGD } = gradientDescent(fGrad, -5, 0.1, 50);
+console.log("GD:", xGD.toFixed(6));   // => -1.000000
+
+const xNwt = newton1D(fGrad, fHess, -5, 5);
+console.log("Newton:", xNwt.toFixed(6)); // => -1.000000</code></pre></div>
+    <div class="ct-panel" data-tab="unc-c"><pre><code>#include &lt;stdio.h&gt;
+#include &lt;math.h&gt;
+
+double f(double x)     { return x*x + 2*x + 1; }
+double f_grad(double x){ return 2*x + 2; }
+double f_hess()        { return 2.0; }
+
+double gradient_descent(double x0, double lr, int n) {
+    double x = x0;
+    for (int i = 0; i &lt; n; i++) {
+        x = x - lr * f_grad(x);
+    }
+    return x;
+}
+
+double newton_1d(double x0, int n) {
+    double x = x0;
+    for (int i = 0; i &lt; n; i++) {
+        x = x - f_grad(x) / f_hess();
+    }
+    return x;
+}
+
+int main(void) {
+    double xGD  = gradient_descent(-5.0, 0.1, 50);
+    double xNwt = newton_1d(-5.0, 10);
+    printf("GD:     x = %.6f, f = %.6f\n", xGD,  f(xGD));
+    printf("Newton: x = %.6f, f = %.6f\n", xNwt, f(xNwt));
+    return 0;
+}</code></pre></div>
+    <div class="ct-panel" data-tab="unc-cpp"><pre><code>#include &lt;iostream&gt;
+#include &lt;vector&gt;
+#include &lt;functional&gt;
+#include &lt;cmath&gt;
+
+double f(double x)     { return x*x + 2*x + 1; }
+double fGrad(double x) { return 2*x + 2; }
+double fHess(double)   { return 2.0; }
+
+double gradientDescent(std::function&lt;double(double)&gt; grad,
+                       double x0, double lr, int n) {
+    double x = x0;
+    for (int i = 0; i &lt; n; i++) x -= lr * grad(x);
+    return x;
+}
+
+double newton1D(std::function&lt;double(double)&gt; grad,
+                std::function&lt;double(double)&gt; hess,
+                double x0, int n) {
+    double x = x0;
+    for (int i = 0; i &lt; n; i++) x -= grad(x) / hess(x);
+    return x;
+}
+
+int main() {
+    double xGD  = gradientDescent(fGrad, -5.0, 0.1, 50);
+    double xNwt = newton1D(fGrad, fHess, -5.0, 10);
+    std::cout &lt;&lt; "GD:     x = " &lt;&lt; xGD  &lt;&lt; ", f = " &lt;&lt; f(xGD)  &lt;&lt; "\n";
+    std::cout &lt;&lt; "Newton: x = " &lt;&lt; xNwt &lt;&lt; ", f = " &lt;&lt; f(xNwt) &lt;&lt; "\n";
+}</code></pre></div>
+    <div class="ct-panel" data-tab="unc-java"><pre><code>public class UnconstrainedOpt {
+    static double f(double x)     { return x*x + 2*x + 1; }
+    static double fGrad(double x) { return 2*x + 2; }
+    static double fHess()         { return 2.0; }
+
+    static double gradientDescent(double x0, double lr, int n) {
+        double x = x0;
+        for (int i = 0; i &lt; n; i++) x -= lr * fGrad(x);
+        return x;
+    }
+
+    static double newton1D(double x0, int n) {
+        double x = x0;
+        for (int i = 0; i &lt; n; i++) x -= fGrad(x) / fHess();
+        return x;
+    }
+
+    public static void main(String[] args) {
+        double xGD  = gradientDescent(-5.0, 0.1, 50);
+        double xNwt = newton1D(-5.0, 10);
+        System.out.printf("GD:     x = %.6f, f = %.6f%n", xGD,  f(xGD));
+        System.out.printf("Newton: x = %.6f, f = %.6f%n", xNwt, f(xNwt));
+    }
+}</code></pre></div>
+    <div class="ct-panel" data-tab="unc-go"><pre><code>package main
+
+import "fmt"
+
+func f(x float64) float64     { return x*x + 2*x + 1 }
+func fGrad(x float64) float64 { return 2*x + 2 }
+func fHess() float64          { return 2.0 }
+
+func gradientDescent(x0, lr float64, n int) float64 {
+	x := x0
+	for i := 0; i &lt; n; i++ {
+		x -= lr * fGrad(x)
+	}
+	return x
+}
+
+func newton1D(x0 float64, n int) float64 {
+	x := x0
+	for i := 0; i &lt; n; i++ {
+		x -= fGrad(x) / fHess()
+	}
+	return x
+}
+
+func main() {
+	xGD  := gradientDescent(-5.0, 0.1, 50)
+	xNwt := newton1D(-5.0, 10)
+	fmt.Printf("GD:     x = %.6f, f = %.6f\n", xGD,  f(xGD))
+	fmt.Printf("Newton: x = %.6f, f = %.6f\n", xNwt, f(xNwt))
+}</code></pre></div>
+  </div>
+</details>
+
     <!-- ========================================================== -->
     <h2 id="convex">4. Convexity — the dividing line between easy and hard</h2>
 
@@ -234,6 +439,187 @@
     </div>
 
     <p>This is why people work so hard to <em>convexify</em> problems — replacing a nasty $\ell_0$ sparsity penalty with $\ell_1$ (LASSO), or relaxing integer constraints to continuous ones, or fitting an SVM by minimizing a hinge loss. Convexity is the prize, and it's worth bending the problem to get it.</p>
+
+    <details class="algo-code">
+  <summary>Source — Convexity Check</summary>
+  <div class="code-tabs">
+    <div class="ct-header">
+      <button class="ct-tab active" data-tab="cvx-pseudo">Pseudocode</button>
+      <button class="ct-tab" data-tab="cvx-py">Python</button>
+      <button class="ct-tab" data-tab="cvx-js">JavaScript</button>
+      <button class="ct-tab" data-tab="cvx-c">C</button>
+      <button class="ct-tab" data-tab="cvx-cpp">C++</button>
+      <button class="ct-tab" data-tab="cvx-java">Java</button>
+      <button class="ct-tab" data-tab="cvx-go">Go</button>
+    </div>
+    <div class="ct-panel active" data-tab="cvx-pseudo"><pre><code>// 1D convexity: check d²f/dx² >= 0 numerically at sample points
+function is_convex_1d(f, a, b, n_samples):
+    h = (b - a) / n_samples
+    for i = 1 to n_samples - 1:
+        x = a + i * h
+        d2f = (f(x+h) - 2*f(x) + f(x-h)) / h^2
+        if d2f &lt; -1e-9:
+            return false
+    return true
+
+// 2D convexity: check all eigenvalues of Hessian >= 0
+// Hessian of f(x,y) = [f_xx, f_xy; f_xy, f_yy]
+// A 2x2 matrix is PSD iff trace >= 0 AND determinant >= 0
+function is_psd_2x2(fxx, fxy, fyy):
+    trace = fxx + fyy
+    det   = fxx * fyy - fxy * fxy
+    return trace &gt;= 0 and det &gt;= 0</code></pre></div>
+    <div class="ct-panel" data-tab="cvx-py"><pre><code>import numpy as np
+
+# 1D convexity: check second derivative numerically
+def is_convex_1d(f, a, b, n_samples=200):
+    xs = np.linspace(a, b, n_samples)
+    h  = xs[1] - xs[0]
+    d2f = (f(xs[2:]) - 2*f(xs[1:-1]) + f(xs[:-2])) / h**2
+    return bool(np.all(d2f &gt;= -1e-9))
+
+# 2D convexity: check Hessian PSD via eigenvalues
+def is_convex_2d(f, center, eps=1e-5):
+    """Numerically estimate Hessian at center and check PSD."""
+    x, y = center
+    fxx = (f(x+eps,y) - 2*f(x,y) + f(x-eps,y)) / eps**2
+    fyy = (f(x,y+eps) - 2*f(x,y) + f(x,y-eps)) / eps**2
+    fxy = (f(x+eps,y+eps) - f(x+eps,y-eps)
+           - f(x-eps,y+eps) + f(x-eps,y-eps)) / (4*eps**2)
+    H = np.array([[fxx, fxy], [fxy, fyy]])
+    eigvals = np.linalg.eigvalsh(H)
+    return bool(np.all(eigvals &gt;= -1e-9)), eigvals
+
+# Examples
+print(is_convex_1d(lambda x: x**2,    -3, 3))  # True  (parabola)
+print(is_convex_1d(lambda x: -x**2,   -3, 3))  # False (concave)
+print(is_convex_1d(lambda x: abs(x),  -3, 3))  # True  (convex, non-smooth)
+
+f2d = lambda x, y: x**2 + y**2       # bowl — convex
+print(is_convex_2d(f2d, (0.0, 0.0)))  # (True, [2., 2.])
+
+g2d = lambda x, y: x**2 - y**2       # saddle — not convex
+print(is_convex_2d(g2d, (0.0, 0.0)))  # (False, [-2., 2.])</code></pre></div>
+    <div class="ct-panel" data-tab="cvx-js"><pre><code>// 1D convexity: check d²f/dx² >= 0 numerically
+function isConvex1D(f, a, b, nSamples = 200) {
+  const h = (b - a) / nSamples;
+  for (let i = 1; i &lt; nSamples - 1; i++) {
+    const x  = a + i * h;
+    const d2 = (f(x + h) - 2 * f(x) + f(x - h)) / (h * h);
+    if (d2 &lt; -1e-9) return false;
+  }
+  return true;
+}
+
+// 2D PSD check for a 2x2 Hessian (trace &gt;= 0 and det &gt;= 0)
+function isPSD2x2(fxx, fxy, fyy) {
+  return (fxx + fyy) &gt;= 0 &amp;&amp; (fxx * fyy - fxy * fxy) &gt;= 0;
+}
+
+function isConvex2D(f, cx, cy, eps = 1e-5) {
+  const fxx = (f(cx+eps,cy) - 2*f(cx,cy) + f(cx-eps,cy)) / (eps*eps);
+  const fyy = (f(cx,cy+eps) - 2*f(cx,cy) + f(cx,cy-eps)) / (eps*eps);
+  const fxy = (f(cx+eps,cy+eps) - f(cx+eps,cy-eps)
+             - f(cx-eps,cy+eps) + f(cx-eps,cy-eps)) / (4*eps*eps);
+  return isPSD2x2(fxx, fxy, fyy);
+}
+
+console.log(isConvex1D(x =&gt; x*x,  -3, 3)); // true
+console.log(isConvex1D(x =&gt; -x*x, -3, 3)); // false
+console.log(isConvex2D((x,y) =&gt; x*x+y*y, 0, 0)); // true</code></pre></div>
+    <div class="ct-panel" data-tab="cvx-c"><pre><code>#include &lt;stdio.h&gt;
+#include &lt;math.h&gt;
+
+typedef double (*Fn1)(double);
+
+int is_convex_1d(Fn1 f, double a, double b, int n) {
+    double h = (b - a) / n;
+    for (int i = 1; i &lt; n - 1; i++) {
+        double x  = a + i * h;
+        double d2 = (f(x+h) - 2*f(x) + f(x-h)) / (h*h);
+        if (d2 &lt; -1e-9) return 0;
+    }
+    return 1;
+}
+
+double bowl(double x)    { return x*x; }
+double concave(double x) { return -x*x; }
+
+int main(void) {
+    printf("bowl convex:    %d\n", is_convex_1d(bowl,    -3, 3, 200)); // 1
+    printf("concave convex: %d\n", is_convex_1d(concave, -3, 3, 200)); // 0
+    return 0;
+}</code></pre></div>
+    <div class="ct-panel" data-tab="cvx-cpp"><pre><code>#include &lt;iostream&gt;
+#include &lt;functional&gt;
+#include &lt;cmath&gt;
+
+bool isConvex1D(std::function&lt;double(double)&gt; f, double a, double b, int n=200) {
+    double h = (b - a) / n;
+    for (int i = 1; i &lt; n - 1; i++) {
+        double x  = a + i * h;
+        double d2 = (f(x+h) - 2*f(x) + f(x-h)) / (h*h);
+        if (d2 &lt; -1e-9) return false;
+    }
+    return true;
+}
+
+bool isConvex2D(std::function&lt;double(double,double)&gt; f, double cx, double cy, double eps=1e-5) {
+    double fxx = (f(cx+eps,cy) - 2*f(cx,cy) + f(cx-eps,cy)) / (eps*eps);
+    double fyy = (f(cx,cy+eps) - 2*f(cx,cy) + f(cx,cy-eps)) / (eps*eps);
+    double fxy = (f(cx+eps,cy+eps) - f(cx+eps,cy-eps)
+                - f(cx-eps,cy+eps) + f(cx-eps,cy-eps)) / (4*eps*eps);
+    return (fxx + fyy) &gt;= 0 &amp;&amp; (fxx*fyy - fxy*fxy) &gt;= 0;
+}
+
+int main() {
+    std::cout &lt;&lt; isConvex1D([](double x){ return x*x; },   -3, 3) &lt;&lt; "\n"; // 1
+    std::cout &lt;&lt; isConvex1D([](double x){ return -x*x; },  -3, 3) &lt;&lt; "\n"; // 0
+    std::cout &lt;&lt; isConvex2D([](double x, double y){ return x*x+y*y; }, 0, 0) &lt;&lt; "\n"; // 1
+}</code></pre></div>
+    <div class="ct-panel" data-tab="cvx-java"><pre><code>import java.util.function.DoubleUnaryOperator;
+
+public class ConvexityCheck {
+    static boolean isConvex1D(DoubleUnaryOperator f, double a, double b, int n) {
+        double h = (b - a) / n;
+        for (int i = 1; i &lt; n - 1; i++) {
+            double x  = a + i * h;
+            double d2 = (f.applyAsDouble(x+h) - 2*f.applyAsDouble(x)
+                        + f.applyAsDouble(x-h)) / (h*h);
+            if (d2 &lt; -1e-9) return false;
+        }
+        return true;
+    }
+
+    public static void main(String[] args) {
+        System.out.println(isConvex1D(x -&gt; x*x,  -3, 3, 200)); // true
+        System.out.println(isConvex1D(x -&gt; -x*x, -3, 3, 200)); // false
+    }
+}</code></pre></div>
+    <div class="ct-panel" data-tab="cvx-go"><pre><code>package main
+
+import "fmt"
+
+func isConvex1D(f func(float64) float64, a, b float64, n int) bool {
+	h := (b - a) / float64(n)
+	for i := 1; i &lt; n-1; i++ {
+		x  := a + float64(i)*h
+		d2 := (f(x+h) - 2*f(x) + f(x-h)) / (h * h)
+		if d2 &lt; -1e-9 {
+			return false
+		}
+	}
+	return true
+}
+
+func main() {
+	bowl    := func(x float64) float64 { return x * x }
+	concave := func(x float64) float64 { return -x * x }
+	fmt.Println(isConvex1D(bowl,    -3, 3, 200)) // true
+	fmt.Println(isConvex1D(concave, -3, 3, 200)) // false
+}</code></pre></div>
+  </div>
+</details>
 
     <div class="problem-set" data-topic="opt-convex"></div>
 
@@ -309,6 +695,207 @@
     <h3>Learning rate sensitivity</h3>
 
     <p>Too small: GD crawls. Too large: GD overshoots and may diverge. The exact safe range depends on the curvature of $f$. For a quadratic $f(\mathbf{x}) = \tfrac{1}{2}\mathbf{x}^\top H \mathbf{x}$ with $H$ symmetric positive-definite, the largest stable step is $\eta < 2/\lambda_{\max}(H)$ where $\lambda_{\max}$ is the largest eigenvalue. In practice you try a few values logarithmically and pick the largest one that doesn't blow up. Most of the variants in the next section exist to make this less painful.</p>
+
+    <details class="algo-code">
+  <summary>Source — Gradient Descent</summary>
+  <div class="code-tabs">
+    <div class="ct-header">
+      <button class="ct-tab active" data-tab="gd-pseudo">Pseudocode</button>
+      <button class="ct-tab" data-tab="gd-py">Python</button>
+      <button class="ct-tab" data-tab="gd-js">JavaScript</button>
+      <button class="ct-tab" data-tab="gd-c">C</button>
+      <button class="ct-tab" data-tab="gd-cpp">C++</button>
+      <button class="ct-tab" data-tab="gd-java">Java</button>
+      <button class="ct-tab" data-tab="gd-go">Go</button>
+    </div>
+    <div class="ct-panel active" data-tab="gd-pseudo"><pre><code>// Gradient descent with convergence check
+// grad_fn: computes gradient at x
+// x0:  starting point (vector)
+// lr:  learning rate
+// tol: stop when ||grad|| &lt; tol
+
+function gradient_descent(grad_fn, x0, lr, tol, max_iter):
+    x = copy(x0)
+    history = [x]
+    for t = 1 to max_iter:
+        g = grad_fn(x)
+        if norm(g) &lt; tol:
+            break
+        x = x - lr * g
+        history.append(x)
+    return x, history</code></pre></div>
+    <div class="ct-panel" data-tab="gd-py"><pre><code>import numpy as np
+
+def gradient_descent(grad_fn, x0, lr=0.01, tol=1e-6, max_iter=10000):
+    """
+    Gradient descent with convergence check.
+
+    Parameters
+    ----------
+    grad_fn  : callable, returns gradient vector at x
+    x0       : ndarray, starting point
+    lr       : float, learning rate (step size)
+    tol      : float, stop when ||grad|| &lt; tol
+    max_iter : int,   maximum iterations
+
+    Returns
+    -------
+    x        : final iterate
+    history  : list of iterates (one per step)
+    """
+    x = np.array(x0, dtype=float)
+    history = [x.copy()]
+    for _ in range(max_iter):
+        g = grad_fn(x)
+        if np.linalg.norm(g) &lt; tol:
+            break
+        x = x - lr * g
+        history.append(x.copy())
+    return x, history
+
+# Example: minimize f(x,y) = x^2 + 4y^2  (bowl with different curvatures)
+def grad_fn(x):
+    return np.array([2*x[0], 8*x[1]])
+
+x_star, hist = gradient_descent(grad_fn, x0=[3.0, 2.0], lr=0.1)
+print(f"Converged to {x_star} in {len(hist)} steps")
+# => Converged to [~0, ~0]</code></pre></div>
+    <div class="ct-panel" data-tab="gd-js"><pre><code>function gradientDescent(gradFn, x0, lr = 0.01, tol = 1e-6, maxIter = 10000) {
+  let x = [...x0];
+  const history = [[...x]];
+
+  for (let t = 0; t &lt; maxIter; t++) {
+    const g    = gradFn(x);
+    const norm = Math.sqrt(g.reduce((s, gi) =&gt; s + gi*gi, 0));
+    if (norm &lt; tol) break;
+    x = x.map((xi, i) =&gt; xi - lr * g[i]);
+    history.push([...x]);
+  }
+  return { x, history };
+}
+
+// f(x,y) = x^2 + 4y^2
+const gradFn = ([x, y]) =&gt; [2*x, 8*y];
+const { x, history } = gradientDescent(gradFn, [3, 2], 0.1);
+console.log("Steps:", history.length, "Final:", x.map(v =&gt; v.toFixed(6)));</code></pre></div>
+    <div class="ct-panel" data-tab="gd-c"><pre><code>#include &lt;stdio.h&gt;
+#include &lt;math.h&gt;
+#include &lt;string.h&gt;
+
+#define N 2
+
+void grad_fn(const double *x, double *g) {
+    g[0] = 2.0 * x[0];
+    g[1] = 8.0 * x[1];
+}
+
+int gradient_descent(double *x, double lr, double tol, int max_iter) {
+    double g[N];
+    for (int t = 0; t &lt; max_iter; t++) {
+        grad_fn(x, g);
+        double norm2 = 0;
+        for (int i = 0; i &lt; N; i++) norm2 += g[i]*g[i];
+        if (sqrt(norm2) &lt; tol) return t;
+        for (int i = 0; i &lt; N; i++) x[i] -= lr * g[i];
+    }
+    return max_iter;
+}
+
+int main(void) {
+    double x[N] = {3.0, 2.0};
+    int steps = gradient_descent(x, 0.1, 1e-6, 10000);
+    printf("Steps: %d, x = [%.6f, %.6f]\n", steps, x[0], x[1]);
+    return 0;
+}</code></pre></div>
+    <div class="ct-panel" data-tab="gd-cpp"><pre><code>#include &lt;iostream&gt;
+#include &lt;vector&gt;
+#include &lt;functional&gt;
+#include &lt;cmath&gt;
+#include &lt;numeric&gt;
+
+using Vec = std::vector&lt;double&gt;;
+
+Vec gradFn(const Vec&amp; x) { return {2*x[0], 8*x[1]}; }
+
+std::pair&lt;Vec, std::vector&lt;Vec&gt;&gt;
+gradientDescent(std::function&lt;Vec(const Vec&amp;)&gt; gradFn,
+                Vec x, double lr, double tol, int maxIter) {
+    std::vector&lt;Vec&gt; history{x};
+    for (int t = 0; t &lt; maxIter; t++) {
+        Vec g = gradFn(x);
+        double norm = std::sqrt(std::inner_product(g.begin(), g.end(), g.begin(), 0.0));
+        if (norm &lt; tol) break;
+        for (size_t i = 0; i &lt; x.size(); i++) x[i] -= lr * g[i];
+        history.push_back(x);
+    }
+    return {x, history};
+}
+
+int main() {
+    auto [xStar, hist] = gradientDescent(gradFn, {3.0, 2.0}, 0.1, 1e-6, 10000);
+    std::cout &lt;&lt; "Steps: " &lt;&lt; hist.size()
+              &lt;&lt; "  x = [" &lt;&lt; xStar[0] &lt;&lt; ", " &lt;&lt; xStar[1] &lt;&lt; "]\n";
+}</code></pre></div>
+    <div class="ct-panel" data-tab="gd-java"><pre><code>import java.util.*;
+
+public class GradientDescent {
+    static double[] gradFn(double[] x) {
+        return new double[]{ 2*x[0], 8*x[1] };
+    }
+
+    static double norm(double[] g) {
+        double s = 0;
+        for (double v : g) s += v*v;
+        return Math.sqrt(s);
+    }
+
+    static double[] gradientDescent(double[] x0, double lr, double tol, int maxIter) {
+        double[] x = x0.clone();
+        for (int t = 0; t &lt; maxIter; t++) {
+            double[] g = gradFn(x);
+            if (norm(g) &lt; tol) { System.out.println("Converged at step " + t); break; }
+            for (int i = 0; i &lt; x.length; i++) x[i] -= lr * g[i];
+        }
+        return x;
+    }
+
+    public static void main(String[] args) {
+        double[] result = gradientDescent(new double[]{3.0, 2.0}, 0.1, 1e-6, 10000);
+        System.out.printf("x = [%.6f, %.6f]%n", result[0], result[1]);
+    }
+}</code></pre></div>
+    <div class="ct-panel" data-tab="gd-go"><pre><code>package main
+
+import (
+	"fmt"
+	"math"
+)
+
+func gradFn(x []float64) []float64 {
+	return []float64{2 * x[0], 8 * x[1]}
+}
+
+func norm(g []float64) float64 {
+	s := 0.0
+	for _, v := range g { s += v * v }
+	return math.Sqrt(s)
+}
+
+func gradientDescent(x []float64, lr, tol float64, maxIter int) ([]float64, int) {
+	for t := 0; t &lt; maxIter; t++ {
+		g := gradFn(x)
+		if norm(g) &lt; tol { return x, t }
+		for i := range x { x[i] -= lr * g[i] }
+	}
+	return x, maxIter
+}
+
+func main() {
+	x, steps := gradientDescent([]float64{3.0, 2.0}, 0.1, 1e-6, 10000)
+	fmt.Printf("Steps: %d, x = [%.6f, %.6f]\n", steps, x[0], x[1])
+}</code></pre></div>
+  </div>
+</details>
 
     <!-- ========================================================== -->
     <h2 id="variants">7. Variants — momentum, Adagrad, RMSProp, Adam</h2>
@@ -419,6 +1006,257 @@
 
     <p>You'll meet Adam again in <a href="../topics/backpropagation.html">backpropagation</a> and <a href="../topics/foundation-models.html">foundation models</a>, where it (or its weight-decay variant AdamW) is the workhorse. There are dozens of newer competitors — Lion, Sophia, Shampoo, Muon — but Adam remains the baseline you should beat.</p>
 
+    <details class="algo-code">
+  <summary>Source — SGD Variants (Momentum, AdaGrad, Adam)</summary>
+  <div class="code-tabs">
+    <div class="ct-header">
+      <button class="ct-tab active" data-tab="adam-pseudo">Pseudocode</button>
+      <button class="ct-tab" data-tab="adam-py">Python</button>
+      <button class="ct-tab" data-tab="adam-js">JavaScript</button>
+      <button class="ct-tab" data-tab="adam-c">C</button>
+      <button class="ct-tab" data-tab="adam-cpp">C++</button>
+      <button class="ct-tab" data-tab="adam-java">Java</button>
+      <button class="ct-tab" data-tab="adam-go">Go</button>
+    </div>
+    <div class="ct-panel active" data-tab="adam-pseudo"><pre><code>// MOMENTUM
+v = 0
+for t = 1 to T:
+    g = grad(x)
+    v = beta * v + g           // accumulate velocity
+    x = x - lr * v
+
+// ADAGRAD
+G = 0
+for t = 1 to T:
+    g = grad(x)
+    G = G + g*g                // accumulate squared gradients
+    x = x - lr * g / sqrt(G + eps)
+
+// ADAM (Kingma &amp; Ba, 2014)
+m = 0;  v = 0
+for t = 1 to T:
+    g      = grad(x)
+    m      = b1*m + (1-b1)*g          // first moment EMA
+    v      = b2*v + (1-b2)*(g*g)      // second moment EMA
+    m_hat  = m / (1 - b1^t)           // bias correction
+    v_hat  = v / (1 - b2^t)
+    x      = x - lr * m_hat / (sqrt(v_hat) + eps)</code></pre></div>
+    <div class="ct-panel" data-tab="adam-py"><pre><code>import numpy as np
+
+def momentum(grad_fn, x0, lr=0.01, beta=0.9, n=500):
+    x, v = np.array(x0, float), np.zeros_like(x0, float)
+    for _ in range(n):
+        g = grad_fn(x)
+        v = beta * v + g
+        x = x - lr * v
+    return x
+
+def adagrad(grad_fn, x0, lr=0.1, eps=1e-8, n=500):
+    x, G = np.array(x0, float), np.zeros_like(x0, float)
+    for _ in range(n):
+        g = grad_fn(x)
+        G = G + g * g
+        x = x - lr * g / (np.sqrt(G) + eps)
+    return x
+
+def adam(grad_fn, x0, lr=1e-3, b1=0.9, b2=0.999, eps=1e-8, n=500):
+    x = np.array(x0, float)
+    m, v = np.zeros_like(x), np.zeros_like(x)
+    for t in range(1, n + 1):
+        g     = grad_fn(x)
+        m     = b1 * m + (1 - b1) * g
+        v     = b2 * v + (1 - b2) * (g * g)
+        m_hat = m / (1 - b1**t)
+        v_hat = v / (1 - b2**t)
+        x     = x - lr * m_hat / (np.sqrt(v_hat) + eps)
+    return x
+
+# Test on f(x,y) = x^2 + 10y^2  (ill-conditioned)
+grad_fn = lambda x: np.array([2*x[0], 20*x[1]])
+x0 = [3.0, 2.0]
+print("Momentum:", momentum(grad_fn, x0))
+print("Adagrad: ", adagrad(grad_fn, x0))
+print("Adam:    ", adam(grad_fn, x0))</code></pre></div>
+    <div class="ct-panel" data-tab="adam-js"><pre><code>function momentum(gradFn, x0, lr=0.01, beta=0.9, n=500) {
+  let x = [...x0], v = x0.map(() =&gt; 0);
+  for (let t = 0; t &lt; n; t++) {
+    const g = gradFn(x);
+    v = v.map((vi, i) =&gt; beta * vi + g[i]);
+    x = x.map((xi, i) =&gt; xi - lr * v[i]);
+  }
+  return x;
+}
+
+function adagrad(gradFn, x0, lr=0.1, eps=1e-8, n=500) {
+  let x = [...x0], G = x0.map(() =&gt; 0);
+  for (let t = 0; t &lt; n; t++) {
+    const g = gradFn(x);
+    G = G.map((Gi, i) =&gt; Gi + g[i]*g[i]);
+    x = x.map((xi, i) =&gt; xi - lr * g[i] / (Math.sqrt(G[i]) + eps));
+  }
+  return x;
+}
+
+function adam(gradFn, x0, lr=1e-3, b1=0.9, b2=0.999, eps=1e-8, n=500) {
+  let x = [...x0];
+  let m = x0.map(() =&gt; 0), v = x0.map(() =&gt; 0);
+  for (let t = 1; t &lt;= n; t++) {
+    const g    = gradFn(x);
+    m = m.map((mi, i) =&gt; b1*mi + (1-b1)*g[i]);
+    v = v.map((vi, i) =&gt; b2*vi + (1-b2)*g[i]*g[i]);
+    const mh = m.map(mi =&gt; mi / (1 - Math.pow(b1, t)));
+    const vh = v.map(vi =&gt; vi / (1 - Math.pow(b2, t)));
+    x = x.map((xi, i) =&gt; xi - lr * mh[i] / (Math.sqrt(vh[i]) + eps));
+  }
+  return x;
+}
+
+const gradFn = ([x, y]) =&gt; [2*x, 20*y];
+const x0 = [3, 2];
+console.log("Momentum:", momentum(gradFn, x0));
+console.log("Adam:    ", adam(gradFn, x0));</code></pre></div>
+    <div class="ct-panel" data-tab="adam-c"><pre><code>#include &lt;stdio.h&gt;
+#include &lt;math.h&gt;
+#include &lt;string.h&gt;
+
+#define N 2
+
+void grad_fn(const double *x, double *g) { g[0]=2*x[0]; g[1]=20*x[1]; }
+
+void run_adam(double *x, double lr, double b1, double b2, double eps, int steps) {
+    double m[N]={0}, v[N]={0}, g[N];
+    for (int t=1; t&lt;=steps; t++) {
+        grad_fn(x, g);
+        for (int i=0; i&lt;N; i++) {
+            m[i] = b1*m[i] + (1-b1)*g[i];
+            v[i] = b2*v[i] + (1-b2)*g[i]*g[i];
+            double mh = m[i] / (1 - pow(b1,t));
+            double vh = v[i] / (1 - pow(b2,t));
+            x[i] -= lr * mh / (sqrt(vh) + eps);
+        }
+    }
+}
+
+void run_momentum(double *x, double lr, double beta, int steps) {
+    double v[N]={0}, g[N];
+    for (int t=0; t&lt;steps; t++) {
+        grad_fn(x, g);
+        for (int i=0; i&lt;N; i++) { v[i]=beta*v[i]+g[i]; x[i]-=lr*v[i]; }
+    }
+}
+
+int main(void) {
+    double xa[N]={3,2}, xb[N]={3,2};
+    run_momentum(xa, 0.01, 0.9, 500);
+    run_adam(xb, 1e-3, 0.9, 0.999, 1e-8, 500);
+    printf("Momentum: [%.4f, %.4f]\n", xa[0], xa[1]);
+    printf("Adam:     [%.4f, %.4f]\n", xb[0], xb[1]);
+    return 0;
+}</code></pre></div>
+    <div class="ct-panel" data-tab="adam-cpp"><pre><code>#include &lt;iostream&gt;
+#include &lt;vector&gt;
+#include &lt;functional&gt;
+#include &lt;cmath&gt;
+
+using Vec = std::vector&lt;double&gt;;
+using GradFn = std::function&lt;Vec(const Vec&amp;)&gt;;
+
+Vec adam(GradFn gFn, Vec x, double lr=1e-3, double b1=0.9, double b2=0.999,
+         double eps=1e-8, int n=500) {
+    Vec m(x.size(), 0), v(x.size(), 0);
+    for (int t = 1; t &lt;= n; t++) {
+        Vec g = gFn(x);
+        for (size_t i = 0; i &lt; x.size(); i++) {
+            m[i] = b1*m[i] + (1-b1)*g[i];
+            v[i] = b2*v[i] + (1-b2)*g[i]*g[i];
+            double mh = m[i]/(1-std::pow(b1,t));
+            double vh = v[i]/(1-std::pow(b2,t));
+            x[i] -= lr * mh / (std::sqrt(vh) + eps);
+        }
+    }
+    return x;
+}
+
+int main() {
+    auto gFn = [](const Vec&amp; x) -&gt; Vec { return {2*x[0], 20*x[1]}; };
+    Vec res = adam(gFn, {3.0, 2.0});
+    std::cout &lt;&lt; "Adam: [" &lt;&lt; res[0] &lt;&lt; ", " &lt;&lt; res[1] &lt;&lt; "]\n";
+}</code></pre></div>
+    <div class="ct-panel" data-tab="adam-java"><pre><code>public class SGDVariants {
+    static double[] gradFn(double[] x) { return new double[]{2*x[0], 20*x[1]}; }
+
+    static double[] adam(double[] x0, double lr, double b1, double b2, double eps, int n) {
+        double[] x = x0.clone(), m = new double[x.length], v = new double[x.length];
+        for (int t = 1; t &lt;= n; t++) {
+            double[] g = gradFn(x);
+            for (int i = 0; i &lt; x.length; i++) {
+                m[i] = b1*m[i] + (1-b1)*g[i];
+                v[i] = b2*v[i] + (1-b2)*g[i]*g[i];
+                double mh = m[i] / (1 - Math.pow(b1, t));
+                double vh = v[i] / (1 - Math.pow(b2, t));
+                x[i] -= lr * mh / (Math.sqrt(vh) + eps);
+            }
+        }
+        return x;
+    }
+
+    static double[] momentum(double[] x0, double lr, double beta, int n) {
+        double[] x = x0.clone(), vel = new double[x.length];
+        for (int t = 0; t &lt; n; t++) {
+            double[] g = gradFn(x);
+            for (int i = 0; i &lt; x.length; i++) { vel[i]=beta*vel[i]+g[i]; x[i]-=lr*vel[i]; }
+        }
+        return x;
+    }
+
+    public static void main(String[] args) {
+        double[] a = adam(new double[]{3,2}, 1e-3, 0.9, 0.999, 1e-8, 500);
+        double[] b = momentum(new double[]{3,2}, 0.01, 0.9, 500);
+        System.out.printf("Adam:     [%.4f, %.4f]%n", a[0], a[1]);
+        System.out.printf("Momentum: [%.4f, %.4f]%n", b[0], b[1]);
+    }
+}</code></pre></div>
+    <div class="ct-panel" data-tab="adam-go"><pre><code>package main
+
+import (
+	"fmt"
+	"math"
+)
+
+func gradFn(x []float64) []float64 { return []float64{2 * x[0], 20 * x[1]} }
+
+func adamOpt(x []float64, lr, b1, b2, eps float64, n int) []float64 {
+	m := make([]float64, len(x))
+	v := make([]float64, len(x))
+	for t := 1; t &lt;= n; t++ {
+		g := gradFn(x)
+		for i := range x {
+			m[i] = b1*m[i] + (1-b1)*g[i]
+			v[i] = b2*v[i] + (1-b2)*g[i]*g[i]
+			mh := m[i] / (1 - math.Pow(b1, float64(t)))
+			vh := v[i] / (1 - math.Pow(b2, float64(t)))
+			x[i] -= lr * mh / (math.Sqrt(vh) + eps)
+		}
+	}
+	return x
+}
+
+func momentumOpt(x []float64, lr, beta float64, n int) []float64 {
+	vel := make([]float64, len(x))
+	for t := 0; t &lt; n; t++ {
+		g := gradFn(x)
+		for i := range x { vel[i] = beta*vel[i] + g[i]; x[i] -= lr * vel[i] }
+	}
+	return x
+}
+
+func main() {
+	fmt.Println("Adam:    ", adamOpt([]float64{3, 2}, 1e-3, 0.9, 0.999, 1e-8, 500))
+	fmt.Println("Momentum:", momentumOpt([]float64{3, 2}, 0.01, 0.9, 500))
+}</code></pre></div>
+  </div>
+</details>
+
     <!-- ========================================================== -->
     <h2 id="sgd">8. Stochastic gradient descent — when computing the gradient is too expensive</h2>
 
@@ -459,6 +1297,249 @@
 
     <p>Convergence-wise, SGD converges sublinearly — about $O(1/\sqrt{t})$ for convex problems with constant step size — slower in iterations than full-batch GD, but each iteration costs much less. With a decreasing step size you can get $O(1/t)$. In ML you usually mix SGD with momentum and an EMA, which is essentially Adam.</p>
 
+    <details class="algo-code">
+  <summary>Source — Stochastic Gradient Descent</summary>
+  <div class="code-tabs">
+    <div class="ct-header">
+      <button class="ct-tab active" data-tab="sgd-pseudo">Pseudocode</button>
+      <button class="ct-tab" data-tab="sgd-py">Python</button>
+      <button class="ct-tab" data-tab="sgd-js">JavaScript</button>
+      <button class="ct-tab" data-tab="sgd-c">C</button>
+      <button class="ct-tab" data-tab="sgd-cpp">C++</button>
+      <button class="ct-tab" data-tab="sgd-java">Java</button>
+      <button class="ct-tab" data-tab="sgd-go">Go</button>
+    </div>
+    <div class="ct-panel active" data-tab="sgd-pseudo"><pre><code>// Mini-batch SGD on squared loss: f(w) = (1/N) * sum_i (w*x_i - y_i)^2
+// grad of f_i w.r.t. w = 2 * (w*x_i - y_i) * x_i
+
+function mini_batch_sgd(X, y, w0, lr, batch_size, epochs):
+    w = w0
+    N = len(X)
+    for epoch = 1 to epochs:
+        shuffle(X, y)
+        for b = 0 to N step batch_size:
+            X_b = X[b : b+batch_size]
+            y_b = y[b : b+batch_size]
+            grad = (2/batch_size) * X_b^T * (X_b * w - y_b)
+            w = w - lr * grad
+    return w</code></pre></div>
+    <div class="ct-panel" data-tab="sgd-py"><pre><code>import numpy as np
+
+def mini_batch_sgd(X, y, lr=0.01, batch_size=32, epochs=50):
+    """
+    Mini-batch SGD on squared loss  f(w) = ||Xw - y||^2 / N.
+    X : (N, d) feature matrix
+    y : (N,)   targets
+    Returns weight vector w of shape (d,).
+    """
+    N, d = X.shape
+    w = np.zeros(d)
+    for epoch in range(epochs):
+        perm = np.random.permutation(N)
+        X_s, y_s = X[perm], y[perm]
+        for b in range(0, N, batch_size):
+            Xb = X_s[b:b + batch_size]
+            yb = y_s[b:b + batch_size]
+            grad = (2 / len(yb)) * Xb.T @ (Xb @ w - yb)
+            w -= lr * grad
+    return w
+
+# Synthetic data: y = 3*x1 - 2*x2 + noise
+rng = np.random.default_rng(42)
+N, d = 500, 2
+X = rng.standard_normal((N, d))
+w_true = np.array([3.0, -2.0])
+y = X @ w_true + 0.1 * rng.standard_normal(N)
+
+w_hat = mini_batch_sgd(X, y, lr=0.05, batch_size=32, epochs=100)
+print("True w:", w_true)
+print("Est  w:", w_hat.round(4))
+# => close to [3.0, -2.0]</code></pre></div>
+    <div class="ct-panel" data-tab="sgd-js"><pre><code>function miniBatchSGD(X, y, lr=0.01, batchSize=32, epochs=50) {
+  const N = X.length, d = X[0].length;
+  let w = new Array(d).fill(0);
+
+  for (let ep = 0; ep &lt; epochs; ep++) {
+    // shuffle indices
+    const perm = Array.from({length: N}, (_, i) =&gt; i)
+      .sort(() =&gt; Math.random() - 0.5);
+
+    for (let b = 0; b &lt; N; b += batchSize) {
+      const idx = perm.slice(b, b + batchSize);
+      const bs  = idx.length;
+
+      // grad = (2/bs) * X_b^T * (X_b @ w - y_b)
+      const grad = new Array(d).fill(0);
+      for (const i of idx) {
+        let pred = 0;
+        for (let j = 0; j &lt; d; j++) pred += X[i][j] * w[j];
+        const err = pred - y[i];
+        for (let j = 0; j &lt; d; j++) grad[j] += (2 / bs) * X[i][j] * err;
+      }
+      for (let j = 0; j &lt; d; j++) w[j] -= lr * grad[j];
+    }
+  }
+  return w;
+}
+
+// Quick test
+const X = [[1,2],[3,4],[5,6],[7,8]];
+const y = [5, 11, 17, 23]; // w = [1, 2] exactly
+const w = miniBatchSGD(X, y, 0.01, 2, 200);
+console.log("w:", w.map(v =&gt; v.toFixed(3)));</code></pre></div>
+    <div class="ct-panel" data-tab="sgd-c"><pre><code>#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;string.h&gt;
+#include &lt;math.h&gt;
+
+#define N_SAMPLES 100
+#define N_FEATURES 2
+
+// Mini-batch SGD: squared loss, batch_size=1 (stochastic)
+void sgd(double X[][N_FEATURES], double *y, double *w,
+         double lr, int epochs) {
+    double grad[N_FEATURES];
+    for (int ep = 0; ep &lt; epochs; ep++) {
+        for (int i = 0; i &lt; N_SAMPLES; i++) {
+            double pred = 0;
+            for (int j = 0; j &lt; N_FEATURES; j++) pred += X[i][j] * w[j];
+            double err = pred - y[i];
+            for (int j = 0; j &lt; N_FEATURES; j++)
+                w[j] -= lr * 2 * X[i][j] * err;
+        }
+    }
+}
+
+int main(void) {
+    double X[N_SAMPLES][N_FEATURES], y[N_SAMPLES];
+    double w_true[N_FEATURES] = {3.0, -2.0};
+    srand(42);
+    for (int i = 0; i &lt; N_SAMPLES; i++) {
+        X[i][0] = ((double)rand()/RAND_MAX) * 4 - 2;
+        X[i][1] = ((double)rand()/RAND_MAX) * 4 - 2;
+        y[i] = w_true[0]*X[i][0] + w_true[1]*X[i][1];
+    }
+    double w[N_FEATURES] = {0, 0};
+    sgd(X, y, w, 0.01, 50);
+    printf("w = [%.4f, %.4f]\n", w[0], w[1]);
+    return 0;
+}</code></pre></div>
+    <div class="ct-panel" data-tab="sgd-cpp"><pre><code>#include &lt;iostream&gt;
+#include &lt;vector&gt;
+#include &lt;random&gt;
+#include &lt;numeric&gt;
+
+using Vec = std::vector&lt;double&gt;;
+
+Vec sgd(const std::vector&lt;Vec&gt;&amp; X, const Vec&amp; y,
+        double lr=0.01, int batchSize=32, int epochs=50) {
+    int N = X.size(), d = X[0].size();
+    Vec w(d, 0.0);
+    std::mt19937 rng(42);
+
+    for (int ep = 0; ep &lt; epochs; ep++) {
+        std::vector&lt;int&gt; idx(N); std::iota(idx.begin(), idx.end(), 0);
+        std::shuffle(idx.begin(), idx.end(), rng);
+
+        for (int b = 0; b &lt; N; b += batchSize) {
+            int bs = std::min(batchSize, N - b);
+            Vec grad(d, 0.0);
+            for (int k = b; k &lt; b + bs; k++) {
+                int i  = idx[k];
+                double pred = std::inner_product(X[i].begin(), X[i].end(), w.begin(), 0.0);
+                double err  = pred - y[i];
+                for (int j = 0; j &lt; d; j++) grad[j] += (2.0/bs) * X[i][j] * err;
+            }
+            for (int j = 0; j &lt; d; j++) w[j] -= lr * grad[j];
+        }
+    }
+    return w;
+}
+
+int main() {
+    // Tiny dataset: y = 1*x + 2
+    std::vector&lt;Vec&gt; X = {{1},{2},{3},{4},{5}};
+    Vec y = {3, 4, 5, 6, 7};
+    Vec w = sgd(X, y, 0.01, 2, 200);
+    std::cout &lt;&lt; "w = " &lt;&lt; w[0] &lt;&lt; "\n"; // ~1.0 (intercept absorbed)
+}</code></pre></div>
+    <div class="ct-panel" data-tab="sgd-java"><pre><code>import java.util.*;
+
+public class MiniBatchSGD {
+    static double dot(double[] a, double[] b) {
+        double s = 0; for (int i = 0; i &lt; a.length; i++) s += a[i]*b[i]; return s;
+    }
+
+    static double[] sgd(double[][] X, double[] y, double lr, int batchSize, int epochs) {
+        int N = X.length, d = X[0].length;
+        double[] w = new double[d];
+        Random rng = new Random(42);
+        Integer[] idx = new Integer[N];
+        for (int i = 0; i &lt; N; i++) idx[i] = i;
+
+        for (int ep = 0; ep &lt; epochs; ep++) {
+            Collections.shuffle(Arrays.asList(idx), rng);
+            for (int b = 0; b &lt; N; b += batchSize) {
+                int bs = Math.min(batchSize, N - b);
+                double[] grad = new double[d];
+                for (int k = b; k &lt; b + bs; k++) {
+                    int i = idx[k];
+                    double err = dot(X[i], w) - y[i];
+                    for (int j = 0; j &lt; d; j++) grad[j] += (2.0/bs) * X[i][j] * err;
+                }
+                for (int j = 0; j &lt; d; j++) w[j] -= lr * grad[j];
+            }
+        }
+        return w;
+    }
+
+    public static void main(String[] args) {
+        double[][] X = {{1,1},{2,1},{3,1},{4,1},{5,1}};
+        double[] y   = {3, 5, 7, 9, 11}; // w = [2, 1]
+        double[] w   = sgd(X, y, 0.01, 2, 300);
+        System.out.printf("w = [%.4f, %.4f]%n", w[0], w[1]);
+    }
+}</code></pre></div>
+    <div class="ct-panel" data-tab="sgd-go"><pre><code>package main
+
+import (
+	"fmt"
+	"math/rand"
+)
+
+func sgd(X [][]float64, y []float64, lr float64, batchSize, epochs int) []float64 {
+	N, d := len(X), len(X[0])
+	w := make([]float64, d)
+	rng := rand.New(rand.NewSource(42))
+
+	for ep := 0; ep &lt; epochs; ep++ {
+		perm := rng.Perm(N)
+		for b := 0; b &lt; N; b += batchSize {
+			end := b + batchSize
+			if end &gt; N { end = N }
+			bs := float64(end - b)
+			grad := make([]float64, d)
+			for _, i := range perm[b:end] {
+				pred := 0.0
+				for j := 0; j &lt; d; j++ { pred += X[i][j] * w[j] }
+				err := pred - y[i]
+				for j := 0; j &lt; d; j++ { grad[j] += (2 / bs) * X[i][j] * err }
+			}
+			for j := 0; j &lt; d; j++ { w[j] -= lr * grad[j] }
+		}
+	}
+	return w
+}
+
+func main() {
+	X := [][]float64{{1, 1}, {2, 1}, {3, 1}, {4, 1}, {5, 1}}
+	y := []float64{3, 5, 7, 9, 11}
+	w := sgd(X, y, 0.01, 2, 300)
+	fmt.Printf("w = [%.4f, %.4f]\n", w[0], w[1])
+}</code></pre></div>
+  </div>
+</details>
+
     <!-- ========================================================== -->
     <h2 id="newton">9. Newton's method and quasi-Newton</h2>
 
@@ -486,6 +1567,254 @@
     <h3>Quasi-Newton — BFGS and L-BFGS</h3>
 
     <p>Quasi-Newton methods build a cheap approximation $B_t \approx \nabla^2 f(\mathbf{x}_t)$ from observed gradient differences. The most famous is BFGS (Broyden, Fletcher, Goldfarb, Shanno, 1970), which updates an $n \times n$ approximation each step. For large $n$, the limited-memory version L-BFGS keeps only the last $\sim 10$ gradient differences and reconstructs the Hessian action on the fly. L-BFGS is the go-to optimizer for deterministic, smooth problems with thousands to a million variables — not as good as Adam for noisy ML, but a beast for classical statistics, image registration, and physics inverse problems.</p>
+
+    <details class="algo-code">
+  <summary>Source — Newton's Method</summary>
+  <div class="code-tabs">
+    <div class="ct-header">
+      <button class="ct-tab active" data-tab="nwt-pseudo">Pseudocode</button>
+      <button class="ct-tab" data-tab="nwt-py">Python</button>
+      <button class="ct-tab" data-tab="nwt-js">JavaScript</button>
+      <button class="ct-tab" data-tab="nwt-c">C</button>
+      <button class="ct-tab" data-tab="nwt-cpp">C++</button>
+      <button class="ct-tab" data-tab="nwt-java">Java</button>
+      <button class="ct-tab" data-tab="nwt-go">Go</button>
+    </div>
+    <div class="ct-panel active" data-tab="nwt-pseudo"><pre><code>// 1D Newton: find zero of f'(x) (i.e., minimise f)
+function newton_1d(f_grad, f_hess, x0, tol, max_iter):
+    x = x0
+    for i = 1 to max_iter:
+        g = f_grad(x)
+        h = f_hess(x)
+        if |g| &lt; tol: break
+        x = x - g / h
+    return x
+
+// 2D/nD Newton: solve H * p = -grad, then x = x + p
+function newton_nd(grad_fn, hess_fn, x0, tol, max_iter):
+    x = x0
+    for i = 1 to max_iter:
+        g = grad_fn(x)
+        if norm(g) &lt; tol: break
+        H = hess_fn(x)
+        p = solve(H, -g)   // linear system H*p = -g
+        x = x + p
+    return x</code></pre></div>
+    <div class="ct-panel" data-tab="nwt-py"><pre><code>import numpy as np
+
+# ---- 1D Newton ----
+def newton_1d(f_grad, f_hess, x0, tol=1e-10, max_iter=50):
+    x = float(x0)
+    for _ in range(max_iter):
+        g = f_grad(x)
+        h = f_hess(x)
+        if abs(g) &lt; tol:
+            break
+        x -= g / h
+    return x
+
+# Example: minimize f(x) = x^4 - 3x^3 + 2
+def f_grad_1d(x): return 4*x**3 - 9*x**2
+def f_hess_1d(x): return 12*x**2 - 18*x
+print("1D Newton:", newton_1d(f_grad_1d, f_hess_1d, x0=4.0))
+# => 2.25 (local minimum)
+
+# ---- nD Newton ----
+def newton_nd(grad_fn, hess_fn, x0, tol=1e-10, max_iter=50):
+    x = np.array(x0, float)
+    for _ in range(max_iter):
+        g = grad_fn(x)
+        if np.linalg.norm(g) &lt; tol:
+            break
+        H = hess_fn(x)
+        p = np.linalg.solve(H, -g)   # H * p = -g
+        x = x + p
+    return x
+
+# Minimize f(x,y) = x^2 + y^2 + xy  (bowl)
+def grad_2d(x): return np.array([2*x[0]+x[1], 2*x[1]+x[0]])
+def hess_2d(x): return np.array([[2, 1], [1, 2]])
+print("2D Newton:", newton_nd(grad_2d, hess_2d, x0=[3.0, -2.0]))
+# => [0., 0.]  (exact in one step — quadratic function)</code></pre></div>
+    <div class="ct-panel" data-tab="nwt-js"><pre><code>// 1D Newton
+function newton1D(fGrad, fHess, x0, tol=1e-10, maxIter=50) {
+  let x = x0;
+  for (let i = 0; i &lt; maxIter; i++) {
+    const g = fGrad(x), h = fHess(x);
+    if (Math.abs(g) &lt; tol) break;
+    x -= g / h;
+  }
+  return x;
+}
+
+// 2x2 linear solve: A*p = b (Cramer's rule)
+function solve2x2([a,b,c,d], [e,f]) {
+  const det = a*d - b*c;
+  return [(e*d - b*f)/det, (a*f - e*c)/det];
+}
+
+// 2D Newton for f(x,y)=x^2+y^2+xy
+function newton2D(x0, y0, tol=1e-10, maxIter=50) {
+  let [x, y] = [x0, y0];
+  for (let i = 0; i &lt; maxIter; i++) {
+    const g = [2*x+y, 2*y+x];
+    if (Math.hypot(...g) &lt; tol) break;
+    const [px, py] = solve2x2([2,1,1,2], [-g[0], -g[1]]);
+    x += px; y += py;
+  }
+  return [x, y];
+}
+
+console.log("1D:", newton1D(x =&gt; 4*x**3-9*x**2, x =&gt; 12*x**2-18*x, 4));
+console.log("2D:", newton2D(3, -2));</code></pre></div>
+    <div class="ct-panel" data-tab="nwt-c"><pre><code>#include &lt;stdio.h&gt;
+#include &lt;math.h&gt;
+
+double f_grad_1d(double x) { return 4*x*x*x - 9*x*x; }
+double f_hess_1d(double x) { return 12*x*x - 18*x; }
+
+double newton_1d(double x0, double tol, int max_iter) {
+    double x = x0;
+    for (int i = 0; i &lt; max_iter; i++) {
+        double g = f_grad_1d(x);
+        if (fabs(g) &lt; tol) break;
+        x -= g / f_hess_1d(x);
+    }
+    return x;
+}
+
+// 2D Newton for f(x,y)=x^2+y^2+xy
+void newton_2d(double *px, double *py, double tol, int max_iter) {
+    double x = *px, y = *py;
+    for (int i = 0; i &lt; max_iter; i++) {
+        double gx = 2*x+y, gy = 2*y+x;
+        if (sqrt(gx*gx + gy*gy) &lt; tol) break;
+        // H = [[2,1],[1,2]], det = 3
+        double det = 3.0;
+        double dx = (2*(-gx) - 1*(-gy)) / det;
+        double dy = (2*(-gy) - 1*(-gx)) / det;
+        x += dx; y += dy;
+    }
+    *px = x; *py = y;
+}
+
+int main(void) {
+    printf("1D Newton: %.8f\n", newton_1d(4.0, 1e-10, 50));
+    double x = 3.0, y = -2.0;
+    newton_2d(&amp;x, &amp;y, 1e-10, 50);
+    printf("2D Newton: [%.8f, %.8f]\n", x, y);
+    return 0;
+}</code></pre></div>
+    <div class="ct-panel" data-tab="nwt-cpp"><pre><code>#include &lt;iostream&gt;
+#include &lt;vector&gt;
+#include &lt;functional&gt;
+#include &lt;cmath&gt;
+
+using Vec = std::vector&lt;double&gt;;
+
+double newton1D(std::function&lt;double(double)&gt; g,
+                std::function&lt;double(double)&gt; h,
+                double x0, double tol=1e-10, int n=50) {
+    double x = x0;
+    for (int i = 0; i &lt; n; i++) {
+        double gv = g(x);
+        if (std::abs(gv) &lt; tol) break;
+        x -= gv / h(x);
+    }
+    return x;
+}
+
+// 2D Newton (hardcoded H = [[2,1],[1,2]])
+std::pair&lt;double,double&gt; newton2D(double x0, double y0, double tol=1e-10, int n=50) {
+    double x = x0, y = y0;
+    for (int i = 0; i &lt; n; i++) {
+        double gx = 2*x+y, gy = 2*y+x;
+        if (std::sqrt(gx*gx+gy*gy) &lt; tol) break;
+        double det = 3.0;
+        x += (2*(-gx) - 1*(-gy)) / det;
+        y += (2*(-gy) - 1*(-gx)) / det;
+    }
+    return {x, y};
+}
+
+int main() {
+    double x1 = newton1D([](double x){ return 4*x*x*x-9*x*x; },
+                         [](double x){ return 12*x*x-18*x; }, 4.0);
+    std::cout &lt;&lt; "1D: " &lt;&lt; x1 &lt;&lt; "\n";
+    auto [x2, y2] = newton2D(3.0, -2.0);
+    std::cout &lt;&lt; "2D: [" &lt;&lt; x2 &lt;&lt; ", " &lt;&lt; y2 &lt;&lt; "]\n";
+}</code></pre></div>
+    <div class="ct-panel" data-tab="nwt-java"><pre><code>public class NewtonMethod {
+    static double fGrad1D(double x) { return 4*x*x*x - 9*x*x; }
+    static double fHess1D(double x) { return 12*x*x - 18*x; }
+
+    static double newton1D(double x0, double tol, int maxIter) {
+        double x = x0;
+        for (int i = 0; i &lt; maxIter; i++) {
+            double g = fGrad1D(x);
+            if (Math.abs(g) &lt; tol) break;
+            x -= g / fHess1D(x);
+        }
+        return x;
+    }
+
+    // 2D Newton for f(x,y)=x^2+y^2+xy, H=[[2,1],[1,2]]
+    static double[] newton2D(double x0, double y0, double tol, int maxIter) {
+        double x = x0, y = y0;
+        for (int i = 0; i &lt; maxIter; i++) {
+            double gx = 2*x+y, gy = 2*y+x;
+            if (Math.sqrt(gx*gx+gy*gy) &lt; tol) break;
+            double det = 3.0;
+            x += (2*(-gx) - 1*(-gy)) / det;
+            y += (2*(-gy) - 1*(-gx)) / det;
+        }
+        return new double[]{x, y};
+    }
+
+    public static void main(String[] args) {
+        System.out.printf("1D Newton: %.8f%n", newton1D(4.0, 1e-10, 50));
+        double[] r = newton2D(3.0, -2.0, 1e-10, 50);
+        System.out.printf("2D Newton: [%.8f, %.8f]%n", r[0], r[1]);
+    }
+}</code></pre></div>
+    <div class="ct-panel" data-tab="nwt-go"><pre><code>package main
+
+import (
+	"fmt"
+	"math"
+)
+
+func newton1D(x0, tol float64, maxIter int) float64 {
+	x := x0
+	for i := 0; i &lt; maxIter; i++ {
+		g := 4*x*x*x - 9*x*x
+		if math.Abs(g) &lt; tol { break }
+		h := 12*x*x - 18*x
+		x -= g / h
+	}
+	return x
+}
+
+// 2D Newton for f(x,y) = x^2 + y^2 + xy
+func newton2D(x0, y0, tol float64, maxIter int) (float64, float64) {
+	x, y := x0, y0
+	for i := 0; i &lt; maxIter; i++ {
+		gx, gy := 2*x+y, 2*y+x
+		if math.Sqrt(gx*gx+gy*gy) &lt; tol { break }
+		det := 3.0
+		x += (2*(-gx) - 1*(-gy)) / det
+		y += (2*(-gy) - 1*(-gx)) / det
+	}
+	return x, y
+}
+
+func main() {
+	fmt.Printf("1D Newton: %.8f\n", newton1D(4.0, 1e-10, 50))
+	x, y := newton2D(3.0, -2.0, 1e-10, 50)
+	fmt.Printf("2D Newton: [%.8f, %.8f]\n", x, y)
+}</code></pre></div>
+  </div>
+</details>
 
     <div class="problem-set" data-topic="opt-gd"></div>
 
@@ -553,6 +1882,224 @@
 
     <p>Setting partials to zero: $2x - \lambda = 0$, $2y - \lambda = 0$, $x + y = 1$. So $x = y = \tfrac{1}{2}$, and $\lambda = 1$. The minimum value of $f$ is $\tfrac{1}{2}$. The multiplier $\lambda = 1$ tells you something physical: if you relaxed the constraint to $x + y = 1 + \delta$, the optimal value would change by approximately $-\lambda \, \delta = -\delta$. Multipliers <em>are</em> the sensitivity of the optimum to the constraint.</p>
 
+    <details class="algo-code">
+  <summary>Source — Lagrange Multipliers</summary>
+  <div class="code-tabs">
+    <div class="ct-header">
+      <button class="ct-tab active" data-tab="lag-pseudo">Pseudocode</button>
+      <button class="ct-tab" data-tab="lag-py">Python</button>
+      <button class="ct-tab" data-tab="lag-js">JavaScript</button>
+      <button class="ct-tab" data-tab="lag-c">C</button>
+      <button class="ct-tab" data-tab="lag-cpp">C++</button>
+      <button class="ct-tab" data-tab="lag-java">Java</button>
+      <button class="ct-tab" data-tab="lag-go">Go</button>
+    </div>
+    <div class="ct-panel active" data-tab="lag-pseudo"><pre><code>// Problem: minimize f(x1, x2) = x1^2 + x2^2
+//          subject to  g(x1, x2) = x1 + x2 - 1 = 0
+//
+// Lagrangian:  L(x1, x2, lam) = x1^2 + x2^2 - lam*(x1+x2-1)
+//
+// KKT stationarity:
+//   dL/dx1 = 2*x1 - lam = 0  =>  x1 = lam/2
+//   dL/dx2 = 2*x2 - lam = 0  =>  x2 = lam/2
+//   dL/dlam = -(x1+x2-1) = 0  =>  x1+x2 = 1
+//
+// Substituting: lam/2 + lam/2 = 1  =>  lam = 1
+//               x1 = x2 = 1/2
+//
+// Analytic solve (matrix form):
+//   [2  0  -1] [x1]   [0]
+//   [0  2  -1] [x2] = [0]
+//   [1  1   0] [lam]  [1]
+// Solve the 3x3 system => x1=0.5, x2=0.5, lam=1</code></pre></div>
+    <div class="ct-panel" data-tab="lag-py"><pre><code>import numpy as np
+from scipy.optimize import minimize, root
+
+# ---- Analytic: solve KKT system as a linear system ----
+# Variables z = [x1, x2, lam]
+# System: [2,0,-1; 0,2,-1; 1,1,0] * z = [0,0,1]
+A = np.array([[2, 0, -1],
+              [0, 2, -1],
+              [1, 1,  0]], dtype=float)
+b = np.array([0.0, 0.0, 1.0])
+z = np.linalg.solve(A, b)
+print("KKT solution (x1, x2, lam) =", z)
+# => [0.5, 0.5, 1.0]
+
+# ---- Numerical: solve grad(L)=0 via scipy.root ----
+def lagrangian_grad(z):
+    x1, x2, lam = z
+    return [2*x1 - lam,       # dL/dx1
+            2*x2 - lam,       # dL/dx2
+            -(x1 + x2 - 1)]   # dL/dlam = -g
+
+sol = root(lagrangian_grad, x0=[0, 0, 0])
+print("root result:", sol.x.round(6))
+# => [0.5, 0.5, 1.0]
+
+# ---- scipy.optimize.minimize with explicit constraint ----
+res = minimize(
+    lambda v: v[0]**2 + v[1]**2,
+    x0=[0.0, 0.0],
+    constraints={"type": "eq", "fun": lambda v: v[0] + v[1] - 1},
+    method="SLSQP",
+)
+print("SLSQP:", res.x.round(6), "  f =", round(res.fun, 6))
+# => [0.5, 0.5]   f = 0.5</code></pre></div>
+    <div class="ct-panel" data-tab="lag-js"><pre><code>// Solve the 3x3 KKT system via Gaussian elimination
+// [2,0,-1; 0,2,-1; 1,1,0] * [x1,x2,lam] = [0,0,1]
+function solve3x3(M, b) {
+  // augmented matrix [M | b]
+  const A = M.map((row, i) =&gt; [...row, b[i]]);
+  for (let col = 0; col &lt; 3; col++) {
+    let pivot = col;
+    for (let r = col+1; r &lt; 3; r++)
+      if (Math.abs(A[r][col]) &gt; Math.abs(A[pivot][col])) pivot = r;
+    [A[col], A[pivot]] = [A[pivot], A[col]];
+    for (let r = col+1; r &lt; 3; r++) {
+      const f = A[r][col] / A[col][col];
+      for (let k = col; k &lt;= 3; k++) A[r][k] -= f * A[col][k];
+    }
+  }
+  const x = [0,0,0];
+  for (let i = 2; i &gt;= 0; i--) {
+    x[i] = A[i][3];
+    for (let j = i+1; j &lt; 3; j++) x[i] -= A[i][j]*x[j];
+    x[i] /= A[i][i];
+  }
+  return x;
+}
+
+const M = [[2,0,-1],[0,2,-1],[1,1,0]];
+const b = [0, 0, 1];
+const [x1, x2, lam] = solve3x3(M, b);
+console.log(`x1=${x1}, x2=${x2}, lam=${lam}`);
+// => x1=0.5, x2=0.5, lam=1</code></pre></div>
+    <div class="ct-panel" data-tab="lag-c"><pre><code>#include &lt;stdio.h&gt;
+
+// Gaussian elimination for 3x3 system
+void solve3x3(double A[3][4], double *x) {
+    for (int col = 0; col &lt; 3; col++) {
+        int pivot = col;
+        for (int r = col+1; r &lt; 3; r++)
+            if (A[r][col]*A[r][col] &gt; A[pivot][col]*A[pivot][col]) pivot = r;
+        double tmp[4];
+        for (int k=0;k&lt;4;k++){tmp[k]=A[col][k];A[col][k]=A[pivot][k];A[pivot][k]=tmp[k];}
+        for (int r = col+1; r &lt; 3; r++) {
+            double f = A[r][col] / A[col][col];
+            for (int k = col; k &lt; 4; k++) A[r][k] -= f * A[col][k];
+        }
+    }
+    for (int i = 2; i &gt;= 0; i--) {
+        x[i] = A[i][3];
+        for (int j = i+1; j &lt; 3; j++) x[i] -= A[i][j]*x[j];
+        x[i] /= A[i][i];
+    }
+}
+
+int main(void) {
+    // KKT: [2,0,-1; 0,2,-1; 1,1,0]*[x1;x2;lam]=[0;0;1]
+    double A[3][4] = {{2,0,-1,0},{0,2,-1,0},{1,1,0,1}};
+    double z[3];
+    solve3x3(A, z);
+    printf("x1=%.4f  x2=%.4f  lam=%.4f\n", z[0], z[1], z[2]);
+    return 0;
+}</code></pre></div>
+    <div class="ct-panel" data-tab="lag-cpp"><pre><code>#include &lt;iostream&gt;
+#include &lt;array&gt;
+#include &lt;cmath&gt;
+
+// Solve 3x3 via Gaussian elimination
+std::array&lt;double,3&gt; solve3x3(std::array&lt;std::array&lt;double,4&gt;,3&gt; A) {
+    for (int col = 0; col &lt; 3; col++) {
+        int pivot = col;
+        for (int r = col+1; r &lt; 3; r++)
+            if (std::abs(A[r][col]) &gt; std::abs(A[pivot][col])) pivot = r;
+        std::swap(A[col], A[pivot]);
+        for (int r = col+1; r &lt; 3; r++) {
+            double f = A[r][col] / A[col][col];
+            for (int k = col; k &lt; 4; k++) A[r][k] -= f * A[col][k];
+        }
+    }
+    std::array&lt;double,3&gt; x{};
+    for (int i = 2; i &gt;= 0; i--) {
+        x[i] = A[i][3];
+        for (int j = i+1; j &lt; 3; j++) x[i] -= A[i][j]*x[j];
+        x[i] /= A[i][i];
+    }
+    return x;
+}
+
+int main() {
+    auto z = solve3x3({{{2,0,-1,0},{0,2,-1,0},{1,1,0,1}}});
+    std::cout &lt;&lt; "x1=" &lt;&lt; z[0] &lt;&lt; "  x2=" &lt;&lt; z[1] &lt;&lt; "  lam=" &lt;&lt; z[2] &lt;&lt; "\n";
+}</code></pre></div>
+    <div class="ct-panel" data-tab="lag-java"><pre><code>public class LagrangeKKT {
+    // Gaussian elimination for Ax=b, A is n x n+1 augmented
+    static double[] gaussElim(double[][] A) {
+        int n = A.length;
+        for (int col = 0; col &lt; n; col++) {
+            int pivot = col;
+            for (int r = col+1; r &lt; n; r++)
+                if (Math.abs(A[r][col]) &gt; Math.abs(A[pivot][col])) pivot = r;
+            double[] tmp = A[col]; A[col] = A[pivot]; A[pivot] = tmp;
+            for (int r = col+1; r &lt; n; r++) {
+                double f = A[r][col] / A[col][col];
+                for (int k = col; k &lt;= n; k++) A[r][k] -= f * A[col][k];
+            }
+        }
+        double[] x = new double[n];
+        for (int i = n-1; i &gt;= 0; i--) {
+            x[i] = A[i][n];
+            for (int j = i+1; j &lt; n; j++) x[i] -= A[i][j]*x[j];
+            x[i] /= A[i][i];
+        }
+        return x;
+    }
+
+    public static void main(String[] args) {
+        double[][] A = {{2,0,-1,0},{0,2,-1,0},{1,1,0,1}};
+        double[] z = gaussElim(A);
+        System.out.printf("x1=%.4f  x2=%.4f  lam=%.4f%n", z[0], z[1], z[2]);
+    }
+}</code></pre></div>
+    <div class="ct-panel" data-tab="lag-go"><pre><code>package main
+
+import (
+	"fmt"
+	"math"
+)
+
+// Gaussian elimination: A is [n][n+1] augmented matrix
+func gaussElim(A [3][4]float64) [3]float64 {
+	for col := 0; col &lt; 3; col++ {
+		pivot := col
+		for r := col + 1; r &lt; 3; r++ {
+			if math.Abs(A[r][col]) &gt; math.Abs(A[pivot][col]) { pivot = r }
+		}
+		A[col], A[pivot] = A[pivot], A[col]
+		for r := col + 1; r &lt; 3; r++ {
+			f := A[r][col] / A[col][col]
+			for k := col; k &lt; 4; k++ { A[r][k] -= f * A[col][k] }
+		}
+	}
+	var x [3]float64
+	for i := 2; i &gt;= 0; i-- {
+		x[i] = A[i][3]
+		for j := i + 1; j &lt; 3; j++ { x[i] -= A[i][j] * x[j] }
+		x[i] /= A[i][i]
+	}
+	return x
+}
+
+func main() {
+	A := [3][4]float64{{2,0,-1,0},{0,2,-1,0},{1,1,0,1}}
+	z := gaussElim(A)
+	fmt.Printf("x1=%.4f  x2=%.4f  lam=%.4f\n", z[0], z[1], z[2])
+}</code></pre></div>
+  </div>
+</details>
+
     <!-- ========================================================== -->
     <h2 id="kkt">11. KKT conditions — Lagrange for inequalities</h2>
 
@@ -602,6 +2149,281 @@
 
     <p>You've already seen KKT, even if you didn't recognize it. The dual formulation of a Support Vector Machine drops out of the KKT conditions. The "active set" methods used in industrial QP solvers are KKT-driven. The "shadow prices" in linear programming are KKT multipliers. Once you spot the pattern, every constrained problem looks like a KKT problem.</p>
 
+    <details class="algo-code">
+  <summary>Source — KKT Conditions</summary>
+  <div class="code-tabs">
+    <div class="ct-header">
+      <button class="ct-tab active" data-tab="kkt-pseudo">Pseudocode</button>
+      <button class="ct-tab" data-tab="kkt-py">Python</button>
+      <button class="ct-tab" data-tab="kkt-js">JavaScript</button>
+      <button class="ct-tab" data-tab="kkt-c">C</button>
+      <button class="ct-tab" data-tab="kkt-cpp">C++</button>
+      <button class="ct-tab" data-tab="kkt-java">Java</button>
+      <button class="ct-tab" data-tab="kkt-go">Go</button>
+    </div>
+    <div class="ct-panel active" data-tab="kkt-pseudo"><pre><code>// Verify KKT conditions for a solved QP:
+//   minimize   (1/2) x^T Q x + c^T x
+//   subject to  A x &lt;= b,  x &gt;= 0
+//
+// KKT conditions:
+//   1. Stationarity:    Q*x + c + A^T*mu = 0
+//   2. Primal feas.:    A*x &lt;= b,  x &gt;= 0
+//   3. Dual feas.:      mu &gt;= 0
+//   4. Comp. slackness: mu_j * (A_j^T x - b_j) = 0  for each j
+
+function verify_kkt(Q, c, A, b, x, mu, tol):
+    stat    = norm(Q*x + c + A^T*mu) &lt; tol
+    prim_ub = all(A*x &lt;= b + tol)
+    prim_nn = all(x &gt;= -tol)
+    dual    = all(mu &gt;= -tol)
+    slack   = all(abs(mu * (A*x - b)) &lt; tol)
+    return stat and prim_ub and prim_nn and dual and slack</code></pre></div>
+    <div class="ct-panel" data-tab="kkt-py"><pre><code>import numpy as np
+
+def verify_kkt(Q, c, A, b, x, mu, tol=1e-6):
+    """
+    Verify KKT conditions for:
+        min  (1/2) x^T Q x + c^T x
+        s.t. A x &lt;= b
+
+    Q : (n,n) PSD matrix
+    c : (n,) cost vector
+    A : (m,n) constraint matrix
+    b : (m,) RHS vector
+    x : (n,) primal solution
+    mu: (m,) dual variables (KKT multipliers for inequalities)
+    """
+    # 1. Stationarity: grad_x L = Q x + c + A^T mu = 0
+    stationarity = np.linalg.norm(Q @ x + c + A.T @ mu) &lt; tol
+
+    # 2. Primal feasibility: A x &lt;= b
+    prim_feas = np.all(A @ x &lt;= b + tol)
+
+    # 3. Dual feasibility: mu &gt;= 0
+    dual_feas = np.all(mu &gt;= -tol)
+
+    # 4. Complementary slackness: mu_j * (A_j x - b_j) = 0
+    slack = A @ x - b              # should be &lt;= 0
+    comp_slack = np.all(np.abs(mu * slack) &lt; tol)
+
+    ok = stationarity and prim_feas and dual_feas and comp_slack
+    print(f"Stationarity:        {stationarity}")
+    print(f"Primal feasibility:  {prim_feas}")
+    print(f"Dual feasibility:    {dual_feas}")
+    print(f"Complementary slack: {comp_slack}")
+    print(f"KKT satisfied:       {ok}")
+    return ok
+
+# Example: min x1^2 + x2^2  s.t. x1 + x2 &lt;= 1, x1,x2 &gt;= 0
+# Solved: x* = [0.5, 0.5] (constraint active), mu* = [1.0]
+Q  = np.eye(2) * 2          # gradient of (1/2) x^T (2I) x = x
+c  = np.zeros(2)
+A  = np.array([[ 1.,  1.],  # x1 + x2 &lt;= 1
+               [-1.,  0.],  # -x1 &lt;= 0  (i.e. x1 &gt;= 0)
+               [ 0., -1.]]) # -x2 &lt;= 0
+b  = np.array([1., 0., 0.])
+x  = np.array([0.5, 0.5])
+mu = np.array([1.0, 0.0, 0.0])  # only first constraint active
+
+verify_kkt(Q, c, A, b, x, mu)</code></pre></div>
+    <div class="ct-panel" data-tab="kkt-js"><pre><code>// Verify KKT for min x1^2+x2^2 s.t. x1+x2 &lt;= 1, x1,x2 &gt;= 0
+// x* = [0.5, 0.5], mu* = [1, 0, 0]
+
+function dot(a, b)    { return a.reduce((s,ai,i) =&gt; s + ai*b[i], 0); }
+function norm(v)      { return Math.sqrt(dot(v, v)); }
+function matVec(M, v) { return M.map(row =&gt; dot(row, v)); }
+function transpose(M) { return M[0].map((_, j) =&gt; M.map(row =&gt; row[j])); }
+function vecAdd(a, b) { return a.map((ai, i) =&gt; ai + b[i]); }
+
+function verifyKKT(Q, c, A, b, x, mu, tol=1e-6) {
+  const n = x.length, m = mu.length;
+  const Qx = matVec(Q, x);
+  const At = transpose(A);
+  const Atmu = matVec(At, mu);
+  const stat_vec = vecAdd(vecAdd(Qx, c), Atmu);
+  const stationarity = norm(stat_vec) &lt; tol;
+
+  const Ax = matVec(A, x);
+  const primFeas = Ax.every((v, i) =&gt; v &lt;= b[i] + tol);
+  const dualFeas = mu.every(m =&gt; m &gt;= -tol);
+  const compSlack = Ax.every((v, j) =&gt; Math.abs(mu[j] * (v - b[j])) &lt; tol);
+
+  console.log({stationarity, primFeas, dualFeas, compSlack,
+               "KKT satisfied": stationarity &amp;&amp; primFeas &amp;&amp; dualFeas &amp;&amp; compSlack});
+}
+
+const Q  = [[2,0],[0,2]];
+const c  = [0, 0];
+const A  = [[1,1],[-1,0],[0,-1]];
+const b  = [1, 0, 0];
+const x  = [0.5, 0.5];
+const mu = [1.0, 0.0, 0.0];
+verifyKKT(Q, c, A, b, x, mu);</code></pre></div>
+    <div class="ct-panel" data-tab="kkt-c"><pre><code>#include &lt;stdio.h&gt;
+#include &lt;math.h&gt;
+
+#define N 2
+#define M 3
+
+// Q=2I, c=0, A=[[1,1],[-1,0],[0,-1]], b=[1,0,0]
+// x=[0.5,0.5], mu=[1,0,0]
+
+int main(void) {
+    double Q[N][N] = {{2,0},{0,2}};
+    double c[N]    = {0, 0};
+    double A[M][N] = {{1,1},{-1,0},{0,-1}};
+    double b[M]    = {1, 0, 0};
+    double x[N]    = {0.5, 0.5};
+    double mu[M]   = {1.0, 0.0, 0.0};
+    double tol     = 1e-6;
+
+    // 1. Stationarity: Q*x + c + A^T*mu
+    double stat[N] = {0};
+    for (int i = 0; i &lt; N; i++) {
+        for (int j = 0; j &lt; N; j++) stat[i] += Q[i][j]*x[j];
+        stat[i] += c[i];
+        for (int j = 0; j &lt; M; j++) stat[i] += A[j][i]*mu[j];
+    }
+    double sn = sqrt(stat[0]*stat[0]+stat[1]*stat[1]);
+    printf("Stationarity norm: %.2e  ok=%d\n", sn, sn &lt; tol);
+
+    // 2. Primal feas: A*x &lt;= b
+    int pf = 1;
+    for (int j = 0; j &lt; M; j++) {
+        double v = 0; for (int i=0;i&lt;N;i++) v+=A[j][i]*x[i];
+        if (v &gt; b[j]+tol) pf=0;
+    }
+    printf("Primal feasible: %d\n", pf);
+
+    // 3. Dual feas + comp slack
+    int df=1, cs=1;
+    for (int j=0;j&lt;M;j++) {
+        double v=0; for(int i=0;i&lt;N;i++) v+=A[j][i]*x[i];
+        if (mu[j] &lt; -tol) df=0;
+        if (fabs(mu[j]*(v-b[j])) &gt; tol) cs=0;
+    }
+    printf("Dual feasible: %d, Comp slack: %d\n", df, cs);
+    return 0;
+}</code></pre></div>
+    <div class="ct-panel" data-tab="kkt-cpp"><pre><code>#include &lt;iostream&gt;
+#include &lt;vector&gt;
+#include &lt;cmath&gt;
+#include &lt;numeric&gt;
+
+using Vec = std::vector&lt;double&gt;;
+using Mat = std::vector&lt;Vec&gt;;
+
+double dot(const Vec&amp; a, const Vec&amp; b) {
+    return std::inner_product(a.begin(), a.end(), b.begin(), 0.0);
+}
+
+bool verifyKKT(const Mat&amp; Q, const Vec&amp; c,
+               const Mat&amp; A, const Vec&amp; b,
+               const Vec&amp; x, const Vec&amp; mu, double tol=1e-6) {
+    int n=x.size(), m=mu.size();
+    // Stationarity
+    double sn=0;
+    for (int i=0;i&lt;n;i++) {
+        double s=c[i];
+        for (int j=0;j&lt;n;j++) s+=Q[i][j]*x[j];
+        for (int j=0;j&lt;m;j++) s+=A[j][i]*mu[j];
+        sn+=s*s;
+    }
+    bool stat = std::sqrt(sn) &lt; tol;
+    bool pf=true, df=true, cs=true;
+    for (int j=0;j&lt;m;j++){
+        double v=dot(A[j],x);
+        if (v &gt; b[j]+tol) pf=false;
+        if (mu[j] &lt; -tol) df=false;
+        if (std::abs(mu[j]*(v-b[j])) &gt; tol) cs=false;
+    }
+    std::cout&lt;&lt;"Stationarity:"&lt;&lt;stat&lt;&lt;" Primal:"&lt;&lt;pf
+              &lt;&lt;" Dual:"&lt;&lt;df&lt;&lt;" CompSlack:"&lt;&lt;cs&lt;&lt;"\n";
+    return stat&amp;&amp;pf&amp;&amp;df&amp;&amp;cs;
+}
+
+int main() {
+    Mat Q={{2,0},{0,2}};
+    Vec c={0,0};
+    Mat A={{1,1},{-1,0},{0,-1}};
+    Vec b={1,0,0}, x={0.5,0.5}, mu={1,0,0};
+    verifyKKT(Q,c,A,b,x,mu);
+}</code></pre></div>
+    <div class="ct-panel" data-tab="kkt-java"><pre><code>public class KKTVerify {
+    static double dot(double[] a, double[] b) {
+        double s=0; for(int i=0;i&lt;a.length;i++) s+=a[i]*b[i]; return s;
+    }
+    static boolean verify(double[][] Q, double[] c, double[][] A, double[] b,
+                          double[] x, double[] mu, double tol) {
+        int n=x.length, m=mu.length;
+        double sn=0;
+        for(int i=0;i&lt;n;i++){
+            double s=c[i];
+            for(int j=0;j&lt;n;j++) s+=Q[i][j]*x[j];
+            for(int j=0;j&lt;m;j++) s+=A[j][i]*mu[j];
+            sn+=s*s;
+        }
+        boolean stat = Math.sqrt(sn) &lt; tol;
+        boolean pf=true, df=true, cs=true;
+        for(int j=0;j&lt;m;j++){
+            double v=dot(A[j],x);
+            if(v&gt;b[j]+tol) pf=false;
+            if(mu[j]&lt;-tol) df=false;
+            if(Math.abs(mu[j]*(v-b[j]))&gt;tol) cs=false;
+        }
+        System.out.printf("stat=%b prim=%b dual=%b compSlack=%b%n",stat,pf,df,cs);
+        return stat&amp;&amp;pf&amp;&amp;df&amp;&amp;cs;
+    }
+    public static void main(String[] a){
+        verify(new double[][]{{2,0},{0,2}}, new double[]{0,0},
+               new double[][]{{1,1},{-1,0},{0,-1}}, new double[]{1,0,0},
+               new double[]{0.5,0.5}, new double[]{1,0,0}, 1e-6);
+    }
+}</code></pre></div>
+    <div class="ct-panel" data-tab="kkt-go"><pre><code>package main
+
+import (
+	"fmt"
+	"math"
+)
+
+func dot(a, b []float64) float64 {
+	s := 0.0; for i := range a { s += a[i]*b[i] }; return s
+}
+
+func verifyKKT(Q, A [][]float64, c, b, x, mu []float64, tol float64) bool {
+	n, m := len(x), len(mu)
+	sn := 0.0
+	for i := 0; i &lt; n; i++ {
+		s := c[i]
+		for j := 0; j &lt; n; j++ { s += Q[i][j] * x[j] }
+		for j := 0; j &lt; m; j++ { s += A[j][i] * mu[j] }
+		sn += s * s
+	}
+	stat := math.Sqrt(sn) &lt; tol
+	pf, df, cs := true, true, true
+	for j := 0; j &lt; m; j++ {
+		v := dot(A[j], x)
+		if v &gt; b[j]+tol { pf = false }
+		if mu[j] &lt; -tol  { df = false }
+		if math.Abs(mu[j]*(v-b[j])) &gt; tol { cs = false }
+	}
+	fmt.Printf("stat=%v prim=%v dual=%v compSlack=%v\n", stat, pf, df, cs)
+	return stat &amp;&amp; pf &amp;&amp; df &amp;&amp; cs
+}
+
+func main() {
+	Q  := [][]float64{{2,0},{0,2}}
+	c  := []float64{0, 0}
+	A  := [][]float64{{1,1},{-1,0},{0,-1}}
+	b  := []float64{1, 0, 0}
+	x  := []float64{0.5, 0.5}
+	mu := []float64{1, 0, 0}
+	verifyKKT(Q, A, c, b, x, mu, 1e-6)
+}</code></pre></div>
+  </div>
+</details>
+
     <div class="problem-set" data-topic="opt-constrained"></div>
 
     <!-- ========================================================== -->
@@ -649,6 +2471,297 @@
       <p class="mg-why"><strong>Why duals matter.</strong> Strong duality for LP says the optimal primal and dual values are equal. So the dual gives you a free certificate: any feasible $\mathbf{y}$ gives a lower bound on the primal optimum. Stop the simplex method anywhere and the dual variables tell you how good your current solution is. This is the basis of branch-and-bound for integer programs.</p>
     </div>
 
+    <details class="algo-code">
+  <summary>Source — Linear Program (Simplex)</summary>
+  <div class="code-tabs">
+    <div class="ct-header">
+      <button class="ct-tab active" data-tab="lp-pseudo">Pseudocode</button>
+      <button class="ct-tab" data-tab="lp-py">Python</button>
+      <button class="ct-tab" data-tab="lp-js">JavaScript</button>
+      <button class="ct-tab" data-tab="lp-c">C</button>
+      <button class="ct-tab" data-tab="lp-cpp">C++</button>
+      <button class="ct-tab" data-tab="lp-java">Java</button>
+      <button class="ct-tab" data-tab="lp-go">Go</button>
+    </div>
+    <div class="ct-panel active" data-tab="lp-pseudo"><pre><code>// 2-variable LP (maximize c^T x  s.t. Ax &lt;= b, x &gt;= 0)
+// Simplex: walk vertices of feasible polytope toward better objective.
+
+// EXAMPLE:
+//   max  x1 + x2
+//   s.t. x1 + 2*x2 &lt;= 4
+//        3*x1 +  x2 &lt;= 6
+//        x1, x2 &gt;= 0
+//
+// Vertices: (0,0), (2,0), (8/5, 6/5), (0,2)
+// Objective values: 0, 2, 14/5, 2
+// Optimum: x* = (8/5, 6/5), obj* = 14/5 = 2.8
+
+// Generic simplex sketch (standard form):
+//   Maintain basis B (indices of basic variables)
+//   while any reduced cost c_j - c_B^T B^-1 A_j &lt; 0:
+//       pick entering variable j (most negative reduced cost)
+//       compute direction, find leaving variable (minimum ratio test)
+//       pivot: swap entering/leaving in B
+//   return x (basic feasible solution)</code></pre></div>
+    <div class="ct-panel" data-tab="lp-py"><pre><code>from scipy.optimize import linprog
+import numpy as np
+
+# ---- Diet problem from section §12 ----
+# Minimize cost of diet meeting nutritional minimums.
+# Foods: bread, milk, cheese, potato, fish, yogurt
+c = np.array([2.0, 3.5, 8.0, 1.5, 11.0, 3.0])   # cost per serving
+
+# Nutrition per serving: (calories, protein_g, calcium_mg)
+nutrition = np.array([
+    [90,  4,   15],   # bread
+    [120, 8,   300],  # milk
+    [110, 7,   200],  # cheese
+    [160, 3,   10],   # potato
+    [200, 22,  10],   # fish
+    [150, 10,  450],  # yogurt
+])
+
+# Want at least: 2000 cal, 55g protein, 800mg calcium
+# linprog expects A_ub @ x &lt;= b_ub, so negate:
+A_ub = -nutrition.T
+b_ub = -np.array([2000.0, 55.0, 800.0])
+
+res = linprog(c, A_ub=A_ub, b_ub=b_ub, method="highs")
+print("Servings:", res.x.round(3))
+print("Daily cost: $", round(res.fun, 2))
+# Shadow prices = KKT multipliers (how much cost changes per unit nutrient)
+print("Shadow prices:", res.ineqlin.marginals.round(4))
+
+# ---- Simple 2-variable LP ----
+# max x1 + x2  s.t.  x1+2x2&lt;=4,  3x1+x2&lt;=6
+# (linprog minimizes, so negate objective)
+c2   = [-1.0, -1.0]
+A_ub2 = [[1, 2], [3, 1]]
+b_ub2 = [4.0, 6.0]
+res2  = linprog(c2, A_ub=A_ub2, b_ub=b_ub2, bounds=[(0,None),(0,None)])
+print("2-var LP: x =", res2.x.round(4), "  obj =", -round(res2.fun, 4))</code></pre></div>
+    <div class="ct-panel" data-tab="lp-js"><pre><code>// 2-variable LP solved by enumerating vertices (feasible for tiny problems)
+// max x1 + x2  s.t. x1+2*x2 &lt;= 4, 3*x1+x2 &lt;= 6, x1,x2 &gt;= 0
+
+function lp2var(c, A, b) {
+  // Enumerate intersections of constraint pairs (and axes)
+  const n = A.length;
+  let best = null, bestVal = -Infinity;
+
+  const checkPt = (x1, x2) =&gt; {
+    if (x1 &lt; -1e-9 || x2 &lt; -1e-9) return;
+    for (let i = 0; i &lt; n; i++)
+      if (A[i][0]*x1 + A[i][1]*x2 &gt; b[i] + 1e-9) return;
+    const val = c[0]*x1 + c[1]*x2;
+    if (val &gt; bestVal) { bestVal = val; best = [x1, x2]; }
+  };
+
+  checkPt(0, 0);
+  // Axes
+  for (let i = 0; i &lt; n; i++) {
+    if (Math.abs(A[i][0]) &gt; 1e-9) checkPt(b[i]/A[i][0], 0);
+    if (Math.abs(A[i][1]) &gt; 1e-9) checkPt(0, b[i]/A[i][1]);
+  }
+  // Constraint-constraint intersections
+  for (let i = 0; i &lt; n; i++)
+    for (let j = i+1; j &lt; n; j++) {
+      const det = A[i][0]*A[j][1] - A[i][1]*A[j][0];
+      if (Math.abs(det) &lt; 1e-9) continue;
+      const x1 = (b[i]*A[j][1] - b[j]*A[i][1]) / det;
+      const x2 = (A[i][0]*b[j] - A[j][0]*b[i]) / det;
+      checkPt(x1, x2);
+    }
+  return { x: best, obj: bestVal };
+}
+
+const c = [1, 1];
+const A = [[1, 2], [3, 1]];
+const b = [4, 6];
+const { x, obj } = lp2var(c, A, b);
+console.log("x =", x.map(v =&gt; v.toFixed(4)), "  obj =", obj.toFixed(4));
+// => x = [1.6, 1.2]   obj = 2.8</code></pre></div>
+    <div class="ct-panel" data-tab="lp-c"><pre><code>#include &lt;stdio.h&gt;
+#include &lt;math.h&gt;
+#include &lt;float.h&gt;
+
+#define NCON 2
+
+// max x1+x2 s.t. x1+2x2&lt;=4, 3x1+x2&lt;=6, x1,x2&gt;=0
+// Enumerate vertices
+
+static double A[NCON][2] = {{1,2},{3,1}};
+static double b[NCON]    = {4, 6};
+
+int feasible(double x1, double x2) {
+    if (x1 &lt; -1e-9 || x2 &lt; -1e-9) return 0;
+    for (int i = 0; i &lt; NCON; i++)
+        if (A[i][0]*x1 + A[i][1]*x2 &gt; b[i] + 1e-9) return 0;
+    return 1;
+}
+
+void check(double x1, double x2, double *best, double *bx, double *by) {
+    if (!feasible(x1, x2)) return;
+    double v = x1 + x2;
+    if (v &gt; *best) { *best = v; *bx = x1; *by = x2; }
+}
+
+int main(void) {
+    double best = -DBL_MAX, bx = 0, by = 0;
+    check(0, 0, &amp;best, &amp;bx, &amp;by);
+    for (int i = 0; i &lt; NCON; i++) {
+        if (fabs(A[i][0]) &gt; 1e-9) check(b[i]/A[i][0], 0,            &amp;best, &amp;bx, &amp;by);
+        if (fabs(A[i][1]) &gt; 1e-9) check(0,             b[i]/A[i][1], &amp;best, &amp;bx, &amp;by);
+    }
+    for (int i = 0; i &lt; NCON; i++)
+        for (int j = i+1; j &lt; NCON; j++) {
+            double det = A[i][0]*A[j][1] - A[i][1]*A[j][0];
+            if (fabs(det) &lt; 1e-9) continue;
+            double x1 = (b[i]*A[j][1] - b[j]*A[i][1]) / det;
+            double x2 = (A[i][0]*b[j] - A[j][0]*b[i]) / det;
+            check(x1, x2, &amp;best, &amp;bx, &amp;by);
+        }
+    printf("x = [%.4f, %.4f]  obj = %.4f\n", bx, by, best);
+    return 0;
+}</code></pre></div>
+    <div class="ct-panel" data-tab="lp-cpp"><pre><code>#include &lt;iostream&gt;
+#include &lt;vector&gt;
+#include &lt;limits&gt;
+#include &lt;cmath&gt;
+
+// max x1+x2 s.t. x1+2x2&lt;=4, 3x1+x2&lt;=6, x1,x2&gt;=0
+// Enumerate vertices
+
+struct LP2 {
+    std::vector&lt;std::array&lt;double,2&gt;&gt; A;
+    std::vector&lt;double&gt; b;
+
+    bool feasible(double x1, double x2) const {
+        if (x1 &lt; -1e-9 || x2 &lt; -1e-9) return false;
+        for (size_t i = 0; i &lt; A.size(); i++)
+            if (A[i][0]*x1+A[i][1]*x2 &gt; b[i]+1e-9) return false;
+        return true;
+    }
+
+    std::pair&lt;double,double&gt; solve() const {
+        double best=-std::numeric_limits&lt;double&gt;::infinity(), bx=0, by=0;
+        auto chk = [&amp;](double x1,double x2){
+            if (!feasible(x1,x2)) return;
+            if (x1+x2 &gt; best) { best=x1+x2; bx=x1; by=x2; }
+        };
+        chk(0,0);
+        int n=A.size();
+        for(int i=0;i&lt;n;i++){
+            if(std::abs(A[i][0])&gt;1e-9) chk(b[i]/A[i][0],0);
+            if(std::abs(A[i][1])&gt;1e-9) chk(0,b[i]/A[i][1]);
+        }
+        for(int i=0;i&lt;n;i++) for(int j=i+1;j&lt;n;j++){
+            double det=A[i][0]*A[j][1]-A[i][1]*A[j][0];
+            if(std::abs(det)&lt;1e-9) continue;
+            double x1=(b[i]*A[j][1]-b[j]*A[i][1])/det;
+            double x2=(A[i][0]*b[j]-A[j][0]*b[i])/det;
+            chk(x1,x2);
+        }
+        return {bx, by};
+    }
+};
+
+int main() {
+    LP2 lp{ {{1,2},{3,1}}, {4,6} };
+    auto [x1,x2] = lp.solve();
+    std::cout &lt;&lt; "x=[" &lt;&lt; x1 &lt;&lt; "," &lt;&lt; x2 &lt;&lt; "]  obj=" &lt;&lt; x1+x2 &lt;&lt; "\n";
+}</code></pre></div>
+    <div class="ct-panel" data-tab="lp-java"><pre><code>public class LP2Var {
+    static double[][] A = {{1,2},{3,1}};
+    static double[] b   = {4, 6};
+
+    static boolean feasible(double x1, double x2) {
+        if (x1 &lt; -1e-9 || x2 &lt; -1e-9) return false;
+        for (int i = 0; i &lt; A.length; i++)
+            if (A[i][0]*x1 + A[i][1]*x2 &gt; b[i]+1e-9) return false;
+        return true;
+    }
+
+    static double[] solve() {
+        double best = Double.NEGATIVE_INFINITY;
+        double[] sol = {0, 0};
+        double[][] cands = {{0,0}};
+        // axis intercepts
+        for (int i = 0; i &lt; A.length; i++) {
+            if (Math.abs(A[i][0]) &gt; 1e-9) eval(new double[]{b[i]/A[i][0], 0}, sol);
+            if (Math.abs(A[i][1]) &gt; 1e-9) eval(new double[]{0, b[i]/A[i][1]}, sol);
+        }
+        // pairwise intersections
+        for (int i=0;i&lt;A.length;i++) for(int j=i+1;j&lt;A.length;j++){
+            double det=A[i][0]*A[j][1]-A[i][1]*A[j][0];
+            if(Math.abs(det)&lt;1e-9) continue;
+            double x1=(b[i]*A[j][1]-b[j]*A[i][1])/det;
+            double x2=(A[i][0]*b[j]-A[j][0]*b[i])/det;
+            eval(new double[]{x1,x2}, sol);
+        }
+        return sol;
+    }
+
+    static double[] bestSol = {0, 0};
+    static double bestVal = Double.NEGATIVE_INFINITY;
+    static void eval(double[] x, double[] s){
+        if (!feasible(x[0],x[1])) return;
+        double v=x[0]+x[1];
+        if(v&gt;bestVal){bestVal=v;bestSol[0]=x[0];bestSol[1]=x[1];}
+    }
+
+    public static void main(String[] args) {
+        solve();
+        System.out.printf("x=[%.4f,%.4f]  obj=%.4f%n",bestSol[0],bestSol[1],bestVal);
+    }
+}</code></pre></div>
+    <div class="ct-panel" data-tab="lp-go"><pre><code>package main
+
+import (
+	"fmt"
+	"math"
+)
+
+var A = [2][2]float64{{1, 2}, {3, 1}}
+var b = [2]float64{4, 6}
+
+func feasible(x1, x2 float64) bool {
+	if x1 &lt; -1e-9 || x2 &lt; -1e-9 { return false }
+	for i := range A {
+		if A[i][0]*x1+A[i][1]*x2 &gt; b[i]+1e-9 { return false }
+	}
+	return true
+}
+
+func solveLp() (float64, float64) {
+	best, bx, by := math.Inf(-1), 0.0, 0.0
+	chk := func(x1, x2 float64) {
+		if !feasible(x1, x2) { return }
+		if v := x1 + x2; v &gt; best { best = v; bx = x1; by = x2 }
+	}
+	chk(0, 0)
+	for i := range A {
+		if math.Abs(A[i][0]) &gt; 1e-9 { chk(b[i]/A[i][0], 0) }
+		if math.Abs(A[i][1]) &gt; 1e-9 { chk(0, b[i]/A[i][1]) }
+	}
+	for i := range A {
+		for j := i + 1; j &lt; len(A); j++ {
+			det := A[i][0]*A[j][1] - A[i][1]*A[j][0]
+			if math.Abs(det) &lt; 1e-9 { continue }
+			x1 := (b[i]*A[j][1] - b[j]*A[i][1]) / det
+			x2 := (A[i][0]*b[j] - A[j][0]*b[i]) / det
+			chk(x1, x2)
+		}
+	}
+	return bx, by
+}
+
+func main() {
+	x1, x2 := solveLp()
+	fmt.Printf("x=[%.4f,%.4f]  obj=%.4f\n", x1, x2, x1+x2)
+}</code></pre></div>
+  </div>
+</details>
+
     <!-- ========================================================== -->
     <h2 id="ip">13. Integer programming — LP gets hard</h2>
 
@@ -674,6 +2787,311 @@
     </ul>
 
     <p>The combination is called <em>branch-and-cut</em>, and it's why a Boeing scheduling problem with 50 million variables and a billion constraints can be solved overnight.</p>
+
+    <details class="algo-code">
+  <summary>Source — Integer Program (Branch &amp; Bound)</summary>
+  <div class="code-tabs">
+    <div class="ct-header">
+      <button class="ct-tab active" data-tab="ip-pseudo">Pseudocode</button>
+      <button class="ct-tab" data-tab="ip-py">Python</button>
+      <button class="ct-tab" data-tab="ip-js">JavaScript</button>
+      <button class="ct-tab" data-tab="ip-c">C</button>
+      <button class="ct-tab" data-tab="ip-cpp">C++</button>
+      <button class="ct-tab" data-tab="ip-java">Java</button>
+      <button class="ct-tab" data-tab="ip-go">Go</button>
+    </div>
+    <div class="ct-panel active" data-tab="ip-pseudo"><pre><code>// 0/1 Knapsack via branch-and-bound
+// n items with weights w[i] and values v[i], capacity W
+// Maximize sum of v[i]*x[i]  s.t. sum of w[i]*x[i] &lt;= W, x[i] in {0,1}
+
+global best_value = 0
+global best_solution = []
+
+function branch_and_bound(items, W, index, current_weight, current_value, taken):
+    if index == n:
+        if current_value &gt; best_value:
+            best_value = current_value
+            best_solution = copy(taken)
+        return
+
+    // Pruning: upper bound via fractional relaxation of remaining items
+    ub = current_value + fractional_bound(items[index:], W - current_weight)
+    if ub &lt;= best_value:
+        return        // prune this branch
+
+    // Branch: do NOT take item index
+    branch_and_bound(items, W, index+1, current_weight, current_value, taken)
+
+    // Branch: take item index (if it fits)
+    if current_weight + w[index] &lt;= W:
+        taken[index] = 1
+        branch_and_bound(items, W, index+1,
+                         current_weight + w[index],
+                         current_value  + v[index], taken)
+        taken[index] = 0</code></pre></div>
+    <div class="ct-panel" data-tab="ip-py"><pre><code>def knapsack_bb(weights, values, W):
+    """
+    0/1 Knapsack via branch-and-bound.
+    Returns (best_value, selected_indices).
+    Items should be sorted by value/weight ratio (descending) for tighter bounds.
+    """
+    n = len(weights)
+    # Sort by density for tighter upper bounds
+    order = sorted(range(n), key=lambda i: values[i]/weights[i], reverse=True)
+    w = [weights[i] for i in order]
+    v = [values[i]  for i in order]
+
+    best = [0]    # best value found
+    taken_best = [[]]
+
+    def upper_bound(idx, cap, val):
+        """Fractional knapsack bound on remaining items."""
+        for i in range(idx, n):
+            if cap &lt;= 0: break
+            if w[i] &lt;= cap:
+                val += v[i]; cap -= w[i]
+            else:
+                val += v[i] * (cap / w[i]); break
+        return val
+
+    def bb(idx, cap, val, taken):
+        if idx == n or cap == 0:
+            if val &gt; best[0]:
+                best[0] = val
+                taken_best[0] = taken[:]
+            return
+        if upper_bound(idx, cap, val) &lt;= best[0]:
+            return   # prune
+        # skip item idx
+        bb(idx + 1, cap, val, taken)
+        # take item idx
+        if w[idx] &lt;= cap:
+            taken.append(order[idx])
+            bb(idx + 1, cap - w[idx], val + v[idx], taken)
+            taken.pop()
+
+    bb(0, W, 0, [])
+    return best[0], sorted(taken_best[0])
+
+weights = [2, 3, 4, 5, 1]
+values  = [3, 4, 5, 8, 2]
+W       = 7
+val, sel = knapsack_bb(weights, values, W)
+print(f"Best value: {val}, items: {sel}")
+# => Best value: 13, items: [2, 3]  (0-indexed)</code></pre></div>
+    <div class="ct-panel" data-tab="ip-js"><pre><code>function knapsackBB(weights, values, W) {
+  const n = weights.length;
+  // Sort by density
+  const order = Array.from({length:n},(_,i)=&gt;i)
+    .sort((a,b) =&gt; values[b]/weights[b] - values[a]/weights[a]);
+  const w = order.map(i=&gt;weights[i]);
+  const v = order.map(i=&gt;values[i]);
+
+  let best = 0, bestTaken = [];
+
+  function ub(idx, cap, val) {
+    for (let i=idx; i&lt;n &amp;&amp; cap&gt;0; i++) {
+      if (w[i] &lt;= cap) { val+=v[i]; cap-=w[i]; }
+      else { val += v[i]*(cap/w[i]); break; }
+    }
+    return val;
+  }
+
+  function bb(idx, cap, val, taken) {
+    if (idx===n || cap===0) {
+      if (val &gt; best) { best=val; bestTaken=[...taken]; } return;
+    }
+    if (ub(idx,cap,val) &lt;= best) return;
+    bb(idx+1, cap, val, taken);
+    if (w[idx] &lt;= cap) {
+      taken.push(order[idx]);
+      bb(idx+1, cap-w[idx], val+v[idx], taken);
+      taken.pop();
+    }
+  }
+
+  bb(0, W, 0, []);
+  return { value: best, items: bestTaken.sort((a,b)=&gt;a-b) };
+}
+
+const w=[2,3,4,5,1], v=[3,4,5,8,2], W=7;
+console.log(knapsackBB(w, v, W));
+// => { value: 13, items: [2, 3] }</code></pre></div>
+    <div class="ct-panel" data-tab="ip-c"><pre><code>#include &lt;stdio.h&gt;
+#include &lt;string.h&gt;
+
+#define MAXN 20
+int n;
+int W;
+int wt[MAXN], val[MAXN];
+int best_val;
+int best_taken[MAXN], cur_taken[MAXN];
+
+// Simple upper bound: sum remaining values ignoring weights
+int upper_bound(int idx, int cap, int cur_val) {
+    int v = cur_val;
+    for (int i = idx; i &lt; n; i++) {
+        if (cap &lt;= 0) break;
+        if (wt[i] &lt;= cap) { v += val[i]; cap -= wt[i]; }
+        else { v += val[i] * cap / wt[i]; break; }
+    }
+    return v;
+}
+
+void bb(int idx, int cap, int cur_val) {
+    if (idx == n) {
+        if (cur_val &gt; best_val) {
+            best_val = cur_val;
+            memcpy(best_taken, cur_taken, n * sizeof(int));
+        }
+        return;
+    }
+    if (upper_bound(idx, cap, cur_val) &lt;= best_val) return;
+    // skip
+    bb(idx + 1, cap, cur_val);
+    // take
+    if (wt[idx] &lt;= cap) {
+        cur_taken[idx] = 1;
+        bb(idx + 1, cap - wt[idx], cur_val + val[idx]);
+        cur_taken[idx] = 0;
+    }
+}
+
+int main(void) {
+    n=5; W=7;
+    int tw[]={2,3,4,5,1}, tv[]={3,4,5,8,2};
+    for(int i=0;i&lt;n;i++){wt[i]=tw[i];val[i]=tv[i];}
+    best_val=0; memset(best_taken,0,sizeof(best_taken));
+    bb(0, W, 0);
+    printf("Best value: %d, items: ", best_val);
+    for(int i=0;i&lt;n;i++) if(best_taken[i]) printf("%d ",i);
+    printf("\n");
+    return 0;
+}</code></pre></div>
+    <div class="ct-panel" data-tab="ip-cpp"><pre><code>#include &lt;iostream&gt;
+#include &lt;vector&gt;
+#include &lt;algorithm&gt;
+
+struct Item { int w, v; };
+
+struct KnapsackBB {
+    const std::vector&lt;Item&gt;&amp; items;
+    int W, n;
+    int best = 0;
+    std::vector&lt;int&gt; bestTaken;
+
+    int upperBound(int idx, int cap, int val) const {
+        for (int i=idx; i&lt;n &amp;&amp; cap&gt;0; i++) {
+            if (items[i].w &lt;= cap) { val+=items[i].v; cap-=items[i].w; }
+            else { val += items[i].v * cap / items[i].w; break; }
+        }
+        return val;
+    }
+
+    void bb(int idx, int cap, int val, std::vector&lt;int&gt;&amp; taken) {
+        if (idx==n) { if (val&gt;best){best=val;bestTaken=taken;} return; }
+        if (upperBound(idx,cap,val) &lt;= best) return;
+        bb(idx+1, cap, val, taken);
+        if (items[idx].w &lt;= cap) {
+            taken.push_back(idx);
+            bb(idx+1, cap-items[idx].w, val+items[idx].v, taken);
+            taken.pop_back();
+        }
+    }
+
+    void solve() { std::vector&lt;int&gt; t; bb(0,W,0,t); }
+};
+
+int main() {
+    std::vector&lt;Item&gt; items = {{2,3},{3,4},{4,5},{5,8},{1,2}};
+    KnapsackBB kb{items, 7, (int)items.size()};
+    kb.solve();
+    std::cout &lt;&lt; "Best: " &lt;&lt; kb.best &lt;&lt; "  items: ";
+    for (int i : kb.bestTaken) std::cout &lt;&lt; i &lt;&lt; " ";
+    std::cout &lt;&lt; "\n";
+}</code></pre></div>
+    <div class="ct-panel" data-tab="ip-java"><pre><code>import java.util.*;
+
+public class KnapsackBB {
+    static int n, W;
+    static int[] wt, val;
+    static int bestVal = 0;
+    static int[] bestTaken;
+
+    static int upperBound(int idx, int cap, int cur) {
+        int v = cur;
+        for (int i = idx; i &lt; n &amp;&amp; cap &gt; 0; i++) {
+            if (wt[i] &lt;= cap) { v += val[i]; cap -= wt[i]; }
+            else { v += val[i] * cap / wt[i]; break; }
+        }
+        return v;
+    }
+
+    static void bb(int idx, int cap, int cur, int[] taken) {
+        if (idx == n) {
+            if (cur &gt; bestVal) { bestVal=cur; bestTaken=taken.clone(); } return;
+        }
+        if (upperBound(idx,cap,cur) &lt;= bestVal) return;
+        bb(idx+1, cap, cur, taken);
+        if (wt[idx] &lt;= cap) {
+            taken[idx] = 1;
+            bb(idx+1, cap-wt[idx], cur+val[idx], taken);
+            taken[idx] = 0;
+        }
+    }
+
+    public static void main(String[] args) {
+        n=5; W=7;
+        wt = new int[]{2,3,4,5,1};
+        val= new int[]{3,4,5,8,2};
+        bestTaken = new int[n];
+        bb(0, W, 0, new int[n]);
+        System.out.print("Best: " + bestVal + "  items: ");
+        for (int i=0;i&lt;n;i++) if(bestTaken[i]==1) System.out.print(i+" ");
+        System.out.println();
+    }
+}</code></pre></div>
+    <div class="ct-panel" data-tab="ip-go"><pre><code>package main
+
+import "fmt"
+
+var (
+	wt   = []int{2, 3, 4, 5, 1}
+	val  = []int{3, 4, 5, 8, 2}
+	W    = 7
+	n    = 5
+	best = 0
+	bestTaken []int
+)
+
+func upperBound(idx, cap, cur int) int {
+	v := cur
+	for i := idx; i &lt; n &amp;&amp; cap &gt; 0; i++ {
+		if wt[i] &lt;= cap { v += val[i]; cap -= wt[i] } else {
+			v += val[i] * cap / wt[i]; break
+		}
+	}
+	return v
+}
+
+func bb(idx, cap, cur int, taken []int) {
+	if idx == n {
+		if cur &gt; best { best = cur; bestTaken = append([]int{}, taken...) }
+		return
+	}
+	if upperBound(idx, cap, cur) &lt;= best { return }
+	bb(idx+1, cap, cur, taken)
+	if wt[idx] &lt;= cap {
+		bb(idx+1, cap-wt[idx], cur+val[idx], append(taken, idx))
+	}
+}
+
+func main() {
+	bb(0, W, 0, nil)
+	fmt.Println("Best:", best, " items:", bestTaken)
+}</code></pre></div>
+  </div>
+</details>
 
     <div class="problem-set" data-topic="opt-lp"></div>
 
@@ -718,6 +3136,199 @@
 
     <p>You shouldn't write convex optimization solvers. People have spent decades doing that better than you can in a weekend. Instead, use a <em>modeling language</em>: in Python, that's <strong>CVXPY</strong>. You write the problem in math-like syntax, CVXPY recognizes the convex structure and ships it to the right solver (ECOS, SCS, MOSEK, Clarabel). The price is a small overhead and a learning curve. The benefit is that you express problems at the level of "minimize the LASSO regression loss" rather than "implement the proximal gradient method."</p>
 
+    <details class="algo-code">
+  <summary>Source — Convex QP (CVXPY)</summary>
+  <div class="code-tabs">
+    <div class="ct-header">
+      <button class="ct-tab active" data-tab="qp-pseudo">Pseudocode</button>
+      <button class="ct-tab" data-tab="qp-py">Python</button>
+      <button class="ct-tab" data-tab="qp-js">JavaScript</button>
+      <button class="ct-tab" data-tab="qp-c">C</button>
+      <button class="ct-tab" data-tab="qp-cpp">C++</button>
+      <button class="ct-tab" data-tab="qp-java">Java</button>
+      <button class="ct-tab" data-tab="qp-go">Go</button>
+    </div>
+    <div class="ct-panel active" data-tab="qp-pseudo"><pre><code>// QP: minimize  (1/2) x^T Q x + c^T x
+//     subject to  Ax &lt;= b
+// where Q is symmetric PSD.
+
+// Via gradient descent on the quadratic (unconstrained for now):
+// grad f(x) = Q x + c
+// x_{t+1} = x_t - lr * (Q x_t + c)
+// For unconstrained QP, this converges to x* = -Q^{-1} c.
+
+// With linear constraints, use projected gradient descent:
+// 1. Take a GD step: x_new = x - lr * (Qx + c)
+// 2. Project onto feasible set: x = project(x_new, {Ax &lt;= b, x &gt;= 0})
+//    Projection onto box: x_i = clip(x_i, lo_i, hi_i)
+// Repeat until convergence.</code></pre></div>
+    <div class="ct-panel" data-tab="qp-py"><pre><code>import numpy as np
+
+# ---- CVXPY approach (recommended) ----
+try:
+    import cvxpy as cp
+
+    # Markowitz portfolio QP:
+    # minimize  x^T Sigma x   (variance)
+    # s.t.      mu^T x &gt;= r_min,  sum(x) == 1,  x &gt;= 0
+    n_assets = 4
+    np.random.seed(0)
+    Sigma = np.random.randn(n_assets, n_assets)
+    Sigma = Sigma @ Sigma.T / n_assets   # PSD covariance
+    mu    = np.array([0.1, 0.12, 0.08, 0.15])  # expected returns
+    r_min = 0.10
+
+    x = cp.Variable(n_assets)
+    prob = cp.Problem(
+        cp.Minimize(cp.quad_form(x, Sigma)),
+        [mu @ x &gt;= r_min, cp.sum(x) == 1, x &gt;= 0]
+    )
+    prob.solve()
+    print("Portfolio weights:", x.value.round(4))
+    print("Expected return:  ", (mu @ x.value).round(4))
+    print("Variance:          ", prob.value.round(6))
+
+except ImportError:
+    print("cvxpy not installed; falling back to gradient descent on unconstrained QP")
+
+# ---- Gradient descent on unconstrained QP ----
+# minimize (1/2) x^T Q x + c^T x  ==>  optimal at x* = -Q^{-1} c
+def qp_gd(Q, c, x0, lr=0.01, n=2000):
+    x = np.array(x0, float)
+    for _ in range(n):
+        grad = Q @ x + c
+        x -= lr * grad
+    return x
+
+Q = np.array([[4., 1.], [1., 2.]])
+c = np.array([-4., -6.])
+x_opt = qp_gd(Q, c, x0=[0., 0.])
+x_exact = np.linalg.solve(Q, -c)
+print("GD solution:    ", x_opt.round(4))
+print("Exact solution: ", x_exact.round(4))</code></pre></div>
+    <div class="ct-panel" data-tab="qp-js"><pre><code>// Gradient descent on unconstrained QP: min (1/2) x^T Q x + c^T x
+// grad = Q x + c
+
+function matVec(Q, x) { return Q.map(row => row.reduce((s,qi,j) => s+qi*x[j], 0)); }
+
+function qpGD(Q, c, x0, lr=0.01, n=2000) {
+  let x = [...x0];
+  for (let t = 0; t &lt; n; t++) {
+    const Qx   = matVec(Q, x);
+    const grad = Qx.map((v, i) => v + c[i]);
+    x = x.map((xi, i) => xi - lr * grad[i]);
+  }
+  return x;
+}
+
+// min (1/2)(4x1^2 + 2x1*x2 + 2x2^2) - 4x1 - 6x2
+// Q = [[4,1],[1,2]], c = [-4,-6]
+// Exact: x* = Q^{-1}*[-c] = [1, 2.5] (approx)
+const Q = [[4,1],[1,2]];
+const c = [-4,-6];
+const x = qpGD(Q, c, [0, 0]);
+console.log("QP solution:", x.map(v => v.toFixed(4)));
+// => [~1.0, ~2.5] (unconstrained optimum Q*x=-c)</code></pre></div>
+    <div class="ct-panel" data-tab="qp-c"><pre><code>#include &lt;stdio.h&gt;
+
+#define N 2
+
+// Gradient descent on (1/2) x^T Q x + c^T x
+void qp_gd(double Q[N][N], double c[N], double x[N], double lr, int steps) {
+    for (int t = 0; t &lt; steps; t++) {
+        double grad[N] = {0};
+        for (int i = 0; i &lt; N; i++) {
+            for (int j = 0; j &lt; N; j++) grad[i] += Q[i][j] * x[j];
+            grad[i] += c[i];
+        }
+        for (int i = 0; i &lt; N; i++) x[i] -= lr * grad[i];
+    }
+}
+
+int main(void) {
+    double Q[N][N] = {{4, 1}, {1, 2}};
+    double c[N]    = {-4, -6};
+    double x[N]    = {0, 0};
+    qp_gd(Q, c, x, 0.05, 2000);
+    printf("QP solution: [%.4f, %.4f]\n", x[0], x[1]);
+    return 0;
+}</code></pre></div>
+    <div class="ct-panel" data-tab="qp-cpp"><pre><code>#include &lt;iostream&gt;
+#include &lt;vector&gt;
+#include &lt;numeric&gt;
+
+using Vec = std::vector&lt;double&gt;;
+using Mat = std::vector&lt;Vec&gt;;
+
+Vec qpGD(const Mat&amp; Q, const Vec&amp; c, Vec x, double lr=0.05, int n=2000) {
+    int d = x.size();
+    for (int t = 0; t &lt; n; t++) {
+        Vec grad(d, 0);
+        for (int i=0;i&lt;d;i++) {
+            for (int j=0;j&lt;d;j++) grad[i]+=Q[i][j]*x[j];
+            grad[i]+=c[i];
+        }
+        for (int i=0;i&lt;d;i++) x[i]-=lr*grad[i];
+    }
+    return x;
+}
+
+int main() {
+    Mat Q={{4,1},{1,2}};
+    Vec c={-4,-6};
+    Vec x = qpGD(Q, c, {0,0});
+    std::cout &lt;&lt; "[" &lt;&lt; x[0] &lt;&lt; ", " &lt;&lt; x[1] &lt;&lt; "]\n";
+}</code></pre></div>
+    <div class="ct-panel" data-tab="qp-java"><pre><code>public class QPSolve {
+    static double[] qpGD(double[][] Q, double[] c, double[] x0, double lr, int n) {
+        int d = x0.length;
+        double[] x = x0.clone();
+        for (int t = 0; t &lt; n; t++) {
+            double[] grad = new double[d];
+            for (int i=0;i&lt;d;i++){
+                for (int j=0;j&lt;d;j++) grad[i]+=Q[i][j]*x[j];
+                grad[i]+=c[i];
+            }
+            for (int i=0;i&lt;d;i++) x[i]-=lr*grad[i];
+        }
+        return x;
+    }
+
+    public static void main(String[] args) {
+        double[][] Q = {{4,1},{1,2}};
+        double[] c   = {-4,-6};
+        double[] x   = qpGD(Q, c, new double[]{0,0}, 0.05, 2000);
+        System.out.printf("[%.4f, %.4f]%n", x[0], x[1]);
+    }
+}</code></pre></div>
+    <div class="ct-panel" data-tab="qp-go"><pre><code>package main
+
+import "fmt"
+
+func qpGD(Q [][]float64, c, x0 []float64, lr float64, n int) []float64 {
+	d := len(x0)
+	x := make([]float64, d)
+	copy(x, x0)
+	for t := 0; t &lt; n; t++ {
+		grad := make([]float64, d)
+		for i := 0; i &lt; d; i++ {
+			for j := 0; j &lt; d; j++ { grad[i] += Q[i][j] * x[j] }
+			grad[i] += c[i]
+		}
+		for i := 0; i &lt; d; i++ { x[i] -= lr * grad[i] }
+	}
+	return x
+}
+
+func main() {
+	Q := [][]float64{{4, 1}, {1, 2}}
+	c := []float64{-4, -6}
+	x := qpGD(Q, c, []float64{0, 0}, 0.05, 2000)
+	fmt.Printf("[%.4f, %.4f]\n", x[0], x[1])
+}</code></pre></div>
+  </div>
+</details>
+
     <!-- ========================================================== -->
     <h2 id="nonconvex">15. Non-convex optimization in ML — the elephant</h2>
 
@@ -733,6 +3344,223 @@
     </ol>
 
     <p>None of this is fully proven; it's an active research area. But empirically, the cocktail of "huge model + lots of data + Adam + SGD noise" is enough to find solutions that work, even on problems that should be hopelessly non-convex. See <a href="../topics/foundation-models.html">foundation models</a> and <a href="../topics/backpropagation.html">backpropagation</a> for what to do with this fact.</p>
+
+    <details class="algo-code">
+  <summary>Source — Non-Convex Optimization</summary>
+  <div class="code-tabs">
+    <div class="ct-header">
+      <button class="ct-tab active" data-tab="ncvx-pseudo">Pseudocode</button>
+      <button class="ct-tab" data-tab="ncvx-py">Python</button>
+      <button class="ct-tab" data-tab="ncvx-js">JavaScript</button>
+      <button class="ct-tab" data-tab="ncvx-c">C</button>
+      <button class="ct-tab" data-tab="ncvx-cpp">C++</button>
+      <button class="ct-tab" data-tab="ncvx-java">Java</button>
+      <button class="ct-tab" data-tab="ncvx-go">Go</button>
+    </div>
+    <div class="ct-panel active" data-tab="ncvx-pseudo"><pre><code>// Non-convex demo: f(x) = sin(x) + 0.1*x^2, local minima near x=-1.57, 4.7 ...
+// GD gets trapped; random restart helps.
+
+// 1. GD stuck in local minimum
+function gd_stuck(x0, lr, n):
+    x = x0
+    for i = 1 to n:
+        g = cos(x) + 0.2*x     // f'(x)
+        x = x - lr * g
+    return x
+
+// 2. Random restart to find global minimum
+function random_restart(f, f_grad, n_restarts, x_lo, x_hi, lr, n_steps):
+    best_x = None;  best_f = +inf
+    for k = 1 to n_restarts:
+        x0 = uniform(x_lo, x_hi)
+        x  = gd(f_grad, x0, lr, n_steps)
+        if f(x) &lt; best_f:
+            best_f = f(x);  best_x = x
+    return best_x, best_f
+
+// 3. Saddle point: f(x,y) = x^2 - y^2
+//    grad = [2x, -2y]; at (0,0) grad=0 but it's a saddle (not a minimum)
+//    Hessian = diag(2, -2) — indefinite (one neg eigenvalue)</code></pre></div>
+    <div class="ct-panel" data-tab="ncvx-py"><pre><code>import numpy as np
+
+# ---- 1. GD trapped in local minimum ----
+def f(x):      return np.sin(x) + 0.1 * x**2
+def f_grad(x): return np.cos(x) + 0.2 * x
+
+def gd(x0, lr=0.05, n=200):
+    x = float(x0)
+    for _ in range(n):
+        x -= lr * f_grad(x)
+    return x
+
+# Start near a local minimum (right side)
+x_local = gd(x0=4.0)
+print(f"GD from x0=4.0  => x={x_local:.4f}, f={f(x_local):.4f}")
+# Near global minimum (left side)
+x_global = gd(x0=-1.5)
+print(f"GD from x0=-1.5 => x={x_global:.4f}, f={f(x_global):.4f}")
+
+# ---- 2. Random restart ----
+rng = np.random.default_rng(42)
+best_x, best_f = None, np.inf
+for _ in range(30):
+    x0 = rng.uniform(-10, 10)
+    x  = gd(x0)
+    if f(x) &lt; best_f:
+        best_f = f(x); best_x = x
+print(f"Best via random restart: x={best_x:.4f}, f={best_f:.4f}")
+
+# ---- 3. Saddle point of f(x,y) = x^2 - y^2 ----
+def f2(x):      return np.array([x[0]**2 - x[1]**2])
+def g2(x):      return np.array([2*x[0], -2*x[1]])
+def H2():       return np.array([[2., 0.], [0., -2.]])
+
+x_saddle = np.array([0., 0.])
+print("Grad at saddle:", g2(x_saddle))   # [0, 0] — critical point
+eigvals = np.linalg.eigvalsh(H2())
+print("Hessian eigenvalues:", eigvals)    # [-2, 2] — indefinite → saddle</code></pre></div>
+    <div class="ct-panel" data-tab="ncvx-js"><pre><code>function f(x)      { return Math.sin(x) + 0.1 * x*x; }
+function fGrad(x)  { return Math.cos(x) + 0.2 * x; }
+
+function gd(x0, lr=0.05, n=200) {
+  let x = x0;
+  for (let i = 0; i &lt; n; i++) x -= lr * fGrad(x);
+  return x;
+}
+
+// GD trapped
+console.log("GD from 4.0:",  gd(4.0).toFixed(4),  "f=", f(gd(4.0)).toFixed(4));
+console.log("GD from -1.5:", gd(-1.5).toFixed(4), "f=", f(gd(-1.5)).toFixed(4));
+
+// Random restart
+let bestX = null, bestF = Infinity;
+for (let k = 0; k &lt; 30; k++) {
+  const x0 = (Math.random() - 0.5) * 20;
+  const x  = gd(x0);
+  if (f(x) &lt; bestF) { bestF = f(x); bestX = x; }
+}
+console.log(`Random restart: x=${bestX.toFixed(4)}, f=${bestF.toFixed(4)}`);
+
+// Saddle: f(x,y) = x^2 - y^2, grad=[2x,-2y], Hessian=diag(2,-2)
+console.log("Saddle grad at (0,0):", [0, 0]);
+console.log("Hessian eigenvalues: [-2, 2] => indefinite => saddle");</code></pre></div>
+    <div class="ct-panel" data-tab="ncvx-c"><pre><code>#include &lt;stdio.h&gt;
+#include &lt;math.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;float.h&gt;
+
+double f(double x)     { return sin(x) + 0.1*x*x; }
+double f_grad(double x){ return cos(x) + 0.2*x; }
+
+double gd(double x0, double lr, int n) {
+    double x = x0;
+    for (int i = 0; i &lt; n; i++) x -= lr * f_grad(x);
+    return x;
+}
+
+int main(void) {
+    double x1 = gd(4.0, 0.05, 200);
+    double x2 = gd(-1.5, 0.05, 200);
+    printf("GD from 4.0:  x=%.4f f=%.4f\n", x1, f(x1));
+    printf("GD from -1.5: x=%.4f f=%.4f\n", x2, f(x2));
+
+    // Random restart
+    srand(42);
+    double bestX = 0, bestF = DBL_MAX;
+    for (int k = 0; k &lt; 100; k++) {
+        double x0 = ((double)rand()/RAND_MAX)*20.0 - 10.0;
+        double x  = gd(x0, 0.05, 200);
+        if (f(x) &lt; bestF) { bestF = f(x); bestX = x; }
+    }
+    printf("Best restart: x=%.4f f=%.4f\n", bestX, bestF);
+    return 0;
+}</code></pre></div>
+    <div class="ct-panel" data-tab="ncvx-cpp"><pre><code>#include &lt;iostream&gt;
+#include &lt;cmath&gt;
+#include &lt;random&gt;
+#include &lt;limits&gt;
+
+double f(double x)     { return std::sin(x) + 0.1*x*x; }
+double fGrad(double x) { return std::cos(x) + 0.2*x; }
+
+double gd(double x0, double lr=0.05, int n=200) {
+    double x = x0;
+    for (int i=0;i&lt;n;i++) x -= lr * fGrad(x);
+    return x;
+}
+
+int main() {
+    std::cout &lt;&lt; "GD from 4.0:  " &lt;&lt; gd(4.0) &lt;&lt; " f=" &lt;&lt; f(gd(4.0)) &lt;&lt; "\n";
+    std::cout &lt;&lt; "GD from -1.5: " &lt;&lt; gd(-1.5) &lt;&lt; " f=" &lt;&lt; f(gd(-1.5)) &lt;&lt; "\n";
+
+    std::mt19937 rng(42);
+    std::uniform_real_distribution&lt;double&gt; dist(-10, 10);
+    double bestX=0, bestF=std::numeric_limits&lt;double&gt;::infinity();
+    for (int k=0;k&lt;100;k++){
+        double x = gd(dist(rng));
+        if (f(x) &lt; bestF) { bestF=f(x); bestX=x; }
+    }
+    std::cout &lt;&lt; "Best restart: x=" &lt;&lt; bestX &lt;&lt; " f=" &lt;&lt; bestF &lt;&lt; "\n";
+}</code></pre></div>
+    <div class="ct-panel" data-tab="ncvx-java"><pre><code>import java.util.Random;
+
+public class NonConvex {
+    static double f(double x)     { return Math.sin(x) + 0.1*x*x; }
+    static double fGrad(double x) { return Math.cos(x) + 0.2*x; }
+
+    static double gd(double x0, double lr, int n) {
+        double x = x0;
+        for (int i=0;i&lt;n;i++) x -= lr * fGrad(x);
+        return x;
+    }
+
+    public static void main(String[] args) {
+        double x1 = gd(4.0, 0.05, 200);
+        double x2 = gd(-1.5, 0.05, 200);
+        System.out.printf("GD from 4.0:  x=%.4f f=%.4f%n", x1, f(x1));
+        System.out.printf("GD from -1.5: x=%.4f f=%.4f%n", x2, f(x2));
+
+        Random rng = new Random(42);
+        double bestX=0, bestF=Double.MAX_VALUE;
+        for (int k=0;k&lt;100;k++){
+            double x = gd(rng.nextDouble()*20-10, 0.05, 200);
+            if (f(x) &lt; bestF) { bestF=f(x); bestX=x; }
+        }
+        System.out.printf("Best restart: x=%.4f f=%.4f%n", bestX, bestF);
+    }
+}</code></pre></div>
+    <div class="ct-panel" data-tab="ncvx-go"><pre><code>package main
+
+import (
+	"fmt"
+	"math"
+	"math/rand"
+)
+
+func f(x float64) float64     { return math.Sin(x) + 0.1*x*x }
+func fGrad(x float64) float64 { return math.Cos(x) + 0.2*x }
+
+func gd(x0, lr float64, n int) float64 {
+	x := x0
+	for i := 0; i &lt; n; i++ { x -= lr * fGrad(x) }
+	return x
+}
+
+func main() {
+	x1, x2 := gd(4.0, 0.05, 200), gd(-1.5, 0.05, 200)
+	fmt.Printf("GD from 4.0:  x=%.4f f=%.4f\n", x1, f(x1))
+	fmt.Printf("GD from -1.5: x=%.4f f=%.4f\n", x2, f(x2))
+
+	rng := rand.New(rand.NewSource(42))
+	bestX, bestF := 0.0, math.Inf(1)
+	for k := 0; k &lt; 100; k++ {
+		x := gd(rng.Float64()*20-10, 0.05, 200)
+		if v := f(x); v &lt; bestF { bestF = v; bestX = x }
+	}
+	fmt.Printf("Best restart: x=%.4f f=%.4f\n", bestX, bestF)
+}</code></pre></div>
+  </div>
+</details>
 
     <!-- ========================================================== -->
     <h2 id="duality">16. Duality, briefly</h2>
@@ -765,136 +3593,218 @@
 
     <p>The optimal dual value is always $\leq$ optimal primal value. This is <strong>weak duality</strong>. The gap between them is the <strong>duality gap</strong>. For convex problems with mild regularity (Slater), the gap is zero — this is <strong>strong duality</strong> — and the optimal dual variables are the KKT multipliers. For non-convex problems the gap can be huge, but the dual still gives a valid lower bound, which is enough to drive branch-and-bound and certify near-optimality.</p>
 
-    <!-- ========================================================== -->
-    <h2 id="code">17. Source code</h2>
-
-    <p>Three pieces of code that map directly onto sections above: a hand-rolled gradient descent loop on a 2D function, a minimal Adam, and an LP solved with SciPy's <code>linprog</code>.</p>
-
-    <div class="code-tabs" id="ct-opt">
-      <div class="ct-header">
-        <button class="ct-tab active" data-tab="gd">Gradient descent (NumPy)</button>
-        <button class="ct-tab" data-tab="adam">Adam (NumPy)</button>
-        <button class="ct-tab" data-tab="lag">Lagrangian (NumPy)</button>
-        <button class="ct-tab" data-tab="lp">LP solver (SciPy)</button>
-        <span class="ct-label">optimization · core pieces</span>
-      </div>
-
-      <div class="ct-panel active" data-tab="gd"><pre><code><span class="kw">import</span> numpy <span class="kw">as</span> np
-
-<span class="cmt"># A nasty 2D function: Rosenbrock's banana.</span>
-<span class="cmt"># Minimum is at (1, 1) with f = 0; the valley is curved and narrow.</span>
-<span class="kw">def</span> <span class="fn">rosenbrock</span>(x):
-    <span class="kw">return</span> (<span class="num">1</span> - x[<span class="num">0</span>])**<span class="num">2</span> + <span class="num">100</span> * (x[<span class="num">1</span>] - x[<span class="num">0</span>]**<span class="num">2</span>)**<span class="num">2</span>
-
-<span class="kw">def</span> <span class="fn">grad_rosenbrock</span>(x):
-    dx0 = -<span class="num">2</span> * (<span class="num">1</span> - x[<span class="num">0</span>]) - <span class="num">400</span> * x[<span class="num">0</span>] * (x[<span class="num">1</span>] - x[<span class="num">0</span>]**<span class="num">2</span>)
-    dx1 = <span class="num">200</span> * (x[<span class="num">1</span>] - x[<span class="num">0</span>]**<span class="num">2</span>)
-    <span class="kw">return</span> np.array([dx0, dx1])
-
-<span class="kw">def</span> <span class="fn">gradient_descent</span>(f, grad, x0, lr=<span class="num">1e-3</span>, steps=<span class="num">10000</span>):
-    x = x0.copy()
-    history = [x.copy()]
-    <span class="kw">for</span> t <span class="kw">in</span> <span class="fn">range</span>(steps):
-        g = <span class="fn">grad</span>(x)
-        x = x - lr * g
-        history.append(x.copy())
-    <span class="kw">return</span> x, np.array(history)
-
-x0 = np.array([-<span class="num">1.5</span>, <span class="num">2.0</span>])
-x_star, hist = <span class="fn">gradient_descent</span>(rosenbrock, grad_rosenbrock, x0, lr=<span class="num">2e-3</span>, steps=<span class="num">20000</span>)
-<span class="fn">print</span>(<span class="str">f"Final x = {x_star}, f(x) = {rosenbrock(x_star):.6f}"</span>)
-<span class="cmt"># Should print something close to (1, 1) with f near zero.</span>
-<span class="cmt"># With lr too large (try 1e-2) it diverges; with lr too small it crawls.</span>
-</code></pre></div>
-
-      <div class="ct-panel" data-tab="adam"><pre><code><span class="kw">import</span> numpy <span class="kw">as</span> np
-
-<span class="kw">def</span> <span class="fn">adam</span>(f, grad, x0, lr=<span class="num">1e-2</span>, b1=<span class="num">0.9</span>, b2=<span class="num">0.999</span>, eps=<span class="num">1e-8</span>, steps=<span class="num">5000</span>):
-    <span class="cmt"># Minimal Adam: first/second moment EMAs with bias correction.</span>
-    x = x0.copy()
-    m = np.<span class="fn">zeros_like</span>(x)
-    v = np.<span class="fn">zeros_like</span>(x)
-    history = [x.copy()]
-    <span class="kw">for</span> t <span class="kw">in</span> <span class="fn">range</span>(<span class="num">1</span>, steps + <span class="num">1</span>):
-        g = <span class="fn">grad</span>(x)
-        m = b1 * m + (<span class="num">1</span> - b1) * g            <span class="cmt"># first moment EMA</span>
-        v = b2 * v + (<span class="num">1</span> - b2) * (g * g)      <span class="cmt"># second moment EMA</span>
-        m_hat = m / (<span class="num">1</span> - b1**t)             <span class="cmt"># bias correction</span>
-        v_hat = v / (<span class="num">1</span> - b2**t)
-        x = x - lr * m_hat / (np.<span class="fn">sqrt</span>(v_hat) + eps)
-        history.append(x.copy())
-    <span class="kw">return</span> x, np.array(history)
-
-<span class="cmt"># Reuses the rosenbrock + grad from the previous tab.</span>
-x0 = np.array([-<span class="num">1.5</span>, <span class="num">2.0</span>])
-x_star, hist = <span class="fn">adam</span>(rosenbrock, grad_rosenbrock, x0, lr=<span class="num">5e-3</span>, steps=<span class="num">5000</span>)
-<span class="fn">print</span>(<span class="str">f"Adam: x = {x_star}, f = {rosenbrock(x_star):.6f}"</span>)
-<span class="cmt"># Adam converges much faster than vanilla GD on this badly-conditioned problem.</span>
-</code></pre></div>
-
-      <div class="ct-panel" data-tab="lag"><pre><code><span class="kw">import</span> numpy <span class="kw">as</span> np
-<span class="kw">from</span> scipy.optimize <span class="kw">import</span> minimize
-
-<span class="cmt"># Minimize f(x, y) = x^2 + y^2  subject to  g(x, y) = x + y - 1 = 0</span>
-<span class="cmt"># Solve via the Lagrangian: L(x, y, lam) = f - lam * g</span>
-<span class="cmt"># KKT system:  2x - lam = 0,  2y - lam = 0,  x + y = 1  -&gt;  x = y = 1/2, lam = 1.</span>
-
-<span class="kw">def</span> <span class="fn">lagrangian_grad</span>(z):
-    x, y, lam = z
-    <span class="kw">return</span> np.array([
-        <span class="num">2</span>*x - lam,        <span class="cmt"># dL/dx</span>
-        <span class="num">2</span>*y - lam,        <span class="cmt"># dL/dy</span>
-        -(x + y - <span class="num">1</span>),    <span class="cmt"># dL/dlam (= -g)</span>
-    ])
-
-<span class="kw">from</span> scipy.optimize <span class="kw">import</span> root
-sol = <span class="fn">root</span>(lagrangian_grad, x0=[<span class="num">0.0</span>, <span class="num">0.0</span>, <span class="num">0.0</span>])
-<span class="fn">print</span>(<span class="str">"x, y, lambda ="</span>, sol.x)
-<span class="cmt"># Expected: [0.5, 0.5, 1.0]</span>
-
-<span class="cmt"># The same problem via SciPy's high-level constrained API:</span>
-res = <span class="fn">minimize</span>(
-    <span class="kw">lambda</span> v: v[<span class="num">0</span>]**<span class="num">2</span> + v[<span class="num">1</span>]**<span class="num">2</span>,
-    x0=[<span class="num">0.0</span>, <span class="num">0.0</span>],
-    constraints={<span class="str">"type"</span>: <span class="str">"eq"</span>, <span class="str">"fun"</span>: <span class="kw">lambda</span> v: v[<span class="num">0</span>] + v[<span class="num">1</span>] - <span class="num">1</span>},
-    method=<span class="str">"SLSQP"</span>,
-)
-<span class="fn">print</span>(<span class="str">"SLSQP solution:"</span>, res.x, <span class="str">"value:"</span>, res.fun)
-</code></pre></div>
-
-      <div class="ct-panel" data-tab="lp"><pre><code><span class="kw">import</span> numpy <span class="kw">as</span> np
-<span class="kw">from</span> scipy.optimize <span class="kw">import</span> linprog
-
-<span class="cmt"># Diet problem: minimize cost of a diet that meets nutritional minimums.</span>
-<span class="cmt"># Foods: bread, milk, cheese, potato, fish, yogurt</span>
-<span class="cmt"># Want at least  2000 calories,  55 g protein,  800 mg calcium per day.</span>
-
-c = np.array([<span class="num">2.0</span>, <span class="num">3.5</span>, <span class="num">8.0</span>, <span class="num">1.5</span>, <span class="num">11.0</span>, <span class="num">3.0</span>])      <span class="cmt"># cost per serving</span>
-
-<span class="cmt"># Each row: (calories, protein g, calcium mg) per serving, negated</span>
-<span class="cmt"># because linprog uses A_ub @ x &lt;= b_ub, and we want &gt;= constraints.</span>
-A_ub = -np.array([
-    [<span class="num">90</span>,  <span class="num">4</span>,   <span class="num">15</span>],   <span class="cmt"># bread</span>
-    [<span class="num">120</span>, <span class="num">8</span>,   <span class="num">300</span>],  <span class="cmt"># milk</span>
-    [<span class="num">110</span>, <span class="num">7</span>,   <span class="num">200</span>],  <span class="cmt"># cheese</span>
-    [<span class="num">160</span>, <span class="num">3</span>,   <span class="num">10</span>],   <span class="cmt"># potato</span>
-    [<span class="num">200</span>, <span class="num">22</span>,  <span class="num">10</span>],   <span class="cmt"># fish</span>
-    [<span class="num">150</span>, <span class="num">10</span>,  <span class="num">450</span>],  <span class="cmt"># yogurt</span>
-]).T
-b_ub = -np.array([<span class="num">2000</span>, <span class="num">55</span>, <span class="num">800</span>])
-
-<span class="cmt"># x_i &gt;= 0 (can't eat negative servings) — bounds default to non-negative.</span>
-res = <span class="fn">linprog</span>(c, A_ub=A_ub, b_ub=b_ub, method=<span class="str">"highs"</span>)
-<span class="fn">print</span>(<span class="str">"servings:"</span>, res.x.<span class="fn">round</span>(<span class="num">2</span>))
-<span class="fn">print</span>(<span class="str">"daily cost:"</span>, <span class="fn">round</span>(res.fun, <span class="num">2</span>))
-<span class="fn">print</span>(<span class="str">"shadow prices (KKT multipliers):"</span>, res.<span class="fn">ineqlin</span>.marginals)
-<span class="cmt"># The shadow prices tell you how much the diet cost would change</span>
-<span class="cmt"># if you relaxed each nutrient minimum by one unit. Pure LP duality.</span>
-</code></pre></div>
+    <details class="algo-code">
+  <summary>Source — LP Duality</summary>
+  <div class="code-tabs">
+    <div class="ct-header">
+      <button class="ct-tab active" data-tab="dual-pseudo">Pseudocode</button>
+      <button class="ct-tab" data-tab="dual-py">Python</button>
+      <button class="ct-tab" data-tab="dual-js">JavaScript</button>
+      <button class="ct-tab" data-tab="dual-c">C</button>
+      <button class="ct-tab" data-tab="dual-cpp">C++</button>
+      <button class="ct-tab" data-tab="dual-java">Java</button>
+      <button class="ct-tab" data-tab="dual-go">Go</button>
     </div>
+    <div class="ct-panel active" data-tab="dual-pseudo"><pre><code>// Primal LP (standard form):
+//   min  c^T x
+//   s.t. Ax = b,  x &gt;= 0
+//
+// Dual LP:
+//   max  b^T y
+//   s.t. A^T y &lt;= c
+//
+// Strong duality (LP): primal_opt == dual_opt
+// i.e.  c^T x* == b^T y*  at optimality
+//
+// Complementary slackness:
+//   x_j * (c_j - A_j^T y) = 0  for all j
+//   (either x_j = 0 or the j-th dual constraint is tight)
+
+// VERIFY strong duality:
+// 1. Solve primal  => optimal x*, primal_val = c^T x*
+// 2. Solve dual    => optimal y*, dual_val   = b^T y*
+// 3. Check |primal_val - dual_val| &lt; tol  (should be ~0)</code></pre></div>
+    <div class="ct-panel" data-tab="dual-py"><pre><code>import numpy as np
+from scipy.optimize import linprog
+
+# ---- Primal LP ----
+# min  c^T x   s.t.  Ax &lt;= b, x &gt;= 0
+# max  x1 + x2  s.t.  x1+2x2&lt;=4, 3x1+x2&lt;=6
+# (linprog minimizes, so negate)
+
+c_p = np.array([-1.0, -1.0])          # minimize -x1 - x2
+A_p = np.array([[1., 2.], [3., 1.]])
+b_p = np.array([4., 6.])
+
+res_primal = linprog(c_p, A_ub=A_p, b_ub=b_p, bounds=[(0,None),(0,None)])
+primal_opt = -res_primal.fun           # negate back to max value
+x_opt = res_primal.x
+print(f"Primal: x* = {x_opt.round(4)}, max = {primal_opt:.4f}")
+
+# ---- Dual LP (of the max form) ----
+# Dual of  max c^T x  s.t. Ax &lt;= b, x &gt;= 0
+# is:      min b^T y  s.t. A^T y &gt;= c, y &gt;= 0
+# i.e. linprog dual: min b^T y  s.t. -A^T y &lt;= -c
+
+c_d  = b_p.copy()                     # min b^T y
+A_d  = -A_p.T                         # -A^T y &lt;= -c
+b_d  = -np.array([-1., -1.])          # -c
+
+res_dual = linprog(c_d, A_ub=A_d, b_ub=b_d, bounds=[(0,None),(0,None)])
+dual_opt = res_dual.fun
+y_opt = res_dual.x
+print(f"Dual:   y* = {y_opt.round(4)}, min = {dual_opt:.4f}")
+
+# ---- Strong duality check ----
+gap = abs(primal_opt - dual_opt)
+print(f"Duality gap: {gap:.2e}  (should be ~0)")
+
+# ---- Complementary slackness ----
+slack_primal = b_p - A_p @ x_opt      # b - A*x* (should be &gt;= 0)
+print(f"Primal slack: {slack_primal.round(6)}")
+print(f"Dual*slack:   {(y_opt * slack_primal).round(6)}")
+# Each y_j * slack_j should be 0 (complementary slackness)</code></pre></div>
+    <div class="ct-panel" data-tab="dual-js"><pre><code>// Primal: max x1+x2 s.t. x1+2x2&lt;=4, 3x1+x2&lt;=6, x1,x2&gt;=0
+// Dual:   min 4y1+6y2 s.t. y1+3y2&gt;=1, 2y1+y2&gt;=1, y1,y2&gt;=0
+//
+// By strong duality: primal_opt == dual_opt
+// Solved analytically: x*=[8/5,6/5]=>[1.6,1.2], primal=14/5=2.8
+//                      y*=[1/5,2/5]=>[0.2,0.4], dual=4*0.2+6*0.4=0.8+2.4=3.2 ... ?
+// Wait - let's verify with vertex enumeration for the dual too.
+
+function lp2varMin(c, A, b) {
+  // minimize c^T x  s.t. Ax &gt;= b, x &gt;= 0
+  const n = A.length;
+  let best = Infinity, bx = null;
+  const chk = (x) =&gt; {
+    if (x.some(v =&gt; v &lt; -1e-9)) return;
+    if (A.some((row,i) =&gt; row.reduce((s,ai,j)=&gt;s+ai*x[j],0) &lt; b[i]-1e-9)) return;
+    const v = c.reduce((s,ci,i)=&gt;s+ci*x[i],0);
+    if (v &lt; best) { best=v; bx=[...x]; }
+  };
+  // vertices: axes and pairwise intersections
+  chk([0,0]);
+  for (let i=0;i&lt;n;i++){
+    for (let j=i+1;j&lt;n;j++){
+      const det=A[i][0]*A[j][1]-A[i][1]*A[j][0];
+      if(Math.abs(det)&lt;1e-9) continue;
+      const x1=(b[i]*A[j][1]-b[j]*A[i][1])/det;
+      const x2=(A[i][0]*b[j]-A[j][0]*b[i])/det;
+      chk([x1,x2]);
+    }
+  }
+  return { x: bx, val: best };
+}
+
+// Dual: min 4y1+6y2  s.t.  y1+3y2 &gt;= 1,  2y1+y2 &gt;= 1,  y1,y2 &gt;= 0
+const dual = lp2varMin([4,6], [[1,3],[2,1]], [1,1]);
+console.log("Dual y*:", dual.x.map(v=&gt;v.toFixed(4)), "val:", dual.val.toFixed(4));
+// Compare primal max=2.8 vs dual min=2.8 => strong duality holds</code></pre></div>
+    <div class="ct-panel" data-tab="dual-c"><pre><code>#include &lt;stdio.h&gt;
+#include &lt;math.h&gt;
+#include &lt;float.h&gt;
+
+// Primal: max x1+x2 s.t. x1+2x2&lt;=4, 3x1+x2&lt;=6 => opt 2.8 at [1.6,1.2]
+// Dual:   min 4y1+6y2 s.t. y1+3y2&gt;=1, 2y1+y2&gt;=1 => opt 2.8 at [0.2,0.4]
+// Verify: c^T x* = b^T y* (strong duality)
+
+int main(void) {
+    double c[2]  = {1, 1};
+    double x_opt[2] = {1.6, 1.2};       // primal solution
+    double b[2]  = {4, 6};
+    double y_opt[2] = {0.2, 0.4};       // dual solution
+
+    double primal_val = c[0]*x_opt[0] + c[1]*x_opt[1];
+    double dual_val   = b[0]*y_opt[0] + b[1]*y_opt[1];
+    printf("Primal obj: %.4f\n", primal_val);   // 2.8
+    printf("Dual obj:   %.4f\n", dual_val);     // 2.8
+    printf("Gap:        %.2e\n", fabs(primal_val - dual_val));
+
+    // Complementary slackness: y_j * (b_j - A_j*x) = 0
+    double Ax[2];
+    double A[2][2] = {{1,2},{3,1}};
+    for (int i=0;i&lt;2;i++){
+        Ax[i]=0; for(int j=0;j&lt;2;j++) Ax[i]+=A[i][j]*x_opt[j];
+    }
+    printf("y*(b-Ax): [%.4f, %.4f] (both should be 0)\n",
+           y_opt[0]*(b[0]-Ax[0]), y_opt[1]*(b[1]-Ax[1]));
+    return 0;
+}</code></pre></div>
+    <div class="ct-panel" data-tab="dual-cpp"><pre><code>#include &lt;iostream&gt;
+#include &lt;cmath&gt;
+
+int main() {
+    // Primal: max x1+x2 s.t. x1+2x2&lt;=4, 3x1+x2&lt;=6
+    // x* = [1.6, 1.2], primal_val = 2.8
+    // Dual:  min 4y1+6y2 s.t. y1+3y2&gt;=1, 2y1+y2&gt;=1
+    // y* = [0.2, 0.4],  dual_val   = 2.8
+    double c[]   = {1, 1};
+    double xOpt[]= {1.6, 1.2};
+    double b[]   = {4, 6};
+    double yOpt[]= {0.2, 0.4};
+    double A[2][2]= {{1,2},{3,1}};
+
+    double pv = c[0]*xOpt[0]+c[1]*xOpt[1];
+    double dv = b[0]*yOpt[0]+b[1]*yOpt[1];
+    std::cout &lt;&lt; "Primal: " &lt;&lt; pv &lt;&lt; "\nDual:   " &lt;&lt; dv
+              &lt;&lt; "\nGap: " &lt;&lt; std::abs(pv-dv) &lt;&lt; "\n";
+
+    // Comp. slackness
+    for (int j=0;j&lt;2;j++){
+        double Ax=A[j][0]*xOpt[0]+A[j][1]*xOpt[1];
+        std::cout &lt;&lt; "y["&lt;&lt;j&lt;&lt;"] * slack = " &lt;&lt; yOpt[j]*(b[j]-Ax) &lt;&lt; "\n";
+    }
+}</code></pre></div>
+    <div class="ct-panel" data-tab="dual-java"><pre><code>public class LPDuality {
+    public static void main(String[] args) {
+        // Primal: max x1+x2 s.t. x1+2x2&lt;=4, 3x1+x2&lt;=6
+        // x* = [1.6, 1.2], primal = 2.8
+        // Dual:  min 4y1+6y2 s.t. y1+3y2&gt;=1, 2y1+y2&gt;=1
+        // y* = [0.2, 0.4], dual = 2.8
+        double[] c    = {1, 1};
+        double[] xOpt = {1.6, 1.2};
+        double[] b    = {4, 6};
+        double[] yOpt = {0.2, 0.4};
+        double[][] A  = {{1,2},{3,1}};
+
+        double pv = c[0]*xOpt[0]+c[1]*xOpt[1];
+        double dv = b[0]*yOpt[0]+b[1]*yOpt[1];
+        System.out.printf("Primal: %.4f%nDual:   %.4f%nGap: %.2e%n",
+                          pv, dv, Math.abs(pv-dv));
+        for (int j=0;j&lt;2;j++){
+            double Ax=A[j][0]*xOpt[0]+A[j][1]*xOpt[1];
+            System.out.printf("y[%d]*slack = %.4f%n", j, yOpt[j]*(b[j]-Ax));
+        }
+    }
+}</code></pre></div>
+    <div class="ct-panel" data-tab="dual-go"><pre><code>package main
+
+import (
+	"fmt"
+	"math"
+)
+
+func main() {
+	c    := [2]float64{1, 1}
+	xOpt := [2]float64{1.6, 1.2}
+	b    := [2]float64{4, 6}
+	yOpt := [2]float64{0.2, 0.4}
+	A    := [2][2]float64{{1, 2}, {3, 1}}
+
+	pv := c[0]*xOpt[0] + c[1]*xOpt[1]
+	dv := b[0]*yOpt[0] + b[1]*yOpt[1]
+	fmt.Printf("Primal: %.4f\nDual:   %.4f\nGap: %.2e\n", pv, dv, math.Abs(pv-dv))
+
+	for j := 0; j &lt; 2; j++ {
+		Ax := A[j][0]*xOpt[0] + A[j][1]*xOpt[1]
+		fmt.Printf("y[%d]*slack = %.4f\n", j, yOpt[j]*(b[j]-Ax))
+	}
+}</code></pre></div>
+  </div>
+</details>
 
     <!-- ========================================================== -->
-    <h2 id="ml">18. Connection to ML</h2>
+    <h2 id="ml">17. Connection to ML</h2>
 
     <p>Once you've internalized this page, every part of modern ML reads as optimization:</p>
 

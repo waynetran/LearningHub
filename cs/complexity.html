@@ -427,6 +427,318 @@
       <p><strong>The general rule.</strong> When loops are nested independently, multiply their bounds. When code blocks run in sequence, sum their bounds (and the sum collapses to the largest term). When you call a function, substitute its complexity in. Recursion is the only place where this gets tricky — see the next section.</p>
     </div>
 
+    <details class="algo-code">
+      <summary>Source — Complexity Examples</summary>
+      <div class="code-tabs">
+        <div class="ct-header">
+          <button class="ct-tab active" data-tab="s9-pseudo">Pseudocode</button>
+          <button class="ct-tab" data-tab="s9-py">Python</button>
+          <button class="ct-tab" data-tab="s9-js">JavaScript</button>
+          <button class="ct-tab" data-tab="s9-c">C</button>
+          <button class="ct-tab" data-tab="s9-cpp">C++</button>
+          <button class="ct-tab" data-tab="s9-java">Java</button>
+          <button class="ct-tab" data-tab="s9-go">Go</button>
+        </div>
+        <div class="ct-panel active" data-tab="s9-pseudo"><pre><code>-- O(1): constant time, no loop
+function first(array):
+    return array[0]
+
+-- O(log n): halve the search space each step
+function binary_search(array, target):
+    lo = 0, hi = len(array) - 1
+    while lo <= hi:
+        mid = (lo + hi) / 2
+        if array[mid] == target: return mid
+        if array[mid] &lt; target: lo = mid + 1
+        else: hi = mid - 1
+    return -1
+
+-- O(n): visit every element once
+function linear_sum(array):
+    total = 0
+    for each x in array:
+        total += x
+    return total
+
+-- O(n log n): outer n, inner log n
+function n_log_n_example(array):
+    for each x in array:           -- n times
+        i = 1
+        while i &lt; len(array):      -- log n times
+            do_work(x, i)
+            i = i * 2
+
+-- O(n^2): nested loops, each 1..n
+function all_pairs(array):
+    for i in 0..len(array):
+        for j in 0..len(array):
+            do_work(array[i], array[j])
+</code></pre></div>
+        <div class="ct-panel" data-tab="s9-py"><pre><code>from math import log2
+
+def o_1_first(xs):
+    """O(1) — constant regardless of input size."""
+    return xs[0]
+
+def o_logn_binary_search(xs, target):
+    """O(log n) — halves the search space each iteration."""
+    lo, hi = 0, len(xs) - 1
+    while lo &lt;= hi:
+        mid = (lo + hi) // 2
+        if xs[mid] == target:
+            return mid
+        elif xs[mid] &lt; target:
+            lo = mid + 1
+        else:
+            hi = mid - 1
+    return -1
+
+def o_n_linear_sum(xs):
+    """O(n) — one pass over all elements."""
+    total = 0
+    for x in xs:
+        total += x
+    return total
+
+def o_n2_all_pairs(xs):
+    """O(n^2) — every pair of elements."""
+    count = 0
+    for i in range(len(xs)):
+        for j in range(i + 1, len(xs)):
+            if xs[i] &lt; xs[j]:
+                count += 1
+    return count
+
+def o_nlogn_example(xs):
+    """O(n log n) — outer linear, inner logarithmic."""
+    result = 0
+    for x in xs:           # n iterations
+        i = 1
+        while i &lt; len(xs):  # log n iterations
+            result += x * i
+            i *= 2
+    return result
+</code></pre></div>
+        <div class="ct-panel" data-tab="s9-js"><pre><code>// O(1) — array index lookup
+function first(xs) {
+  return xs[0];
+}
+
+// O(log n) — binary search on sorted array
+function binarySearch(xs, target) {
+  let lo = 0, hi = xs.length - 1;
+  while (lo &lt;= hi) {
+    const mid = (lo + hi) >> 1;
+    if (xs[mid] === target) return mid;
+    if (xs[mid] &lt; target) lo = mid + 1;
+    else hi = mid - 1;
+  }
+  return -1;
+}
+
+// O(n) — single pass
+function linearSum(xs) {
+  return xs.reduce((s, x) => s + x, 0);
+}
+
+// O(n^2) — all pairs
+function allPairs(xs) {
+  let count = 0;
+  for (let i = 0; i &lt; xs.length; i++)
+    for (let j = i + 1; j &lt; xs.length; j++)
+      if (xs[i] &lt; xs[j]) count++;
+  return count;
+}
+
+// O(n log n) — outer n, inner log n
+function nLogN(xs) {
+  let result = 0;
+  for (const x of xs) {         // n iterations
+    for (let i = 1; i &lt; xs.length; i *= 2)  // log n
+      result += x * i;
+  }
+  return result;
+}
+</code></pre></div>
+        <div class="ct-panel" data-tab="s9-c"><pre><code>#include &lt;stddef.h&gt;
+
+/* O(1) */
+int first(int *xs) { return xs[0]; }
+
+/* O(log n) — binary search */
+int binary_search(int *xs, size_t n, int target) {
+    size_t lo = 0, hi = n - 1;
+    while (lo &lt;= hi) {
+        size_t mid = lo + (hi - lo) / 2;
+        if (xs[mid] == target) return (int)mid;
+        if (xs[mid] &lt; target) lo = mid + 1;
+        else if (mid == 0) break;
+        else hi = mid - 1;
+    }
+    return -1;
+}
+
+/* O(n) — linear scan */
+long linear_sum(int *xs, size_t n) {
+    long total = 0;
+    for (size_t i = 0; i &lt; n; i++) total += xs[i];
+    return total;
+}
+
+/* O(n^2) — all pairs */
+long all_pairs(int *xs, size_t n) {
+    long count = 0;
+    for (size_t i = 0; i &lt; n; i++)
+        for (size_t j = i + 1; j &lt; n; j++)
+            if (xs[i] &lt; xs[j]) count++;
+    return count;
+}
+
+/* O(n log n) — outer n, inner log n */
+long n_log_n(int *xs, size_t n) {
+    long result = 0;
+    for (size_t i = 0; i &lt; n; i++)          /* n */
+        for (size_t j = 1; j &lt; n; j *= 2)   /* log n */
+            result += xs[i] * (long)j;
+    return result;
+}
+</code></pre></div>
+        <div class="ct-panel" data-tab="s9-cpp"><pre><code>#include &lt;vector&gt;
+#include &lt;algorithm&gt;
+using std::vector;
+
+// O(1)
+int first(const vector&lt;int&gt;&amp; v) { return v[0]; }
+
+// O(log n) — use STL lower_bound
+int binarySearch(const vector&lt;int&gt;&amp; v, int target) {
+    auto it = std::lower_bound(v.begin(), v.end(), target);
+    if (it != v.end() &amp;&amp; *it == target)
+        return (int)(it - v.begin());
+    return -1;
+}
+
+// O(n)
+long linearSum(const vector&lt;int&gt;&amp; v) {
+    long s = 0;
+    for (int x : v) s += x;
+    return s;
+}
+
+// O(n^2)
+long allPairs(const vector&lt;int&gt;&amp; v) {
+    long count = 0;
+    for (size_t i = 0; i &lt; v.size(); i++)
+        for (size_t j = i + 1; j &lt; v.size(); j++)
+            if (v[i] &lt; v[j]) count++;
+    return count;
+}
+
+// O(n log n) — outer n, inner log n
+long nLogN(const vector&lt;int&gt;&amp; v) {
+    long result = 0;
+    for (int x : v)
+        for (size_t j = 1; j &lt; v.size(); j *= 2)
+            result += x * (long)j;
+    return result;
+}
+</code></pre></div>
+        <div class="ct-panel" data-tab="s9-java"><pre><code>import java.util.Arrays;
+
+public class ComplexityExamples {
+
+    // O(1)
+    static int first(int[] xs) { return xs[0]; }
+
+    // O(log n) — Arrays.binarySearch is O(log n)
+    static int binarySearch(int[] xs, int target) {
+        return Arrays.binarySearch(xs, target);
+    }
+
+    // O(n)
+    static long linearSum(int[] xs) {
+        long total = 0;
+        for (int x : xs) total += x;
+        return total;
+    }
+
+    // O(n^2)
+    static long allPairs(int[] xs) {
+        long count = 0;
+        for (int i = 0; i &lt; xs.length; i++)
+            for (int j = i + 1; j &lt; xs.length; j++)
+                if (xs[i] &lt; xs[j]) count++;
+        return count;
+    }
+
+    // O(n log n) — outer n, inner log n
+    static long nLogN(int[] xs) {
+        long result = 0;
+        for (int x : xs)
+            for (int j = 1; j &lt; xs.length; j *= 2)
+                result += (long) x * j;
+        return result;
+    }
+}
+</code></pre></div>
+        <div class="ct-panel" data-tab="s9-go"><pre><code>package main
+
+// O(1)
+func first(xs []int) int { return xs[0] }
+
+// O(log n) — binary search
+func binarySearch(xs []int, target int) int {
+	lo, hi := 0, len(xs)-1
+	for lo &lt;= hi {
+		mid := lo + (hi-lo)/2
+		switch {
+		case xs[mid] == target:
+			return mid
+		case xs[mid] &lt; target:
+			lo = mid + 1
+		default:
+			hi = mid - 1
+		}
+	}
+	return -1
+}
+
+// O(n)
+func linearSum(xs []int) int {
+	total := 0
+	for _, x := range xs {
+		total += x
+	}
+	return total
+}
+
+// O(n^2)
+func allPairs(xs []int) int {
+	count := 0
+	for i := range xs {
+		for j := i + 1; j &lt; len(xs); j++ {
+			if xs[i] &lt; xs[j] {
+				count++
+			}
+		}
+	}
+	return count
+}
+
+// O(n log n) — outer n, inner log n
+func nLogN(xs []int) int {
+	result := 0
+	for _, x := range xs {
+		for j := 1; j &lt; len(xs); j *= 2 {
+			result += x * j
+		}
+	}
+	return result
+}
+</code></pre></div>
+      </div>
+    </details>
+
     <!-- ========================================================== -->
     <h2 id="recurrence">10. Recurrence relations</h2>
 
@@ -502,6 +814,284 @@
 
     <div class="problem-set" data-topic="cplx-masters"></div>
 
+    <details class="algo-code">
+      <summary>Source — Recurrence Examples</summary>
+      <div class="code-tabs">
+        <div class="ct-header">
+          <button class="ct-tab active" data-tab="s10-pseudo">Pseudocode</button>
+          <button class="ct-tab" data-tab="s10-py">Python</button>
+          <button class="ct-tab" data-tab="s10-js">JavaScript</button>
+          <button class="ct-tab" data-tab="s10-c">C</button>
+          <button class="ct-tab" data-tab="s10-cpp">C++</button>
+          <button class="ct-tab" data-tab="s10-java">Java</button>
+          <button class="ct-tab" data-tab="s10-go">Go</button>
+        </div>
+        <div class="ct-panel active" data-tab="s10-pseudo"><pre><code>-- Fibonacci: T(n) = 2*T(n-1) + O(1) → O(2^n)
+function fib(n):
+    if n &lt;= 1: return n
+    return fib(n-1) + fib(n-2)
+
+-- Merge sort: T(n) = 2*T(n/2) + O(n) → O(n log n)
+function merge_sort(array):
+    if len(array) &lt;= 1: return array
+    mid = len(array) / 2
+    left  = merge_sort(array[0..mid])
+    right = merge_sort(array[mid..end])
+    return merge(left, right)
+
+function merge(left, right):
+    result = []
+    while left and right are non-empty:
+        if left[0] &lt;= right[0]:
+            append left[0] to result, advance left
+        else:
+            append right[0] to result, advance right
+    append remaining elements
+    return result
+
+-- Binary search: T(n) = T(n/2) + O(1) → O(log n)
+function bin_search(array, lo, hi, target):
+    if lo &gt; hi: return -1
+    mid = (lo + hi) / 2
+    if array[mid] == target: return mid
+    if array[mid] &lt; target: return bin_search(array, mid+1, hi, target)
+    else:                    return bin_search(array, lo, mid-1, target)
+</code></pre></div>
+        <div class="ct-panel" data-tab="s10-py"><pre><code>import sys
+sys.setrecursionlimit(10000)
+
+# Fibonacci: T(n) = 2*T(n-1) + O(1)  →  O(2^n)
+# Each call spawns two more; the tree has 2^n leaves.
+def fib(n):
+    if n &lt;= 1:
+        return n
+    return fib(n - 1) + fib(n - 2)
+
+# Merge sort: T(n) = 2*T(n/2) + O(n)  →  O(n log n)  (Master theorem case 2)
+def merge_sort(xs):
+    if len(xs) &lt;= 1:
+        return xs
+    mid = len(xs) // 2
+    left  = merge_sort(xs[:mid])
+    right = merge_sort(xs[mid:])
+    return merge(left, right)
+
+def merge(a, b):
+    out, i, j = [], 0, 0
+    while i &lt; len(a) and j &lt; len(b):
+        if a[i] &lt;= b[j]:
+            out.append(a[i]); i += 1
+        else:
+            out.append(b[j]); j += 1
+    out.extend(a[i:]); out.extend(b[j:])
+    return out
+
+# Recursive binary search: T(n) = T(n/2) + O(1)  →  O(log n)
+def bin_search(xs, lo, hi, target):
+    if lo &gt; hi:
+        return -1
+    mid = (lo + hi) // 2
+    if xs[mid] == target:
+        return mid
+    if xs[mid] &lt; target:
+        return bin_search(xs, mid + 1, hi, target)
+    return bin_search(xs, lo, mid - 1, target)
+</code></pre></div>
+        <div class="ct-panel" data-tab="s10-js"><pre><code>// Fibonacci: T(n) = 2T(n-1) + O(1) → O(2^n)
+function fib(n) {
+  if (n &lt;= 1) return n;
+  return fib(n - 1) + fib(n - 2);
+}
+
+// Merge sort: T(n) = 2T(n/2) + O(n) → O(n log n)
+function mergeSort(xs) {
+  if (xs.length &lt;= 1) return xs;
+  const mid = xs.length >> 1;
+  const left  = mergeSort(xs.slice(0, mid));
+  const right = mergeSort(xs.slice(mid));
+  return merge(left, right);
+}
+function merge(a, b) {
+  const out = [];
+  let i = 0, j = 0;
+  while (i &lt; a.length &amp;&amp; j &lt; b.length)
+    out.push(a[i] &lt;= b[j] ? a[i++] : b[j++]);
+  return out.concat(a.slice(i), b.slice(j));
+}
+
+// Recursive binary search: T(n) = T(n/2) + O(1) → O(log n)
+function binSearch(xs, lo, hi, target) {
+  if (lo &gt; hi) return -1;
+  const mid = (lo + hi) >> 1;
+  if (xs[mid] === target) return mid;
+  if (xs[mid] &lt; target)  return binSearch(xs, mid + 1, hi, target);
+  return binSearch(xs, lo, mid - 1, target);
+}
+</code></pre></div>
+        <div class="ct-panel" data-tab="s10-c"><pre><code>#include &lt;stdlib.h&gt;
+#include &lt;string.h&gt;
+
+/* Fibonacci: T(n) = 2T(n-1)+O(1) → O(2^n) */
+long fib(int n) {
+    if (n &lt;= 1) return n;
+    return fib(n-1) + fib(n-2);
+}
+
+/* Recursive binary search: T(n) = T(n/2)+O(1) → O(log n) */
+int bin_search(int *xs, int lo, int hi, int target) {
+    if (lo &gt; hi) return -1;
+    int mid = lo + (hi - lo) / 2;
+    if (xs[mid] == target) return mid;
+    if (xs[mid] &lt; target)  return bin_search(xs, mid+1, hi, target);
+    return bin_search(xs, lo, mid-1, target);
+}
+
+/* Merge: O(n) combine step for merge sort */
+void merge(int *xs, int *tmp, int lo, int mid, int hi) {
+    memcpy(tmp + lo, xs + lo, (hi - lo + 1) * sizeof(int));
+    int i = lo, j = mid + 1, k = lo;
+    while (i &lt;= mid &amp;&amp; j &lt;= hi)
+        xs[k++] = (tmp[i] &lt;= tmp[j]) ? tmp[i++] : tmp[j++];
+    while (i &lt;= mid) xs[k++] = tmp[i++];
+    while (j &lt;= hi)  xs[k++] = tmp[j++];
+}
+
+/* Merge sort: T(n) = 2T(n/2)+O(n) → O(n log n) */
+void merge_sort(int *xs, int *tmp, int lo, int hi) {
+    if (lo &gt;= hi) return;
+    int mid = lo + (hi - lo) / 2;
+    merge_sort(xs, tmp, lo, mid);
+    merge_sort(xs, tmp, mid+1, hi);
+    merge(xs, tmp, lo, mid, hi);
+}
+</code></pre></div>
+        <div class="ct-panel" data-tab="s10-cpp"><pre><code>#include &lt;vector&gt;
+using std::vector;
+
+// Fibonacci: T(n) = 2T(n-1)+O(1) → O(2^n)
+long fib(int n) {
+    if (n &lt;= 1) return n;
+    return fib(n-1) + fib(n-2);
+}
+
+// Recursive binary search: T(n) = T(n/2)+O(1) → O(log n)
+int binSearch(const vector&lt;int&gt;&amp; xs, int lo, int hi, int target) {
+    if (lo &gt; hi) return -1;
+    int mid = lo + (hi - lo) / 2;
+    if (xs[mid] == target) return mid;
+    if (xs[mid] &lt; target)  return binSearch(xs, mid+1, hi, target);
+    return binSearch(xs, lo, mid-1, target);
+}
+
+// Merge sort: T(n) = 2T(n/2)+O(n) → O(n log n)
+vector&lt;int&gt; merge(const vector&lt;int&gt;&amp; a, const vector&lt;int&gt;&amp; b) {
+    vector&lt;int&gt; out;
+    size_t i = 0, j = 0;
+    while (i &lt; a.size() &amp;&amp; j &lt; b.size())
+        out.push_back(a[i] &lt;= b[j] ? a[i++] : b[j++]);
+    out.insert(out.end(), a.begin()+i, a.end());
+    out.insert(out.end(), b.begin()+j, b.end());
+    return out;
+}
+
+vector&lt;int&gt; mergeSort(vector&lt;int&gt; xs) {
+    if (xs.size() &lt;= 1) return xs;
+    size_t mid = xs.size() / 2;
+    return merge(mergeSort({xs.begin(), xs.begin()+mid}),
+                 mergeSort({xs.begin()+mid, xs.end()}));
+}
+</code></pre></div>
+        <div class="ct-panel" data-tab="s10-java"><pre><code>import java.util.Arrays;
+
+public class RecurrenceExamples {
+
+    // Fibonacci: T(n) = 2T(n-1)+O(1) → O(2^n)
+    static long fib(int n) {
+        if (n &lt;= 1) return n;
+        return fib(n - 1) + fib(n - 2);
+    }
+
+    // Recursive binary search: T(n) = T(n/2)+O(1) → O(log n)
+    static int binSearch(int[] xs, int lo, int hi, int target) {
+        if (lo &gt; hi) return -1;
+        int mid = lo + (hi - lo) / 2;
+        if (xs[mid] == target) return mid;
+        if (xs[mid] &lt; target)  return binSearch(xs, mid + 1, hi, target);
+        return binSearch(xs, lo, mid - 1, target);
+    }
+
+    // Merge sort: T(n) = 2T(n/2)+O(n) → O(n log n)
+    static int[] mergeSort(int[] xs) {
+        if (xs.length &lt;= 1) return xs;
+        int mid = xs.length / 2;
+        int[] left  = mergeSort(Arrays.copyOfRange(xs, 0, mid));
+        int[] right = mergeSort(Arrays.copyOfRange(xs, mid, xs.length));
+        return merge(left, right);
+    }
+
+    static int[] merge(int[] a, int[] b) {
+        int[] out = new int[a.length + b.length];
+        int i = 0, j = 0, k = 0;
+        while (i &lt; a.length &amp;&amp; j &lt; b.length)
+            out[k++] = (a[i] &lt;= b[j]) ? a[i++] : b[j++];
+        while (i &lt; a.length) out[k++] = a[i++];
+        while (j &lt; b.length) out[k++] = b[j++];
+        return out;
+    }
+}
+</code></pre></div>
+        <div class="ct-panel" data-tab="s10-go"><pre><code>package main
+
+// Fibonacci: T(n) = 2T(n-1)+O(1) → O(2^n)
+func fib(n int) int {
+	if n &lt;= 1 {
+		return n
+	}
+	return fib(n-1) + fib(n-2)
+}
+
+// Recursive binary search: T(n) = T(n/2)+O(1) → O(log n)
+func binSearch(xs []int, lo, hi, target int) int {
+	if lo &gt; hi {
+		return -1
+	}
+	mid := lo + (hi-lo)/2
+	if xs[mid] == target {
+		return mid
+	}
+	if xs[mid] &lt; target {
+		return binSearch(xs, mid+1, hi, target)
+	}
+	return binSearch(xs, lo, mid-1, target)
+}
+
+// Merge sort: T(n) = 2T(n/2)+O(n) → O(n log n)
+func mergeSort(xs []int) []int {
+	if len(xs) &lt;= 1 {
+		return xs
+	}
+	mid := len(xs) / 2
+	return mergeFn(mergeSort(xs[:mid]), mergeSort(xs[mid:]))
+}
+
+func mergeFn(a, b []int) []int {
+	out := make([]int, 0, len(a)+len(b))
+	i, j := 0, 0
+	for i &lt; len(a) &amp;&amp; j &lt; len(b) {
+		if a[i] &lt;= b[j] {
+			out = append(out, a[i]); i++
+		} else {
+			out = append(out, b[j]); j++
+		}
+	}
+	out = append(out, a[i:]...)
+	out = append(out, b[j:]...)
+	return out
+}
+</code></pre></div>
+      </div>
+    </details>
+
     <!-- ========================================================== -->
     <h2 id="amortized">11. Amortized analysis</h2>
 
@@ -536,6 +1126,264 @@
 
     <p>All three give the same answer when applied to dynamic array doubling: amortized $O(1)$ per append. The accounting method is most intuitive: charge each append a constant fee of, say, 3. The first unit pays for the actual append; the second unit gets stashed on the new element; the third unit gets stashed on a previously-existing element. When a doubling fires, every old element has a stashed credit that pays for its move. The math works out.</p>
 
+    <details class="algo-code">
+      <summary>Source — Dynamic Array (Amortized)</summary>
+      <div class="code-tabs">
+        <div class="ct-header">
+          <button class="ct-tab active" data-tab="s11-pseudo">Pseudocode</button>
+          <button class="ct-tab" data-tab="s11-py">Python</button>
+          <button class="ct-tab" data-tab="s11-js">JavaScript</button>
+          <button class="ct-tab" data-tab="s11-c">C</button>
+          <button class="ct-tab" data-tab="s11-cpp">C++</button>
+          <button class="ct-tab" data-tab="s11-java">Java</button>
+          <button class="ct-tab" data-tab="s11-go">Go</button>
+        </div>
+        <div class="ct-panel active" data-tab="s11-pseudo"><pre><code>-- Dynamic array that doubles capacity on overflow.
+-- Amortized cost of append: O(1).
+
+DynamicArray:
+    buf = [None] * 1
+    size = 0
+    cap  = 1
+    total_copies = 0    -- for demonstration
+
+    function append(x):
+        if size == cap:
+            new_buf = [None] * (cap * 2)
+            copy buf[0..size] into new_buf   -- costs `size` copies
+            total_copies += size
+            buf = new_buf
+            cap *= 2
+        buf[size] = x
+        size += 1
+
+-- After N appends, total_copies &lt; 2*N because:
+--   copies happen at sizes 1, 2, 4, 8, ..., N/2
+--   sum = 1+2+4+...+N/2 = N-1 &lt; N
+-- So amortized copies per append &lt; 2, i.e., O(1).
+</code></pre></div>
+        <div class="ct-panel" data-tab="s11-py"><pre><code>class DynamicArray:
+    """Dynamic array with doubling strategy — demonstrates O(1) amortized append."""
+
+    def __init__(self):
+        self.cap = 1
+        self.size = 0
+        self.buf = [None] * self.cap
+        self.total_copies = 0
+
+    def append(self, x):
+        if self.size == self.cap:
+            new_buf = [None] * (self.cap * 2)
+            for i in range(self.size):
+                new_buf[i] = self.buf[i]
+                self.total_copies += 1
+            self.buf = new_buf
+            self.cap *= 2
+        self.buf[self.size] = x
+        self.size += 1
+
+    def __getitem__(self, i):
+        return self.buf[i]
+
+# Demonstration
+N = 200_000
+arr = DynamicArray()
+for i in range(N):
+    arr.append(i)
+
+print(f"N appends:         {N}")
+print(f"total copies:      {arr.total_copies}")
+print(f"copies per append: {arr.total_copies / N:.4f}")
+# Expected: copies per append ≈ 1.0  (geometric sum 1+2+4+...≈N)
+# This confirms O(1) amortized cost per append.
+</code></pre></div>
+        <div class="ct-panel" data-tab="s11-js"><pre><code>class DynamicArray {
+  constructor() {
+    this.buf = new Array(1);
+    this.size = 0;
+    this.cap = 1;
+    this.totalCopies = 0;
+  }
+
+  append(x) {
+    if (this.size === this.cap) {
+      const newBuf = new Array(this.cap * 2);
+      for (let i = 0; i &lt; this.size; i++) {
+        newBuf[i] = this.buf[i];
+        this.totalCopies++;
+      }
+      this.buf = newBuf;
+      this.cap *= 2;
+    }
+    this.buf[this.size++] = x;
+  }
+
+  get(i) { return this.buf[i]; }
+}
+
+const N = 100_000;
+const arr = new DynamicArray();
+for (let i = 0; i &lt; N; i++) arr.append(i);
+
+console.log(`N appends:         ${N}`);
+console.log(`total copies:      ${arr.totalCopies}`);
+console.log(`copies per append: ${(arr.totalCopies / N).toFixed(4)}`);
+// copies per append ≈ 1.0 — O(1) amortized confirmed
+</code></pre></div>
+        <div class="ct-panel" data-tab="s11-c"><pre><code>#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+
+typedef struct {
+    int *buf;
+    int  size, cap;
+    long total_copies;
+} DynArray;
+
+void da_init(DynArray *da) {
+    da->buf = malloc(sizeof(int));
+    da->size = 0;
+    da->cap  = 1;
+    da->total_copies = 0;
+}
+
+void da_append(DynArray *da, int x) {
+    if (da->size == da->cap) {
+        int *new_buf = malloc(da->cap * 2 * sizeof(int));
+        for (int i = 0; i &lt; da->size; i++) {
+            new_buf[i] = da->buf[i];
+            da->total_copies++;
+        }
+        free(da->buf);
+        da->buf = new_buf;
+        da->cap *= 2;
+    }
+    da->buf[da->size++] = x;
+}
+
+int main(void) {
+    DynArray da;
+    da_init(&amp;da);
+    int N = 100000;
+    for (int i = 0; i &lt; N; i++) da_append(&amp;da, i);
+    printf("N=%d  copies=%ld  per_append=%.4f\n",
+           N, da.total_copies, (double)da.total_copies / N);
+    free(da.buf);
+    return 0;
+}
+</code></pre></div>
+        <div class="ct-panel" data-tab="s11-cpp"><pre><code>#include &lt;iostream&gt;
+#include &lt;memory&gt;
+
+class DynamicArray {
+    std::unique_ptr&lt;int[]&gt; buf;
+    int sz = 0, cap = 1;
+public:
+    long totalCopies = 0;
+
+    DynamicArray() : buf(std::make_unique&lt;int[]&gt;(1)) {}
+
+    void append(int x) {
+        if (sz == cap) {
+            auto newBuf = std::make_unique&lt;int[]&gt;(cap * 2);
+            for (int i = 0; i &lt; sz; i++) {
+                newBuf[i] = buf[i];
+                totalCopies++;
+            }
+            buf = std::move(newBuf);
+            cap *= 2;
+        }
+        buf[sz++] = x;
+    }
+
+    int size() const { return sz; }
+};
+
+int main() {
+    const int N = 100'000;
+    DynamicArray da;
+    for (int i = 0; i &lt; N; i++) da.append(i);
+    std::cout &lt;&lt; "N=" &lt;&lt; N
+              &lt;&lt; "  copies=" &lt;&lt; da.totalCopies
+              &lt;&lt; "  per_append=" &lt;&lt; (double)da.totalCopies / N &lt;&lt; "\n";
+}
+</code></pre></div>
+        <div class="ct-panel" data-tab="s11-java"><pre><code>public class DynamicArray {
+    private int[] buf;
+    private int size, cap;
+    public long totalCopies;
+
+    public DynamicArray() {
+        buf = new int[1];
+        size = 0;
+        cap  = 1;
+        totalCopies = 0;
+    }
+
+    public void append(int x) {
+        if (size == cap) {
+            int[] newBuf = new int[cap * 2];
+            for (int i = 0; i &lt; size; i++) {
+                newBuf[i] = buf[i];
+                totalCopies++;
+            }
+            buf = newBuf;
+            cap *= 2;
+        }
+        buf[size++] = x;
+    }
+
+    public static void main(String[] args) {
+        int N = 100_000;
+        DynamicArray da = new DynamicArray();
+        for (int i = 0; i &lt; N; i++) da.append(i);
+        System.out.printf("N=%d  copies=%d  per_append=%.4f%n",
+                N, da.totalCopies, (double) da.totalCopies / N);
+        // per_append ≈ 1.0 → O(1) amortized
+    }
+}
+</code></pre></div>
+        <div class="ct-panel" data-tab="s11-go"><pre><code>package main
+
+import "fmt"
+
+type DynamicArray struct {
+	buf         []int
+	size, cap_  int
+	totalCopies int
+}
+
+func NewDynamicArray() *DynamicArray {
+	return &amp;DynamicArray{buf: make([]int, 1), cap_: 1}
+}
+
+func (da *DynamicArray) Append(x int) {
+	if da.size == da.cap_ {
+		newBuf := make([]int, da.cap_*2)
+		for i := 0; i &lt; da.size; i++ {
+			newBuf[i] = da.buf[i]
+			da.totalCopies++
+		}
+		da.buf = newBuf
+		da.cap_ *= 2
+	}
+	da.buf[da.size] = x
+	da.size++
+}
+
+func main() {
+	N := 100_000
+	da := NewDynamicArray()
+	for i := 0; i &lt; N; i++ {
+		da.Append(i)
+	}
+	fmt.Printf("N=%d  copies=%d  per_append=%.4f\n",
+		N, da.totalCopies, float64(da.totalCopies)/float64(N))
+	// per_append ≈ 1.0 → O(1) amortized confirmed
+}
+</code></pre></div>
+      </div>
+    </details>
+
     <!-- ========================================================== -->
     <h2 id="space">12. Space complexity</h2>
 
@@ -564,6 +1412,282 @@
 
     <div class="problem-set" data-topic="cplx-amortized"></div>
 
+    <details class="algo-code">
+      <summary>Source — Space Complexity</summary>
+      <div class="code-tabs">
+        <div class="ct-header">
+          <button class="ct-tab active" data-tab="s12-pseudo">Pseudocode</button>
+          <button class="ct-tab" data-tab="s12-py">Python</button>
+          <button class="ct-tab" data-tab="s12-js">JavaScript</button>
+          <button class="ct-tab" data-tab="s12-c">C</button>
+          <button class="ct-tab" data-tab="s12-cpp">C++</button>
+          <button class="ct-tab" data-tab="s12-java">Java</button>
+          <button class="ct-tab" data-tab="s12-go">Go</button>
+        </div>
+        <div class="ct-panel active" data-tab="s12-pseudo"><pre><code>-- In-place reverse: O(1) auxiliary space
+function reverse_inplace(array):
+    lo = 0, hi = len(array) - 1
+    while lo &lt; hi:
+        swap array[lo] and array[hi]
+        lo += 1, hi -= 1
+    -- No extra array allocated — swaps use one temp variable.
+
+-- Copy-and-reverse: O(n) auxiliary space
+function reverse_copy(array):
+    result = new array of same length
+    for i in 0..len(array):
+        result[i] = array[len(array) - 1 - i]
+    return result
+    -- Extra array of size n allocated.
+
+-- Recursive binary search: O(log n) stack space
+function rec_bsearch(array, lo, hi, target):
+    if lo &gt; hi: return -1
+    mid = (lo + hi) / 2
+    if array[mid] == target: return mid
+    if array[mid] &lt; target: return rec_bsearch(array, mid+1, hi, target)
+    else:                    return rec_bsearch(array, lo, mid-1, target)
+    -- Each call frame is O(1); depth is O(log n).
+</code></pre></div>
+        <div class="ct-panel" data-tab="s12-py"><pre><code># In-place reverse — O(1) auxiliary space
+def reverse_inplace(xs):
+    lo, hi = 0, len(xs) - 1
+    while lo &lt; hi:
+        xs[lo], xs[hi] = xs[hi], xs[lo]
+        lo += 1; hi -= 1
+    # No extra memory beyond two index variables.
+
+# Copy-and-reverse — O(n) auxiliary space
+def reverse_copy(xs):
+    return xs[::-1]   # creates a new list of length n
+
+# Iterative binary search — O(1) auxiliary space
+def bsearch_iter(xs, target):
+    lo, hi = 0, len(xs) - 1
+    while lo &lt;= hi:
+        mid = (lo + hi) // 2
+        if xs[mid] == target:  return mid
+        if xs[mid] &lt; target:   lo = mid + 1
+        else:                  hi = mid - 1
+    return -1
+
+# Recursive binary search — O(log n) stack space
+# Each frame holds lo, hi, mid: O(1) per frame.
+# Recursion depth = O(log n).
+def bsearch_rec(xs, lo, hi, target):
+    if lo &gt; hi:
+        return -1
+    mid = (lo + hi) // 2
+    if xs[mid] == target:
+        return mid
+    if xs[mid] &lt; target:
+        return bsearch_rec(xs, mid + 1, hi, target)
+    return bsearch_rec(xs, lo, mid - 1, target)
+</code></pre></div>
+        <div class="ct-panel" data-tab="s12-js"><pre><code>// In-place reverse — O(1) auxiliary space
+function reverseInPlace(xs) {
+  let lo = 0, hi = xs.length - 1;
+  while (lo &lt; hi) {
+    [xs[lo], xs[hi]] = [xs[hi], xs[lo]];
+    lo++; hi--;
+  }
+}
+
+// Copy-and-reverse — O(n) auxiliary space
+function reverseCopy(xs) {
+  return xs.slice().reverse(); // new array of length n
+}
+
+// Iterative binary search — O(1) auxiliary space
+function bsearchIter(xs, target) {
+  let lo = 0, hi = xs.length - 1;
+  while (lo &lt;= hi) {
+    const mid = (lo + hi) >> 1;
+    if (xs[mid] === target) return mid;
+    if (xs[mid] &lt; target) lo = mid + 1;
+    else hi = mid - 1;
+  }
+  return -1;
+}
+
+// Recursive binary search — O(log n) stack space
+function bsearchRec(xs, lo, hi, target) {
+  if (lo &gt; hi) return -1;
+  const mid = (lo + hi) >> 1;
+  if (xs[mid] === target) return mid;
+  if (xs[mid] &lt; target)  return bsearchRec(xs, mid + 1, hi, target);
+  return bsearchRec(xs, lo, mid - 1, target);
+}
+</code></pre></div>
+        <div class="ct-panel" data-tab="s12-c"><pre><code>#include &lt;stdlib.h&gt;
+#include &lt;string.h&gt;
+
+/* In-place reverse — O(1) auxiliary space */
+void reverse_inplace(int *xs, int n) {
+    int lo = 0, hi = n - 1;
+    while (lo &lt; hi) {
+        int tmp = xs[lo]; xs[lo] = xs[hi]; xs[hi] = tmp;
+        lo++; hi--;
+    }
+}
+
+/* Copy-and-reverse — O(n) auxiliary space */
+int *reverse_copy(const int *xs, int n) {
+    int *out = malloc(n * sizeof(int));
+    for (int i = 0; i &lt; n; i++)
+        out[i] = xs[n - 1 - i];
+    return out;  /* caller must free */
+}
+
+/* Iterative binary search — O(1) space */
+int bsearch_iter(const int *xs, int n, int target) {
+    int lo = 0, hi = n - 1;
+    while (lo &lt;= hi) {
+        int mid = lo + (hi - lo) / 2;
+        if (xs[mid] == target) return mid;
+        if (xs[mid] &lt; target)  lo = mid + 1;
+        else                   hi = mid - 1;
+    }
+    return -1;
+}
+
+/* Recursive binary search — O(log n) stack space */
+int bsearch_rec(const int *xs, int lo, int hi, int target) {
+    if (lo &gt; hi) return -1;
+    int mid = lo + (hi - lo) / 2;
+    if (xs[mid] == target) return mid;
+    if (xs[mid] &lt; target)  return bsearch_rec(xs, mid+1, hi, target);
+    return bsearch_rec(xs, lo, mid-1, target);
+}
+</code></pre></div>
+        <div class="ct-panel" data-tab="s12-cpp"><pre><code>#include &lt;vector&gt;
+#include &lt;algorithm&gt;
+using std::vector;
+
+// In-place reverse — O(1) auxiliary space
+void reverseInPlace(vector&lt;int&gt;&amp; v) {
+    std::reverse(v.begin(), v.end());
+}
+
+// Copy-and-reverse — O(n) auxiliary space
+vector&lt;int&gt; reverseCopy(const vector&lt;int&gt;&amp; v) {
+    return vector&lt;int&gt;(v.rbegin(), v.rend());
+}
+
+// Iterative binary search — O(1) space
+int bsearchIter(const vector&lt;int&gt;&amp; v, int target) {
+    int lo = 0, hi = (int)v.size() - 1;
+    while (lo &lt;= hi) {
+        int mid = lo + (hi - lo) / 2;
+        if (v[mid] == target) return mid;
+        if (v[mid] &lt; target)  lo = mid + 1;
+        else                  hi = mid - 1;
+    }
+    return -1;
+}
+
+// Recursive binary search — O(log n) stack space
+int bsearchRec(const vector&lt;int&gt;&amp; v, int lo, int hi, int target) {
+    if (lo &gt; hi) return -1;
+    int mid = lo + (hi - lo) / 2;
+    if (v[mid] == target) return mid;
+    if (v[mid] &lt; target)  return bsearchRec(v, mid+1, hi, target);
+    return bsearchRec(v, lo, mid-1, target);
+}
+</code></pre></div>
+        <div class="ct-panel" data-tab="s12-java"><pre><code>import java.util.Arrays;
+
+public class SpaceComplexity {
+
+    // In-place reverse — O(1) auxiliary space
+    static void reverseInPlace(int[] xs) {
+        for (int lo = 0, hi = xs.length - 1; lo &lt; hi; lo++, hi--) {
+            int tmp = xs[lo]; xs[lo] = xs[hi]; xs[hi] = tmp;
+        }
+    }
+
+    // Copy-and-reverse — O(n) auxiliary space
+    static int[] reverseCopy(int[] xs) {
+        int[] out = new int[xs.length];
+        for (int i = 0; i &lt; xs.length; i++)
+            out[i] = xs[xs.length - 1 - i];
+        return out;
+    }
+
+    // Iterative binary search — O(1) space
+    static int bsearchIter(int[] xs, int target) {
+        int lo = 0, hi = xs.length - 1;
+        while (lo &lt;= hi) {
+            int mid = lo + (hi - lo) / 2;
+            if (xs[mid] == target) return mid;
+            if (xs[mid] &lt; target)  lo = mid + 1;
+            else                   hi = mid - 1;
+        }
+        return -1;
+    }
+
+    // Recursive binary search — O(log n) stack space
+    static int bsearchRec(int[] xs, int lo, int hi, int target) {
+        if (lo &gt; hi) return -1;
+        int mid = lo + (hi - lo) / 2;
+        if (xs[mid] == target) return mid;
+        if (xs[mid] &lt; target)  return bsearchRec(xs, mid + 1, hi, target);
+        return bsearchRec(xs, lo, mid - 1, target);
+    }
+}
+</code></pre></div>
+        <div class="ct-panel" data-tab="s12-go"><pre><code>package main
+
+// In-place reverse — O(1) auxiliary space
+func reverseInPlace(xs []int) {
+	for lo, hi := 0, len(xs)-1; lo &lt; hi; lo, hi = lo+1, hi-1 {
+		xs[lo], xs[hi] = xs[hi], xs[lo]
+	}
+}
+
+// Copy-and-reverse — O(n) auxiliary space
+func reverseCopy(xs []int) []int {
+	out := make([]int, len(xs))
+	for i, x := range xs {
+		out[len(xs)-1-i] = x
+	}
+	return out
+}
+
+// Iterative binary search — O(1) auxiliary space
+func bsearchIter(xs []int, target int) int {
+	lo, hi := 0, len(xs)-1
+	for lo &lt;= hi {
+		mid := lo + (hi-lo)/2
+		if xs[mid] == target {
+			return mid
+		} else if xs[mid] &lt; target {
+			lo = mid + 1
+		} else {
+			hi = mid - 1
+		}
+	}
+	return -1
+}
+
+// Recursive binary search — O(log n) stack space
+func bsearchRec(xs []int, lo, hi, target int) int {
+	if lo &gt; hi {
+		return -1
+	}
+	mid := lo + (hi-lo)/2
+	if xs[mid] == target {
+		return mid
+	}
+	if xs[mid] &lt; target {
+		return bsearchRec(xs, mid+1, hi, target)
+	}
+	return bsearchRec(xs, lo, mid-1, target)
+}
+</code></pre></div>
+      </div>
+    </details>
+
     <!-- ========================================================== -->
     <h2 id="cases">13. Best, average, worst</h2>
 
@@ -584,6 +1708,265 @@
     </ul>
 
     <p>Why is quicksort competitive in practice when its worst case is so bad? Because (a) the average case is $n \log n$ with small constants — much smaller than merge sort's, (b) you can randomize to get expected $n \log n$ on adversarial inputs, and (c) it sorts in place. Worst-case-per-op pessimism would tell you to never use it; reality says "it's the fastest comparison sort on most inputs." This is one of the cleanest examples of why "average case" matters as its own concept.</p>
+
+    <details class="algo-code">
+      <summary>Source — Best/Average/Worst</summary>
+      <div class="code-tabs">
+        <div class="ct-header">
+          <button class="ct-tab active" data-tab="s13-pseudo">Pseudocode</button>
+          <button class="ct-tab" data-tab="s13-py">Python</button>
+          <button class="ct-tab" data-tab="s13-js">JavaScript</button>
+          <button class="ct-tab" data-tab="s13-c">C</button>
+          <button class="ct-tab" data-tab="s13-cpp">C++</button>
+          <button class="ct-tab" data-tab="s13-java">Java</button>
+          <button class="ct-tab" data-tab="s13-go">Go</button>
+        </div>
+        <div class="ct-panel active" data-tab="s13-pseudo"><pre><code>-- Linear search
+--   Best case:  O(1)  — target is at index 0
+--   Worst case: O(n)  — target not present or at last index
+function linear_search(array, target):
+    for i in 0..len(array):
+        if array[i] == target:
+            return i
+    return -1
+
+-- Binary search (sorted array)
+--   Best case:  O(1)  — target is the middle element on first check
+--   Worst case: O(log n) — target not present; halve until empty
+--   Average case: O(log n)
+function binary_search(array, target):
+    lo = 0, hi = len(array) - 1
+    while lo &lt;= hi:
+        mid = (lo + hi) / 2
+        if array[mid] == target: return mid
+        if array[mid] &lt; target:  lo = mid + 1
+        else:                    hi = mid - 1
+    return -1
+</code></pre></div>
+        <div class="ct-panel" data-tab="s13-py"><pre><code>import random, time
+
+# Linear search
+# Best:  O(1) — element at index 0
+# Worst: O(n) — element absent or at last position
+def linear_search(xs, target):
+    for i, x in enumerate(xs):
+        if x == target:
+            return i
+    return -1
+
+# Binary search (sorted array)
+# Best:  O(1)  — target is the midpoint
+# Worst: O(log n) — target absent
+# Average: O(log n)
+def binary_search(xs, target):
+    lo, hi = 0, len(xs) - 1
+    while lo &lt;= hi:
+        mid = (lo + hi) // 2
+        if xs[mid] == target:  return mid
+        elif xs[mid] &lt; target: lo = mid + 1
+        else:                  hi = mid - 1
+    return -1
+
+# Demonstrate best vs worst
+n = 10_000
+xs = list(range(n))  # sorted
+
+# Linear search: best case (target at front)
+t0 = time.perf_counter()
+for _ in range(1000): linear_search(xs, 0)
+best = time.perf_counter() - t0
+
+# Linear search: worst case (target absent)
+t0 = time.perf_counter()
+for _ in range(1000): linear_search(xs, n + 1)
+worst = time.perf_counter() - t0
+
+print(f"linear_search  best={best*1e3:.2f}ms  worst={worst*1e3:.2f}ms")
+print(f"ratio worst/best ≈ {worst/best:.0f}  (should be ≈ n = {n})")
+</code></pre></div>
+        <div class="ct-panel" data-tab="s13-js"><pre><code>// Linear search — best O(1), worst O(n)
+function linearSearch(xs, target) {
+  for (let i = 0; i &lt; xs.length; i++)
+    if (xs[i] === target) return i;
+  return -1;
+}
+
+// Binary search — best O(1), worst O(log n)
+function binarySearch(xs, target) {
+  let lo = 0, hi = xs.length - 1;
+  while (lo &lt;= hi) {
+    const mid = (lo + hi) >> 1;
+    if (xs[mid] === target) return mid;
+    if (xs[mid] &lt; target)  lo = mid + 1;
+    else                   hi = mid - 1;
+  }
+  return -1;
+}
+
+// Quick benchmark
+const n = 10_000;
+const xs = Array.from({length: n}, (_, i) => i);
+
+const t = (fn) => { const t0 = performance.now(); fn(); return performance.now() - t0; };
+
+const reps = 1000;
+const bestLinear  = t(() => { for (let i=0;i&lt;reps;i++) linearSearch(xs, 0); });
+const worstLinear = t(() => { for (let i=0;i&lt;reps;i++) linearSearch(xs, n+1); });
+const bsearch     = t(() => { for (let i=0;i&lt;reps;i++) binarySearch(xs, n+1); });
+
+console.log(`linear best:  ${bestLinear.toFixed(2)}ms`);
+console.log(`linear worst: ${worstLinear.toFixed(2)}ms`);
+console.log(`binary worst: ${bsearch.toFixed(2)}ms`);
+</code></pre></div>
+        <div class="ct-panel" data-tab="s13-c"><pre><code>#include &lt;stdio.h&gt;
+
+/* Linear search — best O(1), worst O(n) */
+int linear_search(const int *xs, int n, int target) {
+    for (int i = 0; i &lt; n; i++)
+        if (xs[i] == target) return i;
+    return -1;
+}
+
+/* Binary search — best O(1), worst O(log n) */
+int binary_search(const int *xs, int n, int target) {
+    int lo = 0, hi = n - 1;
+    while (lo &lt;= hi) {
+        int mid = lo + (hi - lo) / 2;
+        if (xs[mid] == target) return mid;
+        if (xs[mid] &lt; target)  lo = mid + 1;
+        else                   hi = mid - 1;
+    }
+    return -1;
+}
+
+int main(void) {
+    int n = 10000;
+    int xs[10000];
+    for (int i = 0; i &lt; n; i++) xs[i] = i;
+
+    /* Best case: target at index 0 */
+    int r1 = linear_search(xs, n, 0);
+    /* Worst case: target absent */
+    int r2 = linear_search(xs, n, n + 1);
+    /* Binary always O(log n) */
+    int r3 = binary_search(xs, n, n + 1);
+
+    printf("linear best (idx 0): %d\n", r1);
+    printf("linear worst (absent): %d\n", r2);
+    printf("binary worst (absent): %d\n", r3);
+    return 0;
+}
+</code></pre></div>
+        <div class="ct-panel" data-tab="s13-cpp"><pre><code>#include &lt;vector&gt;
+#include &lt;algorithm&gt;
+#include &lt;iostream&gt;
+using std::vector;
+
+// Linear search — best O(1), worst O(n)
+int linearSearch(const vector&lt;int&gt;&amp; v, int target) {
+    for (int i = 0; i &lt; (int)v.size(); i++)
+        if (v[i] == target) return i;
+    return -1;
+}
+
+// Binary search — best O(1), worst O(log n)
+// (std::lower_bound is also O(log n) on random-access iterators)
+int binarySearch(const vector&lt;int&gt;&amp; v, int target) {
+    auto it = std::lower_bound(v.begin(), v.end(), target);
+    if (it != v.end() &amp;&amp; *it == target)
+        return (int)(it - v.begin());
+    return -1;
+}
+
+int main() {
+    int n = 10000;
+    vector&lt;int&gt; v(n);
+    for (int i = 0; i &lt; n; i++) v[i] = i;
+
+    std::cout &lt;&lt; "linear search (best, idx 0):  " &lt;&lt; linearSearch(v, 0)   &lt;&lt; "\n";
+    std::cout &lt;&lt; "linear search (worst, absent): " &lt;&lt; linearSearch(v, n+1) &lt;&lt; "\n";
+    std::cout &lt;&lt; "binary search (absent):        " &lt;&lt; binarySearch(v, n+1) &lt;&lt; "\n";
+}
+</code></pre></div>
+        <div class="ct-panel" data-tab="s13-java"><pre><code>import java.util.Arrays;
+
+public class BestAvgWorst {
+
+    // Linear search — best O(1), worst O(n)
+    static int linearSearch(int[] xs, int target) {
+        for (int i = 0; i &lt; xs.length; i++)
+            if (xs[i] == target) return i;
+        return -1;
+    }
+
+    // Binary search — best O(1), worst O(log n)
+    static int binarySearch(int[] xs, int target) {
+        int lo = 0, hi = xs.length - 1;
+        while (lo &lt;= hi) {
+            int mid = lo + (hi - lo) / 2;
+            if (xs[mid] == target) return mid;
+            if (xs[mid] &lt; target)  lo = mid + 1;
+            else                   hi = mid - 1;
+        }
+        return -1;
+    }
+
+    public static void main(String[] args) {
+        int n = 10_000;
+        int[] xs = new int[n];
+        for (int i = 0; i &lt; n; i++) xs[i] = i;
+
+        System.out.println("linear best  (idx 0):  " + linearSearch(xs, 0));
+        System.out.println("linear worst (absent): " + linearSearch(xs, n + 1));
+        System.out.println("binary worst (absent): " + binarySearch(xs, n + 1));
+        // Arrays.binarySearch is the JDK O(log n) implementation:
+        System.out.println("JDK binary   (absent): " + Arrays.binarySearch(xs, n + 1));
+    }
+}
+</code></pre></div>
+        <div class="ct-panel" data-tab="s13-go"><pre><code>package main
+
+import "fmt"
+
+// Linear search — best O(1), worst O(n)
+func linearSearch(xs []int, target int) int {
+	for i, x := range xs {
+		if x == target {
+			return i
+		}
+	}
+	return -1
+}
+
+// Binary search — best O(1), worst O(log n)
+func binarySearch(xs []int, target int) int {
+	lo, hi := 0, len(xs)-1
+	for lo &lt;= hi {
+		mid := lo + (hi-lo)/2
+		if xs[mid] == target {
+			return mid
+		} else if xs[mid] &lt; target {
+			lo = mid + 1
+		} else {
+			hi = mid - 1
+		}
+	}
+	return -1
+}
+
+func main() {
+	n := 10_000
+	xs := make([]int, n)
+	for i := range xs {
+		xs[i] = i
+	}
+	fmt.Println("linear best  (idx 0):", linearSearch(xs, 0))
+	fmt.Println("linear worst (absent):", linearSearch(xs, n+1))
+	fmt.Println("binary worst (absent):", binarySearch(xs, n+1))
+}
+</code></pre></div>
+      </div>
+    </details>
 
     <!-- ========================================================== -->
     <h2 id="lower">14. Lower bounds</h2>
@@ -617,6 +2000,307 @@
 
     <p>The decision-tree argument is your introduction to information-theoretic lower bounds. The general pattern: every "decision" your algorithm makes carries a bounded amount of information (1 bit for a comparison). To distinguish among $K$ possible answers, you need $\log_2 K$ bits. So at least $\log_2 K$ comparisons. Powerful and reusable.</p>
 
+    <details class="algo-code">
+      <summary>Source — Sorting Lower Bound Demo</summary>
+      <div class="code-tabs">
+        <div class="ct-header">
+          <button class="ct-tab active" data-tab="s14-pseudo">Pseudocode</button>
+          <button class="ct-tab" data-tab="s14-py">Python</button>
+          <button class="ct-tab" data-tab="s14-js">JavaScript</button>
+          <button class="ct-tab" data-tab="s14-c">C</button>
+          <button class="ct-tab" data-tab="s14-cpp">C++</button>
+          <button class="ct-tab" data-tab="s14-java">Java</button>
+          <button class="ct-tab" data-tab="s14-go">Go</button>
+        </div>
+        <div class="ct-panel active" data-tab="s14-pseudo"><pre><code>-- Instrumented comparison sort: count comparisons.
+-- Lower bound says worst case >= log2(n!) comparisons.
+
+function instrumented_sort(array):
+    comparisons = 0
+    -- run any comparison sort; intercept each compare:
+    -- whenever we check array[i] &lt; array[j]:
+    --     comparisons += 1
+    return sorted_array, comparisons
+
+-- Information-theoretic argument:
+-- n! possible orderings of n elements
+-- each comparison (yes/no) gives 1 bit of information
+-- need log2(n!) bits to identify the right permutation
+-- log2(n!) ≈ n*log2(n) - n/ln(2)  [Stirling]
+-- so any comparison sort must make Omega(n log n) comparisons
+
+function stirling_lower_bound(n):
+    -- log2(n!) >= n*log2(n) - n*log2(e)
+    return n * log2(n) - n * log2(e)
+</code></pre></div>
+        <div class="ct-panel" data-tab="s14-py"><pre><code>import math, random
+
+# Instrumented merge sort — counts comparisons
+comparisons = 0
+
+def merge_sort(xs):
+    global comparisons
+    if len(xs) &lt;= 1:
+        return xs
+    mid = len(xs) // 2
+    left  = merge_sort(xs[:mid])
+    right = merge_sort(xs[mid:])
+    return merge(left, right)
+
+def merge(a, b):
+    global comparisons
+    out, i, j = [], 0, 0
+    while i &lt; len(a) and j &lt; len(b):
+        comparisons += 1   # one comparison per iteration
+        if a[i] &lt;= b[j]:
+            out.append(a[i]); i += 1
+        else:
+            out.append(b[j]); j += 1
+    out.extend(a[i:]); out.extend(b[j:])
+    return out
+
+# Stirling lower bound: log2(n!) >= n*log2(n) - n*log2(e)
+def lower_bound(n):
+    if n &lt; 2: return 0
+    return n * math.log2(n) - n * math.log2(math.e)
+
+# Measure and compare
+for n in [8, 16, 32, 64, 128, 256]:
+    comparisons = 0
+    xs = list(range(n)); random.shuffle(xs)
+    merge_sort(xs)
+    lb = lower_bound(n)
+    print(f"n={n:4d}  comparisons={comparisons:5d}"
+          f"  lower_bound={lb:6.1f}  ratio={comparisons/lb:.3f}")
+# ratio stays near 1.0–1.5: comparisons are Theta(n log n)
+</code></pre></div>
+        <div class="ct-panel" data-tab="s14-js"><pre><code>let comparisons = 0;
+
+function mergeSort(xs) {
+  if (xs.length &lt;= 1) return xs;
+  const mid = xs.length >> 1;
+  return merge(mergeSort(xs.slice(0, mid)), mergeSort(xs.slice(mid)));
+}
+
+function merge(a, b) {
+  const out = [];
+  let i = 0, j = 0;
+  while (i &lt; a.length &amp;&amp; j &lt; b.length) {
+    comparisons++;
+    out.push(a[i] &lt;= b[j] ? a[i++] : b[j++]);
+  }
+  return out.concat(a.slice(i), b.slice(j));
+}
+
+// log2(n!) lower bound (Stirling)
+function lowerBound(n) {
+  return n * Math.log2(n) - n * Math.LOG2E;
+}
+
+// Shuffle helper
+function shuffle(xs) {
+  for (let i = xs.length - 1; i &gt; 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [xs[i], xs[j]] = [xs[j], xs[i]];
+  }
+}
+
+for (const n of [8, 16, 32, 64, 128, 256]) {
+  const xs = Array.from({length: n}, (_, i) => i);
+  shuffle(xs);
+  comparisons = 0;
+  mergeSort(xs);
+  const lb = lowerBound(n);
+  console.log(`n=${n}  cmps=${comparisons}  lb=${lb.toFixed(1)}  ratio=${(comparisons/lb).toFixed(3)}`);
+}
+</code></pre></div>
+        <div class="ct-panel" data-tab="s14-c"><pre><code>#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;math.h&gt;
+
+static long comparisons = 0;
+
+void merge(int *xs, int *tmp, int lo, int mid, int hi) {
+    for (int k = lo; k &lt;= hi; k++) tmp[k] = xs[k];
+    int i = lo, j = mid + 1, k = lo;
+    while (i &lt;= mid &amp;&amp; j &lt;= hi) {
+        comparisons++;
+        xs[k++] = (tmp[i] &lt;= tmp[j]) ? tmp[i++] : tmp[j++];
+    }
+    while (i &lt;= mid) xs[k++] = tmp[i++];
+    while (j &lt;= hi)  xs[k++] = tmp[j++];
+}
+
+void merge_sort(int *xs, int *tmp, int lo, int hi) {
+    if (lo &gt;= hi) return;
+    int mid = lo + (hi - lo) / 2;
+    merge_sort(xs, tmp, lo, mid);
+    merge_sort(xs, tmp, mid + 1, hi);
+    merge(xs, tmp, lo, mid, hi);
+}
+
+double lower_bound(int n) {
+    /* log2(n!) >= n*log2(n) - n*log2(e) */
+    return n * log2(n) - n * M_LOG2E;
+}
+
+int main(void) {
+    int sizes[] = {8, 16, 32, 64, 128, 256};
+    for (int s = 0; s &lt; 6; s++) {
+        int n = sizes[s];
+        int *xs = malloc(n * sizeof(int));
+        int *tmp = malloc(n * sizeof(int));
+        for (int i = 0; i &lt; n; i++) xs[i] = i;
+        /* shuffle */
+        for (int i = n - 1; i &gt; 0; i--) {
+            int j = rand() % (i + 1);
+            int t = xs[i]; xs[i] = xs[j]; xs[j] = t;
+        }
+        comparisons = 0;
+        merge_sort(xs, tmp, 0, n - 1);
+        printf("n=%3d  cmps=%4ld  lb=%6.1f  ratio=%.3f\n",
+               n, comparisons, lower_bound(n),
+               comparisons / lower_bound(n));
+        free(xs); free(tmp);
+    }
+}
+</code></pre></div>
+        <div class="ct-panel" data-tab="s14-cpp"><pre><code>#include &lt;vector&gt;
+#include &lt;cmath&gt;
+#include &lt;iostream&gt;
+#include &lt;algorithm&gt;
+using std::vector;
+
+long comparisons = 0;
+
+vector&lt;int&gt; merge(const vector&lt;int&gt;&amp; a, const vector&lt;int&gt;&amp; b) {
+    vector&lt;int&gt; out;
+    size_t i = 0, j = 0;
+    while (i &lt; a.size() &amp;&amp; j &lt; b.size()) {
+        comparisons++;
+        out.push_back(a[i] &lt;= b[j] ? a[i++] : b[j++]);
+    }
+    out.insert(out.end(), a.begin()+i, a.end());
+    out.insert(out.end(), b.begin()+j, b.end());
+    return out;
+}
+
+vector&lt;int&gt; mergeSort(vector&lt;int&gt; xs) {
+    if (xs.size() &lt;= 1) return xs;
+    size_t mid = xs.size() / 2;
+    return merge(mergeSort({xs.begin(), xs.begin()+mid}),
+                 mergeSort({xs.begin()+mid, xs.end()}));
+}
+
+double lowerBound(int n) {
+    return n * std::log2(n) - n * M_LOG2E;
+}
+
+int main() {
+    for (int n : {8, 16, 32, 64, 128, 256}) {
+        vector&lt;int&gt; xs(n); std::iota(xs.begin(), xs.end(), 0);
+        std::shuffle(xs.begin(), xs.end(), std::mt19937{42});
+        comparisons = 0;
+        mergeSort(xs);
+        double lb = lowerBound(n);
+        std::cout &lt;&lt; "n=" &lt;&lt; n &lt;&lt; "  cmps=" &lt;&lt; comparisons
+                  &lt;&lt; "  lb=" &lt;&lt; lb &lt;&lt; "  ratio=" &lt;&lt; comparisons/lb &lt;&lt; "\n";
+    }
+}
+</code></pre></div>
+        <div class="ct-panel" data-tab="s14-java"><pre><code>public class LowerBoundDemo {
+    static long comparisons = 0;
+
+    static int[] mergeSort(int[] xs) {
+        if (xs.length &lt;= 1) return xs;
+        int mid = xs.length / 2;
+        int[] left  = mergeSort(java.util.Arrays.copyOfRange(xs, 0, mid));
+        int[] right = mergeSort(java.util.Arrays.copyOfRange(xs, mid, xs.length));
+        return merge(left, right);
+    }
+
+    static int[] merge(int[] a, int[] b) {
+        int[] out = new int[a.length + b.length];
+        int i = 0, j = 0, k = 0;
+        while (i &lt; a.length &amp;&amp; j &lt; b.length) {
+            comparisons++;
+            out[k++] = (a[i] &lt;= b[j]) ? a[i++] : b[j++];
+        }
+        while (i &lt; a.length) out[k++] = a[i++];
+        while (j &lt; b.length) out[k++] = b[j++];
+        return out;
+    }
+
+    static double lowerBound(int n) {
+        return n * (Math.log(n) / Math.log(2)) - n / Math.log(2);
+    }
+
+    public static void main(String[] args) {
+        for (int n : new int[]{8, 16, 32, 64, 128, 256}) {
+            int[] xs = new int[n];
+            for (int i = 0; i &lt; n; i++) xs[i] = n - i;  // reverse sorted
+            comparisons = 0;
+            mergeSort(xs);
+            double lb = lowerBound(n);
+            System.out.printf("n=%3d  cmps=%4d  lb=%6.1f  ratio=%.3f%n",
+                    n, comparisons, lb, comparisons / lb);
+        }
+    }
+}
+</code></pre></div>
+        <div class="ct-panel" data-tab="s14-go"><pre><code>package main
+
+import (
+	"fmt"
+	"math"
+)
+
+var comparisons int64
+
+func mergeSort(xs []int) []int {
+	if len(xs) &lt;= 1 {
+		return xs
+	}
+	mid := len(xs) / 2
+	return mergeFn(mergeSort(xs[:mid]), mergeSort(xs[mid:]))
+}
+
+func mergeFn(a, b []int) []int {
+	out := make([]int, 0, len(a)+len(b))
+	i, j := 0, 0
+	for i &lt; len(a) &amp;&amp; j &lt; len(b) {
+		comparisons++
+		if a[i] &lt;= b[j] {
+			out = append(out, a[i]); i++
+		} else {
+			out = append(out, b[j]); j++
+		}
+	}
+	out = append(out, a[i:]...)
+	out = append(out, b[j:]...)
+	return out
+}
+
+func lowerBound(n int) float64 {
+	fn := float64(n)
+	return fn*math.Log2(fn) - fn*math.Log2(math.E)
+}
+
+func main() {
+	for _, n := range []int{8, 16, 32, 64, 128, 256} {
+		xs := make([]int, n)
+		for i := range xs { xs[i] = n - i } // reverse sorted
+		comparisons = 0
+		mergeSort(xs)
+		lb := lowerBound(n)
+		fmt.Printf("n=%3d  cmps=%4d  lb=%6.1f  ratio=%.3f\n",
+			n, comparisons, lb, float64(comparisons)/lb)
+	}
+}
+</code></pre></div>
+      </div>
+    </details>
+
     <!-- ========================================================== -->
     <h2 id="practical">15. Practical considerations</h2>
 
@@ -637,140 +2321,323 @@
 
     <p>Here's a Python script you can run on your laptop. It times three algorithms — linear search, sorting, and a quadratic all-pairs comparison — at increasing sizes and prints the ratio of consecutive runs. You should see the ratios converge to the predicted growth factors: $\sim$2 for linear, $\sim$2 for $n \log n$ (the log term is small), and $\sim$4 for quadratic when $n$ doubles.</p>
 
-    <div class="code-tabs" id="ct-bench">
-      <div class="ct-header">
-        <button class="ct-tab active" data-tab="bench">Benchmark</button>
-        <button class="ct-tab" data-tab="quick">Quicksort vs merge sort</button>
-        <button class="ct-tab" data-tab="amort">Amortized append</button>
-        <span class="ct-label">empirical complexity</span>
-      </div>
-      <div class="ct-panel active" data-tab="bench"><pre><code><span class="kw">import</span> time, random
+    <details class="algo-code">
+      <summary>Source — Empirical Benchmarks</summary>
+      <div class="code-tabs" id="ct-bench">
+        <div class="ct-header">
+          <button class="ct-tab active" data-tab="s16-pseudo">Pseudocode</button>
+          <button class="ct-tab" data-tab="s16-py">Python</button>
+          <button class="ct-tab" data-tab="s16-js">JavaScript</button>
+          <button class="ct-tab" data-tab="s16-c">C</button>
+          <button class="ct-tab" data-tab="s16-cpp">C++</button>
+          <button class="ct-tab" data-tab="s16-java">Java</button>
+          <button class="ct-tab" data-tab="s16-go">Go</button>
+        </div>
+        <div class="ct-panel active" data-tab="s16-pseudo"><pre><code>-- Time three functions at sizes 1000, 2000, 4000, 8000, 16000.
+-- Print the ratio of consecutive measurements.
+-- Expected ratios when n doubles:
+--   O(n)      ~2.0
+--   O(n log n) ~2.1  (log term grows slowly)
+--   O(n^2)    ~4.0
 
-<span class="kw">def</span> <span class="fn">linear_sum</span>(xs):
-    s = <span class="num">0</span>
-    <span class="kw">for</span> x <span class="kw">in</span> xs:
-        s += x
-    <span class="kw">return</span> s
+function linear_sum(array):        -- O(n)
+    s = 0
+    for each x: s += x
+    return s
 
-<span class="kw">def</span> <span class="fn">sort_copy</span>(xs):
-    <span class="kw">return</span> <span class="fn">sorted</span>(xs)
+function sort(array):               -- O(n log n)
+    return sorted copy of array
 
-<span class="kw">def</span> <span class="fn">all_pairs_count</span>(xs):
-    <span class="cmt"># count pairs (i, j) with xs[i] &lt; xs[j], i &lt; j  → O(n²)</span>
-    n = <span class="fn">len</span>(xs)
-    c = <span class="num">0</span>
-    <span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(n):
-        <span class="kw">for</span> j <span class="kw">in</span> <span class="fn">range</span>(i + <span class="num">1</span>, n):
-            <span class="kw">if</span> xs[i] &lt; xs[j]:
-                c += <span class="num">1</span>
-    <span class="kw">return</span> c
+function all_pairs_count(array):   -- O(n^2)
+    c = 0
+    for each pair (i,j) with i &lt; j:
+        if array[i] &lt; array[j]: c += 1
+    return c
 
-<span class="kw">def</span> <span class="fn">timed</span>(fn, xs, repeat=<span class="num">3</span>):
-    best = <span class="fn">float</span>(<span class="str">"inf"</span>)
-    <span class="kw">for</span> _ <span class="kw">in</span> <span class="fn">range</span>(repeat):
+function timed(fn, array, repeat=3):
+    best = infinity
+    repeat times:
+        t0 = clock()
+        fn(array)
+        best = min(best, clock() - t0)
+    return best
+
+for each fn in [linear_sum, sort, all_pairs_count]:
+    prev = null
+    for each n in [1000, 2000, 4000, 8000, 16000]:
+        data = random array of size n
+        t = timed(fn, data)
+        ratio = t/prev if prev else "--"
+        print(n, t, ratio)
+        prev = t
+</code></pre></div>
+        <div class="ct-panel" data-tab="s16-py"><pre><code>import time, random
+
+def linear_sum(xs):
+    s = 0
+    for x in xs: s += x
+    return s
+
+def sort_copy(xs):
+    return sorted(xs)
+
+def all_pairs_count(xs):
+    n, c = len(xs), 0
+    for i in range(n):
+        for j in range(i + 1, n):
+            if xs[i] &lt; xs[j]: c += 1
+    return c
+
+def timed(fn, xs, repeat=3):
+    best = float("inf")
+    for _ in range(repeat):
         t0 = time.perf_counter()
-        <span class="fn">fn</span>(xs)
-        best = <span class="fn">min</span>(best, time.perf_counter() - t0)
-    <span class="kw">return</span> best
+        fn(xs)
+        best = min(best, time.perf_counter() - t0)
+    return best
 
-<span class="kw">if</span> __name__ == <span class="str">"__main__"</span>:
-    sizes = [<span class="num">1000</span>, <span class="num">2000</span>, <span class="num">4000</span>, <span class="num">8000</span>, <span class="num">16000</span>]
-    fns = [(<span class="str">"O(n)     linear_sum"</span>,    linear_sum),
-           (<span class="str">"O(nlogn) sort_copy"</span>,     sort_copy),
-           (<span class="str">"O(n^2)   all_pairs"</span>,     all_pairs_count)]
+if __name__ == "__main__":
+    sizes = [1000, 2000, 4000, 8000, 16000]
+    fns = [("O(n)     linear_sum", linear_sum),
+           ("O(nlogn) sort_copy",  sort_copy),
+           ("O(n^2)   all_pairs",  all_pairs_count)]
 
-    <span class="kw">for</span> name, fn <span class="kw">in</span> fns:
-        <span class="fn">print</span>(<span class="str">f"\n{name}"</span>)
-        prev = <span class="kw">None</span>
-        <span class="kw">for</span> n <span class="kw">in</span> sizes:
-            xs = [random.random() <span class="kw">for</span> _ <span class="kw">in</span> <span class="fn">range</span>(n)]
-            t = <span class="fn">timed</span>(fn, xs)
-            ratio = <span class="str">f"x{t/prev:5.2f}"</span> <span class="kw">if</span> prev <span class="kw">else</span> <span class="str">"     "</span>
-            <span class="fn">print</span>(<span class="str">f"  n={n:6d}  t={t*1e3:8.2f} ms  {ratio}"</span>)
+    for name, fn in fns:
+        print(f"\n{name}")
+        prev = None
+        for n in sizes:
+            xs = [random.random() for _ in range(n)]
+            t = timed(fn, xs)
+            ratio = f"x{t/prev:5.2f}" if prev else "     "
+            print(f"  n={n:6d}  t={t*1e3:8.2f} ms  {ratio}")
             prev = t
-
-    <span class="cmt"># Expected ratios when n doubles:</span>
-    <span class="cmt">#   O(n)     ~2.0</span>
-    <span class="cmt">#   O(nlogn) ~2.1   (the log term grows slowly)</span>
-    <span class="cmt">#   O(n^2)   ~4.0</span>
+    # Expected ratios when n doubles:
+    #   O(n)      ~2.0
+    #   O(nlogn)  ~2.1
+    #   O(n^2)    ~4.0
 </code></pre></div>
+        <div class="ct-panel" data-tab="s16-js"><pre><code>// Run in Node.js — uses performance.now() for timing.
+// Expected ratios when n doubles: O(n)~2, O(nlogn)~2.1, O(n^2)~4
 
-      <div class="ct-panel" data-tab="quick"><pre><code><span class="kw">import</span> sys, time, random
-sys.setrecursionlimit(<span class="num">100000</span>)
+function linearSum(xs) {
+  return xs.reduce((s, x) => s + x, 0);
+}
 
-<span class="kw">def</span> <span class="fn">quicksort</span>(xs):
-    <span class="kw">if</span> <span class="fn">len</span>(xs) &lt;= <span class="num">1</span>:
-        <span class="kw">return</span> xs
-    pivot = xs[<span class="fn">len</span>(xs) // <span class="num">2</span>]
-    lo  = [x <span class="kw">for</span> x <span class="kw">in</span> xs <span class="kw">if</span> x &lt; pivot]
-    eq  = [x <span class="kw">for</span> x <span class="kw">in</span> xs <span class="kw">if</span> x == pivot]
-    hi  = [x <span class="kw">for</span> x <span class="kw">in</span> xs <span class="kw">if</span> x &gt; pivot]
-    <span class="kw">return</span> <span class="fn">quicksort</span>(lo) + eq + <span class="fn">quicksort</span>(hi)
+function sortCopy(xs) {
+  return xs.slice().sort((a, b) => a - b);
+}
 
-<span class="kw">def</span> <span class="fn">mergesort</span>(xs):
-    <span class="kw">if</span> <span class="fn">len</span>(xs) &lt;= <span class="num">1</span>:
-        <span class="kw">return</span> xs
-    m = <span class="fn">len</span>(xs) // <span class="num">2</span>
-    a = <span class="fn">mergesort</span>(xs[:m])
-    b = <span class="fn">mergesort</span>(xs[m:])
-    <span class="kw">return</span> <span class="fn">merge</span>(a, b)
+function allPairsCount(xs) {
+  let c = 0;
+  for (let i = 0; i &lt; xs.length; i++)
+    for (let j = i + 1; j &lt; xs.length; j++)
+      if (xs[i] &lt; xs[j]) c++;
+  return c;
+}
 
-<span class="kw">def</span> <span class="fn">merge</span>(a, b):
-    out = []
-    i = j = <span class="num">0</span>
-    <span class="kw">while</span> i &lt; <span class="fn">len</span>(a) <span class="kw">and</span> j &lt; <span class="fn">len</span>(b):
-        <span class="kw">if</span> a[i] &lt;= b[j]:
-            out.append(a[i]); i += <span class="num">1</span>
-        <span class="kw">else</span>:
-            out.append(b[j]); j += <span class="num">1</span>
-    out.extend(a[i:]); out.extend(b[j:])
-    <span class="kw">return</span> out
+function timed(fn, xs, repeat = 3) {
+  let best = Infinity;
+  for (let i = 0; i &lt; repeat; i++) {
+    const t0 = performance.now();
+    fn(xs);
+    best = Math.min(best, performance.now() - t0);
+  }
+  return best;
+}
 
-<span class="cmt"># Try both on random data and on already-sorted data.</span>
-<span class="cmt"># quicksort with first/middle pivot is O(n log n) average</span>
-<span class="cmt"># but O(n^2) on adversarial inputs.</span>
-<span class="kw">for</span> n <span class="kw">in</span> [<span class="num">2000</span>, <span class="num">4000</span>, <span class="num">8000</span>]:
-    rnd = [random.random() <span class="kw">for</span> _ <span class="kw">in</span> <span class="fn">range</span>(n)]
-    srt = <span class="fn">sorted</span>(rnd)
-    <span class="kw">for</span> name, data <span class="kw">in</span> [(<span class="str">"random"</span>, rnd), (<span class="str">"sorted"</span>, srt)]:
-        t0 = time.perf_counter(); <span class="fn">quicksort</span>(<span class="fn">list</span>(data)); qs = time.perf_counter() - t0
-        t0 = time.perf_counter(); <span class="fn">mergesort</span>(<span class="fn">list</span>(data)); ms = time.perf_counter() - t0
-        <span class="fn">print</span>(<span class="str">f"n={n} {name:7s}  qs={qs*1e3:7.2f}ms  ms={ms*1e3:7.2f}ms"</span>)
+const sizes = [500, 1000, 2000, 4000, 8000];
+const fns = [["O(n)     linearSum",   linearSum],
+             ["O(nlogn) sortCopy",    sortCopy],
+             ["O(n^2)   allPairs",    allPairsCount]];
+
+for (const [name, fn] of fns) {
+  console.log(`\n${name}`);
+  let prev = null;
+  for (const n of sizes) {
+    const xs = Array.from({length: n}, () => Math.random());
+    const t = timed(fn, xs);
+    const ratio = prev ? `x${(t/prev).toFixed(2)}` : "    ";
+    console.log(`  n=${n.toString().padStart(5)}  t=${t.toFixed(2).padStart(7)}ms  ${ratio}`);
+    prev = t;
+  }
+}
 </code></pre></div>
+        <div class="ct-panel" data-tab="s16-c"><pre><code>#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;time.h&gt;
 
-      <div class="ct-panel" data-tab="amort"><pre><code><span class="kw">import</span> time
+double linear_sum(double *xs, int n) {
+    double s = 0; for (int i=0;i&lt;n;i++) s+=xs[i]; return s;
+}
 
-<span class="kw">class</span> <span class="fn">DoublingArray</span>:
-    <span class="kw">def</span> <span class="fn">__init__</span>(self):
-        self.cap = <span class="num">1</span>
-        self.size = <span class="num">0</span>
-        self.buf = [<span class="kw">None</span>] * self.cap
-        self.copies = <span class="num">0</span>          <span class="cmt"># total elements copied so far</span>
+int cmp_dbl(const void *a, const void *b) {
+    double x = *(double*)a, y = *(double*)b;
+    return (x&gt;y)-(x&lt;y);
+}
+void sort_copy(double *xs, double *out, int n) {
+    for(int i=0;i&lt;n;i++) out[i]=xs[i];
+    qsort(out, n, sizeof(double), cmp_dbl);
+}
 
-    <span class="kw">def</span> <span class="fn">append</span>(self, x):
-        <span class="kw">if</span> self.size == self.cap:
-            self.cap *= <span class="num">2</span>
-            new_buf = [<span class="kw">None</span>] * self.cap
-            <span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(self.size):
-                new_buf[i] = self.buf[i]
-                self.copies += <span class="num">1</span>
-            self.buf = new_buf
-        self.buf[self.size] = x
-        self.size += <span class="num">1</span>
+long all_pairs(double *xs, int n) {
+    long c=0;
+    for(int i=0;i&lt;n;i++) for(int j=i+1;j&lt;n;j++) if(xs[i]&lt;xs[j]) c++;
+    return c;
+}
 
-<span class="cmt"># Build up to N elements and measure work per append.</span>
-N = <span class="num">200_000</span>
-arr = <span class="fn">DoublingArray</span>()
-<span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(N):
-    arr.append(i)
+double now_ms(void) {
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &amp;ts);
+    return ts.tv_sec*1e3 + ts.tv_nsec/1e6;
+}
 
-<span class="fn">print</span>(<span class="str">f"N appends:        {N}"</span>)
-<span class="fn">print</span>(<span class="str">f"total copies:     {arr.copies}"</span>)
-<span class="fn">print</span>(<span class="str">f"copies per append: {arr.copies / N:.3f}"</span>)
-<span class="cmt"># You should see "copies per append" ≈ 1.0 — proof of O(1) amortized.</span>
-<span class="cmt"># Total copies ≈ N − 1, because the geometric sum 1+2+4+...+N/2 ≈ N.</span>
+int main(void) {
+    int sizes[] = {500, 1000, 2000, 4000, 8000};
+    for (int s=0; s&lt;5; s++) {
+        int n = sizes[s];
+        double *xs = malloc(n*sizeof(double));
+        double *out = malloc(n*sizeof(double));
+        for(int i=0;i&lt;n;i++) xs[i]=(double)rand()/RAND_MAX;
+
+        double t0=now_ms(); linear_sum(xs,n); double tl=now_ms()-t0;
+        t0=now_ms(); sort_copy(xs,out,n);     double ts=now_ms()-t0;
+        t0=now_ms(); all_pairs(xs,n);          double tq=now_ms()-t0;
+
+        printf("n=%5d  linear=%.2fms  sort=%.2fms  allpairs=%.2fms\n",
+               n, tl, ts, tq);
+        free(xs); free(out);
+    }
+}
 </code></pre></div>
-    </div>
+        <div class="ct-panel" data-tab="s16-cpp"><pre><code>#include &lt;iostream&gt;
+#include &lt;vector&gt;
+#include &lt;algorithm&gt;
+#include &lt;chrono&gt;
+#include &lt;random&gt;
+using namespace std;
+using ms = chrono::duration&lt;double, milli&gt;;
+
+double linearSum(const vector&lt;double&gt;&amp; v) {
+    double s = 0; for (double x : v) s += x; return s;
+}
+vector&lt;double&gt; sortCopy(vector&lt;double&gt; v) {
+    sort(v.begin(), v.end()); return v;
+}
+long allPairs(const vector&lt;double&gt;&amp; v) {
+    long c = 0;
+    for (int i=0;i&lt;(int)v.size();i++)
+        for (int j=i+1;j&lt;(int)v.size();j++)
+            if (v[i]&lt;v[j]) c++;
+    return c;
+}
+
+template&lt;class F&gt; double timed(F fn) {
+    auto t0 = chrono::high_resolution_clock::now();
+    fn();
+    return ms(chrono::high_resolution_clock::now()-t0).count();
+}
+
+int main() {
+    mt19937 rng(42);
+    uniform_real_distribution&lt;double&gt; dist(0,1);
+    for (int n : {500, 1000, 2000, 4000, 8000}) {
+        vector&lt;double&gt; v(n);
+        generate(v.begin(), v.end(), [&amp;]{ return dist(rng); });
+        double tl = timed([&amp;]{ linearSum(v); });
+        double ts = timed([&amp;]{ sortCopy(v);  });
+        double tq = timed([&amp;]{ allPairs(v);  });
+        cout &lt;&lt; "n=" &lt;&lt; n &lt;&lt; "  linear=" &lt;&lt; tl &lt;&lt; "ms"
+             &lt;&lt; "  sort=" &lt;&lt; ts &lt;&lt; "ms"
+             &lt;&lt; "  allpairs=" &lt;&lt; tq &lt;&lt; "ms\n";
+    }
+}
+</code></pre></div>
+        <div class="ct-panel" data-tab="s16-java"><pre><code>import java.util.Arrays;
+import java.util.Random;
+
+public class Benchmark {
+    static double linearSum(double[] xs) {
+        double s = 0; for (double x : xs) s += x; return s;
+    }
+    static double[] sortCopy(double[] xs) {
+        double[] out = xs.clone(); Arrays.sort(out); return out;
+    }
+    static long allPairs(double[] xs) {
+        long c = 0;
+        for (int i=0;i&lt;xs.length;i++)
+            for (int j=i+1;j&lt;xs.length;j++)
+                if (xs[i]&lt;xs[j]) c++;
+        return c;
+    }
+
+    public static void main(String[] args) {
+        Random rng = new Random(42);
+        int[] sizes = {500, 1000, 2000, 4000, 8000};
+        for (int n : sizes) {
+            double[] xs = new double[n];
+            for (int i=0;i&lt;n;i++) xs[i] = rng.nextDouble();
+
+            long t0; double tl, ts, tq;
+            t0=System.nanoTime(); linearSum(xs); tl=(System.nanoTime()-t0)/1e6;
+            t0=System.nanoTime(); sortCopy(xs);  ts=(System.nanoTime()-t0)/1e6;
+            t0=System.nanoTime(); allPairs(xs);  tq=(System.nanoTime()-t0)/1e6;
+
+            System.out.printf("n=%5d  linear=%.2fms  sort=%.2fms  allpairs=%.2fms%n",
+                    n, tl, ts, tq);
+        }
+    }
+}
+</code></pre></div>
+        <div class="ct-panel" data-tab="s16-go"><pre><code>package main
+
+import (
+	"fmt"
+	"math/rand"
+	"sort"
+	"time"
+)
+
+func linearSum(xs []float64) float64 {
+	s := 0.0; for _, x := range xs { s += x }; return s
+}
+func sortCopy(xs []float64) []float64 {
+	out := make([]float64, len(xs))
+	copy(out, xs)
+	sort.Float64s(out)
+	return out
+}
+func allPairs(xs []float64) int {
+	c := 0
+	for i := range xs {
+		for j := i + 1; j &lt; len(xs); j++ {
+			if xs[i] &lt; xs[j] { c++ }
+		}
+	}
+	return c
+}
+
+func bench(fn func(), n int) time.Duration {
+	t0 := time.Now(); fn(); return time.Since(t0)
+}
+
+func main() {
+	for _, n := range []int{500, 1000, 2000, 4000, 8000} {
+		xs := make([]float64, n)
+		for i := range xs { xs[i] = rand.Float64() }
+
+		tl := bench(func() { linearSum(xs) }, n)
+		ts := bench(func() { sortCopy(xs)  }, n)
+		tq := bench(func() { allPairs(xs)  }, n)
+
+		fmt.Printf("n=%5d  linear=%v  sort=%v  allpairs=%v\n",
+			n, tl.Round(time.Microsecond),
+			ts.Round(time.Microsecond),
+			tq.Round(time.Microsecond))
+	}
+}
+</code></pre></div>
+      </div>
+    </details>
 
     <p>The first script shows you that <em>asymptotic predictions are real and measurable</em>. The doubling ratio is the experiment that turns Big-O from a hand-wave into a quantitative claim.</p>
 
@@ -814,6 +2681,329 @@ arr = <span class="fn">DoublingArray</span>()
     <p>And it's not just attention. KV cache size is $O(L)$ per layer, total inference memory is $O(\ell L d)$, training memory is dominated by activations at $O(\ell L d)$. The complexity story is everywhere.</p>
 
     <div class="problem-set" data-topic="cplx-pvsnp"></div>
+
+    <details class="algo-code">
+      <summary>Source — ML Complexity Examples</summary>
+      <div class="code-tabs">
+        <div class="ct-header">
+          <button class="ct-tab active" data-tab="s17-pseudo">Pseudocode</button>
+          <button class="ct-tab" data-tab="s17-py">Python</button>
+          <button class="ct-tab" data-tab="s17-js">JavaScript</button>
+          <button class="ct-tab" data-tab="s17-c">C</button>
+          <button class="ct-tab" data-tab="s17-cpp">C++</button>
+          <button class="ct-tab" data-tab="s17-java">Java</button>
+          <button class="ct-tab" data-tab="s17-go">Go</button>
+        </div>
+        <div class="ct-panel active" data-tab="s17-pseudo"><pre><code>-- Naive matrix multiply: O(n^3)
+function matmul(A, B, n):
+    C = zero matrix n x n
+    for i in 0..n:
+        for j in 0..n:
+            for k in 0..n:
+                C[i][j] += A[i][k] * B[k][j]
+    return C
+
+-- Strassen (conceptual): O(n^(log2 7)) ≈ O(n^2.807)
+-- Splits each n×n matrix into four (n/2)×(n/2) blocks.
+-- Uses 7 recursive multiplications instead of 8.
+-- T(n) = 7*T(n/2) + O(n^2)  →  O(n^(log2 7)) by master theorem case 1.
+
+-- Transformer forward pass FLOP estimate
+-- Inputs: layers=L, seq_len=S, embed_dim=D, vocab=V
+function estimate_flops(L, S, D, V):
+    -- Attention per layer: 2 * S^2 * D  (Q*K^T and softmax*V)
+    attn = 2 * S * S * D
+    -- FFN per layer (hidden = 4D): 2 * S * D * 4D + 2 * S * 4D * D
+    ffn  = 16 * S * D * D
+    -- Unembedding: S * D * V
+    unembed = S * D * V
+    return L * (attn + ffn) + unembed
+    -- Dominant term: L * S^2 * D when S is large  → O(L S^2 D)
+</code></pre></div>
+        <div class="ct-panel" data-tab="s17-py"><pre><code># Naive matrix multiply: O(n^3)
+def matmul_naive(A, B):
+    n = len(A)
+    C = [[0.0] * n for _ in range(n)]
+    for i in range(n):
+        for j in range(n):
+            for k in range(n):
+                C[i][j] += A[i][k] * B[k][j]
+    return C
+
+# Strassen's algorithm: O(n^log2(7)) ≈ O(n^2.807)
+# Only worth implementing for large n; shown here for illustration.
+def strassen(A, B):
+    n = len(A)
+    if n == 1:
+        return [[A[0][0] * B[0][0]]]
+    # split into 2x2 blocks of (n/2)x(n/2) sub-matrices
+    h = n // 2
+    def sub(X, r, c): return [[X[r+i][c+j] for j in range(h)] for i in range(h)]
+    def add(X, Y):    return [[X[i][j]+Y[i][j] for j in range(h)] for i in range(h)]
+    def sub2(X, Y):   return [[X[i][j]-Y[i][j] for j in range(h)] for i in range(h)]
+    A11,A12,A21,A22 = sub(A,0,0),sub(A,0,h),sub(A,h,0),sub(A,h,h)
+    B11,B12,B21,B22 = sub(B,0,0),sub(B,0,h),sub(B,h,0),sub(B,h,h)
+    M1 = strassen(add(A11,A22), add(B11,B22))
+    M2 = strassen(add(A21,A22), B11)
+    M3 = strassen(A11, sub2(B12,B22))
+    M4 = strassen(A22, sub2(B21,B11))
+    M5 = strassen(add(A11,A12), B22)
+    M6 = strassen(sub2(A21,A11), add(B11,B12))
+    M7 = strassen(sub2(A12,A22), add(B21,B22))
+    # 7 recursive calls vs 8 for naive → exponent drops from 3 to log2(7)≈2.807
+    C = [[0.0]*n for _ in range(n)]
+    for i in range(h):
+        for j in range(h):
+            C[i][j]     = M1[i][j]+M4[i][j]-M5[i][j]+M7[i][j]
+            C[i][j+h]   = M3[i][j]+M5[i][j]
+            C[i+h][j]   = M2[i][j]+M4[i][j]
+            C[i+h][j+h] = M1[i][j]-M2[i][j]+M3[i][j]+M6[i][j]
+    return C
+
+# Transformer forward pass FLOP estimate: O(L * S^2 * D) dominant for large S
+def transformer_flops(layers, seq_len, embed_dim, vocab_size):
+    S, D, L, V = seq_len, embed_dim, layers, vocab_size
+    attn_per_layer = 2 * S * S * D          # QK^T and softmax*V
+    ffn_per_layer  = 2 * S * D * (4*D) * 2  # two linear layers, hidden=4D
+    unembed        = S * D * V
+    total = L * (attn_per_layer + ffn_per_layer) + unembed
+    return total
+
+# Example: GPT-2 small (12 layers, 1024 ctx, 768 dim, 50257 vocab)
+flops = transformer_flops(12, 1024, 768, 50257)
+print(f"GPT-2 small forward FLOPs ≈ {flops:.2e}")
+</code></pre></div>
+        <div class="ct-panel" data-tab="s17-js"><pre><code>// Naive matrix multiply: O(n^3)
+function matmulNaive(A, B, n) {
+  const C = Array.from({length: n}, () => new Float64Array(n));
+  for (let i = 0; i &lt; n; i++)
+    for (let j = 0; j &lt; n; j++)
+      for (let k = 0; k &lt; n; k++)
+        C[i][j] += A[i][k] * B[k][j];
+  return C;
+}
+
+// Transformer forward pass FLOP estimate
+// Dominant term: L * S^2 * D when S is large → O(L S^2 D)
+function transformerFlops(layers, seqLen, embedDim, vocabSize) {
+  const [L, S, D, V] = [layers, seqLen, embedDim, vocabSize];
+  const attnPerLayer = 2 * S * S * D;       // QK^T + softmax*V
+  const ffnPerLayer  = 2 * S * D * (4*D) * 2; // hidden = 4D
+  const unembed      = S * D * V;
+  return L * (attnPerLayer + ffnPerLayer) + unembed;
+}
+
+// Benchmark naive matmul growth: expect ratio ~8 when n doubles (O(n^3))
+console.log("Matrix multiply timing (O(n^3) — ratio ~8 when n doubles):");
+let prev = null;
+for (const n of [32, 64, 128]) {
+  const A = Array.from({length:n}, () => Array.from({length:n}, Math.random));
+  const B = Array.from({length:n}, () => Array.from({length:n}, Math.random));
+  const t0 = performance.now();
+  matmulNaive(A, B, n);
+  const t = performance.now() - t0;
+  const ratio = prev ? `x${(t/prev).toFixed(1)}` : "  --";
+  console.log(`  n=${n}  t=${t.toFixed(1)}ms  ${ratio}`);
+  prev = t;
+}
+
+// GPT-2 small estimate
+const gpt2Flops = transformerFlops(12, 1024, 768, 50257);
+console.log(`\nGPT-2 small forward FLOPs ~ ${gpt2Flops.toExponential(2)}`);
+</code></pre></div>
+        <div class="ct-panel" data-tab="s17-c"><pre><code>#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;time.h&gt;
+
+/* Naive matrix multiply: O(n^3) */
+void matmul(double *A, double *B, double *C, int n) {
+    for (int i = 0; i &lt; n; i++)
+        for (int j = 0; j &lt; n; j++) {
+            C[i*n+j] = 0;
+            for (int k = 0; k &lt; n; k++)
+                C[i*n+j] += A[i*n+k] * B[k*n+j];
+        }
+}
+
+/* Transformer FLOP estimate */
+long long transformer_flops(int L, int S, int D, int V) {
+    long long attn   = 2LL * S * S * D;
+    long long ffn    = 2LL * S * D * (4*D) * 2;
+    long long unemb  = (long long)S * D * V;
+    return L * (attn + ffn) + unemb;
+}
+
+double now_ms(void) {
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &amp;ts);
+    return ts.tv_sec*1e3 + ts.tv_nsec/1e6;
+}
+
+int main(void) {
+    printf("Naive matmul — O(n^3), ratio ~8 when n doubles:\n");
+    double prev = -1;
+    for (int n = 32; n &lt;= 128; n *= 2) {
+        double *A = calloc(n*n, sizeof(double));
+        double *B = calloc(n*n, sizeof(double));
+        double *C = calloc(n*n, sizeof(double));
+        for (int i=0;i&lt;n*n;i++) { A[i]=(double)rand()/RAND_MAX; B[i]=(double)rand()/RAND_MAX; }
+        double t0 = now_ms();
+        matmul(A, B, C, n);
+        double t = now_ms() - t0;
+        if (prev &gt; 0)
+            printf("  n=%3d  t=%.2fms  ratio=x%.1f\n", n, t, t/prev);
+        else
+            printf("  n=%3d  t=%.2fms\n", n, t);
+        prev = t;
+        free(A); free(B); free(C);
+    }
+    long long flops = transformer_flops(12, 1024, 768, 50257);
+    printf("\nGPT-2 small forward FLOPs ~ %lld (%.2e)\n", flops, (double)flops);
+}
+</code></pre></div>
+        <div class="ct-panel" data-tab="s17-cpp"><pre><code>#include &lt;vector&gt;
+#include &lt;chrono&gt;
+#include &lt;iostream&gt;
+#include &lt;random&gt;
+using namespace std;
+using ms = chrono::duration&lt;double, milli&gt;;
+
+// Naive matrix multiply: O(n^3)
+vector&lt;vector&lt;double&gt;&gt; matmul(
+    const vector&lt;vector&lt;double&gt;&gt;&amp; A,
+    const vector&lt;vector&lt;double&gt;&gt;&amp; B, int n)
+{
+    vector&lt;vector&lt;double&gt;&gt; C(n, vector&lt;double&gt;(n, 0));
+    for (int i=0;i&lt;n;i++)
+        for (int k=0;k&lt;n;k++)
+            for (int j=0;j&lt;n;j++)   // loop order ijk is cache-friendlier
+                C[i][j] += A[i][k] * B[k][j];
+    return C;
+}
+
+// Transformer FLOP estimate: dominant term O(L*S^2*D)
+long long transformerFlops(int L, int S, int D, int V) {
+    long long attn  = 2LL*S*S*D;
+    long long ffn   = 2LL*S*D*(4*D)*2;
+    long long unemb = (long long)S*D*V;
+    return L*(attn+ffn)+unemb;
+}
+
+int main() {
+    mt19937 rng(42);
+    uniform_real_distribution&lt;double&gt; dist(0,1);
+    double prev = -1;
+    for (int n : {32, 64, 128}) {
+        vector&lt;vector&lt;double&gt;&gt; A(n, vector&lt;double&gt;(n)), B(n, vector&lt;double&gt;(n));
+        for (auto&amp; row : A) generate(row.begin(), row.end(), [&amp;]{return dist(rng);});
+        for (auto&amp; row : B) generate(row.begin(), row.end(), [&amp;]{return dist(rng);});
+        auto t0 = chrono::high_resolution_clock::now();
+        matmul(A, B, n);
+        double t = ms(chrono::high_resolution_clock::now()-t0).count();
+        if (prev &gt; 0)
+            cout &lt;&lt; "n=" &lt;&lt; n &lt;&lt; "  t=" &lt;&lt; t &lt;&lt; "ms  ratio=x" &lt;&lt; t/prev &lt;&lt; "\n";
+        else
+            cout &lt;&lt; "n=" &lt;&lt; n &lt;&lt; "  t=" &lt;&lt; t &lt;&lt; "ms\n";
+        prev = t;
+    }
+    cout &lt;&lt; "GPT-2 forward FLOPs ~ " &lt;&lt; transformerFlops(12,1024,768,50257) &lt;&lt; "\n";
+}
+</code></pre></div>
+        <div class="ct-panel" data-tab="s17-java"><pre><code>public class MLComplexity {
+
+    // Naive matrix multiply: O(n^3)
+    static double[][] matmul(double[][] A, double[][] B, int n) {
+        double[][] C = new double[n][n];
+        for (int i = 0; i &lt; n; i++)
+            for (int k = 0; k &lt; n; k++)
+                for (int j = 0; j &lt; n; j++)
+                    C[i][j] += A[i][k] * B[k][j];
+        return C;
+    }
+
+    // Transformer forward pass FLOP estimate: O(L * S^2 * D) dominant
+    static long transformerFlops(int L, int S, int D, int V) {
+        long attn  = 2L * S * S * D;
+        long ffn   = 2L * S * D * (4 * D) * 2;
+        long unemb = (long) S * D * V;
+        return L * (attn + ffn) + unemb;
+    }
+
+    public static void main(String[] args) {
+        System.out.println("Naive matmul — O(n^3), ratio ~8 when n doubles:");
+        double prev = -1;
+        for (int n : new int[]{32, 64, 128}) {
+            double[][] A = new double[n][n], B = new double[n][n];
+            for (int i=0;i&lt;n;i++) for (int j=0;j&lt;n;j++) { A[i][j]=Math.random(); B[i][j]=Math.random(); }
+            long t0 = System.nanoTime();
+            matmul(A, B, n);
+            double t = (System.nanoTime() - t0) / 1e6;
+            if (prev &gt; 0) System.out.printf("  n=%3d  t=%.1fms  ratio=x%.1f%n", n, t, t/prev);
+            else           System.out.printf("  n=%3d  t=%.1fms%n", n, t);
+            prev = t;
+        }
+        System.out.printf("%nGPT-2 forward FLOPs ~ %.2e%n",
+                (double) transformerFlops(12, 1024, 768, 50257));
+    }
+}
+</code></pre></div>
+        <div class="ct-panel" data-tab="s17-go"><pre><code>package main
+
+import (
+	"fmt"
+	"math/rand"
+	"time"
+)
+
+// Naive matrix multiply: O(n^3)
+func matmul(A, B [][]float64, n int) [][]float64 {
+	C := make([][]float64, n)
+	for i := range C { C[i] = make([]float64, n) }
+	for i := 0; i &lt; n; i++ {
+		for k := 0; k &lt; n; k++ {
+			for j := 0; j &lt; n; j++ {
+				C[i][j] += A[i][k] * B[k][j]
+			}
+		}
+	}
+	return C
+}
+
+// Transformer FLOP estimate: dominant term O(L*S^2*D)
+func transformerFlops(L, S, D, V int) int64 {
+	attn  := int64(2 * S * S * D)
+	ffn   := int64(2 * S * D * (4 * D) * 2)
+	unemb := int64(S) * int64(D) * int64(V)
+	return int64(L)*(attn+ffn) + unemb
+}
+
+func main() {
+	fmt.Println("Naive matmul — O(n^3), ratio ~8 when n doubles:")
+	var prev float64 = -1
+	for _, n := range []int{32, 64, 128} {
+		A := make([][]float64, n)
+		B := make([][]float64, n)
+		for i := range A {
+			A[i] = make([]float64, n)
+			B[i] = make([]float64, n)
+			for j := range A[i] { A[i][j] = rand.Float64(); B[i][j] = rand.Float64() }
+		}
+		t0 := time.Now()
+		matmul(A, B, n)
+		t := time.Since(t0).Seconds() * 1000
+		if prev &gt; 0 {
+			fmt.Printf("  n=%3d  t=%.1fms  ratio=x%.1f\n", n, t, t/prev)
+		} else {
+			fmt.Printf("  n=%3d  t=%.1fms\n", n, t)
+		}
+		prev = t
+	}
+	flops := transformerFlops(12, 1024, 768, 50257)
+	fmt.Printf("\nGPT-2 forward FLOPs ~ %.2e\n", float64(flops))
+}
+</code></pre></div>
+      </div>
+    </details>
 
     <!-- ========================================================== -->
     <h2 id="summary">18. Summary</h2>

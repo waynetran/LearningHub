@@ -1597,6 +1597,56 @@ ul.checked li::before {
 .code-tabs .ct-panel code .op  { color: #89ddff; }
 
 /* =========================================================================
+   Per-section collapsible code block — wraps a .code-tabs
+   Usage: <details class="algo-code"><summary>Source — Title</summary>…</details>
+   ========================================================================= */
+details.algo-code {
+  margin: 20px 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-2);
+  overflow: hidden;
+}
+details.algo-code > summary {
+  cursor: pointer;
+  padding: 9px 16px;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text-dim);
+  user-select: none;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-3);
+  transition: color 0.15s;
+}
+details.algo-code > summary::-webkit-details-marker { display: none; }
+details.algo-code > summary::before {
+  content: '▶';
+  font-size: 10px;
+  color: var(--accent);
+  display: inline-block;
+  transition: transform 0.15s;
+  flex-shrink: 0;
+}
+details.algo-code[open] > summary::before {
+  transform: rotate(90deg);
+}
+details.algo-code[open] > summary {
+  border-bottom: 1px solid var(--border);
+  color: var(--accent-2);
+}
+details.algo-code > summary:hover {
+  color: var(--text);
+}
+details.algo-code .code-tabs {
+  margin: 0;
+  border: none;
+  border-radius: 0;
+}
+
+/* =========================================================================
    3D visualization frame — for isometric SVG renders
    ========================================================================= */
 .viz-3d {

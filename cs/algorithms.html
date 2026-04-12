@@ -41,9 +41,8 @@
       <li><a href="#s17">17. Dynamic programming</a></li>
       <li><a href="#s18">18. Greedy</a></li>
       <li><a href="#s19">19. Divide &amp; conquer</a></li>
-      <li><a href="#s20">20. Source code</a></li>
-      <li><a href="#s21">21. Picking the right tool</a></li>
-      <li><a href="#s22">22. Further reading</a></li>
+      <li><a href="#s20">20. Picking the right tool</a></li>
+      <li><a href="#s21">21. Further reading</a></li>
     </ul>
   </aside>
 
@@ -182,6 +181,168 @@
 
     <p>Rule of thumb: <em>if you're going to read a lot and append at the end, use a dynamic array</em>. If you need frequent inserts in the middle, reach for a linked list or a balanced tree instead.</p>
 
+    <details class="algo-code">
+      <summary>Source — Dynamic Array</summary>
+      <div class="code-tabs">
+        <div class="ct-header">
+          <button class="ct-tab active" data-tab="arr-pseudo">Pseudocode</button>
+          <button class="ct-tab" data-tab="arr-py">Python</button>
+          <button class="ct-tab" data-tab="arr-js">JavaScript</button>
+          <button class="ct-tab" data-tab="arr-c">C</button>
+          <button class="ct-tab" data-tab="arr-cpp">C++</button>
+          <button class="ct-tab" data-tab="arr-java">Java</button>
+          <button class="ct-tab" data-tab="arr-go">Go</button>
+        </div>
+        <div class="ct-panel active" data-tab="arr-pseudo"><pre><code>DynamicArray:
+  data = fixed array of capacity 1
+  size = 0
+
+  append(value):
+    if size == capacity:
+      allocate new array of size capacity * 2
+      copy old elements into new array
+      replace data with new array
+    data[size] = value
+    size += 1
+
+  get(i):         return data[i]        // O(1)
+  set(i, value):  data[i] = value       // O(1)
+</code></pre></div>
+        <div class="ct-panel" data-tab="arr-py"><pre><code>class DynamicArray:
+    def __init__(self):
+        self._cap = 1
+        self._data = [None] * self._cap
+        self._size = 0
+
+    def append(self, val):
+        if self._size == self._cap:
+            self._resize(self._cap * 2)
+        self._data[self._size] = val
+        self._size += 1
+
+    def _resize(self, new_cap):
+        new_data = [None] * new_cap
+        for i in range(self._size):
+            new_data[i] = self._data[i]
+        self._data = new_data
+        self._cap = new_cap
+
+    def get(self, i):           # O(1)
+        return self._data[i]
+
+    def set(self, i, val):      # O(1)
+        self._data[i] = val
+
+    def __len__(self):
+        return self._size
+</code></pre></div>
+        <div class="ct-panel" data-tab="arr-js"><pre><code>class DynamicArray {
+  constructor() {
+    this._data = new Array(1);
+    this._size = 0;
+    this._cap  = 1;
+  }
+
+  append(val) {
+    if (this._size === this._cap) {
+      const next = new Array(this._cap * 2);
+      for (let i = 0; i &lt; this._size; i++) next[i] = this._data[i];
+      this._data = next;
+      this._cap *= 2;
+    }
+    this._data[this._size++] = val;
+  }
+
+  get(i)        { return this._data[i]; }   // O(1)
+  set(i, val)   { this._data[i] = val; }    // O(1)
+  get size()    { return this._size; }
+}
+</code></pre></div>
+        <div class="ct-panel" data-tab="arr-c"><pre><code>#include &lt;stdlib.h&gt;
+#include &lt;string.h&gt;
+
+typedef struct {
+    int  *data;
+    int   size;
+    int   cap;
+} DynArr;
+
+void da_init(DynArr *a) {
+    a-&gt;data = malloc(sizeof(int));
+    a-&gt;size = 0;
+    a-&gt;cap  = 1;
+}
+
+void da_append(DynArr *a, int val) {
+    if (a-&gt;size == a-&gt;cap) {
+        a-&gt;cap *= 2;
+        a-&gt;data = realloc(a-&gt;data, a-&gt;cap * sizeof(int));
+    }
+    a-&gt;data[a-&gt;size++] = val;
+}
+
+int  da_get(DynArr *a, int i)         { return a-&gt;data[i]; }
+void da_set(DynArr *a, int i, int v)  { a-&gt;data[i] = v; }
+void da_free(DynArr *a)               { free(a-&gt;data); }
+</code></pre></div>
+        <div class="ct-panel" data-tab="arr-cpp"><pre><code>#include &lt;vector&gt;
+#include &lt;stdexcept&gt;
+
+// std::vector IS the dynamic array — shown here for illustration.
+template&lt;typename T&gt;
+class DynArray {
+    std::vector&lt;T&gt; buf;
+public:
+    void append(const T&amp; v)  { buf.push_back(v); }   // amortized O(1)
+    T&amp;   get(int i)          { return buf[i]; }        // O(1)
+    void set(int i, const T&amp; v) { buf[i] = v; }       // O(1)
+    int  size() const        { return (int)buf.size(); }
+};
+
+// Usage:
+// DynArray&lt;int&gt; a;
+// a.append(1); a.append(2);
+// a.get(0);    // 1
+</code></pre></div>
+        <div class="ct-panel" data-tab="arr-java"><pre><code>import java.util.Arrays;
+
+public class DynamicArray&lt;T&gt; {
+    private Object[] data;
+    private int size;
+
+    public DynamicArray() { data = new Object[1]; size = 0; }
+
+    public void append(T val) {
+        if (size == data.length)
+            data = Arrays.copyOf(data, data.length * 2);
+        data[size++] = val;
+    }
+
+    @SuppressWarnings("unchecked")
+    public T get(int i)           { return (T) data[i]; }  // O(1)
+    public void set(int i, T val) { data[i] = val; }       // O(1)
+    public int size()             { return size; }
+}
+</code></pre></div>
+        <div class="ct-panel" data-tab="arr-go"><pre><code>package main
+
+// Go slices are dynamic arrays; this shows the manual version.
+type DynArr struct {
+    data []int
+}
+
+func (a *DynArr) Append(v int) {
+    // append handles resizing automatically (doubles capacity)
+    a.data = append(a.data, v)
+}
+
+func (a *DynArr) Get(i int) int      { return a.data[i] }
+func (a *DynArr) Set(i, v int)       { a.data[i] = v }
+func (a *DynArr) Len() int           { return len(a.data) }
+</code></pre></div>
+      </div>
+    </details>
+
     <!-- ========================================================== -->
     <h2 id="s4">4. Linked lists</h2>
 
@@ -207,6 +368,222 @@
     <div class="callout warn">
       <strong>The rule.</strong> Start with an array. Switch to a linked list only when you've profiled and found that insert/delete in the middle is dominating. Most of the time you won't.
     </div>
+
+    <details class="algo-code">
+      <summary>Source — Linked List</summary>
+      <div class="code-tabs">
+        <div class="ct-header">
+          <button class="ct-tab active" data-tab="ll-pseudo">Pseudocode</button>
+          <button class="ct-tab" data-tab="ll-py">Python</button>
+          <button class="ct-tab" data-tab="ll-js">JavaScript</button>
+          <button class="ct-tab" data-tab="ll-c">C</button>
+          <button class="ct-tab" data-tab="ll-cpp">C++</button>
+          <button class="ct-tab" data-tab="ll-java">Java</button>
+          <button class="ct-tab" data-tab="ll-go">Go</button>
+        </div>
+        <div class="ct-panel active" data-tab="ll-pseudo"><pre><code>Node: value, next = null
+
+LinkedList: head = null
+
+insert_at_head(value):
+  node = new Node(value)
+  node.next = head
+  head = node               // O(1)
+
+delete(value):
+  if head is null: return
+  if head.value == value: head = head.next; return
+  cur = head
+  while cur.next != null:
+    if cur.next.value == value:
+      cur.next = cur.next.next   // splice out
+      return
+    cur = cur.next
+
+traverse():
+  cur = head
+  while cur != null:
+    visit(cur.value)
+    cur = cur.next            // O(n)
+</code></pre></div>
+        <div class="ct-panel" data-tab="ll-py"><pre><code>class Node:
+    def __init__(self, val):
+        self.val  = val
+        self.next = None
+
+class LinkedList:
+    def __init__(self):
+        self.head = None
+
+    def insert_at_head(self, val):  # O(1)
+        node = Node(val)
+        node.next = self.head
+        self.head = node
+
+    def delete(self, val):          # O(n)
+        if self.head is None:
+            return
+        if self.head.val == val:
+            self.head = self.head.next
+            return
+        cur = self.head
+        while cur.next:
+            if cur.next.val == val:
+                cur.next = cur.next.next
+                return
+            cur = cur.next
+
+    def traverse(self):             # O(n)
+        cur = self.head
+        while cur:
+            print(cur.val, end=' -&gt; ')
+            cur = cur.next
+        print('None')
+</code></pre></div>
+        <div class="ct-panel" data-tab="ll-js"><pre><code>class Node {
+  constructor(val) { this.val = val; this.next = null; }
+}
+
+class LinkedList {
+  constructor() { this.head = null; }
+
+  insertAtHead(val) {              // O(1)
+    const n = new Node(val);
+    n.next = this.head;
+    this.head = n;
+  }
+
+  delete(val) {                    // O(n)
+    if (!this.head) return;
+    if (this.head.val === val) { this.head = this.head.next; return; }
+    let cur = this.head;
+    while (cur.next) {
+      if (cur.next.val === val) { cur.next = cur.next.next; return; }
+      cur = cur.next;
+    }
+  }
+
+  traverse() {                     // O(n)
+    const out = [];
+    let cur = this.head;
+    while (cur) { out.push(cur.val); cur = cur.next; }
+    return out;
+  }
+}
+</code></pre></div>
+        <div class="ct-panel" data-tab="ll-c"><pre><code>#include &lt;stdlib.h&gt;
+
+typedef struct Node { int val; struct Node *next; } Node;
+
+Node* ll_insert_head(Node *head, int val) {
+    Node *n = malloc(sizeof(Node));
+    n-&gt;val  = val;
+    n-&gt;next = head;
+    return n;       // new head
+}
+
+Node* ll_delete(Node *head, int val) {
+    if (!head) return NULL;
+    if (head-&gt;val == val) { Node *tmp = head-&gt;next; free(head); return tmp; }
+    Node *cur = head;
+    while (cur-&gt;next) {
+        if (cur-&gt;next-&gt;val == val) {
+            Node *tmp = cur-&gt;next;
+            cur-&gt;next = tmp-&gt;next;
+            free(tmp);
+            return head;
+        }
+        cur = cur-&gt;next;
+    }
+    return head;
+}
+</code></pre></div>
+        <div class="ct-panel" data-tab="ll-cpp"><pre><code>#include &lt;iostream&gt;
+
+struct Node { int val; Node* next; Node(int v): val(v), next(nullptr){} };
+
+struct LinkedList {
+    Node* head = nullptr;
+
+    void insertAtHead(int val) {      // O(1)
+        Node* n = new Node(val);
+        n-&gt;next = head;
+        head = n;
+    }
+
+    void deleteVal(int val) {         // O(n)
+        if (!head) return;
+        if (head-&gt;val == val) { Node* t = head; head = head-&gt;next; delete t; return; }
+        Node* cur = head;
+        while (cur-&gt;next) {
+            if (cur-&gt;next-&gt;val == val) {
+                Node* t = cur-&gt;next; cur-&gt;next = t-&gt;next; delete t; return;
+            }
+            cur = cur-&gt;next;
+        }
+    }
+
+    void traverse() const {
+        for (Node* c = head; c; c = c-&gt;next) std::cout &lt;&lt; c-&gt;val &lt;&lt; " -&gt; ";
+        std::cout &lt;&lt; "null\n";
+    }
+};
+</code></pre></div>
+        <div class="ct-panel" data-tab="ll-java"><pre><code>public class LinkedList&lt;T&gt; {
+    private static class Node&lt;T&gt; { T val; Node&lt;T&gt; next; Node(T v){val=v;} }
+    private Node&lt;T&gt; head;
+
+    public void insertAtHead(T val) {   // O(1)
+        Node&lt;T&gt; n = new Node&lt;&gt;(val);
+        n.next = head;
+        head = n;
+    }
+
+    public void delete(T val) {         // O(n)
+        if (head == null) return;
+        if (head.val.equals(val)) { head = head.next; return; }
+        Node&lt;T&gt; cur = head;
+        while (cur.next != null) {
+            if (cur.next.val.equals(val)) { cur.next = cur.next.next; return; }
+            cur = cur.next;
+        }
+    }
+
+    public void traverse() {            // O(n)
+        for (Node&lt;T&gt; c = head; c != null; c = c.next)
+            System.out.print(c.val + " -> ");
+        System.out.println("null");
+    }
+}
+</code></pre></div>
+        <div class="ct-panel" data-tab="ll-go"><pre><code>package main
+
+type Node struct { Val int; Next *Node }
+
+type LinkedList struct { Head *Node }
+
+func (l *LinkedList) InsertAtHead(val int) {  // O(1)
+    l.Head = &amp;Node{Val: val, Next: l.Head}
+}
+
+func (l *LinkedList) Delete(val int) {        // O(n)
+    if l.Head == nil { return }
+    if l.Head.Val == val { l.Head = l.Head.Next; return }
+    cur := l.Head
+    for cur.Next != nil {
+        if cur.Next.Val == val { cur.Next = cur.Next.Next; return }
+        cur = cur.Next
+    }
+}
+
+func (l *LinkedList) Traverse() []int {       // O(n)
+    var out []int
+    for c := l.Head; c != nil; c = c.Next { out = append(out, c.Val) }
+    return out
+}
+</code></pre></div>
+      </div>
+    </details>
 
     <!-- ========================================================== -->
     <h2 id="s5">5. Stacks and queues</h2>
@@ -234,6 +611,206 @@
     </ul>
 
     <p>If you only remember one thing: <em>DFS uses a stack, BFS uses a queue</em>. That single fact lets you convert one traversal into the other by swapping one container.</p>
+
+    <details class="algo-code">
+      <summary>Source — Stack &amp; Queue</summary>
+      <div class="code-tabs">
+        <div class="ct-header">
+          <button class="ct-tab active" data-tab="sq-pseudo">Pseudocode</button>
+          <button class="ct-tab" data-tab="sq-py">Python</button>
+          <button class="ct-tab" data-tab="sq-js">JavaScript</button>
+          <button class="ct-tab" data-tab="sq-c">C</button>
+          <button class="ct-tab" data-tab="sq-cpp">C++</button>
+          <button class="ct-tab" data-tab="sq-java">Java</button>
+          <button class="ct-tab" data-tab="sq-go">Go</button>
+        </div>
+        <div class="ct-panel active" data-tab="sq-pseudo"><pre><code>-- Stack (array-backed, LIFO) --
+Stack: data=[], top=-1
+push(v):  data[++top] = v
+pop():    return data[top--]
+peek():   return data[top]
+
+-- Circular Queue (ring buffer, FIFO) --
+Queue: data=array[cap], head=0, tail=0, size=0
+enqueue(v):
+  data[tail] = v
+  tail = (tail + 1) mod cap
+  size += 1
+dequeue():
+  v = data[head]
+  head = (head + 1) mod cap
+  size -= 1
+  return v
+</code></pre></div>
+        <div class="ct-panel" data-tab="sq-py"><pre><code># Stack — list is O(1) amortized for push/pop at end
+class Stack:
+    def __init__(self):   self._d = []
+    def push(self, v):    self._d.append(v)
+    def pop(self):        return self._d.pop()
+    def peek(self):       return self._d[-1]
+    def empty(self):      return len(self._d) == 0
+
+# Circular queue using collections.deque (O(1) both ends)
+from collections import deque
+
+class Queue:
+    def __init__(self):   self._d = deque()
+    def enqueue(self, v): self._d.append(v)
+    def dequeue(self):    return self._d.popleft()
+    def empty(self):      return len(self._d) == 0
+
+# Manual ring buffer
+class RingQueue:
+    def __init__(self, cap):
+        self._data = [None] * cap
+        self._cap  = cap
+        self._head = self._tail = self._size = 0
+
+    def enqueue(self, v):
+        self._data[self._tail] = v
+        self._tail = (self._tail + 1) % self._cap
+        self._size += 1
+
+    def dequeue(self):
+        v = self._data[self._head]
+        self._head = (self._head + 1) % self._cap
+        self._size -= 1
+        return v
+</code></pre></div>
+        <div class="ct-panel" data-tab="sq-js"><pre><code>// Stack backed by an array
+class Stack {
+  #d = [];
+  push(v)  { this.#d.push(v); }
+  pop()    { return this.#d.pop(); }
+  peek()   { return this.#d[this.#d.length - 1]; }
+  empty()  { return this.#d.length === 0; }
+}
+
+// Circular queue (ring buffer)
+class RingQueue {
+  constructor(cap) {
+    this._d    = new Array(cap);
+    this._cap  = cap;
+    this._head = this._tail = this._size = 0;
+  }
+  enqueue(v) {
+    this._d[this._tail] = v;
+    this._tail = (this._tail + 1) % this._cap;
+    this._size++;
+  }
+  dequeue() {
+    const v = this._d[this._head];
+    this._head = (this._head + 1) % this._cap;
+    this._size--;
+    return v;
+  }
+  empty() { return this._size === 0; }
+}
+</code></pre></div>
+        <div class="ct-panel" data-tab="sq-c"><pre><code>#include &lt;stdlib.h&gt;
+#define CAP 1024
+
+// Stack
+typedef struct { int d[CAP]; int top; } Stack;
+void s_push(Stack *s, int v) { s-&gt;d[++s-&gt;top] = v; }
+int  s_pop (Stack *s)        { return s-&gt;d[s-&gt;top--]; }
+int  s_peek(Stack *s)        { return s-&gt;d[s-&gt;top]; }
+
+// Ring-buffer queue
+typedef struct {
+    int d[CAP]; int head, tail, size;
+} Queue;
+void q_enq(Queue *q, int v) {
+    q-&gt;d[q-&gt;tail] = v;
+    q-&gt;tail = (q-&gt;tail + 1) % CAP;
+    q-&gt;size++;
+}
+int q_deq(Queue *q) {
+    int v = q-&gt;d[q-&gt;head];
+    q-&gt;head = (q-&gt;head + 1) % CAP;
+    q-&gt;size--;
+    return v;
+}
+</code></pre></div>
+        <div class="ct-panel" data-tab="sq-cpp"><pre><code>#include &lt;stack&gt;
+#include &lt;queue&gt;
+
+// std::stack and std::queue wrap a deque by default.
+
+std::stack&lt;int&gt; stk;
+stk.push(1); stk.push(2);
+stk.top();   // 2
+stk.pop();
+
+std::queue&lt;int&gt; q;
+q.push(1); q.push(2);
+q.front();   // 1
+q.pop();
+
+// Manual ring buffer (same logic as C version):
+template&lt;typename T, int CAP&gt;
+struct RingQueue {
+    T d[CAP]; int head=0, tail=0, size=0;
+    void enqueue(T v) { d[tail]=(v); tail=(tail+1)%CAP; size++; }
+    T    dequeue()    { T v=d[head]; head=(head+1)%CAP; size--; return v; }
+};
+</code></pre></div>
+        <div class="ct-panel" data-tab="sq-java"><pre><code>import java.util.ArrayDeque;
+import java.util.Deque;
+
+// Stack
+Deque&lt;Integer&gt; stack = new ArrayDeque&lt;&gt;();
+stack.push(1); stack.push(2);
+stack.peek();  // 2
+stack.pop();
+
+// Queue (FIFO)
+Deque&lt;Integer&gt; queue = new ArrayDeque&lt;&gt;();
+queue.offer(1); queue.offer(2);
+queue.peek();   // 1
+queue.poll();
+
+// Manual ring buffer
+public class RingQueue {
+    private int[] d; private int head, tail, size, cap;
+    public RingQueue(int cap) { d = new int[cap]; this.cap = cap; }
+    public void enqueue(int v) { d[tail] = v; tail = (tail+1)%cap; size++; }
+    public int  dequeue()      { int v=d[head]; head=(head+1)%cap; size--; return v; }
+}
+</code></pre></div>
+        <div class="ct-panel" data-tab="sq-go"><pre><code>package main
+
+// Stack
+type Stack []int
+
+func (s *Stack) Push(v int)  { *s = append(*s, v) }
+func (s *Stack) Pop() int    { n := len(*s)-1; v := (*s)[n]; *s = (*s)[:n]; return v }
+func (s *Stack) Peek() int   { return (*s)[len(*s)-1] }
+func (s *Stack) Empty() bool { return len(*s) == 0 }
+
+// Ring-buffer queue
+type RingQueue struct {
+    d          []int
+    head, tail, size, cap int
+}
+
+func NewRingQueue(cap int) *RingQueue { return &amp;RingQueue{d: make([]int, cap), cap: cap} }
+
+func (q *RingQueue) Enqueue(v int) {
+    q.d[q.tail] = v
+    q.tail = (q.tail + 1) % q.cap
+    q.size++
+}
+
+func (q *RingQueue) Dequeue() int {
+    v := q.d[q.head]
+    q.head = (q.head + 1) % q.cap
+    q.size--
+    return v
+}
+</code></pre></div>
+      </div>
+    </details>
 
     <!-- ========================================================== -->
     <h2 id="s6">6. Hash tables — the most important data structure in practice</h2>
@@ -293,6 +870,257 @@
       <strong>Why it matters for you.</strong> Every time you write <code>d = {}</code> in Python, or <code>map&lt;string, int&gt;</code> in C++, you're using a hash table. It's the single most used data structure in real software after the array. If you ever have to implement one from scratch — which you shouldn't, but it's educational — try chaining first, then open addressing, and profile both on realistic data.
     </div>
 
+    <details class="algo-code">
+      <summary>Source — Hash Map</summary>
+      <div class="code-tabs">
+        <div class="ct-header">
+          <button class="ct-tab active" data-tab="ht-pseudo">Pseudocode</button>
+          <button class="ct-tab" data-tab="ht-py">Python</button>
+          <button class="ct-tab" data-tab="ht-js">JavaScript</button>
+          <button class="ct-tab" data-tab="ht-c">C</button>
+          <button class="ct-tab" data-tab="ht-cpp">C++</button>
+          <button class="ct-tab" data-tab="ht-java">Java</button>
+          <button class="ct-tab" data-tab="ht-go">Go</button>
+        </div>
+        <div class="ct-panel active" data-tab="ht-pseudo"><pre><code>HashMap (chaining):
+  buckets = array of M empty linked lists
+  size = 0
+
+  put(key, value):
+    i = hash(key) mod M
+    for each (k,v) in buckets[i]:
+      if k == key: update v; return
+    prepend (key, value) to buckets[i]
+    size += 1
+    if size / M > 0.75: rehash(M * 2)
+
+  get(key):
+    i = hash(key) mod M
+    for each (k,v) in buckets[i]:
+      if k == key: return v
+    return NOT_FOUND
+
+  delete(key):
+    i = hash(key) mod M
+    remove (key,*) from buckets[i]
+</code></pre></div>
+        <div class="ct-panel" data-tab="ht-py"><pre><code>class HashMap:
+    def __init__(self, cap=8):
+        self._cap     = cap
+        self._buckets = [[] for _ in range(cap)]  # each bucket = list of (k,v)
+        self._size    = 0
+
+    def _idx(self, key):
+        return hash(key) % self._cap
+
+    def put(self, key, val):
+        b = self._buckets[self._idx(key)]
+        for i, (k, _) in enumerate(b):
+            if k == key:
+                b[i] = (key, val)   # update
+                return
+        b.append((key, val))
+        self._size += 1
+        if self._size / self._cap &gt; 0.75:
+            self._rehash()
+
+    def get(self, key, default=None):
+        for k, v in self._buckets[self._idx(key)]:
+            if k == key:
+                return v
+        return default
+
+    def delete(self, key):
+        b = self._buckets[self._idx(key)]
+        self._buckets[self._idx(key)] = [(k,v) for k,v in b if k != key]
+
+    def _rehash(self):
+        old = self._buckets
+        self._cap    *= 2
+        self._buckets = [[] for _ in range(self._cap)]
+        self._size    = 0
+        for bucket in old:
+            for k, v in bucket:
+                self.put(k, v)
+</code></pre></div>
+        <div class="ct-panel" data-tab="ht-js"><pre><code>class HashMap {
+  constructor(cap = 8) {
+    this._cap     = cap;
+    this._buckets = Array.from({length: cap}, () =&gt; []);
+    this._size    = 0;
+  }
+
+  _idx(key) {
+    let h = 0;
+    for (const c of String(key)) h = (h * 31 + c.charCodeAt(0)) | 0;
+    return Math.abs(h) % this._cap;
+  }
+
+  put(key, val) {
+    const b = this._buckets[this._idx(key)];
+    const entry = b.find(e =&gt; e[0] === key);
+    if (entry) { entry[1] = val; return; }
+    b.push([key, val]);
+    this._size++;
+    if (this._size / this._cap &gt; 0.75) this._rehash();
+  }
+
+  get(key) {
+    const entry = this._buckets[this._idx(key)].find(e =&gt; e[0] === key);
+    return entry ? entry[1] : undefined;
+  }
+
+  delete(key) {
+    const i = this._idx(key);
+    this._buckets[i] = this._buckets[i].filter(e =&gt; e[0] !== key);
+  }
+
+  _rehash() {
+    const old = this._buckets;
+    this._cap *= 2;
+    this._buckets = Array.from({length: this._cap}, () =&gt; []);
+    this._size = 0;
+    old.flat().forEach(([k, v]) =&gt; this.put(k, v));
+  }
+}
+</code></pre></div>
+        <div class="ct-panel" data-tab="ht-c"><pre><code>#include &lt;stdlib.h&gt;
+#include &lt;string.h&gt;
+
+#define INIT_CAP 8
+
+typedef struct Entry { char *key; int val; struct Entry *next; } Entry;
+typedef struct { Entry **buckets; int cap, size; } HashMap;
+
+static unsigned hash_str(const char *s) {
+    unsigned h = 5381;
+    while (*s) h = h * 33 ^ (unsigned char)*s++;
+    return h;
+}
+
+void hm_init(HashMap *m) {
+    m-&gt;cap     = INIT_CAP;
+    m-&gt;size    = 0;
+    m-&gt;buckets = calloc(m-&gt;cap, sizeof(Entry*));
+}
+
+void hm_put(HashMap *m, const char *key, int val) {
+    unsigned i = hash_str(key) % m-&gt;cap;
+    for (Entry *e = m-&gt;buckets[i]; e; e = e-&gt;next)
+        if (!strcmp(e-&gt;key, key)) { e-&gt;val = val; return; }
+    Entry *e = malloc(sizeof(Entry));
+    e-&gt;key  = strdup(key);
+    e-&gt;val  = val;
+    e-&gt;next = m-&gt;buckets[i];
+    m-&gt;buckets[i] = e;
+    m-&gt;size++;
+}
+
+int hm_get(HashMap *m, const char *key, int *out) {
+    for (Entry *e = m-&gt;buckets[hash_str(key) % m-&gt;cap]; e; e = e-&gt;next)
+        if (!strcmp(e-&gt;key, key)) { *out = e-&gt;val; return 1; }
+    return 0;
+}
+</code></pre></div>
+        <div class="ct-panel" data-tab="ht-cpp"><pre><code>#include &lt;unordered_map&gt;
+#include &lt;string&gt;
+#include &lt;optional&gt;
+
+// std::unordered_map is the production hash map.
+// Below is a minimal chaining implementation for illustration.
+
+template&lt;typename K, typename V&gt;
+class HashMap {
+    using Bucket = std::vector&lt;std::pair&lt;K,V&gt;&gt;;
+    std::vector&lt;Bucket&gt; _b;
+    int _size = 0, _cap;
+
+    int idx(const K&amp; k) const { return std::hash&lt;K&gt;{}(k) % _cap; }
+public:
+    HashMap(int cap=8): _b(cap), _cap(cap) {}
+
+    void put(const K&amp; k, const V&amp; v) {
+        auto&amp; bkt = _b[idx(k)];
+        for (auto&amp; p : bkt) if (p.first == k) { p.second = v; return; }
+        bkt.push_back({k, v}); _size++;
+    }
+
+    std::optional&lt;V&gt; get(const K&amp; k) const {
+        for (auto&amp; p : _b[idx(k)]) if (p.first == k) return p.second;
+        return std::nullopt;
+    }
+};
+</code></pre></div>
+        <div class="ct-panel" data-tab="ht-java"><pre><code>import java.util.*;
+
+public class HashMap&lt;K, V&gt; {
+    private static class Node&lt;K,V&gt; { K key; V val; Node&lt;K,V&gt; next; }
+    private Object[] buckets;
+    private int cap, size;
+
+    @SuppressWarnings("unchecked")
+    public HashMap(int cap) { this.cap = cap; buckets = new Object[cap]; }
+
+    private int idx(K key) { return Math.abs(key.hashCode()) % cap; }
+
+    @SuppressWarnings("unchecked")
+    public void put(K key, V val) {
+        int i = idx(key);
+        for (Node&lt;K,V&gt; n=(Node&lt;K,V&gt;)buckets[i]; n!=null; n=n.next)
+            if (n.key.equals(key)) { n.val = val; return; }
+        Node&lt;K,V&gt; n = new Node&lt;&gt;();
+        n.key = key; n.val = val; n.next = (Node&lt;K,V&gt;)buckets[i];
+        buckets[i] = n; size++;
+    }
+
+    @SuppressWarnings("unchecked")
+    public V get(K key) {
+        for (Node&lt;K,V&gt; n=(Node&lt;K,V&gt;)buckets[idx(key)]; n!=null; n=n.next)
+            if (n.key.equals(key)) return n.val;
+        return null;
+    }
+}
+</code></pre></div>
+        <div class="ct-panel" data-tab="ht-go"><pre><code>package main
+
+// Go's built-in map is a hash map. Shown here for illustration.
+type HashMap struct {
+    buckets [][]entry
+    cap     int
+    size    int
+}
+type entry struct{ key, val string }
+
+func NewHashMap(cap int) *HashMap {
+    return &amp;HashMap{buckets: make([][]entry, cap), cap: cap}
+}
+
+func (m *HashMap) idx(key string) int {
+    h := 0
+    for _, c := range key { h = h*31 + int(c) }
+    if h &lt; 0 { h = -h }
+    return h % m.cap
+}
+
+func (m *HashMap) Put(key, val string) {
+    i := m.idx(key)
+    for j, e := range m.buckets[i] {
+        if e.key == key { m.buckets[i][j].val = val; return }
+    }
+    m.buckets[i] = append(m.buckets[i], entry{key, val})
+    m.size++
+}
+
+func (m *HashMap) Get(key string) (string, bool) {
+    for _, e := range m.buckets[m.idx(key)] {
+        if e.key == key { return e.val, true }
+    }
+    return "", false
+}
+</code></pre></div>
+      </div>
+    </details>
+
     <!-- ========================================================== -->
     <h2 id="s7">7. Trees and binary search trees</h2>
 
@@ -330,6 +1158,215 @@
     </div>
 
     <p>So vanilla BSTs are pedagogical. They teach the invariant and the in-order traversal trick. Real code uses <em>balanced</em> BSTs, which we'll meet next.</p>
+
+    <details class="algo-code">
+      <summary>Source — Binary Search Tree</summary>
+      <div class="code-tabs">
+        <div class="ct-header">
+          <button class="ct-tab active" data-tab="bst-pseudo">Pseudocode</button>
+          <button class="ct-tab" data-tab="bst-py">Python</button>
+          <button class="ct-tab" data-tab="bst-js">JavaScript</button>
+          <button class="ct-tab" data-tab="bst-c">C</button>
+          <button class="ct-tab" data-tab="bst-cpp">C++</button>
+          <button class="ct-tab" data-tab="bst-java">Java</button>
+          <button class="ct-tab" data-tab="bst-go">Go</button>
+        </div>
+        <div class="ct-panel active" data-tab="bst-pseudo"><pre><code>Node: val, left=null, right=null
+
+insert(node, val):
+  if node is null: return new Node(val)
+  if val &lt; node.val:  node.left  = insert(node.left,  val)
+  elif val &gt; node.val: node.right = insert(node.right, val)
+  return node   // duplicates ignored
+
+search(node, val):
+  if node is null: return false
+  if val == node.val: return true
+  if val &lt; node.val:  return search(node.left,  val)
+  else:               return search(node.right, val)
+
+inorder(node):
+  if node is null: return
+  inorder(node.left)
+  visit(node.val)       // values come out sorted
+  inorder(node.right)
+</code></pre></div>
+        <div class="ct-panel" data-tab="bst-py"><pre><code>class Node:
+    def __init__(self, val):
+        self.val   = val
+        self.left  = None
+        self.right = None
+
+class BST:
+    def __init__(self): self.root = None
+
+    def insert(self, val):
+        self.root = self._ins(self.root, val)
+
+    def _ins(self, node, val):
+        if node is None:       return Node(val)
+        if val &lt; node.val:     node.left  = self._ins(node.left,  val)
+        elif val &gt; node.val:   node.right = self._ins(node.right, val)
+        return node
+
+    def search(self, val):
+        cur = self.root
+        while cur:
+            if val == cur.val:   return True
+            cur = cur.left if val &lt; cur.val else cur.right
+        return False
+
+    def inorder(self):
+        result = []
+        def _go(n):
+            if n: _go(n.left); result.append(n.val); _go(n.right)
+        _go(self.root)
+        return result   # sorted
+</code></pre></div>
+        <div class="ct-panel" data-tab="bst-js"><pre><code>class Node { constructor(v){this.val=v; this.left=this.right=null;} }
+
+class BST {
+  constructor() { this.root = null; }
+
+  insert(val) { this.root = this._ins(this.root, val); }
+
+  _ins(node, val) {
+    if (!node) return new Node(val);
+    if (val &lt; node.val)      node.left  = this._ins(node.left,  val);
+    else if (val &gt; node.val) node.right = this._ins(node.right, val);
+    return node;
+  }
+
+  search(val) {
+    let cur = this.root;
+    while (cur) {
+      if (val === cur.val) return true;
+      cur = val &lt; cur.val ? cur.left : cur.right;
+    }
+    return false;
+  }
+
+  inorder(node = this.root, out = []) {
+    if (node) { this.inorder(node.left, out); out.push(node.val); this.inorder(node.right, out); }
+    return out;
+  }
+}
+</code></pre></div>
+        <div class="ct-panel" data-tab="bst-c"><pre><code>#include &lt;stdlib.h&gt;
+
+typedef struct Node { int val; struct Node *left, *right; } Node;
+
+Node* bst_insert(Node *root, int val) {
+    if (!root) { Node *n = malloc(sizeof(Node)); n-&gt;val=val; n-&gt;left=n-&gt;right=NULL; return n; }
+    if (val &lt; root-&gt;val)       root-&gt;left  = bst_insert(root-&gt;left,  val);
+    else if (val &gt; root-&gt;val)  root-&gt;right = bst_insert(root-&gt;right, val);
+    return root;
+}
+
+int bst_search(Node *root, int val) {
+    while (root) {
+        if (val == root-&gt;val) return 1;
+        root = (val &lt; root-&gt;val) ? root-&gt;left : root-&gt;right;
+    }
+    return 0;
+}
+
+void bst_inorder(Node *root) {      // prints sorted
+    if (!root) return;
+    bst_inorder(root-&gt;left);
+    printf("%d ", root-&gt;val);
+    bst_inorder(root-&gt;right);
+}
+</code></pre></div>
+        <div class="ct-panel" data-tab="bst-cpp"><pre><code>#include &lt;iostream&gt;
+
+struct Node { int val; Node *left=nullptr, *right=nullptr; Node(int v):val(v){} };
+
+struct BST {
+    Node* root = nullptr;
+
+    Node* insert(Node* n, int val) {
+        if (!n) return new Node(val);
+        if (val &lt; n-&gt;val)       n-&gt;left  = insert(n-&gt;left,  val);
+        else if (val &gt; n-&gt;val)  n-&gt;right = insert(n-&gt;right, val);
+        return n;
+    }
+    void insert(int val) { root = insert(root, val); }
+
+    bool search(int val) const {
+        Node* cur = root;
+        while (cur) {
+            if (val == cur-&gt;val) return true;
+            cur = (val &lt; cur-&gt;val) ? cur-&gt;left : cur-&gt;right;
+        }
+        return false;
+    }
+
+    void inorder(Node* n) const {
+        if (!n) return;
+        inorder(n-&gt;left); std::cout &lt;&lt; n-&gt;val &lt;&lt; ' '; inorder(n-&gt;right);
+    }
+    void inorder() const { inorder(root); std::cout &lt;&lt; '\n'; }
+};
+</code></pre></div>
+        <div class="ct-panel" data-tab="bst-java"><pre><code>public class BST {
+    private static class Node { int val; Node left, right; Node(int v){val=v;} }
+    private Node root;
+
+    public void insert(int val) { root = insert(root, val); }
+    private Node insert(Node n, int val) {
+        if (n == null) return new Node(val);
+        if      (val &lt; n.val) n.left  = insert(n.left,  val);
+        else if (val &gt; n.val) n.right = insert(n.right, val);
+        return n;
+    }
+
+    public boolean search(int val) {
+        Node cur = root;
+        while (cur != null) {
+            if (val == cur.val) return true;
+            cur = (val &lt; cur.val) ? cur.left : cur.right;
+        }
+        return false;
+    }
+
+    public void inorder() { inorder(root); System.out.println(); }
+    private void inorder(Node n) {
+        if (n == null) return;
+        inorder(n.left); System.out.print(n.val + " "); inorder(n.right);
+    }
+}
+</code></pre></div>
+        <div class="ct-panel" data-tab="bst-go"><pre><code>package main
+
+import "fmt"
+
+type Node struct { Val int; Left, Right *Node }
+
+func Insert(root *Node, val int) *Node {
+    if root == nil { return &amp;Node{Val: val} }
+    if val &lt; root.Val       { root.Left  = Insert(root.Left,  val) }
+    if val &gt; root.Val       { root.Right = Insert(root.Right, val) }
+    return root
+}
+
+func Search(root *Node, val int) bool {
+    for root != nil {
+        if val == root.Val { return true }
+        if val &lt; root.Val  { root = root.Left } else { root = root.Right }
+    }
+    return false
+}
+
+func Inorder(root *Node) {   // prints sorted values
+    if root == nil { return }
+    Inorder(root.Left)
+    fmt.Print(root.Val, " ")
+    Inorder(root.Right)
+}
+</code></pre></div>
+      </div>
+    </details>
 
     <!-- ========================================================== -->
     <h2 id="s8">8. Balanced trees and B-trees</h2>
@@ -373,6 +1410,336 @@
     </div>
 
     <p>One more note on B+ trees specifically: the variant actually used by databases. In a B+ tree, internal nodes only hold keys (for routing), and <em>all</em> the real data lives in the leaves, which are linked together in a doubly linked list. This makes range scans — "give me every row with <code>id</code> between 100 and 200" — blazingly fast: you binary-search down to the first leaf, then walk the leaf list. If you've ever wondered why a database index makes <code>WHERE id BETWEEN ...</code> queries fast, that's the mechanism.</p>
+
+    <details class="algo-code">
+      <summary>Source — Red-Black Tree (rotation)</summary>
+      <div class="code-tabs">
+        <div class="ct-header">
+          <button class="ct-tab active" data-tab="rb-pseudo">Pseudocode</button>
+          <button class="ct-tab" data-tab="rb-py">Python</button>
+          <button class="ct-tab" data-tab="rb-js">JavaScript</button>
+          <button class="ct-tab" data-tab="rb-c">C</button>
+          <button class="ct-tab" data-tab="rb-cpp">C++</button>
+          <button class="ct-tab" data-tab="rb-java">Java</button>
+          <button class="ct-tab" data-tab="rb-go">Go</button>
+        </div>
+        <div class="ct-panel active" data-tab="rb-pseudo"><pre><code>-- Red-Black Tree invariants:
+-- 1. Every node is RED or BLACK
+-- 2. Root is BLACK
+-- 3. No two adjacent RED nodes (red node's parent is BLACK)
+-- 4. Every root-to-null path has the same number of BLACK nodes
+
+Node: val, color=RED, left=null, right=null, parent=null
+
+rotate_left(T, x):
+  y = x.right          // y becomes new subtree root
+  x.right = y.left
+  if y.left != null: y.left.parent = x
+  y.parent = x.parent
+  // splice y in where x was
+  if x.parent is null:   T.root = y
+  elif x == x.parent.left:  x.parent.left  = y
+  else:                     x.parent.right = y
+  y.left   = x
+  x.parent = y
+
+rotate_right(T, x):     // mirror image of rotate_left
+
+insert(T, val):
+  z = new Node(val, color=RED)
+  bst_insert(T, z)            // standard BST insert
+  insert_fixup(T, z)          // restore RB invariants
+
+insert_fixup(T, z):
+  while z.parent.color == RED:
+    // parent is red — need to fix
+    if z.parent == z.parent.parent.left:
+      y = z.parent.parent.right  // uncle
+      if y.color == RED:         // Case 1: recolor
+        z.parent.color        = BLACK
+        y.color               = BLACK
+        z.parent.parent.color = RED
+        z = z.parent.parent
+      else:                      // Cases 2&amp;3: rotate
+        if z == z.parent.right:
+          z = z.parent; rotate_left(T, z)
+        z.parent.color        = BLACK
+        z.parent.parent.color = RED
+        rotate_right(T, z.parent.parent)
+    // mirror for right side
+  T.root.color = BLACK
+</code></pre></div>
+        <div class="ct-panel" data-tab="rb-py"><pre><code>RED, BLACK = True, False
+
+class Node:
+    def __init__(self, val):
+        self.val    = val
+        self.color  = RED
+        self.left   = self.right = self.parent = None
+
+class RBTree:
+    def __init__(self):
+        self.NIL  = Node(0)           # sentinel leaf
+        self.NIL.color = BLACK
+        self.root = self.NIL
+
+    def _rotate_left(self, x):
+        y         = x.right
+        x.right   = y.left
+        if y.left is not self.NIL:
+            y.left.parent = x
+        y.parent  = x.parent
+        if x.parent is None:           self.root    = y
+        elif x is x.parent.left:       x.parent.left  = y
+        else:                          x.parent.right = y
+        y.left    = x
+        x.parent  = y
+
+    def _rotate_right(self, x):       # mirror of _rotate_left
+        y         = x.left
+        x.left    = y.right
+        if y.right is not self.NIL:
+            y.right.parent = x
+        y.parent  = x.parent
+        if x.parent is None:           self.root    = y
+        elif x is x.parent.right:      x.parent.right = y
+        else:                          x.parent.left  = y
+        y.right   = x
+        x.parent  = y
+
+    def insert(self, val):
+        z = Node(val)
+        z.left = z.right = self.NIL
+        # standard BST insert
+        y, x = None, self.root
+        while x is not self.NIL:
+            y = x
+            x = x.left if z.val &lt; x.val else x.right
+        z.parent = y
+        if y is None:                  self.root    = z
+        elif z.val &lt; y.val:            y.left       = z
+        else:                          y.right      = z
+        self._insert_fixup(z)
+
+    def _insert_fixup(self, z):
+        while z.parent and z.parent.color == RED:
+            if z.parent is z.parent.parent.left:
+                y = z.parent.parent.right
+                if y.color == RED:             # Case 1
+                    z.parent.color         = BLACK
+                    y.color                = BLACK
+                    z.parent.parent.color  = RED
+                    z = z.parent.parent
+                else:
+                    if z is z.parent.right:    # Case 2
+                        z = z.parent; self._rotate_left(z)
+                    z.parent.color         = BLACK  # Case 3
+                    z.parent.parent.color  = RED
+                    self._rotate_right(z.parent.parent)
+            else:                              # mirror
+                y = z.parent.parent.left
+                if y.color == RED:
+                    z.parent.color = BLACK; y.color = BLACK
+                    z.parent.parent.color = RED; z = z.parent.parent
+                else:
+                    if z is z.parent.left:
+                        z = z.parent; self._rotate_right(z)
+                    z.parent.color = BLACK
+                    z.parent.parent.color = RED
+                    self._rotate_left(z.parent.parent)
+        self.root.color = BLACK
+</code></pre></div>
+        <div class="ct-panel" data-tab="rb-js"><pre><code>const RED = true, BLACK = false;
+
+class RBNode {
+  constructor(v) { this.val=v; this.color=RED; this.left=this.right=this.parent=null; }
+}
+
+class RBTree {
+  constructor() {
+    this.NIL = new RBNode(0); this.NIL.color = BLACK;
+    this.root = this.NIL;
+  }
+
+  _rotateLeft(x) {
+    const y = x.right; x.right = y.left;
+    if (y.left !== this.NIL) y.left.parent = x;
+    y.parent = x.parent;
+    if (!x.parent)               this.root = y;
+    else if (x === x.parent.left) x.parent.left  = y;
+    else                          x.parent.right = y;
+    y.left = x; x.parent = y;
+  }
+
+  _rotateRight(x) {   // mirror of _rotateLeft
+    const y = x.left; x.left = y.right;
+    if (y.right !== this.NIL) y.right.parent = x;
+    y.parent = x.parent;
+    if (!x.parent)                this.root = y;
+    else if (x === x.parent.right) x.parent.right = y;
+    else                           x.parent.left  = y;
+    y.right = x; x.parent = y;
+  }
+
+  insert(val) {
+    const z = new RBNode(val); z.left = z.right = this.NIL;
+    let y = null, x = this.root;
+    while (x !== this.NIL) { y = x; x = z.val &lt; x.val ? x.left : x.right; }
+    z.parent = y;
+    if (!y)                  this.root = z;
+    else if (z.val &lt; y.val)  y.left    = z;
+    else                     y.right   = z;
+    this._fixup(z);
+  }
+
+  _fixup(z) {
+    while (z.parent &amp;&amp; z.parent.color === RED) {
+      // (abbreviated — full 6-case fixup mirrors the Python version)
+      if (z.parent === z.parent.parent.left) {
+        const u = z.parent.parent.right;
+        if (u.color === RED) {
+          z.parent.color = z.parent.parent.color = BLACK;
+          u.color = BLACK; z = z.parent.parent;
+        } else {
+          if (z === z.parent.right) { z = z.parent; this._rotateLeft(z); }
+          z.parent.color = BLACK; z.parent.parent.color = RED;
+          this._rotateRight(z.parent.parent);
+        }
+      } else { /* mirror */ break; }
+    }
+    this.root.color = BLACK;
+  }
+}
+</code></pre></div>
+        <div class="ct-panel" data-tab="rb-c"><pre><code>/* Skeleton: structure + left-rotate only (full insert_fixup mirrors Python) */
+#include &lt;stdlib.h&gt;
+#define RED   1
+#define BLACK 0
+
+typedef struct RBNode {
+    int val, color;
+    struct RBNode *left, *right, *parent;
+} RBNode;
+
+typedef struct { RBNode *root, *NIL; } RBTree;
+
+void rb_init(RBTree *t) {
+    t-&gt;NIL = calloc(1, sizeof(RBNode));
+    t-&gt;NIL-&gt;color = BLACK;
+    t-&gt;root = t-&gt;NIL;
+}
+
+void rotate_left(RBTree *t, RBNode *x) {
+    RBNode *y = x-&gt;right;
+    x-&gt;right  = y-&gt;left;
+    if (y-&gt;left != t-&gt;NIL) y-&gt;left-&gt;parent = x;
+    y-&gt;parent = x-&gt;parent;
+    if (!x-&gt;parent)              t-&gt;root = y;
+    else if (x == x-&gt;parent-&gt;left) x-&gt;parent-&gt;left  = y;
+    else                           x-&gt;parent-&gt;right = y;
+    y-&gt;left   = x;
+    x-&gt;parent = y;
+}
+/* rotate_right is the mirror image */
+</code></pre></div>
+        <div class="ct-panel" data-tab="rb-cpp"><pre><code>// C++ uses std::map / std::set which are red-black trees.
+// Skeleton showing structure and rotation:
+#include &lt;memory&gt;
+enum Color { RED, BLACK };
+
+struct RBNode {
+    int val; Color color = RED;
+    std::shared_ptr&lt;RBNode&gt; left, right;
+    RBNode* parent = nullptr;
+    explicit RBNode(int v) : val(v) {}
+};
+
+struct RBTree {
+    std::shared_ptr&lt;RBNode&gt; root;
+
+    void rotateLeft(std::shared_ptr&lt;RBNode&gt; x) {
+        auto y = x-&gt;right;
+        x-&gt;right = y-&gt;left;
+        if (y-&gt;left) y-&gt;left-&gt;parent = x.get();
+        y-&gt;parent = x-&gt;parent;
+        if (!x-&gt;parent)                 root            = y;
+        else if (x.get()==x-&gt;parent-&gt;left.get()) x-&gt;parent-&gt;left  = y;
+        else                            x-&gt;parent-&gt;right = y;
+        y-&gt;left   = x;
+        x-&gt;parent = y.get();
+    }
+    // rotateRight is the mirror; insert_fixup handles the 6 cases
+};
+</code></pre></div>
+        <div class="ct-panel" data-tab="rb-java"><pre><code>// Java's TreeMap is a red-black tree. Skeleton for illustration:
+public class RBTree {
+    static final boolean RED = true, BLACK = false;
+
+    static class Node {
+        int val; boolean color = RED;
+        Node left, right, parent;
+        Node(int v) { val = v; }
+    }
+
+    Node root;
+
+    void rotateLeft(Node x) {
+        Node y = x.right;
+        x.right = y.left;
+        if (y.left != null) y.left.parent = x;
+        y.parent = x.parent;
+        if (x.parent == null)            root           = y;
+        else if (x == x.parent.left)     x.parent.left  = y;
+        else                             x.parent.right = y;
+        y.left = x; x.parent = y;
+    }
+
+    void rotateRight(Node x) {   // mirror of rotateLeft
+        Node y = x.left;
+        x.left = y.right;
+        if (y.right != null) y.right.parent = x;
+        y.parent = x.parent;
+        if (x.parent == null)            root           = y;
+        else if (x == x.parent.right)    x.parent.right = y;
+        else                             x.parent.left  = y;
+        y.right = x; x.parent = y;
+    }
+    // insert() calls bstInsert() then insertFixup() — mirrors Python
+}
+</code></pre></div>
+        <div class="ct-panel" data-tab="rb-go"><pre><code>package main
+
+const (RED = iota; BLACK)
+
+type RBNode struct {
+    Val, Color int
+    Left, Right, Parent *RBNode
+}
+
+type RBTree struct{ Root, NIL *RBNode }
+
+func NewRBTree() *RBTree {
+    nil_node := &amp;RBNode{Color: BLACK}
+    return &amp;RBTree{Root: nil_node, NIL: nil_node}
+}
+
+func (t *RBTree) RotateLeft(x *RBNode) {
+    y        := x.Right
+    x.Right   = y.Left
+    if y.Left != t.NIL { y.Left.Parent = x }
+    y.Parent  = x.Parent
+    if x.Parent == nil       { t.Root = y } else
+    if x == x.Parent.Left    { x.Parent.Left  = y } else
+                               { x.Parent.Right = y }
+    y.Left   = x
+    x.Parent = y
+}
+
+// RotateRight is the mirror image.
+// Insert calls BST insert then fixup (6 cases, mirrors Python version).
+</code></pre></div>
+      </div>
+    </details>
 
     <!-- ========================================================== -->
     <h2 id="s9">9. Heaps and priority queues</h2>
@@ -427,6 +1794,257 @@
       <li><strong>Top-k queries in data pipelines.</strong> Finding the $k$ largest values in a stream.</li>
     </ul>
 
+    <details class="algo-code">
+      <summary>Source — Min-Heap</summary>
+      <div class="code-tabs">
+        <div class="ct-header">
+          <button class="ct-tab active" data-tab="hp-pseudo">Pseudocode</button>
+          <button class="ct-tab" data-tab="hp-py">Python</button>
+          <button class="ct-tab" data-tab="hp-js">JavaScript</button>
+          <button class="ct-tab" data-tab="hp-c">C</button>
+          <button class="ct-tab" data-tab="hp-cpp">C++</button>
+          <button class="ct-tab" data-tab="hp-java">Java</button>
+          <button class="ct-tab" data-tab="hp-go">Go</button>
+        </div>
+        <div class="ct-panel active" data-tab="hp-pseudo"><pre><code>MinHeap: data=[], size=0
+
+parent(i)      = (i-1) / 2
+left_child(i)  = 2*i + 1
+right_child(i) = 2*i + 2
+
+insert(val):
+  data[size] = val; size += 1
+  sift_up(size - 1)
+
+sift_up(i):
+  while i &gt; 0 and data[i] &lt; data[parent(i)]:
+    swap data[i] with data[parent(i)]
+    i = parent(i)
+
+extract_min():
+  min = data[0]
+  data[0] = data[size-1]; size -= 1
+  sift_down(0)
+  return min
+
+sift_down(i):
+  while left_child(i) &lt; size:
+    smallest = i
+    l = left_child(i); r = right_child(i)
+    if l &lt; size and data[l] &lt; data[smallest]: smallest = l
+    if r &lt; size and data[r] &lt; data[smallest]: smallest = r
+    if smallest == i: break
+    swap data[i] with data[smallest]
+    i = smallest
+
+build_heap(array):        // O(n) heapify
+  data = array; size = len(array)
+  for i from (size/2 - 1) down to 0:
+    sift_down(i)
+</code></pre></div>
+        <div class="ct-panel" data-tab="hp-py"><pre><code>class MinHeap:
+    def __init__(self): self._d = []
+
+    def _par(self, i):   return (i - 1) // 2
+    def _left(self, i):  return 2 * i + 1
+    def _right(self, i): return 2 * i + 2
+
+    def insert(self, val):
+        self._d.append(val)
+        self._sift_up(len(self._d) - 1)
+
+    def _sift_up(self, i):
+        while i &gt; 0 and self._d[i] &lt; self._d[self._par(i)]:
+            p = self._par(i)
+            self._d[i], self._d[p] = self._d[p], self._d[i]
+            i = p
+
+    def extract_min(self):
+        if not self._d: raise IndexError("empty")
+        self._d[0], self._d[-1] = self._d[-1], self._d[0]
+        val = self._d.pop()
+        self._sift_down(0)
+        return val
+
+    def _sift_down(self, i):
+        n = len(self._d)
+        while self._left(i) &lt; n:
+            s = i
+            l, r = self._left(i), self._right(i)
+            if l &lt; n and self._d[l] &lt; self._d[s]: s = l
+            if r &lt; n and self._d[r] &lt; self._d[s]: s = r
+            if s == i: break
+            self._d[i], self._d[s] = self._d[s], self._d[i]
+            i = s
+
+    def peek(self): return self._d[0]
+
+    @classmethod
+    def from_list(cls, arr):    # O(n) build-heap
+        h = cls()
+        h._d = arr[:]
+        for i in range(len(h._d) // 2 - 1, -1, -1):
+            h._sift_down(i)
+        return h
+
+# Python's built-in heapq does all this:
+# import heapq; h=[]; heapq.heappush(h, 3); heapq.heappop(h)
+</code></pre></div>
+        <div class="ct-panel" data-tab="hp-js"><pre><code>class MinHeap {
+  #d = [];
+  #par(i)   { return (i - 1) >> 1; }
+  #left(i)  { return 2 * i + 1; }
+  #right(i) { return 2 * i + 2; }
+  #swap(a, b){ [this.#d[a], this.#d[b]] = [this.#d[b], this.#d[a]]; }
+
+  insert(val) {
+    this.#d.push(val);
+    let i = this.#d.length - 1;
+    while (i &gt; 0 &amp;&amp; this.#d[i] &lt; this.#d[this.#par(i)]) {
+      this.#swap(i, this.#par(i)); i = this.#par(i);
+    }
+  }
+
+  extractMin() {
+    const min = this.#d[0];
+    this.#d[0] = this.#d.pop();
+    this.#siftDown(0);
+    return min;
+  }
+
+  #siftDown(i) {
+    const n = this.#d.length;
+    while (this.#left(i) &lt; n) {
+      let s = i, l = this.#left(i), r = this.#right(i);
+      if (l &lt; n &amp;&amp; this.#d[l] &lt; this.#d[s]) s = l;
+      if (r &lt; n &amp;&amp; this.#d[r] &lt; this.#d[s]) s = r;
+      if (s === i) break;
+      this.#swap(i, s); i = s;
+    }
+  }
+
+  peek()    { return this.#d[0]; }
+  get size(){ return this.#d.length; }
+}
+</code></pre></div>
+        <div class="ct-panel" data-tab="hp-c"><pre><code>#include &lt;stdlib.h&gt;
+#define MAX 1024
+
+typedef struct { int d[MAX]; int size; } MinHeap;
+
+static void swap(MinHeap *h, int a, int b)
+  { int t=h-&gt;d[a]; h-&gt;d[a]=h-&gt;d[b]; h-&gt;d[b]=t; }
+
+void hp_insert(MinHeap *h, int val) {
+    h-&gt;d[h-&gt;size++] = val;
+    int i = h-&gt;size - 1;
+    while (i &gt; 0 &amp;&amp; h-&gt;d[i] &lt; h-&gt;d[(i-1)/2])
+        { swap(h, i, (i-1)/2); i = (i-1)/2; }
+}
+
+int hp_extract_min(MinHeap *h) {
+    int min = h-&gt;d[0];
+    h-&gt;d[0] = h-&gt;d[--h-&gt;size];
+    int i = 0;
+    for (;;) {
+        int s=i, l=2*i+1, r=2*i+2;
+        if (l &lt; h-&gt;size &amp;&amp; h-&gt;d[l] &lt; h-&gt;d[s]) s=l;
+        if (r &lt; h-&gt;size &amp;&amp; h-&gt;d[r] &lt; h-&gt;d[s]) s=r;
+        if (s==i) break;
+        swap(h, i, s); i=s;
+    }
+    return min;
+}
+</code></pre></div>
+        <div class="ct-panel" data-tab="hp-cpp"><pre><code>#include &lt;vector&gt;
+#include &lt;algorithm&gt;
+#include &lt;queue&gt;
+
+// std::priority_queue is a max-heap by default.
+// For min-heap: priority_queue&lt;int, vector&lt;int&gt;, greater&lt;int&gt;&gt;
+
+class MinHeap {
+    std::vector&lt;int&gt; d;
+    static int par(int i)   { return (i-1)/2; }
+    static int left(int i)  { return 2*i+1; }
+    static int right(int i) { return 2*i+2; }
+public:
+    void insert(int v) {
+        d.push_back(v);
+        int i = (int)d.size()-1;
+        while (i&gt;0 &amp;&amp; d[i]&lt;d[par(i)]) { std::swap(d[i],d[par(i)]); i=par(i); }
+    }
+    int extractMin() {
+        int m = d[0]; d[0] = d.back(); d.pop_back();
+        for (int i=0;;) {
+            int s=i, l=left(i), r=right(i), n=(int)d.size();
+            if (l&lt;n &amp;&amp; d[l]&lt;d[s]) s=l;
+            if (r&lt;n &amp;&amp; d[r]&lt;d[s]) s=r;
+            if (s==i) break;
+            std::swap(d[i],d[s]); i=s;
+        }
+        return m;
+    }
+    int peek() const { return d[0]; }
+};
+</code></pre></div>
+        <div class="ct-panel" data-tab="hp-java"><pre><code>import java.util.PriorityQueue;  // built-in min-heap
+
+// Built-in:
+PriorityQueue&lt;Integer&gt; pq = new PriorityQueue&lt;&gt;();
+pq.offer(5); pq.offer(1); pq.offer(3);
+pq.peek();   // 1
+pq.poll();   // extracts 1
+
+// Manual implementation:
+public class MinHeap {
+    private int[] d = new int[256]; private int size = 0;
+
+    public void insert(int v) {
+        d[size++] = v;
+        int i = size - 1;
+        while (i &gt; 0 &amp;&amp; d[i] &lt; d[(i-1)/2]) { swap(i, (i-1)/2); i=(i-1)/2; }
+    }
+
+    public int extractMin() {
+        int m = d[0]; d[0] = d[--size];
+        for (int i=0;;) {
+            int s=i, l=2*i+1, r=2*i+2;
+            if (l&lt;size &amp;&amp; d[l]&lt;d[s]) s=l;
+            if (r&lt;size &amp;&amp; d[r]&lt;d[s]) s=r;
+            if (s==i) break; swap(i,s); i=s;
+        }
+        return m;
+    }
+
+    private void swap(int a, int b) { int t=d[a]; d[a]=d[b]; d[b]=t; }
+}
+</code></pre></div>
+        <div class="ct-panel" data-tab="hp-go"><pre><code>package main
+
+import "container/heap"
+
+// Go's heap package provides heap operations on any type
+// that implements heap.Interface. Example min-heap of ints:
+
+type IntHeap []int
+func (h IntHeap) Len() int           { return len(h) }
+func (h IntHeap) Less(i, j int) bool { return h[i] &lt; h[j] }  // min-heap
+func (h IntHeap) Swap(i, j int)      { h[i], h[j] = h[j], h[i] }
+func (h *IntHeap) Push(x any)        { *h = append(*h, x.(int)) }
+func (h *IntHeap) Pop() any {
+    old := *h; n := len(old); x := old[n-1]; *h = old[:n-1]; return x
+}
+
+// Usage:
+//   h := &amp;IntHeap{5, 1, 3}
+//   heap.Init(h)                  // O(n) build-heap
+//   heap.Push(h, 2)               // insert
+//   heap.Pop(h)                   // extract-min
+</code></pre></div>
+      </div>
+    </details>
+
     <!-- ========================================================== -->
     <h2 id="s10">10. Tries — prefix trees</h2>
 
@@ -444,6 +2062,267 @@
     </ul>
 
     <p>The big downside of a plain trie is memory: one node per character per word. In practice you use a <em>compressed trie</em> (Patricia trie, radix tree) that merges chains of single-child nodes into a single labeled edge. Linux's <code>fib_trie</code> for routing and Go's net package both do this.</p>
+
+    <details class="algo-code">
+      <summary>Source — Trie</summary>
+      <div class="code-tabs">
+        <div class="ct-header">
+          <button class="ct-tab active" data-tab="tr-pseudo">Pseudocode</button>
+          <button class="ct-tab" data-tab="tr-py">Python</button>
+          <button class="ct-tab" data-tab="tr-js">JavaScript</button>
+          <button class="ct-tab" data-tab="tr-c">C</button>
+          <button class="ct-tab" data-tab="tr-cpp">C++</button>
+          <button class="ct-tab" data-tab="tr-java">Java</button>
+          <button class="ct-tab" data-tab="tr-go">Go</button>
+        </div>
+        <div class="ct-panel active" data-tab="tr-pseudo"><pre><code>TrieNode: children = map[char -&gt; TrieNode], is_end = false
+
+insert(word):
+  cur = root
+  for each char c in word:
+    if c not in cur.children:
+      cur.children[c] = new TrieNode()
+    cur = cur.children[c]
+  cur.is_end = true
+
+search(word):
+  cur = root
+  for each char c in word:
+    if c not in cur.children: return false
+    cur = cur.children[c]
+  return cur.is_end
+
+starts_with(prefix):
+  cur = root
+  for each char c in prefix:
+    if c not in cur.children: return false
+    cur = cur.children[c]
+  return true          // any subtree exists
+</code></pre></div>
+        <div class="ct-panel" data-tab="tr-py"><pre><code>class TrieNode:
+    def __init__(self):
+        self.children = {}
+        self.is_end   = False
+
+class Trie:
+    def __init__(self): self.root = TrieNode()
+
+    def insert(self, word: str) -&gt; None:
+        cur = self.root
+        for c in word:
+            if c not in cur.children:
+                cur.children[c] = TrieNode()
+            cur = cur.children[c]
+        cur.is_end = True
+
+    def search(self, word: str) -&gt; bool:
+        cur = self.root
+        for c in word:
+            if c not in cur.children:
+                return False
+            cur = cur.children[c]
+        return cur.is_end
+
+    def starts_with(self, prefix: str) -&gt; bool:
+        cur = self.root
+        for c in prefix:
+            if c not in cur.children:
+                return False
+            cur = cur.children[c]
+        return True
+</code></pre></div>
+        <div class="ct-panel" data-tab="tr-js"><pre><code>class TrieNode {
+  constructor() { this.ch = {}; this.end = false; }
+}
+
+class Trie {
+  constructor() { this.root = new TrieNode(); }
+
+  insert(word) {
+    let cur = this.root;
+    for (const c of word) {
+      if (!cur.ch[c]) cur.ch[c] = new TrieNode();
+      cur = cur.ch[c];
+    }
+    cur.end = true;
+  }
+
+  search(word) {
+    let cur = this.root;
+    for (const c of word) {
+      if (!cur.ch[c]) return false;
+      cur = cur.ch[c];
+    }
+    return cur.end;
+  }
+
+  startsWith(prefix) {
+    let cur = this.root;
+    for (const c of prefix) {
+      if (!cur.ch[c]) return false;
+      cur = cur.ch[c];
+    }
+    return true;
+  }
+}
+</code></pre></div>
+        <div class="ct-panel" data-tab="tr-c"><pre><code>#include &lt;stdlib.h&gt;
+#include &lt;string.h&gt;
+#define ALPHA 26
+
+typedef struct TrieNode {
+    struct TrieNode *ch[ALPHA];
+    int is_end;
+} TrieNode;
+
+TrieNode* tn_new() { return calloc(1, sizeof(TrieNode)); }
+
+void trie_insert(TrieNode *root, const char *word) {
+    for (; *word; word++) {
+        int i = *word - 'a';
+        if (!root-&gt;ch[i]) root-&gt;ch[i] = tn_new();
+        root = root-&gt;ch[i];
+    }
+    root-&gt;is_end = 1;
+}
+
+int trie_search(TrieNode *root, const char *word) {
+    for (; *word; word++) {
+        int i = *word - 'a';
+        if (!root-&gt;ch[i]) return 0;
+        root = root-&gt;ch[i];
+    }
+    return root-&gt;is_end;
+}
+
+int trie_starts_with(TrieNode *root, const char *pre) {
+    for (; *pre; pre++) {
+        int i = *pre - 'a';
+        if (!root-&gt;ch[i]) return 0;
+        root = root-&gt;ch[i];
+    }
+    return 1;
+}
+</code></pre></div>
+        <div class="ct-panel" data-tab="tr-cpp"><pre><code>#include &lt;unordered_map&gt;
+#include &lt;string&gt;
+
+struct TrieNode {
+    std::unordered_map&lt;char, TrieNode*&gt; ch;
+    bool end = false;
+};
+
+class Trie {
+    TrieNode* root = new TrieNode();
+public:
+    void insert(const std::string&amp; w) {
+        TrieNode* cur = root;
+        for (char c : w) {
+            if (!cur-&gt;ch.count(c)) cur-&gt;ch[c] = new TrieNode();
+            cur = cur-&gt;ch[c];
+        }
+        cur-&gt;end = true;
+    }
+
+    bool search(const std::string&amp; w) const {
+        TrieNode* cur = root;
+        for (char c : w) {
+            auto it = cur-&gt;ch.find(c);
+            if (it == cur-&gt;ch.end()) return false;
+            cur = it-&gt;second;
+        }
+        return cur-&gt;end;
+    }
+
+    bool startsWith(const std::string&amp; p) const {
+        TrieNode* cur = root;
+        for (char c : p) {
+            auto it = cur-&gt;ch.find(c);
+            if (it == cur-&gt;ch.end()) return false;
+            cur = it-&gt;second;
+        }
+        return true;
+    }
+};
+</code></pre></div>
+        <div class="ct-panel" data-tab="tr-java"><pre><code>import java.util.HashMap;
+
+public class Trie {
+    private static class Node {
+        HashMap&lt;Character, Node&gt; ch = new HashMap&lt;&gt;();
+        boolean end = false;
+    }
+    private final Node root = new Node();
+
+    public void insert(String word) {
+        Node cur = root;
+        for (char c : word.toCharArray()) {
+            cur.ch.putIfAbsent(c, new Node());
+            cur = cur.ch.get(c);
+        }
+        cur.end = true;
+    }
+
+    public boolean search(String word) {
+        Node cur = root;
+        for (char c : word.toCharArray()) {
+            if (!cur.ch.containsKey(c)) return false;
+            cur = cur.ch.get(c);
+        }
+        return cur.end;
+    }
+
+    public boolean startsWith(String prefix) {
+        Node cur = root;
+        for (char c : prefix.toCharArray()) {
+            if (!cur.ch.containsKey(c)) return false;
+            cur = cur.ch.get(c);
+        }
+        return true;
+    }
+}
+</code></pre></div>
+        <div class="ct-panel" data-tab="tr-go"><pre><code>package main
+
+type TrieNode struct {
+    Ch  [26]*TrieNode
+    End bool
+}
+
+type Trie struct{ Root TrieNode }
+
+func (t *Trie) Insert(word string) {
+    cur := &amp;t.Root
+    for _, c := range word {
+        i := c - 'a'
+        if cur.Ch[i] == nil { cur.Ch[i] = &amp;TrieNode{} }
+        cur = cur.Ch[i]
+    }
+    cur.End = true
+}
+
+func (t *Trie) Search(word string) bool {
+    cur := &amp;t.Root
+    for _, c := range word {
+        i := c - 'a'
+        if cur.Ch[i] == nil { return false }
+        cur = cur.Ch[i]
+    }
+    return cur.End
+}
+
+func (t *Trie) StartsWith(prefix string) bool {
+    cur := &amp;t.Root
+    for _, c := range prefix {
+        i := c - 'a'
+        if cur.Ch[i] == nil { return false }
+        cur = cur.Ch[i]
+    }
+    return true
+}
+</code></pre></div>
+      </div>
+    </details>
 
     <!-- ========================================================== -->
     <h2 id="s11">11. Graphs</h2>
@@ -476,6 +2355,203 @@
     <h3>11.3 Compressed sparse row (CSR)</h3>
 
     <p>For static graphs with billions of edges — think the web graph — the adjacency list is still too cache-unfriendly. The <strong>CSR</strong> format packs all neighbor arrays into one big flat array and uses a separate offset array to say "vertex $v$'s neighbors live at positions $\text{off}[v]$ through $\text{off}[v+1]$". Two arrays, zero pointer chasing, perfect cache locality. This is how production graph libraries (NetworkX's internals, igraph, SNAP, GraphBLAS) store immutable graphs, and it's identical to how sparse matrices are stored in SciPy and Eigen — a graph <em>is</em> a sparse matrix.</p>
+
+    <details class="algo-code">
+      <summary>Source — Graph Representations</summary>
+      <div class="code-tabs">
+        <div class="ct-header">
+          <button class="ct-tab active" data-tab="gr-pseudo">Pseudocode</button>
+          <button class="ct-tab" data-tab="gr-py">Python</button>
+          <button class="ct-tab" data-tab="gr-js">JavaScript</button>
+          <button class="ct-tab" data-tab="gr-c">C</button>
+          <button class="ct-tab" data-tab="gr-cpp">C++</button>
+          <button class="ct-tab" data-tab="gr-java">Java</button>
+          <button class="ct-tab" data-tab="gr-go">Go</button>
+        </div>
+        <div class="ct-panel active" data-tab="gr-pseudo"><pre><code>-- Adjacency List (sparse graphs, O(V+E) space) --
+Graph: adj = map[vertex -&gt; list of (neighbor, weight)]
+
+add_edge(u, v, w=1):
+  adj[u].append((v, w))
+  adj[v].append((u, w))   // omit for directed graph
+
+neighbors(u): return adj[u]
+
+-- Adjacency Matrix (dense graphs, O(V^2) space) --
+Graph: mat = V x V matrix, all zeros
+
+add_edge(u, v, w=1):
+  mat[u][v] = w
+  mat[v][u] = w           // omit for directed graph
+
+has_edge(u, v): return mat[u][v] != 0
+</code></pre></div>
+        <div class="ct-panel" data-tab="gr-py"><pre><code>from collections import defaultdict
+
+class AdjList:
+    """Adjacency list — best for sparse graphs."""
+    def __init__(self):
+        self.adj = defaultdict(list)
+
+    def add_edge(self, u, v, w=1, directed=False):
+        self.adj[u].append((v, w))
+        if not directed:
+            self.adj[v].append((u, w))
+
+    def neighbors(self, u):
+        return self.adj[u]
+
+
+class AdjMatrix:
+    """Adjacency matrix — best for dense graphs."""
+    def __init__(self, n):
+        self.n   = n
+        self.mat = [[0] * n for _ in range(n)]
+
+    def add_edge(self, u, v, w=1, directed=False):
+        self.mat[u][v] = w
+        if not directed:
+            self.mat[v][u] = w
+
+    def has_edge(self, u, v) -&gt; bool:
+        return self.mat[u][v] != 0
+
+    def weight(self, u, v) -&gt; int:
+        return self.mat[u][v]
+</code></pre></div>
+        <div class="ct-panel" data-tab="gr-js"><pre><code>// Adjacency list (Map of arrays)
+class Graph {
+  constructor(directed = false) {
+    this.adj      = new Map();
+    this.directed = directed;
+  }
+
+  addEdge(u, v, w = 1) {
+    if (!this.adj.has(u)) this.adj.set(u, []);
+    if (!this.adj.has(v)) this.adj.set(v, []);
+    this.adj.get(u).push({ to: v, w });
+    if (!this.directed) this.adj.get(v).push({ to: u, w });
+  }
+
+  neighbors(u) { return this.adj.get(u) || []; }
+}
+
+// Adjacency matrix (2-D array)
+class GraphMatrix {
+  constructor(n) {
+    this.n   = n;
+    this.mat = Array.from({length: n}, () =&gt; new Array(n).fill(0));
+  }
+  addEdge(u, v, w = 1, directed = false) {
+    this.mat[u][v] = w;
+    if (!directed) this.mat[v][u] = w;
+  }
+  hasEdge(u, v) { return this.mat[u][v] !== 0; }
+}
+</code></pre></div>
+        <div class="ct-panel" data-tab="gr-c"><pre><code>#include &lt;stdlib.h&gt;
+#define V_MAX 512
+
+/* Adjacency list with a fixed-size array of edge lists */
+typedef struct Edge { int to, w; struct Edge *next; } Edge;
+Edge *adj[V_MAX];   // adj[u] = linked list of edges from u
+
+void add_edge(int u, int v, int w) {
+    Edge *e = malloc(sizeof(Edge)); e-&gt;to=v; e-&gt;w=w; e-&gt;next=adj[u]; adj[u]=e;
+    Edge *f = malloc(sizeof(Edge)); f-&gt;to=u; f-&gt;w=w; f-&gt;next=adj[v]; adj[v]=f;
+}
+
+/* Adjacency matrix */
+int mat[V_MAX][V_MAX];
+void mat_add_edge(int u, int v, int w)
+    { mat[u][v] = mat[v][u] = w; }
+int  mat_has_edge(int u, int v)
+    { return mat[u][v] != 0; }
+</code></pre></div>
+        <div class="ct-panel" data-tab="gr-cpp"><pre><code>#include &lt;vector&gt;
+#include &lt;utility&gt;
+
+// Adjacency list (standard in competitive programming)
+using AdjList = std::vector&lt;std::vector&lt;std::pair&lt;int,int&gt;&gt;&gt;;  // adj[u] = {(v,w),...}
+
+AdjList make_graph(int n) { return AdjList(n); }
+
+void add_edge(AdjList&amp; g, int u, int v, int w=1, bool directed=false) {
+    g[u].push_back({v, w});
+    if (!directed) g[v].push_back({u, w});
+}
+
+// Adjacency matrix
+using AdjMat = std::vector&lt;std::vector&lt;int&gt;&gt;;
+AdjMat make_matrix(int n) { return AdjMat(n, std::vector&lt;int&gt;(n, 0)); }
+
+void mat_add_edge(AdjMat&amp; m, int u, int v, int w=1, bool directed=false) {
+    m[u][v] = w;
+    if (!directed) m[v][u] = w;
+}
+</code></pre></div>
+        <div class="ct-panel" data-tab="gr-java"><pre><code>import java.util.*;
+
+public class Graph {
+    private final int n;
+    private final List&lt;List&lt;int[]&gt;&gt; adj;   // adj.get(u) = list of {v, w}
+    private final boolean directed;
+
+    public Graph(int n, boolean directed) {
+        this.n = n; this.directed = directed;
+        adj = new ArrayList&lt;&gt;();
+        for (int i = 0; i &lt; n; i++) adj.add(new ArrayList&lt;&gt;());
+    }
+
+    public void addEdge(int u, int v, int w) {
+        adj.get(u).add(new int[]{v, w});
+        if (!directed) adj.get(v).add(new int[]{u, w});
+    }
+
+    public List&lt;int[]&gt; neighbors(int u) { return adj.get(u); }
+
+    // Adjacency matrix variant:
+    int[][] mat = new int[512][512];
+    public void matAddEdge(int u, int v, int w)
+        { mat[u][v] = mat[v][u] = w; }
+}
+</code></pre></div>
+        <div class="ct-panel" data-tab="gr-go"><pre><code>package main
+
+// Adjacency list
+type Graph struct {
+    Adj      [][]Edge
+    Directed bool
+}
+type Edge struct{ To, W int }
+
+func NewGraph(n int, directed bool) *Graph {
+    return &amp;Graph{Adj: make([][]Edge, n), Directed: directed}
+}
+
+func (g *Graph) AddEdge(u, v, w int) {
+    g.Adj[u] = append(g.Adj[u], Edge{v, w})
+    if !g.Directed {
+        g.Adj[v] = append(g.Adj[v], Edge{u, w})
+    }
+}
+
+// Adjacency matrix
+type GraphMat struct{ Mat [][]int }
+
+func NewGraphMat(n int) *GraphMat {
+    m := make([][]int, n)
+    for i := range m { m[i] = make([]int, n) }
+    return &amp;GraphMat{m}
+}
+
+func (g *GraphMat) AddEdge(u, v, w int, directed bool) {
+    g.Mat[u][v] = w
+    if !directed { g.Mat[v][u] = w }
+}
+</code></pre></div>
+      </div>
+    </details>
 
     <!-- ========================================================== -->
     <h2 id="s12">12. Interactive figure — the sort animator</h2>
@@ -586,6 +2662,246 @@
 
     <p>A sort is <strong>stable</strong> if elements that compare equal keep their relative order from the input. Mergesort is stable. Quicksort and heapsort are not (without extra bookkeeping). Stability matters when you sort by a secondary key and want the primary-key order preserved — e.g., "sort employees by department, keeping alphabetical order within each department". Python's <code>sorted()</code> is stable by default, which is one of the reasons it's so pleasant to use.</p>
 
+    <details class="algo-code">
+      <summary>Source — Merge Sort &amp; Quick Sort</summary>
+      <div class="code-tabs">
+        <div class="ct-header">
+          <button class="ct-tab active" data-tab="sort-pseudo">Pseudocode</button>
+          <button class="ct-tab" data-tab="sort-py">Python</button>
+          <button class="ct-tab" data-tab="sort-js">JavaScript</button>
+          <button class="ct-tab" data-tab="sort-c">C</button>
+          <button class="ct-tab" data-tab="sort-cpp">C++</button>
+          <button class="ct-tab" data-tab="sort-java">Java</button>
+          <button class="ct-tab" data-tab="sort-go">Go</button>
+        </div>
+        <div class="ct-panel active" data-tab="sort-pseudo"><pre><code>-- Merge Sort: O(n log n) always, stable, O(n) extra space --
+mergesort(a, lo, hi):
+  if lo &gt;= hi: return
+  mid = (lo + hi) / 2
+  mergesort(a, lo, mid)
+  mergesort(a, mid+1, hi)
+  merge(a, lo, mid, hi)
+
+merge(a, lo, mid, hi):
+  left  = a[lo..mid]
+  right = a[mid+1..hi]
+  i = j = 0; k = lo
+  while i &lt; len(left) and j &lt; len(right):
+    if left[i] &lt;= right[j]: a[k++] = left[i++]
+    else:                    a[k++] = right[j++]
+  copy remaining left/right into a[k..]
+
+-- Quick Sort: O(n log n) expected, in-place --
+quicksort(a, lo, hi):
+  if lo &gt;= hi: return
+  p = partition(a, lo, hi)   // random pivot
+  quicksort(a, lo, p-1)
+  quicksort(a, p+1, hi)
+
+partition(a, lo, hi):
+  swap a[random(lo,hi)] with a[hi]  // random pivot to end
+  pivot = a[hi]; i = lo - 1
+  for j = lo to hi-1:
+    if a[j] &lt;= pivot: i++; swap a[i] and a[j]
+  swap a[i+1] and a[hi]
+  return i+1
+</code></pre></div>
+        <div class="ct-panel" data-tab="sort-py"><pre><code>import random
+
+# Merge sort — stable, O(n log n) always
+def mergesort(a: list) -&gt; list:
+    if len(a) &lt;= 1:
+        return a
+    mid   = len(a) // 2
+    left  = mergesort(a[:mid])
+    right = mergesort(a[mid:])
+    return _merge(left, right)
+
+def _merge(l, r):
+    out = []
+    i = j = 0
+    while i &lt; len(l) and j &lt; len(r):
+        if l[i] &lt;= r[j]: out.append(l[i]); i += 1
+        else:             out.append(r[j]); j += 1
+    return out + l[i:] + r[j:]
+
+# Quick sort — in-place, O(n log n) expected
+def quicksort(a: list, lo: int = 0, hi: int = -1) -&gt; None:
+    if hi == -1: hi = len(a) - 1
+    if lo &gt;= hi: return
+    p = _partition(a, lo, hi)
+    quicksort(a, lo, p - 1)
+    quicksort(a, p + 1, hi)
+
+def _partition(a, lo, hi):
+    k = random.randint(lo, hi)
+    a[k], a[hi] = a[hi], a[k]      # move random pivot to end
+    pivot, i = a[hi], lo - 1
+    for j in range(lo, hi):
+        if a[j] &lt;= pivot:
+            i += 1
+            a[i], a[j] = a[j], a[i]
+    a[i+1], a[hi] = a[hi], a[i+1]
+    return i + 1
+</code></pre></div>
+        <div class="ct-panel" data-tab="sort-js"><pre><code>// Merge sort
+function mergeSort(a) {
+  if (a.length <= 1) return a;
+  const mid = a.length >> 1;
+  const L = mergeSort(a.slice(0, mid));
+  const R = mergeSort(a.slice(mid));
+  const out = [];
+  let i = 0, j = 0;
+  while (i &lt; L.length &amp;&amp; j &lt; R.length)
+    out.push(L[i] &lt;= R[j] ? L[i++] : R[j++]);
+  return out.concat(L.slice(i), R.slice(j));
+}
+
+// Quick sort (in-place)
+function quickSort(a, lo = 0, hi = a.length - 1) {
+  if (lo &gt;= hi) return;
+  const p = partition(a, lo, hi);
+  quickSort(a, lo, p - 1);
+  quickSort(a, p + 1, hi);
+}
+
+function partition(a, lo, hi) {
+  const k = lo + Math.floor(Math.random() * (hi - lo + 1));
+  [a[k], a[hi]] = [a[hi], a[k]];
+  const pivot = a[hi]; let i = lo - 1;
+  for (let j = lo; j &lt; hi; j++)
+    if (a[j] &lt;= pivot) { i++; [a[i], a[j]] = [a[j], a[i]]; }
+  [a[i+1], a[hi]] = [a[hi], a[i+1]];
+  return i + 1;
+}
+</code></pre></div>
+        <div class="ct-panel" data-tab="sort-c"><pre><code>#include &lt;stdlib.h&gt;
+#include &lt;string.h&gt;
+
+/* Merge sort */
+static void merge(int *a, int lo, int mid, int hi) {
+    int n = hi - lo + 1;
+    int *tmp = malloc(n * sizeof(int));
+    int i=lo, j=mid+1, k=0;
+    while (i&lt;=mid &amp;&amp; j&lt;=hi) tmp[k++] = a[i]&lt;=a[j] ? a[i++] : a[j++];
+    while (i&lt;=mid) tmp[k++]=a[i++];
+    while (j&lt;=hi)  tmp[k++]=a[j++];
+    memcpy(a+lo, tmp, n*sizeof(int));
+    free(tmp);
+}
+void mergesort(int *a, int lo, int hi) {
+    if (lo&gt;=hi) return;
+    int mid=(lo+hi)/2;
+    mergesort(a,lo,mid); mergesort(a,mid+1,hi);
+    merge(a,lo,mid,hi);
+}
+
+/* Quick sort (random pivot) */
+static int partition(int *a, int lo, int hi) {
+    int k = lo + rand()%(hi-lo+1); int t=a[k]; a[k]=a[hi]; a[hi]=t;
+    int pivot=a[hi], i=lo-1;
+    for (int j=lo;j&lt;hi;j++) if(a[j]&lt;=pivot){i++;t=a[i];a[i]=a[j];a[j]=t;}
+    t=a[i+1];a[i+1]=a[hi];a[hi]=t; return i+1;
+}
+void quicksort(int *a, int lo, int hi)
+    { if(lo&lt;hi){int p=partition(a,lo,hi);quicksort(a,lo,p-1);quicksort(a,p+1,hi);} }
+</code></pre></div>
+        <div class="ct-panel" data-tab="sort-cpp"><pre><code>#include &lt;vector&gt;
+#include &lt;algorithm&gt;
+#include &lt;cstdlib&gt;
+
+// Merge sort
+std::vector&lt;int&gt; mergeSort(std::vector&lt;int&gt; a) {
+    if (a.size() &lt;= 1) return a;
+    auto mid = a.begin() + a.size()/2;
+    auto L = mergeSort({a.begin(), mid});
+    auto R = mergeSort({mid, a.end()});
+    std::vector&lt;int&gt; out; out.reserve(a.size());
+    std::merge(L.begin(),L.end(), R.begin(),R.end(), std::back_inserter(out));
+    return out;
+}
+
+// Quick sort in-place (std::sort uses introsort — same idea)
+void quickSort(std::vector&lt;int&gt;&amp; a, int lo, int hi) {
+    if (lo &gt;= hi) return;
+    int k = lo + rand()%(hi-lo+1); std::swap(a[k], a[hi]);
+    int pivot=a[hi], i=lo-1;
+    for (int j=lo; j&lt;hi; j++) if(a[j]&lt;=pivot) std::swap(a[++i],a[j]);
+    std::swap(a[i+1],a[hi]);
+    int p=i+1; quickSort(a,lo,p-1); quickSort(a,p+1,hi);
+}
+</code></pre></div>
+        <div class="ct-panel" data-tab="sort-java"><pre><code>import java.util.*;
+
+public class Sorts {
+    // Merge sort (returns new sorted list)
+    public static int[] mergeSort(int[] a) {
+        if (a.length &lt;= 1) return a;
+        int mid = a.length / 2;
+        int[] L = mergeSort(Arrays.copyOfRange(a, 0, mid));
+        int[] R = mergeSort(Arrays.copyOfRange(a, mid, a.length));
+        return merge(L, R);
+    }
+    private static int[] merge(int[] l, int[] r) {
+        int[] out = new int[l.length + r.length]; int i=0,j=0,k=0;
+        while (i&lt;l.length &amp;&amp; j&lt;r.length) out[k++] = l[i]&lt;=r[j]?l[i++]:r[j++];
+        while (i&lt;l.length) out[k++]=l[i++]; while(j&lt;r.length) out[k++]=r[j++];
+        return out;
+    }
+
+    // Quick sort (in-place)
+    public static void quickSort(int[] a, int lo, int hi) {
+        if (lo &gt;= hi) return;
+        int p = partition(a, lo, hi);
+        quickSort(a, lo, p-1); quickSort(a, p+1, hi);
+    }
+    private static int partition(int[] a, int lo, int hi) {
+        int k = lo + (int)(Math.random()*(hi-lo+1));
+        int t=a[k]; a[k]=a[hi]; a[hi]=t;
+        int pivot=a[hi], i=lo-1;
+        for (int j=lo;j&lt;hi;j++) if(a[j]&lt;=pivot){t=a[++i];a[i]=a[j];a[j]=t;}
+        t=a[i+1];a[i+1]=a[hi];a[hi]=t; return i+1;
+    }
+}
+</code></pre></div>
+        <div class="ct-panel" data-tab="sort-go"><pre><code>package main
+
+import "math/rand"
+
+// Merge sort (returns new slice)
+func MergeSort(a []int) []int {
+    if len(a) &lt;= 1 { return a }
+    mid := len(a) / 2
+    L, R := MergeSort(a[:mid]), MergeSort(a[mid:])
+    out := make([]int, 0, len(a))
+    i, j := 0, 0
+    for i &lt; len(L) &amp;&amp; j &lt; len(R) {
+        if L[i] &lt;= R[j] { out = append(out, L[i]); i++ } else { out = append(out, R[j]); j++ }
+    }
+    return append(append(out, L[i:]...), R[j:]...)
+}
+
+// Quick sort (in-place)
+func QuickSort(a []int, lo, hi int) {
+    if lo &gt;= hi { return }
+    p := partition(a, lo, hi)
+    QuickSort(a, lo, p-1); QuickSort(a, p+1, hi)
+}
+
+func partition(a []int, lo, hi int) int {
+    k := lo + rand.Intn(hi-lo+1)
+    a[k], a[hi] = a[hi], a[k]
+    pivot, i := a[hi], lo-1
+    for j := lo; j &lt; hi; j++ {
+        if a[j] &lt;= pivot { i++; a[i], a[j] = a[j], a[i] }
+    }
+    a[i+1], a[hi] = a[hi], a[i+1]
+    return i + 1
+}
+</code></pre></div>
+      </div>
+    </details>
+
     <div class="problem-set" data-topic="algo-sorting"></div>
 
     <!-- ========================================================== -->
@@ -618,6 +2934,195 @@
     <h3>14.4 Hash lookup</h3>
 
     <p>The third way to find things is to not search at all — hash the key and go directly to its bucket. We already covered that in §6. When you don't need ordering, this is almost always the winner.</p>
+
+    <details class="algo-code">
+      <summary>Source — Binary Search</summary>
+      <div class="code-tabs">
+        <div class="ct-header">
+          <button class="ct-tab active" data-tab="bs-pseudo">Pseudocode</button>
+          <button class="ct-tab" data-tab="bs-py">Python</button>
+          <button class="ct-tab" data-tab="bs-js">JavaScript</button>
+          <button class="ct-tab" data-tab="bs-c">C</button>
+          <button class="ct-tab" data-tab="bs-cpp">C++</button>
+          <button class="ct-tab" data-tab="bs-java">Java</button>
+          <button class="ct-tab" data-tab="bs-go">Go</button>
+        </div>
+        <div class="ct-panel active" data-tab="bs-pseudo"><pre><code>binary_search(a, target):
+  lo = 0; hi = len(a) - 1
+  while lo &lt;= hi:
+    mid = lo + (hi - lo) / 2    // avoids overflow vs (lo+hi)/2
+    if a[mid] == target: return mid
+    if a[mid] &lt; target:  lo = mid + 1
+    else:                hi = mid - 1
+  return -1   // not found
+
+-- Lower bound (first index where a[i] &gt;= target) --
+lower_bound(a, target):
+  lo = 0; hi = len(a)
+  while lo &lt; hi:
+    mid = lo + (hi - lo) / 2
+    if a[mid] &lt; target: lo = mid + 1
+    else:               hi = mid
+  return lo
+</code></pre></div>
+        <div class="ct-panel" data-tab="bs-py"><pre><code>def binary_search(a: list, target: int) -&gt; int:
+    """Return index of target in sorted array a, or -1 if absent."""
+    lo, hi = 0, len(a) - 1
+    while lo &lt;= hi:
+        mid = lo + (hi - lo) // 2   # avoids integer overflow
+        if a[mid] == target:
+            return mid
+        elif a[mid] &lt; target:
+            lo = mid + 1
+        else:
+            hi = mid - 1
+    return -1
+
+def lower_bound(a: list, target: int) -&gt; int:
+    """First index i such that a[i] &gt;= target (insertion point)."""
+    lo, hi = 0, len(a)
+    while lo &lt; hi:
+        mid = lo + (hi - lo) // 2
+        if a[mid] &lt; target: lo = mid + 1
+        else:                hi = mid
+    return lo
+
+# Python standard library:
+# import bisect
+# bisect.bisect_left(a, target)  == lower_bound
+# bisect.bisect_right(a, target) == upper_bound
+</code></pre></div>
+        <div class="ct-panel" data-tab="bs-js"><pre><code>function binarySearch(a, target) {
+  let lo = 0, hi = a.length - 1;
+  while (lo &lt;= hi) {
+    const mid = lo + ((hi - lo) >> 1);
+    if      (a[mid] === target) return mid;
+    else if (a[mid] &lt;  target)  lo = mid + 1;
+    else                        hi = mid - 1;
+  }
+  return -1;
+}
+
+// Lower bound: first index where a[i] >= target
+function lowerBound(a, target) {
+  let lo = 0, hi = a.length;
+  while (lo &lt; hi) {
+    const mid = lo + ((hi - lo) >> 1);
+    if (a[mid] &lt; target) lo = mid + 1;
+    else                  hi = mid;
+  }
+  return lo;
+}
+
+// Upper bound: first index where a[i] > target
+function upperBound(a, target) {
+  let lo = 0, hi = a.length;
+  while (lo &lt; hi) {
+    const mid = lo + ((hi - lo) >> 1);
+    if (a[mid] &lt;= target) lo = mid + 1;
+    else                   hi = mid;
+  }
+  return lo;
+}
+</code></pre></div>
+        <div class="ct-panel" data-tab="bs-c"><pre><code>#include &lt;stddef.h&gt;
+
+/* Returns index of target in sorted array a[0..n-1], or -1 */
+int binary_search(const int *a, int n, int target) {
+    int lo = 0, hi = n - 1;
+    while (lo &lt;= hi) {
+        int mid = lo + (hi - lo) / 2;
+        if (a[mid] == target) return mid;
+        if (a[mid]  &lt; target) lo = mid + 1;
+        else                  hi = mid - 1;
+    }
+    return -1;
+}
+
+/* Lower bound: first i where a[i] &gt;= target */
+int lower_bound(const int *a, int n, int target) {
+    int lo = 0, hi = n;
+    while (lo &lt; hi) {
+        int mid = lo + (hi - lo) / 2;
+        if (a[mid] &lt; target) lo = mid + 1;
+        else                 hi = mid;
+    }
+    return lo;
+}
+/* C stdlib: bsearch() for exact match */
+</code></pre></div>
+        <div class="ct-panel" data-tab="bs-cpp"><pre><code>#include &lt;algorithm&gt;
+#include &lt;vector&gt;
+
+// Exact match
+int binarySearch(const std::vector&lt;int&gt;&amp; a, int target) {
+    int lo = 0, hi = (int)a.size() - 1;
+    while (lo &lt;= hi) {
+        int mid = lo + (hi - lo) / 2;
+        if      (a[mid] == target) return mid;
+        else if (a[mid] &lt;  target) lo = mid + 1;
+        else                       hi = mid - 1;
+    }
+    return -1;
+}
+
+// Standard library equivalents (prefer these in real code):
+// std::lower_bound(a.begin(), a.end(), target)  — O(log n)
+// std::upper_bound(a.begin(), a.end(), target)  — O(log n)
+// std::binary_search(a.begin(), a.end(), target) — returns bool
+</code></pre></div>
+        <div class="ct-panel" data-tab="bs-java"><pre><code>public class BinarySearch {
+    public static int search(int[] a, int target) {
+        int lo = 0, hi = a.length - 1;
+        while (lo &lt;= hi) {
+            int mid = lo + (hi - lo) / 2;   // avoids overflow
+            if      (a[mid] == target) return mid;
+            else if (a[mid]  &lt; target) lo = mid + 1;
+            else                       hi = mid - 1;
+        }
+        return -1;
+    }
+
+    // Lower bound: first index where a[i] &gt;= target
+    public static int lowerBound(int[] a, int target) {
+        int lo = 0, hi = a.length;
+        while (lo &lt; hi) {
+            int mid = lo + (hi - lo) / 2;
+            if (a[mid] &lt; target) lo = mid + 1;
+            else                 hi = mid;
+        }
+        return lo;
+    }
+    // Java standard: Arrays.binarySearch(a, target)
+}
+</code></pre></div>
+        <div class="ct-panel" data-tab="bs-go"><pre><code>package main
+
+// Exact match — returns index or -1
+func BinarySearch(a []int, target int) int {
+    lo, hi := 0, len(a)-1
+    for lo &lt;= hi {
+        mid := lo + (hi-lo)/2
+        if a[mid] == target   { return mid }
+        if a[mid] &lt; target    { lo = mid + 1 } else { hi = mid - 1 }
+    }
+    return -1
+}
+
+// Lower bound — first i where a[i] >= target
+func LowerBound(a []int, target int) int {
+    lo, hi := 0, len(a)
+    for lo &lt; hi {
+        mid := lo + (hi-lo)/2
+        if a[mid] &lt; target { lo = mid + 1 } else { hi = mid }
+    }
+    return lo
+}
+
+// Go standard library: sort.SearchInts(a, target) == lower_bound
+</code></pre></div>
+      </div>
+    </details>
 
     <!-- ========================================================== -->
     <h2 id="s15">15. BFS and DFS — the two core graph traversals</h2>
@@ -656,6 +3161,276 @@
       <strong>When to pick which.</strong> Use BFS when you need shortest paths, layers, or when the graph is very deep (DFS might blow the stack). Use DFS when you need to reason about subtrees, when memory is tight (BFS's queue can get huge), or when the problem has a recursive structure that matches.
     </div>
 
+    <details class="algo-code">
+      <summary>Source — BFS &amp; DFS</summary>
+      <div class="code-tabs">
+        <div class="ct-header">
+          <button class="ct-tab active" data-tab="bd-pseudo">Pseudocode</button>
+          <button class="ct-tab" data-tab="bd-py">Python</button>
+          <button class="ct-tab" data-tab="bd-js">JavaScript</button>
+          <button class="ct-tab" data-tab="bd-c">C</button>
+          <button class="ct-tab" data-tab="bd-cpp">C++</button>
+          <button class="ct-tab" data-tab="bd-java">Java</button>
+          <button class="ct-tab" data-tab="bd-go">Go</button>
+        </div>
+        <div class="ct-panel active" data-tab="bd-pseudo"><pre><code>-- BFS (queue, O(V+E)) --
+bfs(graph, start):
+  visited = {start}
+  dist    = {start: 0}
+  queue   = [start]
+  while queue not empty:
+    u = dequeue(queue)
+    for each neighbor v of u:
+      if v not in visited:
+        visited.add(v)
+        dist[v] = dist[u] + 1
+        enqueue(queue, v)
+  return dist
+
+-- DFS recursive (stack via call stack, O(V+E)) --
+dfs_recursive(graph, u, visited):
+  visited.add(u)
+  for each neighbor v of u:
+    if v not in visited:
+      dfs_recursive(graph, v, visited)
+
+-- DFS iterative (explicit stack) --
+dfs_iterative(graph, start):
+  visited = {}
+  stack   = [start]
+  while stack not empty:
+    u = pop(stack)
+    if u in visited: continue
+    visited.add(u)
+    for each neighbor v of u:
+      if v not in visited: push(stack, v)
+</code></pre></div>
+        <div class="ct-panel" data-tab="bd-py"><pre><code>from collections import deque
+
+# BFS — returns shortest distances from start
+def bfs(graph: dict, start) -&gt; dict:
+    dist = {start: 0}
+    q    = deque([start])
+    while q:
+        u = q.popleft()
+        for v in graph.get(u, []):
+            if v not in dist:
+                dist[v] = dist[u] + 1
+                q.append(v)
+    return dist
+
+# DFS recursive
+def dfs_recursive(graph: dict, u, visited: set = None):
+    if visited is None: visited = set()
+    visited.add(u)
+    for v in graph.get(u, []):
+        if v not in visited:
+            dfs_recursive(graph, v, visited)
+    return visited
+
+# DFS iterative
+def dfs_iterative(graph: dict, start) -&gt; set:
+    visited = set()
+    stack   = [start]
+    while stack:
+        u = stack.pop()
+        if u in visited: continue
+        visited.add(u)
+        for v in graph.get(u, []):
+            if v not in visited:
+                stack.append(v)
+    return visited
+</code></pre></div>
+        <div class="ct-panel" data-tab="bd-js"><pre><code>// BFS — returns Map of vertex -&gt; shortest distance
+function bfs(graph, start) {
+  const dist = new Map([[start, 0]]);
+  const q    = [start];
+  let head   = 0;
+  while (head &lt; q.length) {
+    const u = q[head++];
+    for (const v of (graph.get(u) || [])) {
+      if (!dist.has(v)) {
+        dist.set(v, dist.get(u) + 1);
+        q.push(v);
+      }
+    }
+  }
+  return dist;
+}
+
+// DFS recursive
+function dfsRecursive(graph, u, visited = new Set()) {
+  visited.add(u);
+  for (const v of (graph.get(u) || []))
+    if (!visited.has(v)) dfsRecursive(graph, v, visited);
+  return visited;
+}
+
+// DFS iterative
+function dfsIterative(graph, start) {
+  const visited = new Set(), stack = [start];
+  while (stack.length) {
+    const u = stack.pop();
+    if (visited.has(u)) continue;
+    visited.add(u);
+    for (const v of (graph.get(u) || []))
+      if (!visited.has(v)) stack.push(v);
+  }
+  return visited;
+}
+</code></pre></div>
+        <div class="ct-panel" data-tab="bd-c"><pre><code>#include &lt;string.h&gt;
+#include &lt;stdlib.h&gt;
+#define V 512
+
+int adj[V][V], visited[V];
+
+/* BFS — dist[] filled with shortest distances from src */
+void bfs(int src, int n, int dist[]) {
+    memset(visited, 0, sizeof(visited));
+    memset(dist, -1, n * sizeof(int));
+    int q[V], head=0, tail=0;
+    visited[src]=1; dist[src]=0; q[tail++]=src;
+    while (head &lt; tail) {
+        int u = q[head++];
+        for (int v=0; v&lt;n; v++)
+            if (adj[u][v] &amp;&amp; !visited[v])
+                { visited[v]=1; dist[v]=dist[u]+1; q[tail++]=v; }
+    }
+}
+
+/* DFS recursive */
+void dfs(int u, int n) {
+    visited[u] = 1;
+    for (int v=0; v&lt;n; v++)
+        if (adj[u][v] &amp;&amp; !visited[v]) dfs(v, n);
+}
+
+/* DFS iterative */
+void dfs_iter(int src, int n) {
+    memset(visited, 0, sizeof(visited));
+    int stk[V], top=0; stk[top++]=src;
+    while (top) {
+        int u=stk[--top];
+        if (visited[u]) continue;
+        visited[u]=1;
+        for (int v=n-1;v&gt;=0;v--)
+            if (adj[u][v] &amp;&amp; !visited[v]) stk[top++]=v;
+    }
+}
+</code></pre></div>
+        <div class="ct-panel" data-tab="bd-cpp"><pre><code>#include &lt;vector&gt;
+#include &lt;queue&gt;
+#include &lt;stack&gt;
+#include &lt;unordered_map&gt;
+
+using Graph = std::vector&lt;std::vector&lt;int&gt;&gt;;
+
+// BFS — returns dist vector (-1 = unreachable)
+std::vector&lt;int&gt; bfs(const Graph&amp; g, int src) {
+    int n = g.size();
+    std::vector&lt;int&gt; dist(n, -1);
+    dist[src] = 0;
+    std::queue&lt;int&gt; q; q.push(src);
+    while (!q.empty()) {
+        int u = q.front(); q.pop();
+        for (int v : g[u]) if (dist[v]==-1) { dist[v]=dist[u]+1; q.push(v); }
+    }
+    return dist;
+}
+
+// DFS recursive
+void dfsRec(const Graph&amp; g, int u, std::vector&lt;bool&gt;&amp; vis) {
+    vis[u] = true;
+    for (int v : g[u]) if (!vis[v]) dfsRec(g, v, vis);
+}
+
+// DFS iterative
+void dfsIter(const Graph&amp; g, int src) {
+    std::vector&lt;bool&gt; vis(g.size(), false);
+    std::stack&lt;int&gt; stk; stk.push(src);
+    while (!stk.empty()) {
+        int u = stk.top(); stk.pop();
+        if (vis[u]) continue; vis[u]=true;
+        for (int v : g[u]) if (!vis[v]) stk.push(v);
+    }
+}
+</code></pre></div>
+        <div class="ct-panel" data-tab="bd-java"><pre><code>import java.util.*;
+
+public class Traversal {
+    // BFS — returns dist array
+    public static int[] bfs(List&lt;List&lt;Integer&gt;&gt; g, int src) {
+        int n = g.size();
+        int[] dist = new int[n]; Arrays.fill(dist, -1);
+        dist[src] = 0;
+        Queue&lt;Integer&gt; q = new LinkedList&lt;&gt;(); q.offer(src);
+        while (!q.isEmpty()) {
+            int u = q.poll();
+            for (int v : g.get(u))
+                if (dist[v] == -1) { dist[v] = dist[u]+1; q.offer(v); }
+        }
+        return dist;
+    }
+
+    // DFS recursive
+    public static void dfsRec(List&lt;List&lt;Integer&gt;&gt; g, int u, boolean[] vis) {
+        vis[u] = true;
+        for (int v : g.get(u)) if (!vis[v]) dfsRec(g, v, vis);
+    }
+
+    // DFS iterative
+    public static void dfsIter(List&lt;List&lt;Integer&gt;&gt; g, int src) {
+        boolean[] vis = new boolean[g.size()];
+        Deque&lt;Integer&gt; stk = new ArrayDeque&lt;&gt;(); stk.push(src);
+        while (!stk.isEmpty()) {
+            int u = stk.pop();
+            if (vis[u]) continue; vis[u] = true;
+            for (int v : g.get(u)) if (!vis[v]) stk.push(v);
+        }
+    }
+}
+</code></pre></div>
+        <div class="ct-panel" data-tab="bd-go"><pre><code>package main
+
+// BFS — returns slice of shortest distances (-1 = unreachable)
+func BFS(adj [][]int, src int) []int {
+    n := len(adj)
+    dist := make([]int, n)
+    for i := range dist { dist[i] = -1 }
+    dist[src] = 0
+    q := []int{src}
+    for len(q) &gt; 0 {
+        u := q[0]; q = q[1:]
+        for _, v := range adj[u] {
+            if dist[v] == -1 { dist[v] = dist[u] + 1; q = append(q, v) }
+        }
+    }
+    return dist
+}
+
+// DFS recursive
+func DFSRec(adj [][]int, u int, vis []bool) {
+    vis[u] = true
+    for _, v := range adj[u] { if !vis[v] { DFSRec(adj, v, vis) } }
+}
+
+// DFS iterative
+func DFSIter(adj [][]int, src int) []bool {
+    vis := make([]bool, len(adj))
+    stk := []int{src}
+    for len(stk) &gt; 0 {
+        u := stk[len(stk)-1]; stk = stk[:len(stk)-1]
+        if vis[u] { continue }
+        vis[u] = true
+        for _, v := range adj[u] { if !vis[v] { stk = append(stk, v) } }
+    }
+    return vis
+}
+</code></pre></div>
+      </div>
+    </details>
+
     <!-- ========================================================== -->
     <h2 id="s16">16. Dijkstra — single-source shortest path</h2>
 
@@ -692,6 +3467,204 @@
     <p><strong>Negative weights?</strong> Dijkstra fails on graphs with negative-weight edges — you can't assume extracted distances are final. Use the Bellman-Ford algorithm instead. It's slower ($O(VE)$) but handles negative weights and even detects negative cycles.</p>
 
     <p>Dijkstra is the core of every routing system you use: GPS driving directions, network routers (OSPF is Dijkstra under the hood), flight search, game AI pathfinding. The variant <em>A*</em> adds a heuristic estimate of remaining distance to guide the search toward the target faster — same skeleton, different priority key. You can think of it this way: Dijkstra expands vertices in order of $\text{dist}[u]$; A* expands them in order of $\text{dist}[u] + h(u, t)$, where $h$ is a lower bound on the remaining distance to the target $t$. As long as $h$ never overestimates (an <em>admissible</em> heuristic), A* still returns the true shortest path but usually explores far fewer vertices.</p>
+
+    <details class="algo-code">
+      <summary>Source — Dijkstra</summary>
+      <div class="code-tabs">
+        <div class="ct-header">
+          <button class="ct-tab active" data-tab="dijk-pseudo">Pseudocode</button>
+          <button class="ct-tab" data-tab="dijk-py">Python</button>
+          <button class="ct-tab" data-tab="dijk-js">JavaScript</button>
+          <button class="ct-tab" data-tab="dijk-c">C</button>
+          <button class="ct-tab" data-tab="dijk-cpp">C++</button>
+          <button class="ct-tab" data-tab="dijk-java">Java</button>
+          <button class="ct-tab" data-tab="dijk-go">Go</button>
+        </div>
+        <div class="ct-panel active" data-tab="dijk-pseudo"><pre><code>dijkstra(graph, src):
+  dist[src] = 0; dist[v] = INF for all other v
+  heap = min-heap; push (0, src)
+
+  while heap not empty:
+    (d, u) = pop_min(heap)
+    if d &gt; dist[u]: continue    // stale entry, skip
+
+    for each (v, w) in neighbors(u):
+      new_d = dist[u] + w
+      if new_d &lt; dist[v]:
+        dist[v] = new_d
+        push (new_d, v) onto heap
+
+  return dist
+</code></pre></div>
+        <div class="ct-panel" data-tab="dijk-py"><pre><code>import heapq
+
+def dijkstra(graph: dict, src) -&gt; dict:
+    """
+    graph: {u: [(v, weight), ...]}
+    Returns: {vertex: shortest distance from src}
+    """
+    dist = {src: 0}
+    heap = [(0, src)]   # (distance, vertex)
+
+    while heap:
+        d, u = heapq.heappop(heap)
+        if d &gt; dist.get(u, float('inf')):
+            continue                     # stale entry
+        for v, w in graph.get(u, []):
+            new_d = d + w
+            if new_d &lt; dist.get(v, float('inf')):
+                dist[v] = new_d
+                heapq.heappush(heap, (new_d, v))
+    return dist
+
+# Example:
+# graph = {'A': [('B', 1), ('C', 4)], 'B': [('C', 2)], 'C': []}
+# dijkstra(graph, 'A')  # {'A': 0, 'B': 1, 'C': 3}
+</code></pre></div>
+        <div class="ct-panel" data-tab="dijk-js"><pre><code>// MinHeap from §9 (or use a priority queue library)
+function dijkstra(graph, src) {
+  const dist = new Map();
+  dist.set(src, 0);
+  // Simple array-based min-heap via sort (fine for small graphs)
+  const heap = [[0, src]];   // [dist, vertex]
+
+  while (heap.length) {
+    heap.sort((a, b) =&gt; a[0] - b[0]);
+    const [d, u] = heap.shift();
+    if (d &gt; (dist.get(u) ?? Infinity)) continue;  // stale
+
+    for (const [v, w] of (graph.get(u) || [])) {
+      const nd = d + w;
+      if (nd &lt; (dist.get(v) ?? Infinity)) {
+        dist.set(v, nd);
+        heap.push([nd, v]);
+      }
+    }
+  }
+  return dist;
+}
+</code></pre></div>
+        <div class="ct-panel" data-tab="dijk-c"><pre><code>#include &lt;stdlib.h&gt;
+#include &lt;string.h&gt;
+#define V_MAX 512
+#define INF   0x7fffffff
+
+/* Adjacency list (edge list per vertex) */
+typedef struct { int to, w; } Edge;
+Edge adj[V_MAX][V_MAX]; int deg[V_MAX];
+
+/* Simple O(V^2) Dijkstra (adequate for dense/small graphs) */
+int dist[V_MAX]; int vis[V_MAX];
+
+void dijkstra(int src, int n) {
+    for (int i=0;i&lt;n;i++) dist[i]=INF, vis[i]=0;
+    dist[src]=0;
+    for (int iter=0;iter&lt;n;iter++) {
+        int u=-1;
+        for (int v=0;v&lt;n;v++) if (!vis[v] &amp;&amp; (u==-1||dist[v]&lt;dist[u])) u=v;
+        if (u==-1 || dist[u]==INF) break;
+        vis[u]=1;
+        for (int i=0;i&lt;deg[u];i++) {
+            int v=adj[u][i].to, w=adj[u][i].w;
+            if (dist[u]+w &lt; dist[v]) dist[v]=dist[u]+w;
+        }
+    }
+}
+</code></pre></div>
+        <div class="ct-panel" data-tab="dijk-cpp"><pre><code>#include &lt;vector&gt;
+#include &lt;queue&gt;
+#include &lt;climits&gt;
+
+using Graph = std::vector&lt;std::vector&lt;std::pair&lt;int,int&gt;&gt;&gt;;  // adj[u]={(v,w)}
+
+std::vector&lt;int&gt; dijkstra(const Graph&amp; g, int src) {
+    int n = g.size();
+    std::vector&lt;int&gt; dist(n, INT_MAX);
+    dist[src] = 0;
+    std::priority_queue&lt;std::pair&lt;int,int&gt;,
+                        std::vector&lt;std::pair&lt;int,int&gt;&gt;,
+                        std::greater&lt;&gt;&gt; pq;  // min-heap
+    pq.push({0, src});
+
+    while (!pq.empty()) {
+        auto [d, u] = pq.top(); pq.pop();
+        if (d &gt; dist[u]) continue;           // stale entry
+        for (auto [v, w] : g[u]) {
+            if (dist[u] + w &lt; dist[v]) {
+                dist[v] = dist[u] + w;
+                pq.push({dist[v], v});
+            }
+        }
+    }
+    return dist;
+}
+</code></pre></div>
+        <div class="ct-panel" data-tab="dijk-java"><pre><code>import java.util.*;
+
+public class Dijkstra {
+    public static int[] dijkstra(List&lt;List&lt;int[]&gt;&gt; g, int src) {
+        // g.get(u) = list of {v, weight}
+        int n = g.size();
+        int[] dist = new int[n]; Arrays.fill(dist, Integer.MAX_VALUE);
+        dist[src] = 0;
+        // PriorityQueue: min-heap on distance
+        PriorityQueue&lt;int[]&gt; pq = new PriorityQueue&lt;&gt;(Comparator.comparingInt(a -&gt; a[0]));
+        pq.offer(new int[]{0, src});
+
+        while (!pq.isEmpty()) {
+            int[] top = pq.poll();
+            int d = top[0], u = top[1];
+            if (d &gt; dist[u]) continue;  // stale
+            for (int[] e : g.get(u)) {
+                int v = e[0], w = e[1];
+                if (dist[u] + w &lt; dist[v]) {
+                    dist[v] = dist[u] + w;
+                    pq.offer(new int[]{dist[v], v});
+                }
+            }
+        }
+        return dist;
+    }
+}
+</code></pre></div>
+        <div class="ct-panel" data-tab="dijk-go"><pre><code>package main
+
+import "container/heap"
+
+type Edge struct{ To, W int }
+
+// Min-heap of (dist, vertex)
+type Item struct{ d, v int }
+type PQ []Item
+func (h PQ) Len() int            { return len(h) }
+func (h PQ) Less(i, j int) bool  { return h[i].d &lt; h[j].d }
+func (h PQ) Swap(i, j int)       { h[i], h[j] = h[j], h[i] }
+func (h *PQ) Push(x any)         { *h = append(*h, x.(Item)) }
+func (h *PQ) Pop() any           { old:=*h; n:=len(old); x:=old[n-1]; *h=old[:n-1]; return x }
+
+func Dijkstra(adj [][]Edge, src int) []int {
+    const inf = 1 &lt;&lt; 30
+    n := len(adj)
+    dist := make([]int, n)
+    for i := range dist { dist[i] = inf }
+    dist[src] = 0
+    pq := &amp;PQ{{0, src}}
+    heap.Init(pq)
+    for pq.Len() &gt; 0 {
+        cur := heap.Pop(pq).(Item)
+        if cur.d &gt; dist[cur.v] { continue }  // stale
+        for _, e := range adj[cur.v] {
+            if nd := dist[cur.v] + e.W; nd &lt; dist[e.To] {
+                dist[e.To] = nd
+                heap.Push(pq, Item{nd, e.To})
+            }
+        }
+    }
+    return dist
+}
+</code></pre></div>
+      </div>
+    </details>
 
     <div class="problem-set" data-topic="algo-graphs"></div>
 
@@ -797,6 +3770,192 @@ def F(state):
 
     <p>Python's <code>functools.lru_cache</code> turns any pure recursive function into a top-down DP for free. For quick prototyping it's unbeatable.</p>
 
+
+    <details class="algo-code">
+      <summary>Source — Edit Distance (DP)</summary>
+      <div class="code-tabs">
+        <div class="ct-header">
+          <button class="ct-tab active" data-tab="dp-pseudo">Pseudocode</button>
+          <button class="ct-tab" data-tab="dp-py">Python</button>
+          <button class="ct-tab" data-tab="dp-js">JavaScript</button>
+          <button class="ct-tab" data-tab="dp-c">C</button>
+          <button class="ct-tab" data-tab="dp-cpp">C++</button>
+          <button class="ct-tab" data-tab="dp-java">Java</button>
+          <button class="ct-tab" data-tab="dp-go">Go</button>
+        </div>
+        <div class="ct-panel active" data-tab="dp-pseudo"><pre><code>edit_distance(x, y):
+  n = len(x); m = len(y)
+  E = (n+1) x (m+1) table
+
+  // Base cases
+  for i in 0..n: E[i][0] = i   // delete all of x
+  for j in 0..m: E[0][j] = j   // insert all of y
+
+  // Fill table bottom-up
+  for i in 1..n:
+    for j in 1..m:
+      if x[i] == y[j]:
+        E[i][j] = E[i-1][j-1]       // free match
+      else:
+        E[i][j] = 1 + min(
+          E[i-1][j],                 // delete x[i]
+          E[i][j-1],                 // insert y[j]
+          E[i-1][j-1]                // substitute
+        )
+
+  return E[n][m]
+</code></pre></div>
+        <div class="ct-panel" data-tab="dp-py"><pre><code>def edit_distance(x: str, y: str) -&gt; int:
+    """Levenshtein distance: min single-char edits to turn x into y."""
+    n, m = len(x), len(y)
+    # E[i][j] = edit distance between x[:i] and y[:j]
+    E = [[0] * (m + 1) for _ in range(n + 1)]
+    for i in range(n + 1): E[i][0] = i   # delete all of x prefix
+    for j in range(m + 1): E[0][j] = j   # insert all of y prefix
+
+    for i in range(1, n + 1):
+        for j in range(1, m + 1):
+            if x[i - 1] == y[j - 1]:
+                E[i][j] = E[i-1][j-1]    # match, free
+            else:
+                E[i][j] = 1 + min(
+                    E[i-1][j],            # delete x[i-1]
+                    E[i][j-1],            # insert y[j-1]
+                    E[i-1][j-1],          # substitute
+                )
+    return E[n][m]
+
+# Space-optimized: keep only two rows
+def edit_distance_opt(x: str, y: str) -&gt; int:
+    m = len(y)
+    prev = list(range(m + 1))
+    for c in x:
+        cur = [prev[0] + 1] + [0] * m
+        for j, d in enumerate(y):
+            cur[j+1] = prev[j] if c == d else 1 + min(prev[j+1], cur[j], prev[j])
+        prev = cur
+    return prev[m]
+</code></pre></div>
+        <div class="ct-panel" data-tab="dp-js"><pre><code>function editDistance(x, y) {
+  const n = x.length, m = y.length;
+  // Build (n+1) x (m+1) table
+  const E = Array.from({length: n+1}, (_, i) =&gt;
+    Array.from({length: m+1}, (_, j) =&gt; i === 0 ? j : (j === 0 ? i : 0))
+  );
+  for (let i = 1; i &lt;= n; i++) {
+    for (let j = 1; j &lt;= m; j++) {
+      if (x[i-1] === y[j-1]) {
+        E[i][j] = E[i-1][j-1];
+      } else {
+        E[i][j] = 1 + Math.min(E[i-1][j], E[i][j-1], E[i-1][j-1]);
+      }
+    }
+  }
+  return E[n][m];
+}
+
+// console.log(editDistance("kitten", "sitting")); // 3
+</code></pre></div>
+        <div class="ct-panel" data-tab="dp-c"><pre><code>#include &lt;stdio.h&gt;
+#include &lt;string.h&gt;
+#define MAXN 512
+
+int E[MAXN][MAXN];
+
+static int min3(int a, int b, int c)
+    { return a&lt;b ? (a&lt;c?a:c) : (b&lt;c?b:c); }
+
+int edit_distance(const char *x, const char *y) {
+    int n = strlen(x), m = strlen(y);
+    for (int i=0;i&lt;=n;i++) E[i][0]=i;
+    for (int j=0;j&lt;=m;j++) E[0][j]=j;
+    for (int i=1;i&lt;=n;i++)
+        for (int j=1;j&lt;=m;j++) {
+            if (x[i-1]==y[j-1]) E[i][j]=E[i-1][j-1];
+            else E[i][j]=1+min3(E[i-1][j], E[i][j-1], E[i-1][j-1]);
+        }
+    return E[n][m];
+}
+</code></pre></div>
+        <div class="ct-panel" data-tab="dp-cpp"><pre><code>#include &lt;string&gt;
+#include &lt;vector&gt;
+#include &lt;algorithm&gt;
+
+int editDistance(const std::string&amp; x, const std::string&amp; y) {
+    int n = x.size(), m = y.size();
+    std::vector&lt;std::vector&lt;int&gt;&gt; E(n+1, std::vector&lt;int&gt;(m+1));
+    for (int i=0;i&lt;=n;i++) E[i][0]=i;
+    for (int j=0;j&lt;=m;j++) E[0][j]=j;
+    for (int i=1;i&lt;=n;i++)
+        for (int j=1;j&lt;=m;j++) {
+            if (x[i-1]==y[j-1]) E[i][j]=E[i-1][j-1];
+            else E[i][j]=1+std::min({E[i-1][j], E[i][j-1], E[i-1][j-1]});
+        }
+    return E[n][m];
+}
+
+// Space-optimized to O(m):
+int editDistOpt(const std::string&amp; x, const std::string&amp; y) {
+    int m = y.size();
+    std::vector&lt;int&gt; prev(m+1), cur(m+1);
+    std::iota(prev.begin(), prev.end(), 0);
+    for (int i=1; i&lt;=(int)x.size(); i++) {
+        cur[0]=i;
+        for (int j=1;j&lt;=m;j++)
+            cur[j] = x[i-1]==y[j-1] ? prev[j-1] :
+                     1+std::min({prev[j], cur[j-1], prev[j-1]});
+        std::swap(prev, cur);
+    }
+    return prev[m];
+}
+</code></pre></div>
+        <div class="ct-panel" data-tab="dp-java"><pre><code>public class EditDistance {
+    public static int compute(String x, String y) {
+        int n = x.length(), m = y.length();
+        int[][] E = new int[n+1][m+1];
+        for (int i=0;i&lt;=n;i++) E[i][0]=i;
+        for (int j=0;j&lt;=m;j++) E[0][j]=j;
+        for (int i=1;i&lt;=n;i++) {
+            for (int j=1;j&lt;=m;j++) {
+                if (x.charAt(i-1)==y.charAt(j-1)) E[i][j]=E[i-1][j-1];
+                else E[i][j]=1+Math.min(E[i-1][j-1], Math.min(E[i-1][j],E[i][j-1]));
+            }
+        }
+        return E[n][m];
+    }
+    // compute("kitten","sitting") == 3
+}
+</code></pre></div>
+        <div class="ct-panel" data-tab="dp-go"><pre><code>package main
+
+func EditDistance(x, y string) int {
+    n, m := len(x), len(y)
+    // Allocate (n+1) x (m+1) table
+    E := make([][]int, n+1)
+    for i := range E { E[i] = make([]int, m+1) }
+    for i := 0; i &lt;= n; i++ { E[i][0] = i }
+    for j := 0; j &lt;= m; j++ { E[0][j] = j }
+
+    for i := 1; i &lt;= n; i++ {
+        for j := 1; j &lt;= m; j++ {
+            if x[i-1] == y[j-1] {
+                E[i][j] = E[i-1][j-1]
+            } else {
+                E[i][j] = 1 + min3(E[i-1][j], E[i][j-1], E[i-1][j-1])
+            }
+        }
+    }
+    return E[n][m]
+}
+
+func min3(a, b, c int) int {
+    if a &lt; b { if a &lt; c { return a }; return c }
+    if b &lt; c { return b }; return c
+}
+</code></pre></div>
+      </div>
+    </details>
+
     <h3>17.6 The DP recipe</h3>
 
     <p>To solve a new DP problem:</p>
@@ -843,6 +4002,167 @@ def F(state):
       <strong>Rule of thumb.</strong> If you can't articulate why the greedy choice is <em>safe</em> (i.e., can't be undone later without loss), don't trust it. When in doubt, reach for DP.
     </div>
 
+    <details class="algo-code">
+      <summary>Source — Activity Selection</summary>
+      <div class="code-tabs">
+        <div class="ct-header">
+          <button class="ct-tab active" data-tab="act-pseudo">Pseudocode</button>
+          <button class="ct-tab" data-tab="act-py">Python</button>
+          <button class="ct-tab" data-tab="act-js">JavaScript</button>
+          <button class="ct-tab" data-tab="act-c">C</button>
+          <button class="ct-tab" data-tab="act-cpp">C++</button>
+          <button class="ct-tab" data-tab="act-java">Java</button>
+          <button class="ct-tab" data-tab="act-go">Go</button>
+        </div>
+        <div class="ct-panel active" data-tab="act-pseudo"><pre><code>activity_selection(activities):
+  // Each activity: (start, end)
+  sort activities by end time (ascending)
+
+  selected = []
+  last_end = -infinity
+
+  for each activity (s, e) in sorted order:
+    if s &gt;= last_end:          // no overlap with last selected
+      selected.append((s, e))
+      last_end = e
+
+  return selected
+</code></pre></div>
+        <div class="ct-panel" data-tab="act-py"><pre><code>def activity_selection(activities: list[tuple]) -&gt; list[tuple]:
+    """
+    activities: list of (start, end) pairs.
+    Returns max subset with no two activities overlapping.
+    O(n log n) for the sort, O(n) scan.
+    """
+    sorted_acts = sorted(activities, key=lambda a: a[1])  # sort by end time
+    selected = []
+    last_end = float('-inf')
+
+    for start, end in sorted_acts:
+        if start &gt;= last_end:       # no overlap
+            selected.append((start, end))
+            last_end = end
+
+    return selected
+
+# Example:
+# acts = [(1,4),(3,5),(0,6),(5,7),(3,9),(5,9),(6,10),(8,11),(8,12),(2,14),(12,16)]
+# activity_selection(acts)  # max non-overlapping set
+</code></pre></div>
+        <div class="ct-panel" data-tab="act-js"><pre><code>function activitySelection(activities) {
+  // activities: [{start, end}, ...]
+  const sorted = [...activities].sort((a, b) =&gt; a.end - b.end);
+  const selected = [];
+  let lastEnd = -Infinity;
+
+  for (const act of sorted) {
+    if (act.start &gt;= lastEnd) {
+      selected.push(act);
+      lastEnd = act.end;
+    }
+  }
+  return selected;
+}
+
+// const acts = [{start:1,end:4},{start:3,end:5},{start:0,end:6},{start:5,end:7}];
+// activitySelection(acts);
+</code></pre></div>
+        <div class="ct-panel" data-tab="act-c"><pre><code>#include &lt;stdlib.h&gt;
+#include &lt;stdio.h&gt;
+
+typedef struct { int start, end; } Activity;
+
+int cmp_end(const void *a, const void *b) {
+    return ((Activity*)a)-&gt;end - ((Activity*)b)-&gt;end;
+}
+
+int activity_selection(Activity *acts, int n, Activity *out) {
+    qsort(acts, n, sizeof(Activity), cmp_end);  // sort by end time
+    int count   = 0;
+    int last_end = -1;
+    for (int i = 0; i &lt; n; i++) {
+        if (acts[i].start &gt;= last_end) {
+            out[count++] = acts[i];
+            last_end = acts[i].end;
+        }
+    }
+    return count;   // number of selected activities
+}
+</code></pre></div>
+        <div class="ct-panel" data-tab="act-cpp"><pre><code>#include &lt;vector&gt;
+#include &lt;algorithm&gt;
+
+struct Activity { int start, end; };
+
+std::vector&lt;Activity&gt; activitySelection(std::vector&lt;Activity&gt; acts) {
+    // Sort by end time — greedy key
+    std::sort(acts.begin(), acts.end(),
+              [](const Activity&amp; a, const Activity&amp; b){ return a.end &lt; b.end; });
+
+    std::vector&lt;Activity&gt; selected;
+    int lastEnd = INT_MIN;
+
+    for (const auto&amp; a : acts) {
+        if (a.start &gt;= lastEnd) {
+            selected.push_back(a);
+            lastEnd = a.end;
+        }
+    }
+    return selected;
+}
+</code></pre></div>
+        <div class="ct-panel" data-tab="act-java"><pre><code>import java.util.*;
+
+public class ActivitySelection {
+    record Activity(int start, int end) {}
+
+    public static List&lt;Activity&gt; select(List&lt;Activity&gt; acts) {
+        // Sort by end time
+        List&lt;Activity&gt; sorted = new ArrayList&lt;&gt;(acts);
+        sorted.sort(Comparator.comparingInt(Activity::end));
+
+        List&lt;Activity&gt; selected = new ArrayList&lt;&gt;();
+        int lastEnd = Integer.MIN_VALUE;
+
+        for (Activity a : sorted) {
+            if (a.start() &gt;= lastEnd) {
+                selected.add(a);
+                lastEnd = a.end();
+            }
+        }
+        return selected;
+    }
+}
+</code></pre></div>
+        <div class="ct-panel" data-tab="act-go"><pre><code>package main
+
+import "sort"
+
+type Activity struct{ Start, End int }
+
+func ActivitySelection(acts []Activity) []Activity {
+    // Sort by end time — the greedy key
+    sorted := make([]Activity, len(acts))
+    copy(sorted, acts)
+    sort.Slice(sorted, func(i, j int) bool {
+        return sorted[i].End &lt; sorted[j].End
+    })
+
+    var selected []Activity
+    lastEnd := -1 &lt;&lt; 30
+
+    for _, a := range sorted {
+        if a.Start &gt;= lastEnd {
+            selected = append(selected, a)
+            lastEnd = a.End
+        }
+    }
+    return selected
+}
+</code></pre></div>
+      </div>
+    </details>
+
     <!-- ========================================================== -->
     <h2 id="s19">19. Divide and conquer</h2>
 
@@ -860,113 +4180,199 @@ def F(state):
 
     <p>The recurrence for balanced divide-and-conquer is the one we saw for mergesort: $T(n) = aT(n/b) + f(n)$, solved by the master theorem. You plug in $a$ (number of subproblems), $b$ (shrinkage factor), and $f(n)$ (combine cost), and read off the answer. Again, see <a href="complexity.html">complexity.html</a> for the full statement.</p>
 
-    <!-- ========================================================== -->
-    <h2 id="s20">20. Source code</h2>
+    <details class="algo-code">
+      <summary>Source — Counting Inversions</summary>
+      <div class="code-tabs">
+        <div class="ct-header">
+          <button class="ct-tab active" data-tab="inv-pseudo">Pseudocode</button>
+          <button class="ct-tab" data-tab="inv-py">Python</button>
+          <button class="ct-tab" data-tab="inv-js">JavaScript</button>
+          <button class="ct-tab" data-tab="inv-c">C</button>
+          <button class="ct-tab" data-tab="inv-cpp">C++</button>
+          <button class="ct-tab" data-tab="inv-java">Java</button>
+          <button class="ct-tab" data-tab="inv-go">Go</button>
+        </div>
+        <div class="ct-panel active" data-tab="inv-pseudo"><pre><code>-- Count inversions: pairs (i,j) where i &lt; j but a[i] &gt; a[j] --
+-- Runs in O(n log n) via a modified merge sort --
 
-    <p>Three canonical algorithms in plain Python. Quicksort (divide and conquer, random pivot), BFS on a graph (adjacency list), and edit distance (dynamic programming). Read them side by side to see how different the shapes are.</p>
+count_inversions(a):
+  if len(a) &lt;= 1: return a, 0
+  mid = len(a) / 2
+  left,  inv_l = count_inversions(a[:mid])
+  right, inv_r = count_inversions(a[mid:])
+  merged, inv_m = merge_count(left, right)
+  return merged, inv_l + inv_r + inv_m
 
-    <div class="code-tabs" id="ct-algos">
-      <div class="ct-header">
-        <button class="ct-tab active" data-tab="qs">Quicksort</button>
-        <button class="ct-tab" data-tab="bfs">BFS</button>
-        <button class="ct-tab" data-tab="dp">Edit distance (DP)</button>
-        <span class="ct-label">three canonical algorithms</span>
-      </div>
-
-      <div class="ct-panel active" data-tab="qs"><pre><code><span class="kw">import</span> random
-
-<span class="kw">def</span> <span class="fn">quicksort</span>(a):
-    <span class="cmt"># Sort list `a` in place using a random-pivot Lomuto partition.</span>
-    <span class="cmt"># Expected time O(n log n); worst case O(n^2), negligibly unlikely.</span>
-    <span class="fn">_qs</span>(a, <span class="num">0</span>, <span class="fn">len</span>(a) - <span class="num">1</span>)
-
-<span class="kw">def</span> <span class="fn">_qs</span>(a, lo, hi):
-    <span class="kw">if</span> lo &gt;= hi:
-        <span class="kw">return</span>                                 <span class="cmt"># 0 or 1 element, already sorted</span>
-    p = <span class="fn">_partition</span>(a, lo, hi)              <span class="cmt"># p is the final index of the pivot</span>
-    <span class="fn">_qs</span>(a, lo, p - <span class="num">1</span>)
-    <span class="fn">_qs</span>(a, p + <span class="num">1</span>, hi)
-
-<span class="kw">def</span> <span class="fn">_partition</span>(a, lo, hi):
-    <span class="cmt"># Pick a random pivot to avoid worst-case on sorted input.</span>
-    k = random.<span class="fn">randint</span>(lo, hi)
-    a[k], a[hi] = a[hi], a[k]                 <span class="cmt"># move pivot to the end</span>
-    pivot = a[hi]
-    i = lo - <span class="num">1</span>                               <span class="cmt"># i+1 is the next slot for &quot;&lt; pivot&quot;</span>
-    <span class="kw">for</span> j <span class="kw">in</span> <span class="fn">range</span>(lo, hi):
-        <span class="kw">if</span> a[j] &lt; pivot:
-            i += <span class="num">1</span>
-            a[i], a[j] = a[j], a[i]
-    a[i + <span class="num">1</span>], a[hi] = a[hi], a[i + <span class="num">1</span>]    <span class="cmt"># put pivot in its final place</span>
-    <span class="kw">return</span> i + <span class="num">1</span>
-
-<span class="cmt"># Try it:</span>
-arr = [<span class="num">9</span>, <span class="num">4</span>, <span class="num">7</span>, <span class="num">1</span>, <span class="num">2</span>, <span class="num">8</span>, <span class="num">3</span>, <span class="num">6</span>, <span class="num">5</span>]
-<span class="fn">quicksort</span>(arr)
-<span class="fn">print</span>(arr)                                   <span class="cmt"># [1, 2, 3, 4, 5, 6, 7, 8, 9]</span>
+merge_count(left, right):
+  result = []; inversions = 0
+  i = j = 0
+  while i &lt; len(left) and j &lt; len(right):
+    if left[i] &lt;= right[j]:
+      result.append(left[i]); i++
+    else:
+      // All remaining left[i..] are &gt; right[j]: cross inversions
+      inversions += len(left) - i
+      result.append(right[j]); j++
+  result += left[i:] + right[j:]
+  return result, inversions
 </code></pre></div>
+        <div class="ct-panel" data-tab="inv-py"><pre><code>def count_inversions(a: list) -&gt; tuple[list, int]:
+    """
+    Returns (sorted_a, inversion_count).
+    An inversion is a pair (i,j) with i &lt; j and a[i] &gt; a[j].
+    O(n log n) via divide-and-conquer merge sort.
+    """
+    if len(a) &lt;= 1:
+        return a[:], 0
+    mid = len(a) // 2
+    left,  inv_l = count_inversions(a[:mid])
+    right, inv_r = count_inversions(a[mid:])
+    merged, inv_m = _merge_count(left, right)
+    return merged, inv_l + inv_r + inv_m
 
-      <div class="ct-panel" data-tab="bfs"><pre><code><span class="kw">from</span> collections <span class="kw">import</span> deque
+def _merge_count(left, right):
+    result = []
+    inversions = 0
+    i = j = 0
+    while i &lt; len(left) and j &lt; len(right):
+        if left[i] &lt;= right[j]:
+            result.append(left[i]); i += 1
+        else:
+            # left[i..] are all &gt; right[j] — each is an inversion with right[j]
+            inversions += len(left) - i
+            result.append(right[j]); j += 1
+    result.extend(left[i:]); result.extend(right[j:])
+    return result, inversions
 
-<span class="kw">def</span> <span class="fn">bfs</span>(graph, start):
-    <span class="cmt"># graph is a dict: vertex -&gt; list of neighbor vertices.</span>
-    <span class="cmt"># Returns a dict: vertex -&gt; shortest-path distance from `start`.</span>
-    dist = {start: <span class="num">0</span>}
-    q = <span class="fn">deque</span>([start])
-    <span class="kw">while</span> q:
-        u = q.<span class="fn">popleft</span>()                          <span class="cmt"># dequeue the front</span>
-        <span class="kw">for</span> v <span class="kw">in</span> graph[u]:
-            <span class="kw">if</span> v <span class="kw">not</span> <span class="kw">in</span> dist:                   <span class="cmt"># first time seen = shortest</span>
-                dist[v] = dist[u] + <span class="num">1</span>
-                q.<span class="fn">append</span>(v)                       <span class="cmt"># enqueue at the back</span>
-    <span class="kw">return</span> dist
-
-<span class="cmt"># Tiny example graph:</span>
-<span class="cmt">#    A --- B --- C</span>
-<span class="cmt">#    |     |</span>
-<span class="cmt">#    D --- E --- F</span>
-graph = {
-    <span class="str">&quot;A&quot;</span>: [<span class="str">&quot;B&quot;</span>, <span class="str">&quot;D&quot;</span>],
-    <span class="str">&quot;B&quot;</span>: [<span class="str">&quot;A&quot;</span>, <span class="str">&quot;C&quot;</span>, <span class="str">&quot;E&quot;</span>],
-    <span class="str">&quot;C&quot;</span>: [<span class="str">&quot;B&quot;</span>],
-    <span class="str">&quot;D&quot;</span>: [<span class="str">&quot;A&quot;</span>, <span class="str">&quot;E&quot;</span>],
-    <span class="str">&quot;E&quot;</span>: [<span class="str">&quot;B&quot;</span>, <span class="str">&quot;D&quot;</span>, <span class="str">&quot;F&quot;</span>],
-    <span class="str">&quot;F&quot;</span>: [<span class="str">&quot;E&quot;</span>],
+# count_inversions([2, 4, 1, 3, 5])  # ([1,2,3,4,5], 3)
+</code></pre></div>
+        <div class="ct-panel" data-tab="inv-js"><pre><code>function countInversions(a) {
+  if (a.length &lt;= 1) return { sorted: [...a], inv: 0 };
+  const mid = a.length >> 1;
+  const L = countInversions(a.slice(0, mid));
+  const R = countInversions(a.slice(mid));
+  const { sorted, inv } = mergeCount(L.sorted, R.sorted);
+  return { sorted, inv: L.inv + R.inv + inv };
 }
-<span class="fn">print</span>(<span class="fn">bfs</span>(graph, <span class="str">&quot;A&quot;</span>))
-<span class="cmt"># {'A': 0, 'B': 1, 'D': 1, 'C': 2, 'E': 2, 'F': 3}</span>
-</code></pre></div>
 
-      <div class="ct-panel" data-tab="dp"><pre><code><span class="kw">def</span> <span class="fn">edit_distance</span>(x, y):
-    <span class="cmt"># Levenshtein distance: min single-char edits to turn x into y.</span>
-    <span class="cmt"># Classic bottom-up DP. Table size (len(x)+1) x (len(y)+1).</span>
-    n, m = <span class="fn">len</span>(x), <span class="fn">len</span>(y)
-    <span class="cmt"># E[i][j] = edit distance between x[:i] and y[:j]</span>
-    E = [[<span class="num">0</span>] * (m + <span class="num">1</span>) <span class="kw">for</span> _ <span class="kw">in</span> <span class="fn">range</span>(n + <span class="num">1</span>)]
-    <span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(n + <span class="num">1</span>):
-        E[i][<span class="num">0</span>] = i                               <span class="cmt"># delete all i characters of x</span>
-    <span class="kw">for</span> j <span class="kw">in</span> <span class="fn">range</span>(m + <span class="num">1</span>):
-        E[<span class="num">0</span>][j] = j                               <span class="cmt"># insert all j characters of y</span>
-    <span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(<span class="num">1</span>, n + <span class="num">1</span>):
-        <span class="kw">for</span> j <span class="kw">in</span> <span class="fn">range</span>(<span class="num">1</span>, m + <span class="num">1</span>):
-            <span class="kw">if</span> x[i - <span class="num">1</span>] == y[j - <span class="num">1</span>]:
-                E[i][j] = E[i - <span class="num">1</span>][j - <span class="num">1</span>]       <span class="cmt"># free match</span>
-            <span class="kw">else</span>:
-                E[i][j] = <span class="num">1</span> + <span class="fn">min</span>(
-                    E[i - <span class="num">1</span>][j],                   <span class="cmt"># delete x[i-1]</span>
-                    E[i][j - <span class="num">1</span>],                   <span class="cmt"># insert y[j-1]</span>
-                    E[i - <span class="num">1</span>][j - <span class="num">1</span>],               <span class="cmt"># substitute</span>
-                )
-    <span class="kw">return</span> E[n][m]
+function mergeCount(left, right) {
+  const sorted = []; let inv = 0, i = 0, j = 0;
+  while (i &lt; left.length &amp;&amp; j &lt; right.length) {
+    if (left[i] &lt;= right[j]) {
+      sorted.push(left[i++]);
+    } else {
+      inv += left.length - i;  // all left[i..] &gt; right[j]
+      sorted.push(right[j++]);
+    }
+  }
+  return { sorted: sorted.concat(left.slice(i), right.slice(j)), inv };
+}
 
-<span class="fn">print</span>(<span class="fn">edit_distance</span>(<span class="str">&quot;kitten&quot;</span>, <span class="str">&quot;sitting&quot;</span>))   <span class="cmt"># 3</span>
-<span class="fn">print</span>(<span class="fn">edit_distance</span>(<span class="str">&quot;sunday&quot;</span>, <span class="str">&quot;saturday&quot;</span>))  <span class="cmt"># 3</span>
-<span class="fn">print</span>(<span class="fn">edit_distance</span>(<span class="str">&quot;abc&quot;</span>, <span class="str">&quot;abc&quot;</span>))            <span class="cmt"># 0</span>
+// countInversions([2,4,1,3,5]).inv  // 3
 </code></pre></div>
-    </div>
+        <div class="ct-panel" data-tab="inv-c"><pre><code>#include &lt;stdlib.h&gt;
+#include &lt;string.h&gt;
+
+long long merge_count(int *a, int *tmp, int lo, int mid, int hi) {
+    long long inv = 0;
+    int i=lo, j=mid, k=lo;
+    while (i &lt; mid &amp;&amp; j &lt;= hi) {
+        if (a[i] &lt;= a[j]) tmp[k++]=a[i++];
+        else { inv += mid - i; tmp[k++]=a[j++]; }
+    }
+    while (i &lt; mid)  tmp[k++]=a[i++];
+    while (j &lt;= hi)  tmp[k++]=a[j++];
+    memcpy(a+lo, tmp+lo, (hi-lo+1)*sizeof(int));
+    return inv;
+}
+
+long long sort_count(int *a, int *tmp, int lo, int hi) {
+    if (lo &gt;= hi) return 0;
+    int mid = lo + (hi-lo)/2;
+    long long inv = sort_count(a,tmp,lo,mid)
+                  + sort_count(a,tmp,mid+1,hi)
+                  + merge_count(a,tmp,lo,mid+1,hi);
+    return inv;
+}
+</code></pre></div>
+        <div class="ct-panel" data-tab="inv-cpp"><pre><code>#include &lt;vector&gt;
+
+std::pair&lt;std::vector&lt;int&gt;, long long&gt;
+countInversions(std::vector&lt;int&gt; a) {
+    if (a.size() &lt;= 1) return {a, 0};
+    int mid = a.size() / 2;
+    auto [L, il] = countInversions({a.begin(), a.begin()+mid});
+    auto [R, ir] = countInversions({a.begin()+mid, a.end()});
+
+    std::vector&lt;int&gt; merged; long long inv = il + ir;
+    int i=0, j=0;
+    while (i &lt; (int)L.size() &amp;&amp; j &lt; (int)R.size()) {
+        if (L[i] &lt;= R[j]) merged.push_back(L[i++]);
+        else { inv += L.size()-i; merged.push_back(R[j++]); }
+    }
+    merged.insert(merged.end(), L.begin()+i, L.end());
+    merged.insert(merged.end(), R.begin()+j, R.end());
+    return {merged, inv};
+}
+</code></pre></div>
+        <div class="ct-panel" data-tab="inv-java"><pre><code>public class CountInversions {
+    public static long count(int[] a) { return sort(a, 0, a.length-1); }
+
+    private static long sort(int[] a, int lo, int hi) {
+        if (lo &gt;= hi) return 0;
+        int mid = lo + (hi-lo)/2;
+        long inv = sort(a,lo,mid) + sort(a,mid+1,hi);
+        return inv + merge(a, lo, mid, hi);
+    }
+
+    private static long merge(int[] a, int lo, int mid, int hi) {
+        int[] tmp = new int[hi-lo+1];
+        int i=lo, j=mid+1, k=0; long inv=0;
+        while (i&lt;=mid &amp;&amp; j&lt;=hi) {
+            if (a[i]&lt;=a[j]) tmp[k++]=a[i++];
+            else { inv += mid-i+1; tmp[k++]=a[j++]; }
+        }
+        while (i&lt;=mid) tmp[k++]=a[i++];
+        while (j&lt;=hi)  tmp[k++]=a[j++];
+        System.arraycopy(tmp,0,a,lo,tmp.length);
+        return inv;
+    }
+}
+</code></pre></div>
+        <div class="ct-panel" data-tab="inv-go"><pre><code>package main
+
+func CountInversions(a []int) ([]int, int64) {
+    if len(a) &lt;= 1 { return append([]int{}, a...), 0 }
+    mid := len(a) / 2
+    L, il := CountInversions(a[:mid])
+    R, ir := CountInversions(a[mid:])
+    merged, im := mergeCount(L, R)
+    return merged, il + ir + im
+}
+
+func mergeCount(L, R []int) ([]int, int64) {
+    out := make([]int, 0, len(L)+len(R))
+    var inv int64
+    i, j := 0, 0
+    for i &lt; len(L) &amp;&amp; j &lt; len(R) {
+        if L[i] &lt;= R[j] {
+            out = append(out, L[i]); i++
+        } else {
+            inv += int64(len(L) - i)   // all L[i..] &gt; R[j]
+            out = append(out, R[j]); j++
+        }
+    }
+    out = append(out, L[i:]...)
+    out = append(out, R[j:]...)
+    return out, inv
+}
+</code></pre></div>
+      </div>
+    </details>
 
     <!-- ========================================================== -->
-    <h2 id="s21">21. A practical guide — how to pick the right tool</h2>
+    <!-- ========================================================== -->
+    <h2 id="s20">20. A practical guide — how to pick the right tool</h2>
 
     <p>The single best question to ask when facing a new problem is: <em>"What operations do I need, and how often?"</em> The answer narrows the data structure instantly.</p>
 
@@ -1001,7 +4407,7 @@ graph = {
       <li><strong>Know one well, the rest will follow.</strong> If you really understand hash tables — chaining, probing, load factors, amortization — everything else gets easier by analogy.</li>
     </ul>
 
-    <h3>21.1 Cross-links to other tracks</h3>
+    <h3>20.1 Cross-links to other tracks</h3>
 
     <ul>
       <li><strong><a href="../math/discrete-math.html">Discrete math</a></strong> for the graph vocabulary (vertex, edge, path, cycle), proof by induction (which is how you prove recurrences), and counting arguments (which is how you prove the $n \log n$ sorting lower bound).</li>
@@ -1013,7 +4419,7 @@ graph = {
     </ul>
 
     <!-- ========================================================== -->
-    <h2 id="s22">22. Further reading</h2>
+    <h2 id="s21">21. Further reading</h2>
 
     <div class="bib">
       <h4>The canon</h4>

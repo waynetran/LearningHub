@@ -183,6 +183,233 @@ $$y_i = \sum_{j=1}^{n} \alpha_{ij} \, v_j, \qquad \alpha_{ij} = \frac{\exp(s_{ij
 
     <p>That's it. A full self-attention layer is three matrix multiplications and a softmax — which is why it maps so well onto GPU hardware.</p>
 
+    <details class="algo-code">
+      <summary>Source — Scaled Dot-Product Attention</summary>
+      <div class="code-tabs">
+        <div class="ct-header">
+          <button class="ct-tab active" data-tab="attn-dp-pseudo">Pseudocode</button>
+          <button class="ct-tab" data-tab="attn-dp-py">Python</button>
+          <button class="ct-tab" data-tab="attn-dp-js">JavaScript</button>
+          <button class="ct-tab" data-tab="attn-dp-c">C</button>
+          <button class="ct-tab" data-tab="attn-dp-cpp">C++</button>
+          <button class="ct-tab" data-tab="attn-dp-java">Java</button>
+          <button class="ct-tab" data-tab="attn-dp-go">Go</button>
+        </div>
+        <div class="ct-panel active" data-tab="attn-dp-pseudo"><pre><code>function scaled_dot_product_attention(Q, K, V):
+    # Q: [n, d_k]  K: [n, d_k]  V: [n, d_v]
+    d_k = number of columns in K
+    scores = Q * K^T / sqrt(d_k)   # [n, n]
+    weights = softmax(scores, axis=-1)  # row-wise softmax
+    output = weights * V               # [n, d_v]
+    return output
+
+function softmax(x, axis):
+    x = x - max(x, axis)   # numerical stability
+    e = exp(x)
+    return e / sum(e, axis)</code></pre></div>
+        <div class="ct-panel" data-tab="attn-dp-py"><pre><code>import numpy as np
+
+def softmax(x):
+    # x: [..., n]  — applied along last axis
+    x = x - x.max(axis=-1, keepdims=True)
+    e = np.exp(x)
+    return e / e.sum(axis=-1, keepdims=True)
+
+def scaled_dot_product_attention(Q, K, V, mask=None):
+    """
+    Q: (n, d_k)
+    K: (n, d_k)
+    V: (n, d_v)
+    mask: optional (n, n) boolean array; True = keep, False = mask out
+    Returns: (n, d_v)
+    """
+    d_k = Q.shape[-1]
+    scores = Q @ K.T / np.sqrt(d_k)          # (n, n)
+    if mask is not None:
+        scores = np.where(mask, scores, -1e9)
+    weights = softmax(scores)                  # (n, n)
+    return weights @ V                         # (n, d_v)</code></pre></div>
+        <div class="ct-panel" data-tab="attn-dp-js"><pre><code>function softmax(row) {
+  const max = Math.max(...row);
+  const e = row.map(x =&gt; Math.exp(x - max));
+  const s = e.reduce((a, b) =&gt; a + b, 0);
+  return e.map(x =&gt; x / s);
+}
+
+function matMul(A, B) {
+  // A: [m, k]  B: [k, n]  returns [m, n]
+  const m = A.length, k = B.length, n = B[0].length;
+  return Array.from({length: m}, (_, i) =&gt;
+    Array.from({length: n}, (_, j) =&gt;
+      A[i].reduce((s, _, l) =&gt; s + A[i][l] * B[l][j], 0)));
+}
+
+function transpose(M) {
+  return M[0].map((_, j) =&gt; M.map(row =&gt; row[j]));
+}
+
+function scaledDotProductAttention(Q, K, V, mask) {
+  const dK = K[0].length;
+  const KT = transpose(K);
+  const scores = matMul(Q, KT).map(row =&gt; row.map(s =&gt; s / Math.sqrt(dK)));
+  if (mask) {
+    for (let i = 0; i &lt; scores.length; i++)
+      for (let j = 0; j &lt; scores[i].length; j++)
+        if (!mask[i][j]) scores[i][j] = -1e9;
+  }
+  const weights = scores.map(softmax);
+  return matMul(weights, V);
+}</code></pre></div>
+        <div class="ct-panel" data-tab="attn-dp-c"><pre><code>#include &lt;math.h&gt;
+#include &lt;stdlib.h&gt;
+
+/* Q[n][dk], K[n][dk], V[n][dv], out[n][dv] */
+void scaled_dot_product_attention(
+    int n, int dk, int dv,
+    double Q[n][dk], double K[n][dk], double V[n][dv],
+    double out[n][dv])
+{
+    double scores[n][n];
+    double sqrt_dk = sqrt((double)dk);
+
+    /* scores = Q * K^T / sqrt(dk) */
+    for (int i = 0; i &lt; n; i++)
+        for (int j = 0; j &lt; n; j++) {
+            double s = 0;
+            for (int l = 0; l &lt; dk; l++) s += Q[i][l] * K[j][l];
+            scores[i][j] = s / sqrt_dk;
+        }
+
+    /* row-wise softmax */
+    for (int i = 0; i &lt; n; i++) {
+        double mx = scores[i][0];
+        for (int j = 1; j &lt; n; j++) if (scores[i][j] &gt; mx) mx = scores[i][j];
+        double sum = 0;
+        for (int j = 0; j &lt; n; j++) { scores[i][j] = exp(scores[i][j] - mx); sum += scores[i][j]; }
+        for (int j = 0; j &lt; n; j++) scores[i][j] /= sum;
+    }
+
+    /* out = scores * V */
+    for (int i = 0; i &lt; n; i++)
+        for (int d = 0; d &lt; dv; d++) {
+            double s = 0;
+            for (int j = 0; j &lt; n; j++) s += scores[i][j] * V[j][d];
+            out[i][d] = s;
+        }
+}</code></pre></div>
+        <div class="ct-panel" data-tab="attn-dp-cpp"><pre><code>#include &lt;vector&gt;
+#include &lt;cmath&gt;
+#include &lt;algorithm&gt;
+using namespace std;
+using Mat = vector&lt;vector&lt;double&gt;&gt;;
+
+Mat matMul(const Mat&amp; A, const Mat&amp; B) {
+    int m = A.size(), k = B.size(), n = B[0].size();
+    Mat C(m, vector&lt;double&gt;(n, 0));
+    for (int i = 0; i &lt; m; i++)
+        for (int l = 0; l &lt; k; l++)
+            for (int j = 0; j &lt; n; j++)
+                C[i][j] += A[i][l] * B[l][j];
+    return C;
+}
+
+Mat transpose(const Mat&amp; M) {
+    Mat T(M[0].size(), vector&lt;double&gt;(M.size()));
+    for (int i = 0; i &lt; (int)M.size(); i++)
+        for (int j = 0; j &lt; (int)M[0].size(); j++)
+            T[j][i] = M[i][j];
+    return T;
+}
+
+Mat scaledDotProductAttention(const Mat&amp; Q, const Mat&amp; K, const Mat&amp; V) {
+    double sqrt_dk = sqrt((double)K[0].size());
+    Mat scores = matMul(Q, transpose(K));
+    for (auto&amp; row : scores) {
+        double mx = *max_element(row.begin(), row.end());
+        double s = 0;
+        for (auto&amp; x : row) { x = exp((x / sqrt_dk) - mx); s += x; }
+        for (auto&amp; x : row) x /= s;
+    }
+    return matMul(scores, V);
+}</code></pre></div>
+        <div class="ct-panel" data-tab="attn-dp-java"><pre><code>public class ScaledDotProductAttention {
+    static double[][] matMul(double[][] A, double[][] B) {
+        int m = A.length, k = B.length, n = B[0].length;
+        double[][] C = new double[m][n];
+        for (int i = 0; i &lt; m; i++)
+            for (int l = 0; l &lt; k; l++)
+                for (int j = 0; j &lt; n; j++)
+                    C[i][j] += A[i][l] * B[l][j];
+        return C;
+    }
+
+    static double[][] transpose(double[][] M) {
+        double[][] T = new double[M[0].length][M.length];
+        for (int i = 0; i &lt; M.length; i++)
+            for (int j = 0; j &lt; M[0].length; j++)
+                T[j][i] = M[i][j];
+        return T;
+    }
+
+    public static double[][] attention(double[][] Q, double[][] K, double[][] V) {
+        double sqrtDk = Math.sqrt(K[0].length);
+        double[][] KT = transpose(K);
+        double[][] scores = matMul(Q, KT);
+        for (double[] row : scores) {
+            double max = Double.NEGATIVE_INFINITY;
+            for (double v : row) if (v &gt; max) max = v;
+            double sum = 0;
+            for (int j = 0; j &lt; row.length; j++) { row[j] = Math.exp(row[j] / sqrtDk - max); sum += row[j]; }
+            for (int j = 0; j &lt; row.length; j++) row[j] /= sum;
+        }
+        return matMul(scores, V);
+    }
+}</code></pre></div>
+        <div class="ct-panel" data-tab="attn-dp-go"><pre><code>package attention
+
+import "math"
+
+func matMul(A, B [][]float64) [][]float64 {
+    m, k, n := len(A), len(B), len(B[0])
+    C := make([][]float64, m)
+    for i := range C {
+        C[i] = make([]float64, n)
+        for l := 0; l &lt; k; l++ {
+            for j := 0; j &lt; n; j++ {
+                C[i][j] += A[i][l] * B[l][j]
+            }
+        }
+    }
+    return C
+}
+
+func transpose(M [][]float64) [][]float64 {
+    rows, cols := len(M), len(M[0])
+    T := make([][]float64, cols)
+    for j := range T {
+        T[j] = make([]float64, rows)
+        for i := 0; i &lt; rows; i++ {
+            T[j][i] = M[i][j]
+        }
+    }
+    return T
+}
+
+func ScaledDotProductAttention(Q, K, V [][]float64) [][]float64 {
+    sqrtDk := math.Sqrt(float64(len(K[0])))
+    scores := matMul(Q, transpose(K))
+    for _, row := range scores {
+        mx := row[0]
+        for _, v := range row { if v &gt; mx { mx = v } }
+        sum := 0.0
+        for j := range row { row[j] = math.Exp(row[j]/sqrtDk - mx); sum += row[j] }
+        for j := range row { row[j] /= sum }
+    }
+    return matMul(scores, V)
+}</code></pre></div>
+      </div>
+    </details>
+
     <!-- ========================================================== -->
     <h2 id="demo">6. Interactive: attention over 3 tokens</h2>
 
@@ -275,6 +502,247 @@ $$\begin{aligned}
 
     <p>Empirically, different heads really do specialize. Visualizing attention patterns in a trained transformer reveals heads that attend to the previous token, heads that attend to the matching bracket, heads that attend to the subject of the sentence. Not all heads are interpretable, but enough of them are to make the story compelling.</p>
 
+    <details class="algo-code">
+      <summary>Source — Multi-Head Attention</summary>
+      <div class="code-tabs">
+        <div class="ct-header">
+          <button class="ct-tab active" data-tab="attn-mha-pseudo">Pseudocode</button>
+          <button class="ct-tab" data-tab="attn-mha-py">Python</button>
+          <button class="ct-tab" data-tab="attn-mha-js">JavaScript</button>
+          <button class="ct-tab" data-tab="attn-mha-c">C</button>
+          <button class="ct-tab" data-tab="attn-mha-cpp">C++</button>
+          <button class="ct-tab" data-tab="attn-mha-java">Java</button>
+          <button class="ct-tab" data-tab="attn-mha-go">Go</button>
+        </div>
+        <div class="ct-panel active" data-tab="attn-mha-pseudo"><pre><code>function multi_head_attention(X, h, W_Q[h], W_K[h], W_V[h], W_O):
+    # X: [n, d_model]
+    # h: number of heads
+    # W_Q[i], W_K[i], W_V[i]: [d_model, d_k]  where d_k = d_model / h
+    # W_O: [h*d_k, d_model]
+    heads = []
+    for i in 0..h-1:
+        Q_i = X * W_Q[i]           # [n, d_k]
+        K_i = X * W_K[i]           # [n, d_k]
+        V_i = X * W_V[i]           # [n, d_k]
+        head_i = attention(Q_i, K_i, V_i)  # [n, d_k]
+        heads.append(head_i)
+    concat = horizontal_concat(heads)  # [n, h*d_k]
+    return concat * W_O                # [n, d_model]</code></pre></div>
+        <div class="ct-panel" data-tab="attn-mha-py"><pre><code>import numpy as np
+
+def softmax(x):
+    x = x - x.max(axis=-1, keepdims=True)
+    e = np.exp(x)
+    return e / e.sum(axis=-1, keepdims=True)
+
+def attention(Q, K, V):
+    d_k = Q.shape[-1]
+    return softmax(Q @ K.T / np.sqrt(d_k)) @ V
+
+def multi_head_attention(X, W_Q, W_K, W_V, W_O, h):
+    """
+    X:   (n, d_model)
+    W_Q, W_K, W_V: each (h, d_model, d_k)
+    W_O: (h * d_k, d_model)
+    Returns (n, d_model)
+    """
+    heads = []
+    for i in range(h):
+        Q_i = X @ W_Q[i]          # (n, d_k)
+        K_i = X @ W_K[i]
+        V_i = X @ W_V[i]
+        heads.append(attention(Q_i, K_i, V_i))
+    concat = np.concatenate(heads, axis=-1)  # (n, h*d_k)
+    return concat @ W_O                       # (n, d_model)</code></pre></div>
+        <div class="ct-panel" data-tab="attn-mha-js"><pre><code>function softmax(row) {
+  const max = Math.max(...row);
+  const e = row.map(x =&gt; Math.exp(x - max));
+  const s = e.reduce((a, b) =&gt; a + b, 0);
+  return e.map(x =&gt; x / s);
+}
+function matMul(A, B) {
+  const m = A.length, k = B.length, n = B[0].length;
+  return Array.from({length: m}, (_, i) =&gt;
+    Array.from({length: n}, (_, j) =&gt;
+      A[i].reduce((s, _, l) =&gt; s + A[i][l] * B[l][j], 0)));
+}
+function transpose(M) { return M[0].map((_, j) =&gt; M.map(r =&gt; r[j])); }
+function attention(Q, K, V) {
+  const dK = K[0].length;
+  const scores = matMul(Q, transpose(K)).map(r =&gt; r.map(s =&gt; s / Math.sqrt(dK)));
+  return matMul(scores.map(softmax), V);
+}
+
+// W_Q, W_K, W_V: array of h matrices, each [d_model][d_k]
+// W_O: [h*d_k][d_model]
+function multiHeadAttention(X, W_Q, W_K, W_V, W_O, h) {
+  const heads = [];
+  for (let i = 0; i &lt; h; i++) {
+    const Qi = matMul(X, W_Q[i]);
+    const Ki = matMul(X, W_K[i]);
+    const Vi = matMul(X, W_V[i]);
+    heads.push(attention(Qi, Ki, Vi));
+  }
+  // horizontal concatenate heads: each is [n][d_k]
+  const concat = heads[0].map((row, n) =&gt; heads.flatMap(h =&gt; h[n]));
+  return matMul(concat, W_O);
+}</code></pre></div>
+        <div class="ct-panel" data-tab="attn-mha-c"><pre><code>/* Simplified: fixed n, d_model, h, dk = d_model/h */
+#include &lt;math.h&gt;
+#include &lt;string.h&gt;
+#define N   4
+#define DM  8
+#define H   2
+#define DK  (DM/H)
+
+void attention_head(double Q[N][DK], double K[N][DK], double V[N][DK],
+                    double out[N][DK]) {
+    double scores[N][N];
+    double sq = sqrt((double)DK);
+    for (int i = 0; i &lt; N; i++) for (int j = 0; j &lt; N; j++) {
+        double s = 0; for (int l = 0; l &lt; DK; l++) s += Q[i][l]*K[j][l];
+        scores[i][j] = s / sq;
+    }
+    for (int i = 0; i &lt; N; i++) {
+        double mx = scores[i][0]; for (int j=1;j&lt;N;j++) if(scores[i][j]&gt;mx) mx=scores[i][j];
+        double s = 0; for (int j=0;j&lt;N;j++){scores[i][j]=exp(scores[i][j]-mx);s+=scores[i][j];}
+        for (int j=0;j&lt;N;j++) scores[i][j]/=s;
+    }
+    for (int i=0;i&lt;N;i++) for (int d=0;d&lt;DK;d++) {
+        double s=0; for(int j=0;j&lt;N;j++) s+=scores[i][j]*V[j][d]; out[i][d]=s;
+    }
+}
+
+/* W_Q[h][DM][DK], W_K[h][DM][DK], W_V[h][DM][DK], W_O[H*DK][DM] */
+void multi_head_attention(double X[N][DM],
+    double W_Q[H][DM][DK], double W_K[H][DM][DK], double W_V[H][DM][DK],
+    double W_O[H*DK][DM], double out[N][DM]) {
+    double heads[H][N][DK];
+    for (int h = 0; h &lt; H; h++) {
+        double Q[N][DK], K[N][DK], V[N][DK];
+        for (int i=0;i&lt;N;i++) for (int d=0;d&lt;DK;d++) {
+            double q=0,k=0,v=0;
+            for (int m=0;m&lt;DM;m++){q+=X[i][m]*W_Q[h][m][d];k+=X[i][m]*W_K[h][m][d];v+=X[i][m]*W_V[h][m][d];}
+            Q[i][d]=q; K[i][d]=k; V[i][d]=v;
+        }
+        attention_head(Q, K, V, heads[h]);
+    }
+    /* concat heads and project with W_O */
+    for (int i=0;i&lt;N;i++) for (int d=0;d&lt;DM;d++) {
+        double s=0;
+        for (int h=0;h&lt;H;h++) for (int dk=0;dk&lt;DK;dk++) s+=heads[h][i][dk]*W_O[h*DK+dk][d];
+        out[i][d]=s;
+    }
+}</code></pre></div>
+        <div class="ct-panel" data-tab="attn-mha-cpp"><pre><code>#include &lt;vector&gt;
+#include &lt;cmath&gt;
+#include &lt;algorithm&gt;
+using namespace std;
+using Mat = vector&lt;vector&lt;double&gt;&gt;;
+
+Mat matMul(const Mat&amp; A, const Mat&amp; B) {
+    int m=A.size(),k=B.size(),n=B[0].size(); Mat C(m,vector&lt;double&gt;(n,0));
+    for(int i=0;i&lt;m;i++) for(int l=0;l&lt;k;l++) for(int j=0;j&lt;n;j++) C[i][j]+=A[i][l]*B[l][j];
+    return C;
+}
+Mat transpose(const Mat&amp; M) {
+    Mat T(M[0].size(),vector&lt;double&gt;(M.size()));
+    for(int i=0;i&lt;(int)M.size();i++) for(int j=0;j&lt;(int)M[0].size();j++) T[j][i]=M[i][j];
+    return T;
+}
+Mat attention(const Mat&amp; Q, const Mat&amp; K, const Mat&amp; V) {
+    double sq=sqrt((double)K[0].size()); Mat S=matMul(Q,transpose(K));
+    for(auto&amp; r:S){ double mx=*max_element(r.begin(),r.end()),s=0;
+        for(auto&amp; x:r){x=exp(x/sq-mx);s+=x;} for(auto&amp; x:r) x/=s;}
+    return matMul(S,V);
+}
+// W_Q/K/V: vector of h matrices [d_model x d_k]; W_O: [h*d_k x d_model]
+Mat multiHeadAttention(const Mat&amp; X, const vector&lt;Mat&gt;&amp; WQ, const vector&lt;Mat&gt;&amp; WK,
+                        const vector&lt;Mat&gt;&amp; WV, const Mat&amp; WO) {
+    int h=WQ.size(); Mat concat;
+    for(int i=0;i&lt;h;i++){
+        Mat head=attention(matMul(X,WQ[i]),matMul(X,WK[i]),matMul(X,WV[i]));
+        if(concat.empty()) concat=head;
+        else for(int r=0;r&lt;(int)head.size();r++)
+            concat[r].insert(concat[r].end(),head[r].begin(),head[r].end());
+    }
+    return matMul(concat,WO);
+}</code></pre></div>
+        <div class="ct-panel" data-tab="attn-mha-java"><pre><code>import java.util.Arrays;
+
+public class MultiHeadAttention {
+    static double[][] matMul(double[][] A, double[][] B) {
+        int m=A.length,k=B.length,n=B[0].length; double[][] C=new double[m][n];
+        for(int i=0;i&lt;m;i++) for(int l=0;l&lt;k;l++) for(int j=0;j&lt;n;j++) C[i][j]+=A[i][l]*B[l][j];
+        return C;
+    }
+    static double[][] transpose(double[][] M) {
+        double[][] T=new double[M[0].length][M.length];
+        for(int i=0;i&lt;M.length;i++) for(int j=0;j&lt;M[0].length;j++) T[j][i]=M[i][j];
+        return T;
+    }
+    static double[][] attention(double[][] Q, double[][] K, double[][] V) {
+        double sq=Math.sqrt(K[0].length); double[][] S=matMul(Q,transpose(K));
+        for(double[] r:S){
+            double mx=Arrays.stream(r).max().getAsDouble(),s=0;
+            for(int j=0;j&lt;r.length;j++){r[j]=Math.exp(r[j]/sq-mx);s+=r[j];}
+            for(int j=0;j&lt;r.length;j++) r[j]/=s;
+        }
+        return matMul(S,V);
+    }
+    // WQ, WK, WV: h x d_model x d_k;  WO: h*d_k x d_model
+    public static double[][] forward(double[][] X, double[][][] WQ, double[][][] WK,
+                                     double[][][] WV, double[][] WO) {
+        int h=WQ.length, n=X.length, dk=WQ[0][0].length;
+        double[][] concat=new double[n][h*dk];
+        for(int i=0;i&lt;h;i++){
+            double[][] head=attention(matMul(X,WQ[i]),matMul(X,WK[i]),matMul(X,WV[i]));
+            for(int r=0;r&lt;n;r++) for(int d=0;d&lt;dk;d++) concat[r][i*dk+d]=head[r][d];
+        }
+        return matMul(concat,WO);
+    }
+}</code></pre></div>
+        <div class="ct-panel" data-tab="attn-mha-go"><pre><code>package attention
+
+import "math"
+
+func matMul(A, B [][]float64) [][]float64 {
+    m, k, n := len(A), len(B), len(B[0])
+    C := make([][]float64, m)
+    for i := range C { C[i] = make([]float64, n)
+        for l := 0; l &lt; k; l++ { for j := 0; j &lt; n; j++ { C[i][j] += A[i][l] * B[l][j] } } }
+    return C
+}
+func transpose(M [][]float64) [][]float64 {
+    T := make([][]float64, len(M[0]))
+    for j := range T { T[j] = make([]float64, len(M))
+        for i := range M { T[j][i] = M[i][j] } }
+    return T
+}
+func singleAttention(Q, K, V [][]float64) [][]float64 {
+    sq := math.Sqrt(float64(len(K[0]))); S := matMul(Q, transpose(K))
+    for _, row := range S {
+        mx := row[0]; for _, v := range row { if v &gt; mx { mx = v } }
+        s := 0.0; for j := range row { row[j] = math.Exp(row[j]/sq - mx); s += row[j] }
+        for j := range row { row[j] /= s }
+    }
+    return matMul(S, V)
+}
+
+// WQ, WK, WV: slice of h matrices [d_model x d_k]; WO: [h*d_k x d_model]
+func MultiHeadAttention(X [][]float64, WQ, WK, WV [][]float64slice, WO [][]float64) [][]float64 {
+    h := len(WQ); n := len(X); dk := len(WQ[0][0])
+    concat := make([][]float64, n)
+    for i := range concat { concat[i] = make([]float64, h*dk) }
+    for i := 0; i &lt; h; i++ {
+        head := singleAttention(matMul(X, WQ[i]), matMul(X, WK[i]), matMul(X, WV[i]))
+        for r := 0; r &lt; n; r++ { for d := 0; d &lt; dk; d++ { concat[r][i*dk+d] = head[r][d] } }
+    }
+    return matMul(concat, WO)
+}</code></pre></div>
+      </div>
+    </details>
+
     <!-- ========================================================== -->
     <h2 id="positional">8. Positional encoding</h2>
 
@@ -296,6 +764,118 @@ PE(\text{pos}, 2i+1) &= \cos(\text{pos} / 10000^{2i/d_\text{model}})
 
     <h3>Rotary positional embedding (RoPE)</h3>
     <p>The modern favorite, used in LLaMA, Qwen, and most recent LLMs. Instead of adding a position vector to the embedding, RoPE <em>rotates</em> pairs of components of the query and key by an angle proportional to their position. Dot products $q_i \cdot k_j$ then depend on the relative position $i - j$ rather than absolute positions, which turns out to generalize much better to longer sequences.</p>
+
+    <details class="algo-code">
+      <summary>Source — Sinusoidal Positional Encoding</summary>
+      <div class="code-tabs">
+        <div class="ct-header">
+          <button class="ct-tab active" data-tab="attn-pe-pseudo">Pseudocode</button>
+          <button class="ct-tab" data-tab="attn-pe-py">Python</button>
+          <button class="ct-tab" data-tab="attn-pe-js">JavaScript</button>
+          <button class="ct-tab" data-tab="attn-pe-c">C</button>
+          <button class="ct-tab" data-tab="attn-pe-cpp">C++</button>
+          <button class="ct-tab" data-tab="attn-pe-java">Java</button>
+          <button class="ct-tab" data-tab="attn-pe-go">Go</button>
+        </div>
+        <div class="ct-panel active" data-tab="attn-pe-pseudo"><pre><code>function sinusoidal_pe(max_len, d_model):
+    PE = zeros(max_len, d_model)
+    for pos in 0..max_len-1:
+        for i in 0..d_model/2-1:
+            angle = pos / 10000^(2*i / d_model)
+            PE[pos][2*i]   = sin(angle)
+            PE[pos][2*i+1] = cos(angle)
+    return PE   # shape [max_len, d_model]
+
+# Usage: add PE to token embeddings before the first attention layer
+# X = token_embeddings + PE[:n]</code></pre></div>
+        <div class="ct-panel" data-tab="attn-pe-py"><pre><code>import numpy as np
+
+def sinusoidal_positional_encoding(max_len, d_model):
+    """
+    Returns PE of shape (max_len, d_model).
+    PE(pos, 2i)   = sin(pos / 10000^(2i/d_model))
+    PE(pos, 2i+1) = cos(pos / 10000^(2i/d_model))
+    """
+    PE = np.zeros((max_len, d_model))
+    positions = np.arange(max_len)[:, np.newaxis]        # (max_len, 1)
+    dims = np.arange(0, d_model, 2)                       # [0, 2, 4, ...]
+    angles = positions / np.power(10000, dims / d_model)  # (max_len, d_model/2)
+    PE[:, 0::2] = np.sin(angles)
+    PE[:, 1::2] = np.cos(angles)
+    return PE</code></pre></div>
+        <div class="ct-panel" data-tab="attn-pe-js"><pre><code>function sinusoidalPE(maxLen, dModel) {
+  const PE = Array.from({length: maxLen}, () =&gt; new Array(dModel).fill(0));
+  for (let pos = 0; pos &lt; maxLen; pos++) {
+    for (let i = 0; i &lt; dModel / 2; i++) {
+      const angle = pos / Math.pow(10000, (2 * i) / dModel);
+      PE[pos][2 * i]     = Math.sin(angle);
+      PE[pos][2 * i + 1] = Math.cos(angle);
+    }
+  }
+  return PE;
+}</code></pre></div>
+        <div class="ct-panel" data-tab="attn-pe-c"><pre><code>#include &lt;math.h&gt;
+#include &lt;stdlib.h&gt;
+
+/* Returns heap-allocated PE[max_len][d_model] (caller frees each row) */
+double** sinusoidal_pe(int max_len, int d_model) {
+    double** PE = malloc(max_len * sizeof(double*));
+    for (int pos = 0; pos &lt; max_len; pos++) {
+        PE[pos] = calloc(d_model, sizeof(double));
+        for (int i = 0; i &lt; d_model / 2; i++) {
+            double angle = pos / pow(10000.0, 2.0 * i / d_model);
+            PE[pos][2 * i]     = sin(angle);
+            PE[pos][2 * i + 1] = cos(angle);
+        }
+    }
+    return PE;
+}</code></pre></div>
+        <div class="ct-panel" data-tab="attn-pe-cpp"><pre><code>#include &lt;vector&gt;
+#include &lt;cmath&gt;
+using namespace std;
+
+vector&lt;vector&lt;double&gt;&gt; sinusoidalPE(int maxLen, int dModel) {
+    vector&lt;vector&lt;double&gt;&gt; PE(maxLen, vector&lt;double&gt;(dModel, 0.0));
+    for (int pos = 0; pos &lt; maxLen; pos++) {
+        for (int i = 0; i &lt; dModel / 2; i++) {
+            double angle = pos / pow(10000.0, 2.0 * i / dModel);
+            PE[pos][2 * i]     = sin(angle);
+            PE[pos][2 * i + 1] = cos(angle);
+        }
+    }
+    return PE;
+}</code></pre></div>
+        <div class="ct-panel" data-tab="attn-pe-java"><pre><code>public class SinusoidalPE {
+    public static double[][] compute(int maxLen, int dModel) {
+        double[][] PE = new double[maxLen][dModel];
+        for (int pos = 0; pos &lt; maxLen; pos++) {
+            for (int i = 0; i &lt; dModel / 2; i++) {
+                double angle = pos / Math.pow(10000.0, 2.0 * i / dModel);
+                PE[pos][2 * i]     = Math.sin(angle);
+                PE[pos][2 * i + 1] = Math.cos(angle);
+            }
+        }
+        return PE;
+    }
+}</code></pre></div>
+        <div class="ct-panel" data-tab="attn-pe-go"><pre><code>package attention
+
+import "math"
+
+func SinusoidalPE(maxLen, dModel int) [][]float64 {
+    PE := make([][]float64, maxLen)
+    for pos := range PE {
+        PE[pos] = make([]float64, dModel)
+        for i := 0; i &lt; dModel/2; i++ {
+            angle := float64(pos) / math.Pow(10000, float64(2*i)/float64(dModel))
+            PE[pos][2*i]   = math.Sin(angle)
+            PE[pos][2*i+1] = math.Cos(angle)
+        }
+    }
+    return PE
+}</code></pre></div>
+      </div>
+    </details>
 
     <!-- ========================================================== -->
     <h2 id="transformer">9. A full transformer block</h2>
@@ -328,6 +908,274 @@ return x
 
     <p>Stack 12 of these blocks: you have BERT-base or GPT-1. Stack 96 blocks with $d_\text{model} = 12{,}288$ and 96 heads: you have GPT-3 (175B parameters). Stack a few hundred with mixture-of-experts and you have GPT-4, Claude, Gemini, Grok. The architecture is the same; what changed is scale and training data.</p>
 
+    <details class="algo-code">
+      <summary>Source — Transformer Encoder Block</summary>
+      <div class="code-tabs">
+        <div class="ct-header">
+          <button class="ct-tab active" data-tab="attn-tfm-pseudo">Pseudocode</button>
+          <button class="ct-tab" data-tab="attn-tfm-py">Python</button>
+          <button class="ct-tab" data-tab="attn-tfm-js">JavaScript</button>
+          <button class="ct-tab" data-tab="attn-tfm-c">C</button>
+          <button class="ct-tab" data-tab="attn-tfm-cpp">C++</button>
+          <button class="ct-tab" data-tab="attn-tfm-java">Java</button>
+          <button class="ct-tab" data-tab="attn-tfm-go">Go</button>
+        </div>
+        <div class="ct-panel active" data-tab="attn-tfm-pseudo"><pre><code>function transformer_encoder_block(x, params):
+    # Pre-norm variant (used by most modern models)
+    # x: [n, d_model]
+
+    # --- Self-attention sub-layer ---
+    a = layer_norm(x)
+    a = multi_head_attention(a, a, a, params.W_Q, params.W_K, params.W_V, params.W_O)
+    x = x + a                   # residual connection
+
+    # --- Feed-forward sub-layer ---
+    b = layer_norm(x)
+    b = linear(b, params.W1, params.b1)   # [n, d_ff]  d_ff = 4 * d_model
+    b = gelu(b)
+    b = linear(b, params.W2, params.b2)   # [n, d_model]
+    x = x + b                   # residual connection
+
+    return x</code></pre></div>
+        <div class="ct-panel" data-tab="attn-tfm-py"><pre><code>import numpy as np
+
+def layer_norm(x, eps=1e-5):
+    mean = x.mean(axis=-1, keepdims=True)
+    std  = x.std(axis=-1, keepdims=True)
+    return (x - mean) / (std + eps)
+
+def gelu(x):
+    import math
+    return 0.5 * x * (1 + np.tanh(math.sqrt(2/math.pi) * (x + 0.044715 * x**3)))
+
+def softmax(x):
+    x = x - x.max(axis=-1, keepdims=True)
+    e = np.exp(x); return e / e.sum(axis=-1, keepdims=True)
+
+def mha(X, WQ, WK, WV, WO, h):
+    heads = []
+    for i in range(h):
+        d_k = WQ[i].shape[1]
+        S = softmax((X @ WQ[i]) @ (X @ WK[i]).T / np.sqrt(d_k))
+        heads.append(S @ (X @ WV[i]))
+    return np.concatenate(heads, axis=-1) @ WO
+
+def transformer_encoder_block(x, WQ, WK, WV, WO, W1, b1, W2, b2, h):
+    """
+    x:  (n, d_model)
+    WQ/WK/WV: (h, d_model, d_k)   WO: (h*d_k, d_model)
+    W1: (d_model, d_ff)  b1: (d_ff,)
+    W2: (d_ff, d_model)  b2: (d_model,)
+    """
+    # Attention sub-layer
+    a = layer_norm(x)
+    a = mha(a, WQ, WK, WV, WO, h)
+    x = x + a
+
+    # Feed-forward sub-layer
+    b = layer_norm(x)
+    b = gelu(b @ W1 + b1)
+    b = b @ W2 + b2
+    x = x + b
+    return x</code></pre></div>
+        <div class="ct-panel" data-tab="attn-tfm-js"><pre><code>function layerNorm(X, eps=1e-5) {
+  return X.map(row =&gt; {
+    const mean = row.reduce((a,b)=&gt;a+b,0)/row.length;
+    const std  = Math.sqrt(row.reduce((a,v)=&gt;a+(v-mean)**2,0)/row.length + eps);
+    return row.map(v =&gt; (v-mean)/std);
+  });
+}
+function gelu(x) {
+  return x.map(row =&gt; row.map(v =&gt;
+    0.5*v*(1+Math.tanh(Math.sqrt(2/Math.PI)*(v+0.044715*v**3)))));
+}
+function softmax(row){const m=Math.max(...row),e=row.map(x=&gt;Math.exp(x-m)),s=e.reduce((a,b)=&gt;a+b,0);return e.map(x=&gt;x/s);}
+function matMul(A,B){const m=A.length,k=B.length,n=B[0].length;return Array.from({length:m},(_,i)=>Array.from({length:n},(_,j)=>A[i].reduce((s,_,l)=>s+A[i][l]*B[l][j],0)));}
+function transpose(M){return M[0].map((_,j)=>M.map(r=>r[j]));}
+function addBias(M,b){return M.map(row=&gt;row.map((v,j)=&gt;v+b[j]));}
+
+function transformerEncoderBlock(x, WQ, WK, WV, WO, W1, b1, W2, b2, h) {
+  // Attention
+  let a = layerNorm(x);
+  const heads = WQ.map((_,i)=&gt;{
+    const dk=WQ[i][0].length;
+    const S=matMul(matMul(a,WQ[i]),transpose(matMul(a,WK[i]))).map(r=&gt;softmax(r.map(v=&gt;v/Math.sqrt(dk))));
+    return matMul(S,matMul(a,WV[i]));
+  });
+  const concat = heads[0].map((row,n)=&gt;heads.flatMap(h=&gt;h[n]));
+  a = matMul(concat, WO);
+  x = x.map((row,i)=&gt;row.map((v,j)=&gt;v+a[i][j]));
+
+  // FFN
+  let b = layerNorm(x);
+  b = gelu(addBias(matMul(b,W1),b1));
+  b = addBias(matMul(b,W2),b2);
+  return x.map((row,i)=&gt;row.map((v,j)=&gt;v+b[i][j]));
+}</code></pre></div>
+        <div class="ct-panel" data-tab="attn-tfm-c"><pre><code>/* Sketch: calls previously defined helpers (layer_norm, attention, matmul, gelu).
+   Assumes fixed dimensions N, DM, H, DK=DM/H, DF=4*DM. */
+#include &lt;math.h&gt;
+#include &lt;string.h&gt;
+
+/* gelu approximation */
+static double gelu(double x) {
+    return 0.5*x*(1.0+tanh(0.7978845608*(x+0.044715*x*x*x)));
+}
+
+void transformer_encoder_block(
+    int n, int dm, int h, int dk, int df,
+    double x[n][dm],
+    /* MHA weights */
+    double WQ[/*h*/][dm][dk], double WK[/*h*/][dm][dk],
+    double WV[/*h*/][dm][dk], double WO[/*h*dk*/][dm],
+    /* FFN weights */
+    double W1[dm][df], double b1[df],
+    double W2[df][dm], double b2[dm],
+    double out[n][dm])
+{
+    /* layer_norm + MHA + residual -- schematic */
+    /* (full implementation omitted for brevity; uses helpers from prior sections) */
+    /* b = LayerNorm(x);  a = MHA(b);  x += a */
+    /* b = LayerNorm(x);  b = W2*(gelu(W1*b + b1)) + b2;  x += b */
+    /* copy to out */
+    memcpy(out, x, n*dm*sizeof(double));
+}</code></pre></div>
+        <div class="ct-panel" data-tab="attn-tfm-cpp"><pre><code>#include &lt;vector&gt;
+#include &lt;cmath&gt;
+#include &lt;numeric&gt;
+using namespace std;
+using Mat = vector&lt;vector&lt;double&gt;&gt;;
+
+Mat layerNorm(const Mat&amp; X, double eps=1e-5) {
+    Mat Y = X;
+    for (auto&amp; row : Y) {
+        double mean = accumulate(row.begin(),row.end(),0.0)/row.size();
+        double var  = 0; for (double v:row) var+=(v-mean)*(v-mean); var/=row.size();
+        for (auto&amp; v:row) v=(v-mean)/sqrt(var+eps);
+    }
+    return Y;
+}
+Mat geluMat(const Mat&amp; X) {
+    Mat Y=X; for(auto&amp; row:Y) for(auto&amp; v:row)
+        v=0.5*v*(1+tanh(0.7978845608*(v+0.044715*v*v*v)));
+    return Y;
+}
+Mat addMat(const Mat&amp; A, const Mat&amp; B){
+    Mat C=A; for(int i=0;i&lt;(int)A.size();i++) for(int j=0;j&lt;(int)A[0].size();j++) C[i][j]+=B[i][j];
+    return C;
+}
+// Calls multiHeadAttention from prior section
+extern Mat multiHeadAttention(const Mat&amp;,const vector&lt;Mat&gt;&amp;,const vector&lt;Mat&gt;&amp;,const vector&lt;Mat&gt;&amp;,const Mat&amp;);
+extern Mat matMul(const Mat&amp;,const Mat&amp;);
+
+Mat transformerEncoderBlock(const Mat&amp; x, const vector&lt;Mat&gt;&amp; WQ, const vector&lt;Mat&gt;&amp; WK,
+                             const vector&lt;Mat&gt;&amp; WV, const Mat&amp; WO,
+                             const Mat&amp; W1, const vector&lt;double&gt;&amp; b1,
+                             const Mat&amp; W2, const vector&lt;double&gt;&amp; b2) {
+    // Attention sub-layer
+    Mat a = layerNorm(x);
+    a = multiHeadAttention(a, WQ, WK, WV, WO);
+    Mat x2 = addMat(x, a);
+
+    // FFN sub-layer
+    Mat b = layerNorm(x2);
+    b = matMul(b, W1);
+    for(int i=0;i&lt;(int)b.size();i++) for(int j=0;j&lt;(int)b[0].size();j++) b[i][j]+=b1[j];
+    b = geluMat(b);
+    b = matMul(b, W2);
+    for(int i=0;i&lt;(int)b.size();i++) for(int j=0;j&lt;(int)b[0].size();j++) b[i][j]+=b2[j];
+    return addMat(x2, b);
+}</code></pre></div>
+        <div class="ct-panel" data-tab="attn-tfm-java"><pre><code>import java.util.Arrays;
+
+public class TransformerEncoderBlock {
+    static double gelu(double x) {
+        return 0.5*x*(1+Math.tanh(0.7978845608*(x+0.044715*x*x*x)));
+    }
+    static double[][] layerNorm(double[][] X, double eps) {
+        double[][] Y = new double[X.length][X[0].length];
+        for (int i=0;i&lt;X.length;i++) {
+            double mean=Arrays.stream(X[i]).average().orElse(0);
+            double var=Arrays.stream(X[i]).map(v-&gt;(v-mean)*(v-mean)).average().orElse(0);
+            double std=Math.sqrt(var+eps);
+            for(int j=0;j&lt;X[i].length;j++) Y[i][j]=(X[i][j]-mean)/std;
+        }
+        return Y;
+    }
+    static double[][] matMul(double[][] A, double[][] B) {
+        int m=A.length,k=B.length,n=B[0].length; double[][] C=new double[m][n];
+        for(int i=0;i&lt;m;i++) for(int l=0;l&lt;k;l++) for(int j=0;j&lt;n;j++) C[i][j]+=A[i][l]*B[l][j];
+        return C;
+    }
+    // forward: schematic using helpers defined in prior classes
+    // (MultiHeadAttention.forward, layerNorm, matMul)
+    public static double[][] forward(double[][] x,
+            double[][][] WQ, double[][][] WK, double[][][] WV, double[][] WO,
+            double[][] W1, double[] b1, double[][] W2, double[] b2) {
+        // Attention sub-layer
+        double[][] a = layerNorm(x, 1e-5);
+        a = MultiHeadAttention.forward(a, WQ, WK, WV, WO);
+        for(int i=0;i&lt;x.length;i++) for(int j=0;j&lt;x[0].length;j++) x[i][j]+=a[i][j];
+
+        // FFN sub-layer
+        double[][] b = layerNorm(x, 1e-5);
+        b = matMul(b, W1);
+        for(int i=0;i&lt;b.length;i++) for(int j=0;j&lt;b[0].length;j++) b[i][j]=gelu(b[i][j]+b1[j]);
+        b = matMul(b, W2);
+        for(int i=0;i&lt;b.length;i++) for(int j=0;j&lt;b[0].length;j++) x[i][j]+=b[i][j]+b2[j];
+        return x;
+    }
+}</code></pre></div>
+        <div class="ct-panel" data-tab="attn-tfm-go"><pre><code>package attention
+
+import (
+    "math"
+)
+
+func layerNorm(X [][]float64, eps float64) [][]float64 {
+    Y := make([][]float64, len(X))
+    for i, row := range X {
+        mean := 0.0; for _, v := range row { mean += v }; mean /= float64(len(row))
+        vari := 0.0; for _, v := range row { vari += (v-mean)*(v-mean) }; vari /= float64(len(row))
+        std := math.Sqrt(vari + eps)
+        Y[i] = make([]float64, len(row))
+        for j, v := range row { Y[i][j] = (v - mean) / std }
+    }
+    return Y
+}
+
+func geluVal(x float64) float64 {
+    return 0.5 * x * (1 + math.Tanh(0.7978845608*(x+0.044715*x*x*x)))
+}
+
+func addMat(A, B [][]float64) [][]float64 {
+    C := make([][]float64, len(A))
+    for i := range A { C[i] = make([]float64, len(A[i]))
+        for j := range A[i] { C[i][j] = A[i][j] + B[i][j] } }
+    return C
+}
+
+// TransformerEncoderBlock: pre-norm encoder block.
+// Calls MultiHeadAttention and matMul defined in prior sections.
+func TransformerEncoderBlock(x [][]float64,
+    WQ, WK, WV [][]float64, WO [][]float64,
+    W1 [][]float64, b1 []float64,
+    W2 [][]float64, b2 []float64) [][]float64 {
+
+    // Attention sub-layer
+    a := MultiHeadAttention(layerNorm(x, 1e-5), WQ, WK, WV, WO)
+    x = addMat(x, a)
+
+    // FFN sub-layer
+    b := matMul(layerNorm(x, 1e-5), W1)
+    for i := range b { for j := range b[i] { b[i][j] = geluVal(b[i][j] + b1[j]) } }
+    b = matMul(b, W2)
+    for i := range b { for j := range b[i] { b[i][j] += b2[j] } }
+    return addMat(x, b)
+}</code></pre></div>
+      </div>
+    </details>
+
     <!-- ========================================================== -->
     <h2 id="cost">10. Cost, causal masks, and variants</h2>
 
@@ -338,6 +1186,195 @@ return x
     <p>For language modeling, you only want a token to attend to tokens at earlier positions — the model shouldn't see the future. We enforce this by adding $-\infty$ to the upper-triangular entries of $QK^\top / \sqrt{d_k}$ before the softmax. Those entries become exactly zero in the softmax output, so information from future positions cannot flow back. Encoder-only models like BERT skip the mask; decoder-only models like GPT use it.</p>
 
     <div class="math-display">$$\text{mask}_{ij} = \begin{cases} 0 & j \le i \\ -\infty & j > i \end{cases}$$</div>
+
+    <details class="algo-code">
+      <summary>Source — Causal Attention Mask</summary>
+      <div class="code-tabs">
+        <div class="ct-header">
+          <button class="ct-tab active" data-tab="attn-mask-pseudo">Pseudocode</button>
+          <button class="ct-tab" data-tab="attn-mask-py">Python</button>
+          <button class="ct-tab" data-tab="attn-mask-js">JavaScript</button>
+          <button class="ct-tab" data-tab="attn-mask-c">C</button>
+          <button class="ct-tab" data-tab="attn-mask-cpp">C++</button>
+          <button class="ct-tab" data-tab="attn-mask-java">Java</button>
+          <button class="ct-tab" data-tab="attn-mask-go">Go</button>
+        </div>
+        <div class="ct-panel active" data-tab="attn-mask-pseudo"><pre><code>function causal_mask(n):
+    # Returns lower-triangular boolean matrix [n, n]
+    # mask[i][j] = True if j <= i (token i may attend to token j)
+    mask = zeros(n, n, dtype=bool)
+    for i in 0..n-1:
+        for j in 0..i:
+            mask[i][j] = True
+    return mask
+
+function apply_causal_mask(scores, mask):
+    # scores: [n, n]  mask: [n, n] bool
+    # Set upper-triangular entries to -inf so they vanish in softmax
+    for i in 0..n-1:
+        for j in i+1..n-1:
+            scores[i][j] = -infinity
+    return scores</code></pre></div>
+        <div class="ct-panel" data-tab="attn-mask-py"><pre><code>import numpy as np
+
+def causal_mask(n):
+    """Lower-triangular boolean mask: mask[i, j] = (j &lt;= i)."""
+    return np.tril(np.ones((n, n), dtype=bool))
+
+def masked_scaled_dot_product_attention(Q, K, V):
+    """Causal (decoder) attention — token i cannot see token j &gt; i."""
+    n, d_k = Q.shape[0], Q.shape[1]
+    scores = Q @ K.T / np.sqrt(d_k)               # (n, n)
+    mask = causal_mask(n)
+    scores = np.where(mask, scores, -1e9)          # mask future positions
+    scores = scores - scores.max(axis=-1, keepdims=True)
+    weights = np.exp(scores)
+    weights = weights / weights.sum(axis=-1, keepdims=True)
+    return weights @ V                              # (n, d_v)</code></pre></div>
+        <div class="ct-panel" data-tab="attn-mask-js"><pre><code>function causalMask(n) {
+  // mask[i][j] = true iff j &lt;= i
+  return Array.from({length: n}, (_, i) =&gt;
+    Array.from({length: n}, (_, j) =&gt; j &lt;= i));
+}
+
+function maskedAttention(Q, K, V) {
+  const n = Q.length, dK = K[0].length;
+  const KT = K[0].map((_, j) =&gt; K.map(r =&gt; r[j]));
+  const mask = causalMask(n);
+  const scores = Q.map((qi, i) =&gt;
+    KT[0].map((_, j) =&gt; {
+      const raw = qi.reduce((s, v, l) =&gt; s + v * K[j][l], 0) / Math.sqrt(dK);
+      return mask[i][j] ? raw : -1e9;
+    })
+  );
+  const weights = scores.map(row =&gt; {
+    const max = Math.max(...row);
+    const e = row.map(v =&gt; Math.exp(v - max));
+    const s = e.reduce((a, b) =&gt; a + b, 0);
+    return e.map(v =&gt; v / s);
+  });
+  return weights.map(wi =&gt;
+    V[0].map((_, d) =&gt; wi.reduce((s, w, j) =&gt; s + w * V[j][d], 0)));
+}</code></pre></div>
+        <div class="ct-panel" data-tab="attn-mask-c"><pre><code>#include &lt;math.h&gt;
+#include &lt;stdbool.h&gt;
+
+/* Build causal mask: mask[i*n + j] = (j &lt;= i) */
+void causal_mask(int n, bool mask[n][n]) {
+    for (int i = 0; i &lt; n; i++)
+        for (int j = 0; j &lt; n; j++)
+            mask[i][j] = (j &lt;= i);
+}
+
+/* Apply mask to scores in-place: set upper triangle to -1e9 */
+void apply_causal_mask(int n, double scores[n][n]) {
+    for (int i = 0; i &lt; n; i++)
+        for (int j = i + 1; j &lt; n; j++)
+            scores[i][j] = -1e9;
+}
+
+/* Masked attention: Q,K[n][dk], V[n][dv], out[n][dv] */
+void causal_attention(int n, int dk, int dv,
+    double Q[n][dk], double K[n][dk], double V[n][dv], double out[n][dv])
+{
+    double scores[n][n];
+    double sq = sqrt((double)dk);
+    for (int i=0;i&lt;n;i++) for(int j=0;j&lt;n;j++){
+        double s=0; for(int l=0;l&lt;dk;l++) s+=Q[i][l]*K[j][l];
+        scores[i][j] = (j&lt;=i) ? s/sq : -1e9;
+    }
+    for(int i=0;i&lt;n;i++){
+        double mx=scores[i][0]; for(int j=1;j&lt;n;j++) if(scores[i][j]&gt;mx) mx=scores[i][j];
+        double sm=0; for(int j=0;j&lt;n;j++){scores[i][j]=exp(scores[i][j]-mx);sm+=scores[i][j];}
+        for(int j=0;j&lt;n;j++) scores[i][j]/=sm;
+    }
+    for(int i=0;i&lt;n;i++) for(int d=0;d&lt;dv;d++){
+        double s=0; for(int j=0;j&lt;n;j++) s+=scores[i][j]*V[j][d]; out[i][d]=s;
+    }
+}</code></pre></div>
+        <div class="ct-panel" data-tab="attn-mask-cpp"><pre><code>#include &lt;vector&gt;
+#include &lt;cmath&gt;
+#include &lt;algorithm&gt;
+using namespace std;
+using Mat = vector&lt;vector&lt;double&gt;&gt;;
+
+Mat causalAttention(const Mat&amp; Q, const Mat&amp; K, const Mat&amp; V) {
+    int n = Q.size(), dk = K[0].size(), dv = V[0].size();
+    double sq = sqrt((double)dk);
+    Mat scores(n, vector&lt;double&gt;(n));
+    for (int i=0;i&lt;n;i++) for(int j=0;j&lt;n;j++){
+        double s=0; for(int l=0;l&lt;dk;l++) s+=Q[i][l]*K[j][l];
+        scores[i][j] = (j&lt;=i) ? s/sq : -1e9;
+    }
+    for (auto&amp; row : scores) {
+        double mx = *max_element(row.begin(), row.end());
+        double sm=0; for(auto&amp; x:row){x=exp(x-mx);sm+=x;}
+        for(auto&amp; x:row) x/=sm;
+    }
+    Mat out(n, vector&lt;double&gt;(dv, 0));
+    for(int i=0;i&lt;n;i++) for(int d=0;d&lt;dv;d++)
+        for(int j=0;j&lt;n;j++) out[i][d]+=scores[i][j]*V[j][d];
+    return out;
+}</code></pre></div>
+        <div class="ct-panel" data-tab="attn-mask-java"><pre><code>public class CausalAttention {
+    public static boolean[][] causalMask(int n) {
+        boolean[][] m = new boolean[n][n];
+        for (int i=0;i&lt;n;i++) for(int j=0;j&lt;=i;j++) m[i][j]=true;
+        return m;
+    }
+
+    public static double[][] maskedAttention(double[][] Q, double[][] K, double[][] V) {
+        int n=Q.length, dk=K[0].length, dv=V[0].length;
+        double sq=Math.sqrt(dk);
+        double[][] scores=new double[n][n];
+        boolean[][] mask=causalMask(n);
+        for(int i=0;i&lt;n;i++) for(int j=0;j&lt;n;j++){
+            if(!mask[i][j]){scores[i][j]=-1e9;continue;}
+            double s=0; for(int l=0;l&lt;dk;l++) s+=Q[i][l]*K[j][l];
+            scores[i][j]=s/sq;
+        }
+        for(double[] r:scores){
+            double mx=Double.NEGATIVE_INFINITY; for(double v:r) if(v&gt;mx) mx=v;
+            double sm=0; for(int j=0;j&lt;r.length;j++){r[j]=Math.exp(r[j]-mx);sm+=r[j];}
+            for(int j=0;j&lt;r.length;j++) r[j]/=sm;
+        }
+        double[][] out=new double[n][dv];
+        for(int i=0;i&lt;n;i++) for(int d=0;d&lt;dv;d++)
+            for(int j=0;j&lt;n;j++) out[i][d]+=scores[i][j]*V[j][d];
+        return out;
+    }
+}</code></pre></div>
+        <div class="ct-panel" data-tab="attn-mask-go"><pre><code>package attention
+
+import "math"
+
+func CausalAttention(Q, K, V [][]float64) [][]float64 {
+    n, dk, dv := len(Q), len(K[0]), len(V[0])
+    sq := math.Sqrt(float64(dk))
+    scores := make([][]float64, n)
+    for i := range scores {
+        scores[i] = make([]float64, n)
+        for j := 0; j &lt; n; j++ {
+            if j &gt; i { scores[i][j] = -1e9; continue }
+            s := 0.0
+            for l := 0; l &lt; dk; l++ { s += Q[i][l] * K[j][l] }
+            scores[i][j] = s / sq
+        }
+    }
+    for _, row := range scores {
+        mx := row[0]; for _, v := range row { if v &gt; mx { mx = v } }
+        sm := 0.0; for j := range row { row[j] = math.Exp(row[j] - mx); sm += row[j] }
+        for j := range row { row[j] /= sm }
+    }
+    out := make([][]float64, n)
+    for i := range out {
+        out[i] = make([]float64, dv)
+        for d := 0; d &lt; dv; d++ { for j := 0; j &lt; n; j++ { out[i][d] += scores[i][j] * V[j][d] } }
+    }
+    return out
+}</code></pre></div>
+      </div>
+    </details>
 
     <h3>Cross-attention</h3>
     <p>In encoder-decoder models (original transformer, T5, machine translation) the decoder has an extra attention layer where the queries come from the decoder and the keys/values come from the encoder. This lets the decoder attend to the input sequence while generating the output. Decoder-only LLMs don't use cross-attention — they concatenate prompt and completion into one sequence instead.</p>
@@ -492,6 +1529,21 @@ function runSA() {
 
 window.addEventListener('DOMContentLoaded', () => {
   resetSA();
+});
+
+// =========================================================
+// Code tabs
+// =========================================================
+document.querySelectorAll('.code-tabs').forEach(root => {
+  const tabs = root.querySelectorAll('.ct-tab');
+  const panels = root.querySelectorAll('.ct-panel');
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const target = tab.getAttribute('data-tab');
+      tabs.forEach(t => t.classList.toggle('active', t === tab));
+      panels.forEach(p => p.classList.toggle('active', p.getAttribute('data-tab') === target));
+    });
+  });
 });
 </script>
 <script defer src="../search-index.js"></script>

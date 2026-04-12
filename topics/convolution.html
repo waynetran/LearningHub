@@ -90,6 +90,155 @@
 
     <p>Notice the output has length $N - K + 1 = 5 - 3 + 1 = 3$. The filter fits into the signal in 3 distinct positions. We'll recover the general formula in the padding section below.</p>
 
+    <details class="algo-code">
+      <summary>Source — 1D Convolution</summary>
+      <div class="code-tabs">
+        <div class="ct-header">
+          <button class="ct-tab active" data-tab="conv-1d-pseudo">Pseudocode</button>
+          <button class="ct-tab" data-tab="conv-1d-py">Python</button>
+          <button class="ct-tab" data-tab="conv-1d-js">JavaScript</button>
+          <button class="ct-tab" data-tab="conv-1d-c">C</button>
+          <button class="ct-tab" data-tab="conv-1d-cpp">C++</button>
+          <button class="ct-tab" data-tab="conv-1d-java">Java</button>
+          <button class="ct-tab" data-tab="conv-1d-go">Go</button>
+        </div>
+        <div class="ct-panel active" data-tab="conv-1d-pseudo"><pre><code>function conv1d(x, k, padding="valid"):
+    # x: signal of length N
+    # k: kernel of length K
+    # cross-correlation: y[n] = sum_{m=0}^{K-1} k[m] * x[n+m]
+    if padding == "same":
+        pad = (K - 1) / 2
+        x = pad_zeros(x, left=pad, right=pad)
+    N = length(x)
+    out_len = N - K + 1
+    y = zeros(out_len)
+    for n in 0..out_len-1:
+        for m in 0..K-1:
+            y[n] += k[m] * x[n + m]
+    return y</code></pre></div>
+        <div class="ct-panel" data-tab="conv-1d-py"><pre><code>import numpy as np
+
+def conv1d(x, k, padding="valid"):
+    """
+    Naive 1D cross-correlation (what deep learning calls 'convolution').
+    x: 1D array of length N
+    k: 1D kernel of length K
+    padding: 'valid' (no pad) or 'same' (output length == input length)
+    """
+    K = len(k)
+    if padding == "same":
+        pad = (K - 1) // 2
+        x = np.pad(x, pad)
+    N = len(x)
+    out_len = N - K + 1
+    y = np.zeros(out_len)
+    for n in range(out_len):
+        y[n] = np.dot(k, x[n:n + K])
+    return y
+
+# Example
+x = np.array([1, 2, 3, 4, 5], dtype=float)
+k = np.array([1, 0, -1], dtype=float)
+print(conv1d(x, k))              # valid: [-2. -2. -2.]
+print(conv1d(x, k, "same"))      # same:  [-2. -2. -2.  0.  0.]</code></pre></div>
+        <div class="ct-panel" data-tab="conv-1d-js"><pre><code>function conv1d(x, k, padding = 'valid') {
+  const K = k.length;
+  if (padding === 'same') {
+    const pad = Math.floor((K - 1) / 2);
+    x = [...new Array(pad).fill(0), ...x, ...new Array(pad).fill(0)];
+  }
+  const outLen = x.length - K + 1;
+  const y = new Array(outLen).fill(0);
+  for (let n = 0; n &lt; outLen; n++) {
+    for (let m = 0; m &lt; K; m++) {
+      y[n] += k[m] * x[n + m];
+    }
+  }
+  return y;
+}
+
+// Example
+const x = [1, 2, 3, 4, 5];
+const k = [1, 0, -1];
+console.log(conv1d(x, k));          // [-2, -2, -2]
+console.log(conv1d(x, k, 'same'));  // [-2, -2, -2, 0, 0]</code></pre></div>
+        <div class="ct-panel" data-tab="conv-1d-c"><pre><code>#include &lt;string.h&gt;
+
+/* valid padding only; caller provides output array of length N - K + 1 */
+void conv1d(const double *x, int N, const double *k, int K, double *y) {
+    int out_len = N - K + 1;
+    memset(y, 0, out_len * sizeof(double));
+    for (int n = 0; n &lt; out_len; n++)
+        for (int m = 0; m &lt; K; m++)
+            y[n] += k[m] * x[n + m];
+}
+
+/* same padding: zero-pad input, output length == N */
+void conv1d_same(const double *x, int N, const double *k, int K, double *y) {
+    int pad = (K - 1) / 2;
+    int padded_len = N + 2 * pad;
+    double padded[padded_len];
+    memset(padded, 0, sizeof(padded));
+    for (int i = 0; i &lt; N; i++) padded[i + pad] = x[i];
+    conv1d(padded, padded_len, k, K, y);
+}</code></pre></div>
+        <div class="ct-panel" data-tab="conv-1d-cpp"><pre><code>#include &lt;vector&gt;
+using namespace std;
+
+vector&lt;double&gt; conv1d(vector&lt;double&gt; x, const vector&lt;double&gt;&amp; k,
+                       const string&amp; padding = "valid") {
+    int K = k.size();
+    if (padding == "same") {
+        int pad = (K - 1) / 2;
+        x.insert(x.begin(), pad, 0.0);
+        x.insert(x.end(),   pad, 0.0);
+    }
+    int outLen = x.size() - K + 1;
+    vector&lt;double&gt; y(outLen, 0.0);
+    for (int n = 0; n &lt; outLen; n++)
+        for (int m = 0; m &lt; K; m++)
+            y[n] += k[m] * x[n + m];
+    return y;
+}</code></pre></div>
+        <div class="ct-panel" data-tab="conv-1d-java"><pre><code>public class Conv1D {
+    public static double[] conv1d(double[] x, double[] k, String padding) {
+        int K = k.length;
+        if ("same".equals(padding)) {
+            int pad = (K - 1) / 2;
+            double[] padded = new double[x.length + 2 * pad];
+            System.arraycopy(x, 0, padded, pad, x.length);
+            x = padded;
+        }
+        int outLen = x.length - K + 1;
+        double[] y = new double[outLen];
+        for (int n = 0; n &lt; outLen; n++)
+            for (int m = 0; m &lt; K; m++)
+                y[n] += k[m] * x[n + m];
+        return y;
+    }
+}</code></pre></div>
+        <div class="ct-panel" data-tab="conv-1d-go"><pre><code>package conv
+
+func Conv1D(x, k []float64, padding string) []float64 {
+    K := len(k)
+    if padding == "same" {
+        pad := (K - 1) / 2
+        padded := make([]float64, len(x)+2*pad)
+        copy(padded[pad:], x)
+        x = padded
+    }
+    outLen := len(x) - K + 1
+    y := make([]float64, outLen)
+    for n := 0; n &lt; outLen; n++ {
+        for m := 0; m &lt; K; m++ {
+            y[n] += k[m] * x[n+m]
+        }
+    }
+    return y
+}</code></pre></div>
+      </div>
+    </details>
+
     <!-- ========================================================== -->
     <h2 id="2d">3. 2D convolution on images</h2>
 
@@ -154,6 +303,192 @@
         <button class="btn" onclick="runConvAll()">Run All</button>
       </div>
     </div>
+
+    <details class="algo-code">
+      <summary>Source — 2D Convolution / Cross-Correlation</summary>
+      <div class="code-tabs">
+        <div class="ct-header">
+          <button class="ct-tab active" data-tab="conv-2d-pseudo">Pseudocode</button>
+          <button class="ct-tab" data-tab="conv-2d-py">Python</button>
+          <button class="ct-tab" data-tab="conv-2d-js">JavaScript</button>
+          <button class="ct-tab" data-tab="conv-2d-c">C</button>
+          <button class="ct-tab" data-tab="conv-2d-cpp">C++</button>
+          <button class="ct-tab" data-tab="conv-2d-java">Java</button>
+          <button class="ct-tab" data-tab="conv-2d-go">Go</button>
+        </div>
+        <div class="ct-panel active" data-tab="conv-2d-pseudo"><pre><code>function conv2d(image, kernel, padding="valid"):
+    # image:  H x W
+    # kernel: Kh x Kw
+    # y[i,j] = sum_{u,v} kernel[u,v] * image[i+u, j+v]
+    if padding == "same":
+        ph = (Kh - 1) / 2
+        pw = (Kw - 1) / 2
+        image = zero_pad(image, top=ph, bottom=ph, left=pw, right=pw)
+    H, W = shape(image)
+    out_h = H - Kh + 1
+    out_w = W - Kw + 1
+    y = zeros(out_h, out_w)
+    for i in 0..out_h-1:
+        for j in 0..out_w-1:
+            for u in 0..Kh-1:
+                for v in 0..Kw-1:
+                    y[i][j] += kernel[u][v] * image[i+u][j+v]
+    return y</code></pre></div>
+        <div class="ct-panel" data-tab="conv-2d-py"><pre><code>import numpy as np
+
+def conv2d(image, kernel, padding="valid"):
+    """
+    Naive 2D cross-correlation on a grayscale (H x W) image.
+    padding: 'valid' — output is (H-Kh+1) x (W-Kw+1)
+             'same'  — output is H x W (zero-padded)
+    """
+    Kh, Kw = kernel.shape
+    if padding == "same":
+        ph, pw = (Kh - 1) // 2, (Kw - 1) // 2
+        image = np.pad(image, ((ph, ph), (pw, pw)))
+    H, W = image.shape
+    out_h, out_w = H - Kh + 1, W - Kw + 1
+    y = np.zeros((out_h, out_w))
+    for i in range(out_h):
+        for j in range(out_w):
+            y[i, j] = np.sum(kernel * image[i:i+Kh, j:j+Kw])
+    return y
+
+# Example — edge detection on a 5x5 image
+img = np.array([
+    [0,0,0,0,0],
+    [0,1,1,1,0],
+    [0,1,2,1,0],
+    [0,1,1,1,0],
+    [0,0,0,0,0]], dtype=float)
+edge = np.array([[-1,-1,-1],[-1,8,-1],[-1,-1,-1]], dtype=float)
+print(conv2d(img, edge))           # valid: 3x3
+print(conv2d(img, edge, "same"))   # same:  5x5</code></pre></div>
+        <div class="ct-panel" data-tab="conv-2d-js"><pre><code>function conv2d(image, kernel, padding = 'valid') {
+  const Kh = kernel.length, Kw = kernel[0].length;
+  if (padding === 'same') {
+    const ph = Math.floor((Kh-1)/2), pw = Math.floor((Kw-1)/2);
+    const H = image.length, W = image[0].length;
+    const padded = Array.from({length: H+2*ph}, (_, i) =&gt;
+      Array.from({length: W+2*pw}, (_, j) =&gt;
+        (i &gt;= ph &amp;&amp; i &lt; H+ph &amp;&amp; j &gt;= pw &amp;&amp; j &lt; W+pw)
+          ? image[i-ph][j-pw] : 0));
+    image = padded;
+  }
+  const H = image.length, W = image[0].length;
+  const outH = H - Kh + 1, outW = W - Kw + 1;
+  return Array.from({length: outH}, (_, i) =&gt;
+    Array.from({length: outW}, (_, j) =&gt; {
+      let s = 0;
+      for (let u = 0; u &lt; Kh; u++)
+        for (let v = 0; v &lt; Kw; v++)
+          s += kernel[u][v] * image[i+u][j+v];
+      return s;
+    }));
+}</code></pre></div>
+        <div class="ct-panel" data-tab="conv-2d-c"><pre><code>#include &lt;string.h&gt;
+#include &lt;stdlib.h&gt;
+
+/* valid padding only.
+   image[H][W], kernel[Kh][Kw], out[(H-Kh+1)][(W-Kw+1)] */
+void conv2d_valid(int H, int W, int Kh, int Kw,
+                  double image[H][W], double kernel[Kh][Kw],
+                  double out[H-Kh+1][W-Kw+1])
+{
+    int oh = H-Kh+1, ow = W-Kw+1;
+    for (int i=0; i&lt;oh; i++)
+        for (int j=0; j&lt;ow; j++) {
+            double s = 0;
+            for (int u=0; u&lt;Kh; u++)
+                for (int v=0; v&lt;Kw; v++)
+                    s += kernel[u][v] * image[i+u][j+v];
+            out[i][j] = s;
+        }
+}
+
+/* same padding: pad H x W input to (H+Kh-1) x (W+Kw-1), then convolve */
+void conv2d_same(int H, int W, int Kh, int Kw,
+                 double image[H][W], double kernel[Kh][Kw],
+                 double out[H][W])
+{
+    int ph = (Kh-1)/2, pw = (Kw-1)/2;
+    int pH = H+2*ph, pW = W+2*pw;
+    double (*padded)[pW] = calloc(pH, sizeof(*padded));
+    for (int i=0;i&lt;H;i++) for(int j=0;j&lt;W;j++) padded[i+ph][j+pw]=image[i][j];
+    conv2d_valid(pH, pW, Kh, Kw, padded, kernel, out);
+    free(padded);
+}</code></pre></div>
+        <div class="ct-panel" data-tab="conv-2d-cpp"><pre><code>#include &lt;vector&gt;
+using namespace std;
+using Mat = vector&lt;vector&lt;double&gt;&gt;;
+
+Mat conv2d(Mat image, const Mat&amp; kernel, const string&amp; padding = "valid") {
+    int Kh = kernel.size(), Kw = kernel[0].size();
+    if (padding == "same") {
+        int ph = (Kh-1)/2, pw = (Kw-1)/2;
+        int H = image.size(), W = image[0].size();
+        Mat padded(H+2*ph, vector&lt;double&gt;(W+2*pw, 0));
+        for (int i=0;i&lt;H;i++) for(int j=0;j&lt;W;j++) padded[i+ph][j+pw]=image[i][j];
+        image = padded;
+    }
+    int H=image.size(), W=image[0].size();
+    int oh=H-Kh+1, ow=W-Kw+1;
+    Mat out(oh, vector&lt;double&gt;(ow, 0));
+    for (int i=0;i&lt;oh;i++) for(int j=0;j&lt;ow;j++) {
+        double s=0;
+        for(int u=0;u&lt;Kh;u++) for(int v=0;v&lt;Kw;v++) s+=kernel[u][v]*image[i+u][j+v];
+        out[i][j]=s;
+    }
+    return out;
+}</code></pre></div>
+        <div class="ct-panel" data-tab="conv-2d-java"><pre><code>public class Conv2D {
+    public static double[][] conv2d(double[][] image, double[][] kernel, String padding) {
+        int Kh=kernel.length, Kw=kernel[0].length;
+        if ("same".equals(padding)) {
+            int ph=(Kh-1)/2, pw=(Kw-1)/2;
+            int H=image.length, W=image[0].length;
+            double[][] padded=new double[H+2*ph][W+2*pw];
+            for(int i=0;i&lt;H;i++) for(int j=0;j&lt;W;j++) padded[i+ph][j+pw]=image[i][j];
+            image=padded;
+        }
+        int H=image.length, W=image[0].length;
+        int oh=H-Kh+1, ow=W-Kw+1;
+        double[][] out=new double[oh][ow];
+        for(int i=0;i&lt;oh;i++) for(int j=0;j&lt;ow;j++) {
+            double s=0;
+            for(int u=0;u&lt;Kh;u++) for(int v=0;v&lt;Kw;v++) s+=kernel[u][v]*image[i+u][j+v];
+            out[i][j]=s;
+        }
+        return out;
+    }
+}</code></pre></div>
+        <div class="ct-panel" data-tab="conv-2d-go"><pre><code>package conv
+
+func Conv2D(image [][]float64, kernel [][]float64, padding string) [][]float64 {
+    Kh, Kw := len(kernel), len(kernel[0])
+    if padding == "same" {
+        ph, pw := (Kh-1)/2, (Kw-1)/2
+        H, W := len(image), len(image[0])
+        padded := make([][]float64, H+2*ph)
+        for i := range padded { padded[i] = make([]float64, W+2*pw) }
+        for i := 0; i &lt; H; i++ { for j := 0; j &lt; W; j++ { padded[i+ph][j+pw] = image[i][j] } }
+        image = padded
+    }
+    H, W := len(image), len(image[0])
+    oh, ow := H-Kh+1, W-Kw+1
+    out := make([][]float64, oh)
+    for i := range out {
+        out[i] = make([]float64, ow)
+        for j := 0; j &lt; ow; j++ {
+            s := 0.0
+            for u := 0; u &lt; Kh; u++ { for v := 0; v &lt; Kw; v++ { s += kernel[u][v] * image[i+u][j+v] } }
+            out[i][j] = s
+        }
+    }
+    return out
+}</code></pre></div>
+      </div>
+    </details>
 
     <!-- ========================================================== -->
     <h2 id="kernels">4. Famous hand-crafted kernels</h2>
@@ -249,6 +584,202 @@
     </ul>
     <p>Total: $9 C + C^2$ weights instead of $9 C^2$ — roughly $9\times$ cheaper for large $C$. This factorization is the core insight of MobileNet, used on every phone camera.</p>
 
+    <details class="algo-code">
+      <summary>Source — CNN Convolutional Layer</summary>
+      <div class="code-tabs">
+        <div class="ct-header">
+          <button class="ct-tab active" data-tab="conv-cnn-pseudo">Pseudocode</button>
+          <button class="ct-tab" data-tab="conv-cnn-py">Python</button>
+          <button class="ct-tab" data-tab="conv-cnn-js">JavaScript</button>
+          <button class="ct-tab" data-tab="conv-cnn-c">C</button>
+          <button class="ct-tab" data-tab="conv-cnn-cpp">C++</button>
+          <button class="ct-tab" data-tab="conv-cnn-java">Java</button>
+          <button class="ct-tab" data-tab="conv-cnn-go">Go</button>
+        </div>
+        <div class="ct-panel active" data-tab="conv-cnn-pseudo"><pre><code>function conv2d_layer(input, W, b, stride=1, padding="valid"):
+    # input: N x C_in x H x W
+    # W: C_out x C_in x Kh x Kw   (learned filters)
+    # b: C_out                      (bias per output channel)
+    # output: N x C_out x H' x W'
+    #   H' = floor((H - Kh + 2*pad) / stride) + 1
+
+    for n in 0..N-1:
+        for c_out in 0..C_out-1:
+            for i in 0..H'-1:
+                for j in 0..W'-1:
+                    s = b[c_out]
+                    for c_in in 0..C_in-1:
+                        for u in 0..Kh-1:
+                            for v in 0..Kw-1:
+                                s += W[c_out][c_in][u][v]
+                                   * input[n][c_in][i*stride+u][j*stride+v]
+                    output[n][c_out][i][j] = s
+    return output</code></pre></div>
+        <div class="ct-panel" data-tab="conv-cnn-py"><pre><code>import numpy as np
+
+def conv2d_layer(x, W, b, stride=1, padding=0):
+    """
+    Forward pass of a single Conv2D layer (no activation).
+    x: (N, C_in, H, W)
+    W: (C_out, C_in, Kh, Kw)
+    b: (C_out,)
+    stride, padding: integers
+    Returns: (N, C_out, H', W')
+    """
+    N, C_in, H, Wx = x.shape
+    C_out, _, Kh, Kw = W.shape
+    if padding &gt; 0:
+        x = np.pad(x, ((0,0),(0,0),(padding,padding),(padding,padding)))
+    H_in, W_in = x.shape[2], x.shape[3]
+    H_out = (H_in - Kh) // stride + 1
+    W_out = (W_in - Kw) // stride + 1
+    out = np.zeros((N, C_out, H_out, W_out))
+    for n in range(N):
+        for co in range(C_out):
+            for i in range(H_out):
+                for j in range(W_out):
+                    patch = x[n, :, i*stride:i*stride+Kh, j*stride:j*stride+Kw]
+                    out[n, co, i, j] = np.sum(W[co] * patch) + b[co]
+    return out</code></pre></div>
+        <div class="ct-panel" data-tab="conv-cnn-js"><pre><code>function conv2dLayer(x, W, b, stride = 1, padding = 0) {
+  // x: [N][C_in][H][W]   W: [C_out][C_in][Kh][Kw]   b: [C_out]
+  const N = x.length, Cin = x[0].length;
+  const Cout = W.length, Kh = W[0][0].length, Kw = W[0][0][0].length;
+
+  // zero-pad spatial dims
+  const xp = x.map(n =&gt; n.map(c =&gt; {
+    const H = c.length, Wp = c[0].length;
+    return Array.from({length: H+2*padding}, (_, i) =&gt;
+      Array.from({length: Wp+2*padding}, (_, j) =&gt;
+        (i&gt;=padding &amp;&amp; i&lt;H+padding &amp;&amp; j&gt;=padding &amp;&amp; j&lt;Wp+padding)
+          ? c[i-padding][j-padding] : 0));
+  }));
+
+  const H = xp[0][0].length, Ww = xp[0][0][0].length;
+  const Ho = Math.floor((H-Kh)/stride)+1, Wo = Math.floor((Ww-Kw)/stride)+1;
+  const out = Array.from({length:N},()=&gt;Array.from({length:Cout},()=&gt;
+    Array.from({length:Ho},()=&gt;new Array(Wo).fill(0))));
+
+  for(let n=0;n&lt;N;n++) for(let co=0;co&lt;Cout;co++) for(let i=0;i&lt;Ho;i++) for(let j=0;j&lt;Wo;j++){
+    let s=b[co];
+    for(let ci=0;ci&lt;Cin;ci++) for(let u=0;u&lt;Kh;u++) for(let v=0;v&lt;Kw;v++)
+      s+=W[co][ci][u][v]*xp[n][ci][i*stride+u][j*stride+v];
+    out[n][co][i][j]=s;
+  }
+  return out;
+}</code></pre></div>
+        <div class="ct-panel" data-tab="conv-cnn-c"><pre><code>/* Fixed dims example: N=1, C_in=3, C_out=8, H=W=6, Kh=Kw=3, stride=1, no padding */
+#include &lt;string.h&gt;
+#define N 1
+#define CIN 3
+#define COUT 8
+#define H 6
+#define W 6
+#define KH 3
+#define KW 3
+#define HO (H-KH+1)
+#define WO (W-KW+1)
+
+void conv2d_layer(
+    double x[N][CIN][H][W],
+    double weight[COUT][CIN][KH][KW],
+    double bias[COUT],
+    double out[N][COUT][HO][WO])
+{
+    memset(out, 0, sizeof(double)*N*COUT*HO*WO);
+    for (int n=0;n&lt;N;n++)
+      for (int co=0;co&lt;COUT;co++)
+        for (int i=0;i&lt;HO;i++)
+          for (int j=0;j&lt;WO;j++) {
+            double s=bias[co];
+            for (int ci=0;ci&lt;CIN;ci++)
+              for (int u=0;u&lt;KH;u++)
+                for (int v=0;v&lt;KW;v++)
+                  s+=weight[co][ci][u][v]*x[n][ci][i+u][j+v];
+            out[n][co][i][j]=s;
+          }
+}</code></pre></div>
+        <div class="ct-panel" data-tab="conv-cnn-cpp"><pre><code>#include &lt;vector&gt;
+using namespace std;
+// x: [N][Cin][H][W]  W4: [Cout][Cin][Kh][Kw]  b: [Cout]
+// returns [N][Cout][Ho][Wo]
+using T4 = vector&lt;vector&lt;vector&lt;vector&lt;double&gt;&gt;&gt;&gt;;
+
+T4 conv2dLayer(const T4&amp; x, const T4&amp; W4, const vector&lt;double&gt;&amp; b,
+               int stride=1, int padding=0) {
+    int N=x.size(), Cin=x[0].size(), H=x[0][0].size(), Ww=x[0][0][0].size();
+    int Cout=W4.size(), Kh=W4[0][0].size(), Kw=W4[0][0][0].size();
+    // apply padding
+    T4 xp(N, vector&lt;vector&lt;vector&lt;double&gt;&gt;&gt;(Cin,
+          vector&lt;vector&lt;double&gt;&gt;(H+2*padding, vector&lt;double&gt;(Ww+2*padding,0))));
+    for(int n=0;n&lt;N;n++) for(int c=0;c&lt;Cin;c++)
+        for(int i=0;i&lt;H;i++) for(int j=0;j&lt;Ww;j++)
+            xp[n][c][i+padding][j+padding]=x[n][c][i][j];
+    int Ho=(H+2*padding-Kh)/stride+1, Wo=(Ww+2*padding-Kw)/stride+1;
+    T4 out(N,vector&lt;vector&lt;vector&lt;double&gt;&gt;&gt;(Cout,vector&lt;vector&lt;double&gt;&gt;(Ho,vector&lt;double&gt;(Wo,0))));
+    for(int n=0;n&lt;N;n++) for(int co=0;co&lt;Cout;co++) for(int i=0;i&lt;Ho;i++) for(int j=0;j&lt;Wo;j++){
+        double s=b[co];
+        for(int ci=0;ci&lt;Cin;ci++) for(int u=0;u&lt;Kh;u++) for(int v=0;v&lt;Kw;v++)
+            s+=W4[co][ci][u][v]*xp[n][ci][i*stride+u][j*stride+v];
+        out[n][co][i][j]=s;
+    }
+    return out;
+}</code></pre></div>
+        <div class="ct-panel" data-tab="conv-cnn-java"><pre><code>public class ConvLayer {
+    // x[n][cin][h][w]  W[cout][cin][kh][kw]  b[cout]
+    public static double[][][][] forward(
+            double[][][][] x, double[][][][] W, double[] b,
+            int stride, int padding) {
+        int N=x.length, Cin=x[0].length, H=x[0][0].length, Ww=x[0][0][0].length;
+        int Cout=W.length, Kh=W[0][0].length, Kw=W[0][0][0].length;
+        // pad
+        double[][][][] xp=new double[N][Cin][H+2*padding][Ww+2*padding];
+        for(int n=0;n&lt;N;n++) for(int c=0;c&lt;Cin;c++)
+            for(int i=0;i&lt;H;i++) for(int j=0;j&lt;Ww;j++)
+                xp[n][c][i+padding][j+padding]=x[n][c][i][j];
+        int Ho=(H+2*padding-Kh)/stride+1, Wo=(Ww+2*padding-Kw)/stride+1;
+        double[][][][] out=new double[N][Cout][Ho][Wo];
+        for(int n=0;n&lt;N;n++) for(int co=0;co&lt;Cout;co++) for(int i=0;i&lt;Ho;i++) for(int j=0;j&lt;Wo;j++){
+            double s=b[co];
+            for(int ci=0;ci&lt;Cin;ci++) for(int u=0;u&lt;Kh;u++) for(int v=0;v&lt;Kw;v++)
+                s+=W[co][ci][u][v]*xp[n][ci][i*stride+u][j*stride+v];
+            out[n][co][i][j]=s;
+        }
+        return out;
+    }
+}</code></pre></div>
+        <div class="ct-panel" data-tab="conv-cnn-go"><pre><code>package conv
+
+// x [N][Cin][H][W]  w [Cout][Cin][Kh][Kw]  b [Cout]
+// returns [N][Cout][Ho][Wo]
+func Conv2DLayer(x [][][][]float64, w [][][][]float64, b []float64, stride, padding int) [][][][]float64 {
+    N, Cin, H, Ww := len(x), len(x[0]), len(x[0][0]), len(x[0][0][0])
+    Cout, Kh, Kw := len(w), len(w[0][0]), len(w[0][0][0])
+    // pad
+    Hp, Wp := H+2*padding, Ww+2*padding
+    xp := make([][][][]float64, N)
+    for n := range xp { xp[n]=make([][][]float64,Cin)
+        for c := range xp[n] { xp[n][c]=make([][]float64,Hp)
+            for i := range xp[n][c] { xp[n][c][i]=make([]float64,Wp) } }
+        for c:=0;c&lt;Cin;c++ { for i:=0;i&lt;H;i++ { for j:=0;j&lt;Ww;j++ {
+            xp[n][c][i+padding][j+padding]=x[n][c][i][j] } } }
+    }
+    Ho, Wo := (H+2*padding-Kh)/stride+1, (Ww+2*padding-Kw)/stride+1
+    out := make([][][][]float64, N)
+    for n := range out { out[n]=make([][][]float64,Cout)
+        for co := range out[n] { out[n][co]=make([][]float64,Ho)
+            for i := range out[n][co] { out[n][co][i]=make([]float64,Wo) } }
+        for co:=0;co&lt;Cout;co++ { for i:=0;i&lt;Ho;i++ { for j:=0;j&lt;Wo;j++ {
+            s:=b[co]
+            for ci:=0;ci&lt;Cin;ci++ { for u:=0;u&lt;Kh;u++ { for v:=0;v&lt;Kw;v++ {
+                s+=w[co][ci][u][v]*xp[n][ci][i*stride+u][j*stride+v] } } }
+            out[n][co][i][j]=s } } }
+    }
+    return out
+}</code></pre></div>
+      </div>
+    </details>
+
     <!-- ========================================================== -->
     <h2 id="pooling">8. Pooling</h2>
 
@@ -266,6 +797,211 @@
     </div>
 
     <p>Modern architectures (ResNet and after) often replace pooling with strided convolutions, on the theory that a learned downsampler is better than a fixed one. You'll still see max pooling in many production networks, though.</p>
+
+    <details class="algo-code">
+      <summary>Source — Max Pooling &amp; Average Pooling</summary>
+      <div class="code-tabs">
+        <div class="ct-header">
+          <button class="ct-tab active" data-tab="conv-pool-pseudo">Pseudocode</button>
+          <button class="ct-tab" data-tab="conv-pool-py">Python</button>
+          <button class="ct-tab" data-tab="conv-pool-js">JavaScript</button>
+          <button class="ct-tab" data-tab="conv-pool-c">C</button>
+          <button class="ct-tab" data-tab="conv-pool-cpp">C++</button>
+          <button class="ct-tab" data-tab="conv-pool-java">Java</button>
+          <button class="ct-tab" data-tab="conv-pool-go">Go</button>
+        </div>
+        <div class="ct-panel active" data-tab="conv-pool-pseudo"><pre><code>function max_pool2d(x, pool_size, stride):
+    # x: H x W  (single channel for clarity)
+    # output[i][j] = max of x[i*stride .. i*stride+pool_size-1]
+    #                          [j*stride .. j*stride+pool_size-1]
+    Ho = floor((H - pool_size) / stride) + 1
+    Wo = floor((W - pool_size) / stride) + 1
+    for i in 0..Ho-1:
+        for j in 0..Wo-1:
+            window = x[i*stride .. i*stride+pool_size,
+                       j*stride .. j*stride+pool_size]
+            output[i][j] = max(window)
+    return output
+
+function avg_pool2d(x, pool_size, stride):
+    # same structure, replace max with mean
+    output[i][j] = mean(window)</code></pre></div>
+        <div class="ct-panel" data-tab="conv-pool-py"><pre><code>import numpy as np
+
+def max_pool2d(x, pool_size=2, stride=2):
+    """
+    2D max pooling on a 2D feature map (H x W).
+    For multi-channel input (C x H x W) call per channel.
+    """
+    H, W = x.shape
+    Ho = (H - pool_size) // stride + 1
+    Wo = (W - pool_size) // stride + 1
+    out = np.zeros((Ho, Wo))
+    for i in range(Ho):
+        for j in range(Wo):
+            window = x[i*stride:i*stride+pool_size, j*stride:j*stride+pool_size]
+            out[i, j] = window.max()
+    return out
+
+def avg_pool2d(x, pool_size=2, stride=2):
+    H, W = x.shape
+    Ho = (H - pool_size) // stride + 1
+    Wo = (W - pool_size) // stride + 1
+    out = np.zeros((Ho, Wo))
+    for i in range(Ho):
+        for j in range(Wo):
+            window = x[i*stride:i*stride+pool_size, j*stride:j*stride+pool_size]
+            out[i, j] = window.mean()
+    return out
+
+# Example
+x = np.array([[1,3,2,4],[5,6,7,8],[9,2,3,1],[4,5,6,0]], dtype=float)
+print(max_pool2d(x, 2, 2))  # [[6,8],[9,6]]
+print(avg_pool2d(x, 2, 2))  # [[3.75,5.25],[5.0,2.5]]</code></pre></div>
+        <div class="ct-panel" data-tab="conv-pool-js"><pre><code>function maxPool2d(x, poolSize = 2, stride = 2) {
+  const H = x.length, W = x[0].length;
+  const Ho = Math.floor((H - poolSize) / stride) + 1;
+  const Wo = Math.floor((W - poolSize) / stride) + 1;
+  return Array.from({length: Ho}, (_, i) =&gt;
+    Array.from({length: Wo}, (_, j) =&gt; {
+      let max = -Infinity;
+      for (let u = 0; u &lt; poolSize; u++)
+        for (let v = 0; v &lt; poolSize; v++)
+          if (x[i*stride+u][j*stride+v] &gt; max)
+            max = x[i*stride+u][j*stride+v];
+      return max;
+    }));
+}
+
+function avgPool2d(x, poolSize = 2, stride = 2) {
+  const H = x.length, W = x[0].length;
+  const Ho = Math.floor((H - poolSize) / stride) + 1;
+  const Wo = Math.floor((W - poolSize) / stride) + 1;
+  const n = poolSize * poolSize;
+  return Array.from({length: Ho}, (_, i) =&gt;
+    Array.from({length: Wo}, (_, j) =&gt; {
+      let s = 0;
+      for (let u = 0; u &lt; poolSize; u++)
+        for (let v = 0; v &lt; poolSize; v++)
+          s += x[i*stride+u][j*stride+v];
+      return s / n;
+    }));
+}</code></pre></div>
+        <div class="ct-panel" data-tab="conv-pool-c"><pre><code>#include &lt;float.h&gt;
+
+/* x[H][W] -> out[Ho][Wo]   Ho=(H-P)/S+1  Wo=(W-P)/S+1 */
+void max_pool2d(int H, int W, int P, int S, double x[H][W],
+                int Ho, int Wo, double out[Ho][Wo]) {
+    for (int i=0;i&lt;Ho;i++) for(int j=0;j&lt;Wo;j++) {
+        double mx=-DBL_MAX;
+        for(int u=0;u&lt;P;u++) for(int v=0;v&lt;P;v++) {
+            double val=x[i*S+u][j*S+v];
+            if(val&gt;mx) mx=val;
+        }
+        out[i][j]=mx;
+    }
+}
+
+void avg_pool2d(int H, int W, int P, int S, double x[H][W],
+                int Ho, int Wo, double out[Ho][Wo]) {
+    double n=(double)(P*P);
+    for(int i=0;i&lt;Ho;i++) for(int j=0;j&lt;Wo;j++){
+        double s=0;
+        for(int u=0;u&lt;P;u++) for(int v=0;v&lt;P;v++) s+=x[i*S+u][j*S+v];
+        out[i][j]=s/n;
+    }
+}</code></pre></div>
+        <div class="ct-panel" data-tab="conv-pool-cpp"><pre><code>#include &lt;vector&gt;
+#include &lt;algorithm&gt;
+#include &lt;numeric&gt;
+using namespace std;
+using Mat = vector&lt;vector&lt;double&gt;&gt;;
+
+Mat maxPool2d(const Mat&amp; x, int P=2, int S=2) {
+    int H=x.size(), W=x[0].size();
+    int Ho=(H-P)/S+1, Wo=(W-P)/S+1;
+    Mat out(Ho, vector&lt;double&gt;(Wo));
+    for(int i=0;i&lt;Ho;i++) for(int j=0;j&lt;Wo;j++){
+        double mx=-1e18;
+        for(int u=0;u&lt;P;u++) for(int v=0;v&lt;P;v++) mx=max(mx,x[i*S+u][j*S+v]);
+        out[i][j]=mx;
+    }
+    return out;
+}
+
+Mat avgPool2d(const Mat&amp; x, int P=2, int S=2) {
+    int H=x.size(), W=x[0].size();
+    int Ho=(H-P)/S+1, Wo=(W-P)/S+1; double n=P*P;
+    Mat out(Ho, vector&lt;double&gt;(Wo));
+    for(int i=0;i&lt;Ho;i++) for(int j=0;j&lt;Wo;j++){
+        double s=0;
+        for(int u=0;u&lt;P;u++) for(int v=0;v&lt;P;v++) s+=x[i*S+u][j*S+v];
+        out[i][j]=s/n;
+    }
+    return out;
+}</code></pre></div>
+        <div class="ct-panel" data-tab="conv-pool-java"><pre><code>public class Pooling {
+    public static double[][] maxPool2d(double[][] x, int P, int S) {
+        int H=x.length, W=x[0].length;
+        int Ho=(H-P)/S+1, Wo=(W-P)/S+1;
+        double[][] out=new double[Ho][Wo];
+        for(int i=0;i&lt;Ho;i++) for(int j=0;j&lt;Wo;j++){
+            double mx=Double.NEGATIVE_INFINITY;
+            for(int u=0;u&lt;P;u++) for(int v=0;v&lt;P;v++) mx=Math.max(mx,x[i*S+u][j*S+v]);
+            out[i][j]=mx;
+        }
+        return out;
+    }
+
+    public static double[][] avgPool2d(double[][] x, int P, int S) {
+        int H=x.length, W=x[0].length;
+        int Ho=(H-P)/S+1, Wo=(W-P)/S+1; double n=P*P;
+        double[][] out=new double[Ho][Wo];
+        for(int i=0;i&lt;Ho;i++) for(int j=0;j&lt;Wo;j++){
+            double s=0;
+            for(int u=0;u&lt;P;u++) for(int v=0;v&lt;P;v++) s+=x[i*S+u][j*S+v];
+            out[i][j]=s/n;
+        }
+        return out;
+    }
+}</code></pre></div>
+        <div class="ct-panel" data-tab="conv-pool-go"><pre><code>package conv
+
+import "math"
+
+func MaxPool2D(x [][]float64, P, S int) [][]float64 {
+    H, W := len(x), len(x[0])
+    Ho, Wo := (H-P)/S+1, (W-P)/S+1
+    out := make([][]float64, Ho)
+    for i := range out {
+        out[i] = make([]float64, Wo)
+        for j := 0; j &lt; Wo; j++ {
+            mx := math.Inf(-1)
+            for u := 0; u &lt; P; u++ { for v := 0; v &lt; P; v++ {
+                if x[i*S+u][j*S+v] &gt; mx { mx = x[i*S+u][j*S+v] } } }
+            out[i][j] = mx
+        }
+    }
+    return out
+}
+
+func AvgPool2D(x [][]float64, P, S int) [][]float64 {
+    H, W := len(x), len(x[0])
+    Ho, Wo := (H-P)/S+1, (W-P)/S+1
+    n := float64(P * P)
+    out := make([][]float64, Ho)
+    for i := range out {
+        out[i] = make([]float64, Wo)
+        for j := 0; j &lt; Wo; j++ {
+            s := 0.0
+            for u := 0; u &lt; P; u++ { for v := 0; v &lt; P; v++ { s += x[i*S+u][j*S+v] } }
+            out[i][j] = s / n
+        }
+    }
+    return out
+}</code></pre></div>
+      </div>
+    </details>
 
     <!-- ========================================================== -->
     <h2 id="learned">9. Why learned filters beat hand-crafted</h2>
@@ -511,6 +1247,21 @@ function editConvCell(r, c) {
 
 window.addEventListener('DOMContentLoaded', () => {
   resetConv();
+});
+
+// =========================================================
+// Code tabs
+// =========================================================
+document.querySelectorAll('.code-tabs').forEach(root => {
+  const tabs = root.querySelectorAll('.ct-tab');
+  const panels = root.querySelectorAll('.ct-panel');
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const target = tab.getAttribute('data-tab');
+      tabs.forEach(t => t.classList.toggle('active', t === tab));
+      panels.forEach(p => p.classList.toggle('active', p.getAttribute('data-tab') === target));
+    });
+  });
 });
 </script>
 <script defer src="../search-index.js"></script>

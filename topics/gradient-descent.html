@@ -103,6 +103,275 @@
 
     <p>For convex, sufficiently smooth $L$ and a learning rate below a certain critical value, gradient descent is guaranteed to converge to the global minimum. Neural network losses are <em>not</em> convex — they have thousands of local minima and saddle points — but empirically the minima SGD finds are "good enough" for deep networks. We'll come back to this.</p>
 
+    <details class="algo-code">
+  <summary>Source — Gradient Descent</summary>
+  <div class="code-tabs">
+    <div class="ct-header">
+      <button class="ct-tab active" data-tab="gd-vanilla-pseudo">Pseudocode</button>
+      <button class="ct-tab" data-tab="gd-vanilla-py">Python</button>
+      <button class="ct-tab" data-tab="gd-vanilla-js">JavaScript</button>
+      <button class="ct-tab" data-tab="gd-vanilla-c">C</button>
+      <button class="ct-tab" data-tab="gd-vanilla-cpp">C++</button>
+      <button class="ct-tab" data-tab="gd-vanilla-java">Java</button>
+      <button class="ct-tab" data-tab="gd-vanilla-go">Go</button>
+    </div>
+    <div class="ct-panel active" data-tab="gd-vanilla-pseudo"><pre><code>function gradient_descent(f, grad_f, x0, lr, n_iter):
+    x = x0
+    for t in 1..n_iter:
+        g = grad_f(x)          # compute gradient at current point
+        x = x - lr * g         # take step against the gradient
+        print(t, x, f(x))
+    return x
+
+# Example: minimize L(theta) = theta^2 - 2*theta + 3
+# grad_L(theta) = 2*theta - 2
+# minimum at theta* = 1, L(1) = 2</code></pre></div>
+    <div class="ct-panel" data-tab="gd-vanilla-py"><pre><code>def gradient_descent(grad_f, x0, lr=0.1, n_iter=100, tol=1e-7):
+    """
+    Generic gradient descent.
+    grad_f: callable, takes x and returns gradient (same shape as x)
+    x0:     starting point (float or np.ndarray)
+    lr:     learning rate (step size)
+    Returns history of (x, loss) pairs.
+    """
+    import numpy as np
+    x = np.array(x0, dtype=float)
+    history = []
+    for t in range(n_iter):
+        g = grad_f(x)
+        x = x - lr * g
+        history.append(x.copy())
+        if np.linalg.norm(g) &lt; tol:
+            print(f"Converged at iteration {t+1}")
+            break
+    return x, history
+
+# --- 1D example: L(theta) = theta^2 - 2*theta + 3 ---
+def grad_L1d(theta): return 2*theta - 2
+
+x_star, hist = gradient_descent(grad_L1d, x0=5.0, lr=0.3, n_iter=50)
+print(f"Minimum found at theta = {x_star:.6f}  (true: 1.0)")
+
+# --- Multi-dimensional example: L(x) = x1^2 + 10*x2^2 ---
+import numpy as np
+def grad_bowl(x): return np.array([2*x[0], 20*x[1]])
+
+x_star2, hist2 = gradient_descent(grad_bowl, x0=np.array([3.0, 2.0]), lr=0.05, n_iter=200)
+print(f"2D minimum: {x_star2}")</code></pre></div>
+    <div class="ct-panel" data-tab="gd-vanilla-js"><pre><code>/**
+ * Generic gradient descent for scalar or array-valued theta.
+ * gradF: (theta) => gradient (same type as theta)
+ * x0:   starting value (number or number[])
+ * Returns final theta.
+ */
+function gradientDescent(gradF, x0, lr = 0.1, nIter = 100, tol = 1e-7) {
+  let x = Array.isArray(x0) ? [...x0] : x0;
+  const isArray = Array.isArray(x0);
+
+  for (let t = 0; t &lt; nIter; t++) {
+    const g = gradF(x);
+
+    if (isArray) {
+      const norm = Math.sqrt(g.reduce((s, gi) => s + gi * gi, 0));
+      if (norm &lt; tol) { console.log(`Converged at iter ${t+1}`); break; }
+      x = x.map((xi, i) => xi - lr * g[i]);
+    } else {
+      if (Math.abs(g) &lt; tol) { console.log(`Converged at iter ${t+1}`); break; }
+      x = x - lr * g;
+    }
+  }
+  return x;
+}
+
+// 1D: L(theta) = theta^2 - 2*theta + 3
+const theta = gradientDescent(t => 2*t - 2, 5.0, 0.3, 50);
+console.log("1D minimum:", theta.toFixed(6));  // expect ~1.0
+
+// 2D: L(x) = x1^2 + 10*x2^2
+const x2d = gradientDescent(
+  ([x1, x2]) => [2*x1, 20*x2],
+  [3.0, 2.0], 0.05, 200
+);
+console.log("2D minimum:", x2d.map(v => v.toFixed(6)));</code></pre></div>
+    <div class="ct-panel" data-tab="gd-vanilla-c"><pre><code>#include &lt;stdio.h&gt;
+#include &lt;math.h&gt;
+
+/* Generic 1-D gradient descent */
+double gradient_descent_1d(
+    double (*f)(double),
+    double (*grad_f)(double),
+    double x0, double lr, int n_iter, double tol)
+{
+    double x = x0;
+    for (int t = 0; t &lt; n_iter; t++) {
+        double g = grad_f(x);
+        x -= lr * g;
+        if (fabs(g) &lt; tol) {
+            printf("Converged at iter %d\n", t + 1);
+            break;
+        }
+    }
+    return x;
+}
+
+/* Multi-dimensional: operates on arrays */
+void gradient_descent_nd(
+    void (*grad_f)(const double *, double *, int),
+    double *x, int n, double lr, int n_iter, double tol)
+{
+    double g[n];
+    for (int t = 0; t &lt; n_iter; t++) {
+        grad_f(x, g, n);
+        double norm = 0;
+        for (int i = 0; i &lt; n; i++) { x[i] -= lr * g[i]; norm += g[i]*g[i]; }
+        if (sqrt(norm) &lt; tol) { printf("Converged at iter %d\n", t+1); break; }
+    }
+}
+
+/* L(theta) = theta^2 - 2*theta + 3 */
+double L1d(double t)       { return t*t - 2*t + 3; }
+double grad_L1d(double t)  { return 2*t - 2; }
+
+/* L(x) = x[0]^2 + 10*x[1]^2 */
+void grad_bowl(const double *x, double *g, int n) {
+    g[0] = 2*x[0]; g[1] = 20*x[1];
+}
+
+int main(void) {
+    double theta = gradient_descent_1d(L1d, grad_L1d, 5.0, 0.3, 100, 1e-7);
+    printf("1D minimum: theta = %.6f  (true: 1.0)\n", theta);
+
+    double x[2] = {3.0, 2.0};
+    gradient_descent_nd(grad_bowl, x, 2, 0.05, 200, 1e-7);
+    printf("2D minimum: [%.6f, %.6f]\n", x[0], x[1]);
+    return 0;
+}</code></pre></div>
+    <div class="ct-panel" data-tab="gd-vanilla-cpp"><pre><code>#include &lt;cmath&gt;
+#include &lt;vector&gt;
+#include &lt;functional&gt;
+#include &lt;iostream&gt;
+#include &lt;numeric&gt;
+
+using Vec = std::vector&lt;double&gt;;
+
+Vec gradientDescent(
+    std::function&lt;Vec(const Vec&amp;)&gt; gradF,
+    Vec x, double lr = 0.1, int nIter = 200, double tol = 1e-7)
+{
+    for (int t = 0; t &lt; nIter; t++) {
+        Vec g = gradF(x);
+        double norm = 0;
+        for (size_t i = 0; i &lt; x.size(); i++) {
+            x[i] -= lr * g[i];
+            norm  += g[i] * g[i];
+        }
+        if (std::sqrt(norm) &lt; tol) {
+            std::cout &lt;&lt; "Converged at iter " &lt;&lt; t + 1 &lt;&lt; "\n";
+            break;
+        }
+    }
+    return x;
+}
+
+int main() {
+    // 1D: L(theta) = theta^2 - 2*theta + 3
+    auto theta = gradientDescent(
+        [](const Vec&amp; x) { return Vec{2*x[0] - 2}; },
+        {5.0}, 0.3, 100);
+    std::cout &lt;&lt; "1D minimum: " &lt;&lt; theta[0] &lt;&lt; "  (true: 1.0)\n";
+
+    // 2D: L(x) = x1^2 + 10*x2^2
+    auto x2d = gradientDescent(
+        [](const Vec&amp; x) { return Vec{2*x[0], 20*x[1]}; },
+        {3.0, 2.0}, 0.05, 300);
+    std::cout &lt;&lt; "2D minimum: [" &lt;&lt; x2d[0] &lt;&lt; ", " &lt;&lt; x2d[1] &lt;&lt; "]\n";
+}</code></pre></div>
+    <div class="ct-panel" data-tab="gd-vanilla-java"><pre><code>import java.util.function.Function;
+
+public class GradientDescent {
+
+    @FunctionalInterface
+    interface VecFunc { double[] apply(double[] x); }
+
+    static double[] gradientDescent(
+            VecFunc gradF, double[] x0,
+            double lr, int nIter, double tol) {
+        double[] x = x0.clone();
+        for (int t = 0; t &lt; nIter; t++) {
+            double[] g = gradF.apply(x);
+            double norm = 0;
+            for (int i = 0; i &lt; x.length; i++) {
+                x[i] -= lr * g[i];
+                norm  += g[i] * g[i];
+            }
+            if (Math.sqrt(norm) &lt; tol) {
+                System.out.println("Converged at iter " + (t + 1));
+                break;
+            }
+        }
+        return x;
+    }
+
+    public static void main(String[] args) {
+        // 1D: L(theta) = theta^2 - 2*theta + 3
+        double[] theta = gradientDescent(
+            x -> new double[]{2 * x[0] - 2},
+            new double[]{5.0}, 0.3, 100, 1e-7);
+        System.out.printf("1D minimum: %.6f  (true: 1.0)%n", theta[0]);
+
+        // 2D: L(x) = x1^2 + 10*x2^2
+        double[] x2d = gradientDescent(
+            x -> new double[]{2 * x[0], 20 * x[1]},
+            new double[]{3.0, 2.0}, 0.05, 300, 1e-7);
+        System.out.printf("2D minimum: [%.6f, %.6f]%n", x2d[0], x2d[1]);
+    }
+}</code></pre></div>
+    <div class="ct-panel" data-tab="gd-vanilla-go"><pre><code>package main
+
+import (
+    "fmt"
+    "math"
+)
+
+func gradientDescent(
+    gradF func([]float64) []float64,
+    x0 []float64, lr float64, nIter int, tol float64) []float64 {
+
+    x := make([]float64, len(x0))
+    copy(x, x0)
+    g := make([]float64, len(x0))
+
+    for t := 0; t &lt; nIter; t++ {
+        g = gradF(x)
+        norm := 0.0
+        for i := range x {
+            x[i] -= lr * g[i]
+            norm += g[i] * g[i]
+        }
+        if math.Sqrt(norm) &lt; tol {
+            fmt.Printf("Converged at iter %d\n", t+1)
+            break
+        }
+    }
+    return x
+}
+
+func main() {
+    // 1D: L(theta) = theta^2 - 2*theta + 3
+    theta := gradientDescent(
+        func(x []float64) []float64 { return []float64{2*x[0] - 2} },
+        []float64{5.0}, 0.3, 100, 1e-7)
+    fmt.Printf("1D minimum: %.6f  (true: 1.0)\n", theta[0])
+
+    // 2D: L(x) = x1^2 + 10*x2^2
+    x2d := gradientDescent(
+        func(x []float64) []float64 { return []float64{2 * x[0], 20 * x[1]} },
+        []float64{3.0, 2.0}, 0.05, 300, 1e-7)
+    fmt.Printf("2D minimum: %v\n", x2d)
+}</code></pre></div>
+  </div>
+</details>
+
     <!-- ========================================================== -->
     <h2 id="1d-demo">4. Descent on a 1D curve</h2>
 
@@ -386,6 +655,237 @@ $$\begin{aligned}
 
     <p>Try setting momentum to 0.9 in the 2D demo above. The trail should straighten out dramatically.</p>
 
+    <details class="algo-code">
+  <summary>Source — Momentum (SGD with Momentum)</summary>
+  <div class="code-tabs">
+    <div class="ct-header">
+      <button class="ct-tab active" data-tab="gd-mom-pseudo">Pseudocode</button>
+      <button class="ct-tab" data-tab="gd-mom-py">Python</button>
+      <button class="ct-tab" data-tab="gd-mom-js">JavaScript</button>
+      <button class="ct-tab" data-tab="gd-mom-c">C</button>
+      <button class="ct-tab" data-tab="gd-mom-cpp">C++</button>
+      <button class="ct-tab" data-tab="gd-mom-java">Java</button>
+      <button class="ct-tab" data-tab="gd-mom-go">Go</button>
+    </div>
+    <div class="ct-panel active" data-tab="gd-mom-pseudo"><pre><code>function sgd_momentum(grad_f, x0, lr, beta, n_iter):
+    x = x0
+    v = zeros_like(x)       # velocity initialized to zero
+    for t in 1..n_iter:
+        g    = grad_f(x)
+        v    = beta * v + g  # accumulate velocity
+        x    = x - lr * v    # update parameters
+    return x
+
+# beta = 0: vanilla SGD
+# beta = 0.9: typical momentum (last ~10 steps contribute)
+# beta = 0.99: strong momentum (last ~100 steps contribute)</code></pre></div>
+    <div class="ct-panel" data-tab="gd-mom-py"><pre><code>import numpy as np
+
+def sgd_momentum(grad_f, x0, lr=0.01, beta=0.9, n_iter=200, tol=1e-7):
+    """
+    SGD with momentum.
+    grad_f: callable(x) -> gradient
+    beta:   momentum coefficient (0 = plain SGD, typical 0.9)
+    """
+    x = np.array(x0, dtype=float)
+    v = np.zeros_like(x)
+    for t in range(n_iter):
+        g = grad_f(x)
+        v = beta * v + g        # update velocity
+        x = x - lr * v          # update parameters
+        if np.linalg.norm(g) &lt; tol:
+            print(f"Converged at iter {t+1}")
+            break
+    return x
+
+# 2D stretched bowl: L(x) = x1^2 + 10*x2^2
+def grad_bowl(x): return np.array([2*x[0], 20*x[1]])
+
+print("No momentum:")
+x1 = sgd_momentum(grad_bowl, [3.0, 2.0], lr=0.05, beta=0.0, n_iter=500)
+print(f"  Result: {x1}")
+
+print("Momentum=0.9:")
+x2 = sgd_momentum(grad_bowl, [3.0, 2.0], lr=0.05, beta=0.9, n_iter=500)
+print(f"  Result: {x2}")</code></pre></div>
+    <div class="ct-panel" data-tab="gd-mom-js"><pre><code>function sgdMomentum(gradF, x0, lr = 0.01, beta = 0.9, nIter = 200, tol = 1e-7) {
+  let x = [...x0];
+  let v = new Array(x0.length).fill(0);
+
+  for (let t = 0; t &lt; nIter; t++) {
+    const g = gradF(x);
+    const norm = Math.sqrt(g.reduce((s, gi) => s + gi * gi, 0));
+    if (norm &lt; tol) { console.log(`Converged at iter ${t+1}`); break; }
+    v = v.map((vi, i) => beta * vi + g[i]);   // update velocity
+    x = x.map((xi, i) => xi - lr * v[i]);     // update params
+  }
+  return x;
+}
+
+// 2D stretched bowl: L(x) = x1^2 + 10*x2^2
+const gradBowl = ([x1, x2]) => [2*x1, 20*x2];
+
+console.log("No momentum:",
+  sgdMomentum(gradBowl, [3, 2], 0.05, 0.0, 500).map(v => v.toFixed(5)));
+
+console.log("Momentum=0.9:",
+  sgdMomentum(gradBowl, [3, 2], 0.05, 0.9, 500).map(v => v.toFixed(5)));</code></pre></div>
+    <div class="ct-panel" data-tab="gd-mom-c"><pre><code>#include &lt;stdio.h&gt;
+#include &lt;math.h&gt;
+#include &lt;string.h&gt;
+
+#define NDIM 2
+
+void sgd_momentum(
+    void (*grad_f)(const double *, double *, int),
+    double *x, int n, double lr, double beta,
+    int n_iter, double tol)
+{
+    double v[NDIM], g[NDIM];
+    memset(v, 0, sizeof(double) * n);
+
+    for (int t = 0; t &lt; n_iter; t++) {
+        grad_f(x, g, n);
+        double norm = 0;
+        for (int i = 0; i &lt; n; i++) {
+            v[i] = beta * v[i] + g[i];
+            x[i] -= lr * v[i];
+            norm += g[i] * g[i];
+        }
+        if (sqrt(norm) &lt; tol) {
+            printf("Converged at iter %d\n", t + 1);
+            break;
+        }
+    }
+}
+
+void grad_bowl(const double *x, double *g, int n) {
+    g[0] = 2 * x[0];
+    g[1] = 20 * x[1];
+}
+
+int main(void) {
+    double x[NDIM] = {3.0, 2.0};
+    sgd_momentum(grad_bowl, x, NDIM, 0.05, 0.9, 500, 1e-7);
+    printf("Minimum: [%.6f, %.6f]\n", x[0], x[1]);
+    return 0;
+}</code></pre></div>
+    <div class="ct-panel" data-tab="gd-mom-cpp"><pre><code>#include &lt;cmath&gt;
+#include &lt;vector&gt;
+#include &lt;functional&gt;
+#include &lt;iostream&gt;
+
+using Vec = std::vector&lt;double&gt;;
+
+Vec sgdMomentum(
+    std::function&lt;Vec(const Vec&amp;)&gt; gradF,
+    Vec x, double lr = 0.01, double beta = 0.9,
+    int nIter = 200, double tol = 1e-7)
+{
+    Vec v(x.size(), 0.0);
+    for (int t = 0; t &lt; nIter; t++) {
+        Vec g = gradF(x);
+        double norm = 0;
+        for (size_t i = 0; i &lt; x.size(); i++) {
+            v[i] = beta * v[i] + g[i];
+            x[i] -= lr * v[i];
+            norm += g[i] * g[i];
+        }
+        if (std::sqrt(norm) &lt; tol) {
+            std::cout &lt;&lt; "Converged at iter " &lt;&lt; t + 1 &lt;&lt; "\n";
+            break;
+        }
+    }
+    return x;
+}
+
+int main() {
+    auto gradBowl = [](const Vec&amp; x) { return Vec{2*x[0], 20*x[1]}; };
+
+    auto x1 = sgdMomentum(gradBowl, {3.0, 2.0}, 0.05, 0.0, 500);
+    std::cout &lt;&lt; "No momentum: [" &lt;&lt; x1[0] &lt;&lt; ", " &lt;&lt; x1[1] &lt;&lt; "]\n";
+
+    auto x2 = sgdMomentum(gradBowl, {3.0, 2.0}, 0.05, 0.9, 500);
+    std::cout &lt;&lt; "Momentum=0.9: [" &lt;&lt; x2[0] &lt;&lt; ", " &lt;&lt; x2[1] &lt;&lt; "]\n";
+}</code></pre></div>
+    <div class="ct-panel" data-tab="gd-mom-java"><pre><code>import java.util.Arrays;
+
+public class SGDMomentum {
+
+    @FunctionalInterface
+    interface VecFunc { double[] apply(double[] x); }
+
+    static double[] sgdMomentum(
+            VecFunc gradF, double[] x0,
+            double lr, double beta, int nIter, double tol) {
+        double[] x = x0.clone();
+        double[] v = new double[x0.length];  // initialized to 0
+
+        for (int t = 0; t &lt; nIter; t++) {
+            double[] g = gradF.apply(x);
+            double norm = 0;
+            for (int i = 0; i &lt; x.length; i++) {
+                v[i] = beta * v[i] + g[i];
+                x[i] -= lr * v[i];
+                norm += g[i] * g[i];
+            }
+            if (Math.sqrt(norm) &lt; tol) {
+                System.out.println("Converged at iter " + (t + 1));
+                break;
+            }
+        }
+        return x;
+    }
+
+    public static void main(String[] args) {
+        double[] x1 = sgdMomentum(
+            x -> new double[]{2*x[0], 20*x[1]},
+            new double[]{3.0, 2.0}, 0.05, 0.9, 500, 1e-7);
+        System.out.printf("Minimum: [%.6f, %.6f]%n", x1[0], x1[1]);
+    }
+}</code></pre></div>
+    <div class="ct-panel" data-tab="gd-mom-go"><pre><code>package main
+
+import (
+    "fmt"
+    "math"
+)
+
+func sgdMomentum(
+    gradF func([]float64) []float64,
+    x0 []float64, lr, beta float64,
+    nIter int, tol float64) []float64 {
+
+    x := make([]float64, len(x0))
+    copy(x, x0)
+    v := make([]float64, len(x0)) // velocity = 0
+
+    for t := 0; t &lt; nIter; t++ {
+        g    := gradF(x)
+        norm := 0.0
+        for i := range x {
+            v[i] = beta*v[i] + g[i]
+            x[i] -= lr * v[i]
+            norm += g[i] * g[i]
+        }
+        if math.Sqrt(norm) &lt; tol {
+            fmt.Printf("Converged at iter %d\n", t+1)
+            break
+        }
+    }
+    return x
+}
+
+func main() {
+    gradBowl := func(x []float64) []float64 {
+        return []float64{2 * x[0], 20 * x[1]}
+    }
+    x := sgdMomentum(gradBowl, []float64{3.0, 2.0}, 0.05, 0.9, 500, 1e-7)
+    fmt.Printf("Minimum: %v\n", x)
+}</code></pre></div>
+  </div>
+</details>
+
     <!-- ========================================================== -->
     <h2 id="adagrad">9. Adaptive methods: AdaGrad, RMSProp, Adam</h2>
 
@@ -423,6 +923,494 @@ v_t &= \beta_2 v_{t-1} + (1-\beta_2) g_t^2 \\
       <strong>Adam:</strong> momentum + RMSProp + bias correction. The safe default.<br>
       <strong>AdamW:</strong> Adam with decoupled weight decay. The actual modern default for transformers.</p>
     </div>
+
+    <details class="algo-code">
+  <summary>Source — RMSProp</summary>
+  <div class="code-tabs">
+    <div class="ct-header">
+      <button class="ct-tab active" data-tab="gd-rmsp-pseudo">Pseudocode</button>
+      <button class="ct-tab" data-tab="gd-rmsp-py">Python</button>
+      <button class="ct-tab" data-tab="gd-rmsp-js">JavaScript</button>
+      <button class="ct-tab" data-tab="gd-rmsp-c">C</button>
+      <button class="ct-tab" data-tab="gd-rmsp-cpp">C++</button>
+      <button class="ct-tab" data-tab="gd-rmsp-java">Java</button>
+      <button class="ct-tab" data-tab="gd-rmsp-go">Go</button>
+    </div>
+    <div class="ct-panel active" data-tab="gd-rmsp-pseudo"><pre><code>function rmsprop(grad_f, x0, lr, rho, eps, n_iter):
+    x = x0
+    G = zeros_like(x)        # accumulated squared gradients
+    for t in 1..n_iter:
+        g = grad_f(x)
+        G = rho * G + (1 - rho) * g^2    # exponential moving average
+        x = x - lr / sqrt(G + eps) * g   # adaptive step
+    return x
+
+# rho:  decay rate, typically 0.9
+# eps:  small constant for numerical stability, typically 1e-8
+# Adaptive learning rate per parameter:
+#   large G_i  => small effective lr for param i
+#   small G_i  => large effective lr for param i</code></pre></div>
+    <div class="ct-panel" data-tab="gd-rmsp-py"><pre><code>import numpy as np
+
+def rmsprop(grad_f, x0, lr=0.01, rho=0.9, eps=1e-8, n_iter=200, tol=1e-7):
+    """
+    RMSProp optimizer.
+    grad_f: callable(x) -> gradient
+    rho:    decay rate for squared-gradient accumulation (default 0.9)
+    eps:    numerical stability constant (default 1e-8)
+    """
+    x = np.array(x0, dtype=float)
+    G = np.zeros_like(x)          # accumulated squared gradients
+
+    for t in range(n_iter):
+        g = grad_f(x)
+        G = rho * G + (1 - rho) * g ** 2
+        x = x - lr / np.sqrt(G + eps) * g
+        if np.linalg.norm(g) &lt; tol:
+            print(f"Converged at iter {t+1}")
+            break
+    return x
+
+# 2D stretched bowl: L(x) = x1^2 + 10*x2^2
+def grad_bowl(x): return np.array([2*x[0], 20*x[1]])
+
+x_star = rmsprop(grad_bowl, [3.0, 2.0], lr=0.1, rho=0.9, n_iter=300)
+print(f"Minimum: {x_star}")  # should be near [0, 0]</code></pre></div>
+    <div class="ct-panel" data-tab="gd-rmsp-js"><pre><code>function rmsprop(gradF, x0, lr = 0.01, rho = 0.9, eps = 1e-8, nIter = 200, tol = 1e-7) {
+  let x = [...x0];
+  let G = new Array(x0.length).fill(0);  // accumulated squared gradients
+
+  for (let t = 0; t &lt; nIter; t++) {
+    const g    = gradF(x);
+    const norm = Math.sqrt(g.reduce((s, gi) => s + gi * gi, 0));
+    if (norm &lt; tol) { console.log(`Converged at iter ${t+1}`); break; }
+
+    G = G.map((gi, i) => rho * gi + (1 - rho) * g[i] * g[i]);
+    x = x.map((xi, i) => xi - (lr / Math.sqrt(G[i] + eps)) * g[i]);
+  }
+  return x;
+}
+
+// 2D stretched bowl
+const gradBowl = ([x1, x2]) => [2*x1, 20*x2];
+const result = rmsprop(gradBowl, [3, 2], 0.1, 0.9, 1e-8, 300);
+console.log("Minimum:", result.map(v => v.toFixed(6)));</code></pre></div>
+    <div class="ct-panel" data-tab="gd-rmsp-c"><pre><code>#include &lt;stdio.h&gt;
+#include &lt;math.h&gt;
+#include &lt;string.h&gt;
+
+#define NDIM 2
+
+void rmsprop(
+    void (*grad_f)(const double *, double *, int),
+    double *x, int n,
+    double lr, double rho, double eps,
+    int n_iter, double tol)
+{
+    double G[NDIM], g[NDIM];
+    memset(G, 0, sizeof(double) * n);
+
+    for (int t = 0; t &lt; n_iter; t++) {
+        grad_f(x, g, n);
+        double norm = 0;
+        for (int i = 0; i &lt; n; i++) {
+            G[i] = rho * G[i] + (1.0 - rho) * g[i] * g[i];
+            x[i] -= (lr / sqrt(G[i] + eps)) * g[i];
+            norm  += g[i] * g[i];
+        }
+        if (sqrt(norm) &lt; tol) {
+            printf("Converged at iter %d\n", t + 1);
+            break;
+        }
+    }
+}
+
+void grad_bowl(const double *x, double *g, int n) {
+    g[0] = 2 * x[0];
+    g[1] = 20 * x[1];
+}
+
+int main(void) {
+    double x[NDIM] = {3.0, 2.0};
+    rmsprop(grad_bowl, x, NDIM, 0.1, 0.9, 1e-8, 300, 1e-7);
+    printf("Minimum: [%.6f, %.6f]\n", x[0], x[1]);
+    return 0;
+}</code></pre></div>
+    <div class="ct-panel" data-tab="gd-rmsp-cpp"><pre><code>#include &lt;cmath&gt;
+#include &lt;vector&gt;
+#include &lt;functional&gt;
+#include &lt;iostream&gt;
+
+using Vec = std::vector&lt;double&gt;;
+
+Vec rmsprop(
+    std::function&lt;Vec(const Vec&amp;)&gt; gradF,
+    Vec x, double lr = 0.01, double rho = 0.9, double eps = 1e-8,
+    int nIter = 200, double tol = 1e-7)
+{
+    Vec G(x.size(), 0.0);
+    for (int t = 0; t &lt; nIter; t++) {
+        Vec g = gradF(x);
+        double norm = 0;
+        for (size_t i = 0; i &lt; x.size(); i++) {
+            G[i] = rho * G[i] + (1 - rho) * g[i] * g[i];
+            x[i] -= (lr / std::sqrt(G[i] + eps)) * g[i];
+            norm  += g[i] * g[i];
+        }
+        if (std::sqrt(norm) &lt; tol) {
+            std::cout &lt;&lt; "Converged at iter " &lt;&lt; t + 1 &lt;&lt; "\n";
+            break;
+        }
+    }
+    return x;
+}
+
+int main() {
+    auto gradBowl = [](const Vec&amp; x) { return Vec{2*x[0], 20*x[1]}; };
+    auto x = rmsprop(gradBowl, {3.0, 2.0}, 0.1, 0.9, 1e-8, 300);
+    std::cout &lt;&lt; "Minimum: [" &lt;&lt; x[0] &lt;&lt; ", " &lt;&lt; x[1] &lt;&lt; "]\n";
+}</code></pre></div>
+    <div class="ct-panel" data-tab="gd-rmsp-java"><pre><code>import java.util.Arrays;
+
+public class RMSProp {
+
+    @FunctionalInterface
+    interface VecFunc { double[] apply(double[] x); }
+
+    static double[] rmsprop(
+            VecFunc gradF, double[] x0,
+            double lr, double rho, double eps, int nIter, double tol) {
+        double[] x = x0.clone();
+        double[] G = new double[x0.length];  // all zeros
+
+        for (int t = 0; t &lt; nIter; t++) {
+            double[] g = gradF.apply(x);
+            double norm = 0;
+            for (int i = 0; i &lt; x.length; i++) {
+                G[i] = rho * G[i] + (1 - rho) * g[i] * g[i];
+                x[i] -= (lr / Math.sqrt(G[i] + eps)) * g[i];
+                norm += g[i] * g[i];
+            }
+            if (Math.sqrt(norm) &lt; tol) {
+                System.out.println("Converged at iter " + (t + 1));
+                break;
+            }
+        }
+        return x;
+    }
+
+    public static void main(String[] args) {
+        double[] x = rmsprop(
+            x -> new double[]{2*x[0], 20*x[1]},
+            new double[]{3.0, 2.0},
+            0.1, 0.9, 1e-8, 300, 1e-7);
+        System.out.printf("Minimum: [%.6f, %.6f]%n", x[0], x[1]);
+    }
+}</code></pre></div>
+    <div class="ct-panel" data-tab="gd-rmsp-go"><pre><code>package main
+
+import (
+    "fmt"
+    "math"
+)
+
+func rmsprop(
+    gradF func([]float64) []float64,
+    x0 []float64, lr, rho, eps float64,
+    nIter int, tol float64) []float64 {
+
+    x := make([]float64, len(x0))
+    copy(x, x0)
+    G := make([]float64, len(x0))
+
+    for t := 0; t &lt; nIter; t++ {
+        g    := gradF(x)
+        norm := 0.0
+        for i := range x {
+            G[i] = rho*G[i] + (1-rho)*g[i]*g[i]
+            x[i] -= (lr / math.Sqrt(G[i]+eps)) * g[i]
+            norm += g[i] * g[i]
+        }
+        if math.Sqrt(norm) &lt; tol {
+            fmt.Printf("Converged at iter %d\n", t+1)
+            break
+        }
+    }
+    return x
+}
+
+func main() {
+    gradBowl := func(x []float64) []float64 {
+        return []float64{2 * x[0], 20 * x[1]}
+    }
+    x := rmsprop(gradBowl, []float64{3.0, 2.0}, 0.1, 0.9, 1e-8, 300, 1e-7)
+    fmt.Printf("Minimum: %v\n", x)
+}</code></pre></div>
+  </div>
+</details>
+
+    <details class="algo-code">
+  <summary>Source — Adam Optimizer</summary>
+  <div class="code-tabs">
+    <div class="ct-header">
+      <button class="ct-tab active" data-tab="gd-adam-pseudo">Pseudocode</button>
+      <button class="ct-tab" data-tab="gd-adam-py">Python</button>
+      <button class="ct-tab" data-tab="gd-adam-js">JavaScript</button>
+      <button class="ct-tab" data-tab="gd-adam-c">C</button>
+      <button class="ct-tab" data-tab="gd-adam-cpp">C++</button>
+      <button class="ct-tab" data-tab="gd-adam-java">Java</button>
+      <button class="ct-tab" data-tab="gd-adam-go">Go</button>
+    </div>
+    <div class="ct-panel active" data-tab="gd-adam-pseudo"><pre><code>function adam(grad_f, x0, lr, beta1, beta2, eps, n_iter):
+    x  = x0
+    m  = zeros_like(x)   # first moment (momentum)
+    v  = zeros_like(x)   # second moment (RMSProp-like)
+    for t in 1..n_iter:
+        g     = grad_f(x)
+        m     = beta1 * m + (1 - beta1) * g          # update biased 1st moment
+        v     = beta2 * v + (1 - beta2) * g^2        # update biased 2nd moment
+        m_hat = m / (1 - beta1^t)                    # bias correction
+        v_hat = v / (1 - beta2^t)                    # bias correction
+        x     = x - lr / (sqrt(v_hat) + eps) * m_hat
+    return x
+
+# Typical defaults: beta1=0.9, beta2=0.999, eps=1e-8
+# The bias corrections matter most in the first few steps when
+# m and v are still close to zero (initialized at zero).</code></pre></div>
+    <div class="ct-panel" data-tab="gd-adam-py"><pre><code>import numpy as np
+
+def adam(grad_f, x0, lr=1e-3, beta1=0.9, beta2=0.999, eps=1e-8,
+         n_iter=1000, tol=1e-7):
+    """
+    Adam optimizer (Kingma & Ba, 2014).
+    grad_f: callable(x) -> gradient
+    beta1:  first-moment decay  (default 0.9)
+    beta2:  second-moment decay (default 0.999)
+    eps:    numerical stability  (default 1e-8)
+    """
+    x = np.array(x0, dtype=float)
+    m = np.zeros_like(x)   # first moment
+    v = np.zeros_like(x)   # second moment
+
+    for t in range(1, n_iter + 1):
+        g     = grad_f(x)
+        m     = beta1 * m + (1 - beta1) * g
+        v     = beta2 * v + (1 - beta2) * g ** 2
+        m_hat = m / (1 - beta1 ** t)   # bias correction
+        v_hat = v / (1 - beta2 ** t)   # bias correction
+        x     = x - lr / (np.sqrt(v_hat) + eps) * m_hat
+        if np.linalg.norm(g) &lt; tol:
+            print(f"Converged at iter {t}")
+            break
+    return x
+
+# 2D stretched bowl: L(x) = x1^2 + 10*x2^2
+def grad_bowl(x): return np.array([2*x[0], 20*x[1]])
+
+x_star = adam(grad_bowl, [3.0, 2.0], lr=0.1, n_iter=500)
+print(f"Minimum: {x_star}")  # should be near [0, 0]</code></pre></div>
+    <div class="ct-panel" data-tab="gd-adam-js"><pre><code>function adam(gradF, x0,
+    lr = 1e-3, beta1 = 0.9, beta2 = 0.999, eps = 1e-8,
+    nIter = 1000, tol = 1e-7)
+{
+  let x = [...x0];
+  let m = new Array(x0.length).fill(0);   // first moment
+  let v = new Array(x0.length).fill(0);   // second moment
+
+  for (let t = 1; t &lt;= nIter; t++) {
+    const g    = gradF(x);
+    const norm = Math.sqrt(g.reduce((s, gi) => s + gi * gi, 0));
+    if (norm &lt; tol) { console.log(`Converged at iter ${t}`); break; }
+
+    m = m.map((mi, i) => beta1 * mi + (1 - beta1) * g[i]);
+    v = v.map((vi, i) => beta2 * vi + (1 - beta2) * g[i] * g[i]);
+
+    const mHat = m.map(mi => mi / (1 - beta1 ** t));
+    const vHat = v.map(vi => vi / (1 - beta2 ** t));
+
+    x = x.map((xi, i) => xi - (lr / (Math.sqrt(vHat[i]) + eps)) * mHat[i]);
+  }
+  return x;
+}
+
+const gradBowl = ([x1, x2]) => [2*x1, 20*x2];
+const result = adam(gradBowl, [3, 2], 0.1, 0.9, 0.999, 1e-8, 500);
+console.log("Minimum:", result.map(v => v.toFixed(6)));</code></pre></div>
+    <div class="ct-panel" data-tab="gd-adam-c"><pre><code>#include &lt;stdio.h&gt;
+#include &lt;math.h&gt;
+#include &lt;string.h&gt;
+
+#define NDIM 2
+
+void adam(
+    void (*grad_f)(const double *, double *, int),
+    double *x, int n,
+    double lr, double beta1, double beta2, double eps,
+    int n_iter, double tol)
+{
+    double m[NDIM], v[NDIM], g[NDIM];
+    memset(m, 0, sizeof(double) * n);
+    memset(v, 0, sizeof(double) * n);
+
+    for (int t = 1; t &lt;= n_iter; t++) {
+        grad_f(x, g, n);
+        double norm = 0, b1t = pow(beta1, t), b2t = pow(beta2, t);
+        for (int i = 0; i &lt; n; i++) {
+            m[i] = beta1 * m[i] + (1.0 - beta1) * g[i];
+            v[i] = beta2 * v[i] + (1.0 - beta2) * g[i] * g[i];
+            double m_hat = m[i] / (1.0 - b1t);
+            double v_hat = v[i] / (1.0 - b2t);
+            x[i] -= lr / (sqrt(v_hat) + eps) * m_hat;
+            norm  += g[i] * g[i];
+        }
+        if (sqrt(norm) &lt; tol) {
+            printf("Converged at iter %d\n", t);
+            break;
+        }
+    }
+}
+
+void grad_bowl(const double *x, double *g, int n) {
+    g[0] = 2 * x[0];
+    g[1] = 20 * x[1];
+}
+
+int main(void) {
+    double x[NDIM] = {3.0, 2.0};
+    adam(grad_bowl, x, NDIM, 0.1, 0.9, 0.999, 1e-8, 500, 1e-7);
+    printf("Minimum: [%.6f, %.6f]\n", x[0], x[1]);
+    return 0;
+}</code></pre></div>
+    <div class="ct-panel" data-tab="gd-adam-cpp"><pre><code>#include &lt;cmath&gt;
+#include &lt;vector&gt;
+#include &lt;functional&gt;
+#include &lt;iostream&gt;
+
+using Vec = std::vector&lt;double&gt;;
+
+Vec adam(
+    std::function&lt;Vec(const Vec&amp;)&gt; gradF,
+    Vec x, double lr = 1e-3,
+    double beta1 = 0.9, double beta2 = 0.999, double eps = 1e-8,
+    int nIter = 1000, double tol = 1e-7)
+{
+    Vec m(x.size(), 0.0), v(x.size(), 0.0);
+
+    for (int t = 1; t &lt;= nIter; t++) {
+        Vec g = gradF(x);
+        double norm = 0;
+        double b1t = std::pow(beta1, t), b2t = std::pow(beta2, t);
+        for (size_t i = 0; i &lt; x.size(); i++) {
+            m[i] = beta1 * m[i] + (1 - beta1) * g[i];
+            v[i] = beta2 * v[i] + (1 - beta2) * g[i] * g[i];
+            double mHat = m[i] / (1 - b1t);
+            double vHat = v[i] / (1 - b2t);
+            x[i] -= lr / (std::sqrt(vHat) + eps) * mHat;
+            norm  += g[i] * g[i];
+        }
+        if (std::sqrt(norm) &lt; tol) {
+            std::cout &lt;&lt; "Converged at iter " &lt;&lt; t &lt;&lt; "\n";
+            break;
+        }
+    }
+    return x;
+}
+
+int main() {
+    auto gradBowl = [](const Vec&amp; x) { return Vec{2*x[0], 20*x[1]}; };
+    auto x = adam(gradBowl, {3.0, 2.0}, 0.1, 0.9, 0.999, 1e-8, 500);
+    std::cout &lt;&lt; "Minimum: [" &lt;&lt; x[0] &lt;&lt; ", " &lt;&lt; x[1] &lt;&lt; "]\n";
+}</code></pre></div>
+    <div class="ct-panel" data-tab="gd-adam-java"><pre><code>public class Adam {
+
+    @FunctionalInterface
+    interface VecFunc { double[] apply(double[] x); }
+
+    static double[] adam(
+            VecFunc gradF, double[] x0,
+            double lr, double beta1, double beta2, double eps,
+            int nIter, double tol) {
+        double[] x = x0.clone();
+        double[] m = new double[x0.length];  // first moment
+        double[] v = new double[x0.length];  // second moment
+
+        for (int t = 1; t &lt;= nIter; t++) {
+            double[] g = gradF.apply(x);
+            double norm = 0;
+            double b1t = Math.pow(beta1, t), b2t = Math.pow(beta2, t);
+            for (int i = 0; i &lt; x.length; i++) {
+                m[i] = beta1 * m[i] + (1 - beta1) * g[i];
+                v[i] = beta2 * v[i] + (1 - beta2) * g[i] * g[i];
+                double mHat = m[i] / (1 - b1t);
+                double vHat = v[i] / (1 - b2t);
+                x[i] -= lr / (Math.sqrt(vHat) + eps) * mHat;
+                norm += g[i] * g[i];
+            }
+            if (Math.sqrt(norm) &lt; tol) {
+                System.out.println("Converged at iter " + t);
+                break;
+            }
+        }
+        return x;
+    }
+
+    public static void main(String[] args) {
+        double[] x = adam(
+            a -> new double[]{2*a[0], 20*a[1]},
+            new double[]{3.0, 2.0},
+            0.1, 0.9, 0.999, 1e-8, 500, 1e-7);
+        System.out.printf("Minimum: [%.6f, %.6f]%n", x[0], x[1]);
+    }
+}</code></pre></div>
+    <div class="ct-panel" data-tab="gd-adam-go"><pre><code>package main
+
+import (
+    "fmt"
+    "math"
+)
+
+func adamOptimizer(
+    gradF func([]float64) []float64,
+    x0 []float64,
+    lr, beta1, beta2, eps float64,
+    nIter int, tol float64) []float64 {
+
+    x := make([]float64, len(x0))
+    copy(x, x0)
+    m := make([]float64, len(x0))
+    v := make([]float64, len(x0))
+
+    for t := 1; t &lt;= nIter; t++ {
+        g    := gradF(x)
+        norm := 0.0
+        b1t  := math.Pow(beta1, float64(t))
+        b2t  := math.Pow(beta2, float64(t))
+        for i := range x {
+            m[i] = beta1*m[i] + (1-beta1)*g[i]
+            v[i] = beta2*v[i] + (1-beta2)*g[i]*g[i]
+            mHat := m[i] / (1 - b1t)
+            vHat := v[i] / (1 - b2t)
+            x[i] -= lr / (math.Sqrt(vHat) + eps) * mHat
+            norm += g[i] * g[i]
+        }
+        if math.Sqrt(norm) &lt; tol {
+            fmt.Printf("Converged at iter %d\n", t)
+            break
+        }
+    }
+    return x
+}
+
+func main() {
+    gradBowl := func(x []float64) []float64 {
+        return []float64{2 * x[0], 20 * x[1]}
+    }
+    x := adamOptimizer(gradBowl, []float64{3.0, 2.0},
+        0.1, 0.9, 0.999, 1e-8, 500, 1e-7)
+    fmt.Printf("Minimum: %v\n", x)
+}</code></pre></div>
+  </div>
+</details>
 
     <!-- ========================================================== -->
     <h2 id="landscapes">10. Non-convex landscapes (the actual setting)</h2>

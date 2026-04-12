@@ -245,6 +245,254 @@ z^{(2)}  &= w^{(2)}_{1} h_1 + w^{(2)}_{2} h_2 + b^{(2)}    & \hat{y} &= \sigma(z
       </div>
     </div>
 
+    <details class="algo-code">
+  <summary>Source — Neural Net Forward Pass</summary>
+  <div class="code-tabs">
+    <div class="ct-header">
+      <button class="ct-tab active" data-tab="bp-fwd-pseudo">Pseudocode</button>
+      <button class="ct-tab" data-tab="bp-fwd-py">Python</button>
+      <button class="ct-tab" data-tab="bp-fwd-js">JavaScript</button>
+      <button class="ct-tab" data-tab="bp-fwd-c">C</button>
+      <button class="ct-tab" data-tab="bp-fwd-cpp">C++</button>
+      <button class="ct-tab" data-tab="bp-fwd-java">Java</button>
+      <button class="ct-tab" data-tab="bp-fwd-go">Go</button>
+    </div>
+    <div class="ct-panel active" data-tab="bp-fwd-pseudo"><pre><code>function forward(X, W1, b1, W2, b2):
+    # Layer 1
+    Z1 = W1 * X + b1          # shape: (hidden, 1)
+    H1 = sigmoid(Z1)          # element-wise activation
+
+    # Layer 2 (output)
+    Z2 = W2 * H1 + b2         # shape: (1, 1)
+    Y_hat = sigmoid(Z2)       # scalar output
+
+    return Y_hat, H1, Z1, Z2
+
+function sigmoid(z):
+    return 1 / (1 + exp(-z))</code></pre></div>
+    <div class="ct-panel" data-tab="bp-fwd-py"><pre><code>import numpy as np
+
+def sigmoid(z):
+    return 1.0 / (1.0 + np.exp(-z))
+
+def forward(X, W1, b1, W2, b2):
+    """
+    X:  (n_in,)  input vector
+    W1: (n_hid, n_in)  first-layer weights
+    b1: (n_hid,)       first-layer biases
+    W2: (n_out, n_hid) second-layer weights
+    b2: (n_out,)       second-layer biases
+    """
+    Z1 = W1 @ X + b1          # (n_hid,)
+    H1 = sigmoid(Z1)           # (n_hid,)
+    Z2 = W2 @ H1 + b2          # (n_out,)
+    Y_hat = sigmoid(Z2)        # (n_out,)
+    return Y_hat, H1, Z1, Z2
+
+# Example: 2-2-1 network
+W1 = np.array([[0.2, 0.4], [0.3, 0.1]])
+b1 = np.array([0.1, 0.1])
+W2 = np.array([[0.5, 0.6]])
+b2 = np.array([0.2])
+X  = np.array([0.5, 0.8])
+
+Y_hat, H1, Z1, Z2 = forward(X, W1, b1, W2, b2)
+print(f"H1={H1}, Y_hat={Y_hat}")</code></pre></div>
+    <div class="ct-panel" data-tab="bp-fwd-js"><pre><code>function sigmoid(z) {
+  return 1 / (1 + Math.exp(-z));
+}
+
+// Matrix-vector multiply: A (rows x cols) times v (cols,) -> out (rows,)
+function matVec(A, v) {
+  return A.map(row => row.reduce((s, a, j) => s + a * v[j], 0));
+}
+
+function forward(X, W1, b1, W2, b2) {
+  const Z1 = matVec(W1, X).map((z, i) => z + b1[i]);
+  const H1 = Z1.map(sigmoid);
+  const Z2 = matVec(W2, H1).map((z, i) => z + b2[i]);
+  const Yhat = Z2.map(sigmoid);
+  return { Yhat, H1, Z1, Z2 };
+}
+
+// Example: 2-2-1 network
+const W1 = [[0.2, 0.4], [0.3, 0.1]];
+const b1 = [0.1, 0.1];
+const W2 = [[0.5, 0.6]];
+const b2 = [0.2];
+const X  = [0.5, 0.8];
+
+const { Yhat, H1 } = forward(X, W1, b1, W2, b2);
+console.log("H1:", H1, "Yhat:", Yhat);</code></pre></div>
+    <div class="ct-panel" data-tab="bp-fwd-c"><pre><code>#include &lt;stdio.h&gt;
+#include &lt;math.h&gt;
+
+#define N_IN  2
+#define N_HID 2
+#define N_OUT 1
+
+double sigmoid(double z) { return 1.0 / (1.0 + exp(-z)); }
+
+void forward(
+    double X[N_IN],
+    double W1[N_HID][N_IN], double b1[N_HID],
+    double W2[N_OUT][N_HID], double b2[N_OUT],
+    double Z1[N_HID], double H1[N_HID],
+    double Z2[N_OUT], double Yhat[N_OUT])
+{
+    for (int i = 0; i &lt; N_HID; i++) {
+        Z1[i] = b1[i];
+        for (int j = 0; j &lt; N_IN; j++) Z1[i] += W1[i][j] * X[j];
+        H1[i] = sigmoid(Z1[i]);
+    }
+    for (int i = 0; i &lt; N_OUT; i++) {
+        Z2[i] = b2[i];
+        for (int j = 0; j &lt; N_HID; j++) Z2[i] += W2[i][j] * H1[j];
+        Yhat[i] = sigmoid(Z2[i]);
+    }
+}
+
+int main(void) {
+    double X[N_IN]           = {0.5, 0.8};
+    double W1[N_HID][N_IN]   = {{0.2, 0.4}, {0.3, 0.1}};
+    double b1[N_HID]         = {0.1, 0.1};
+    double W2[N_OUT][N_HID]  = {{0.5, 0.6}};
+    double b2[N_OUT]         = {0.2};
+    double Z1[N_HID], H1[N_HID], Z2[N_OUT], Yhat[N_OUT];
+
+    forward(X, W1, b1, W2, b2, Z1, H1, Z2, Yhat);
+    printf("H1=[%.4f, %.4f]  Yhat=%.4f\n", H1[0], H1[1], Yhat[0]);
+    return 0;
+}</code></pre></div>
+    <div class="ct-panel" data-tab="bp-fwd-cpp"><pre><code>#include &lt;cmath&gt;
+#include &lt;vector&gt;
+#include &lt;iostream&gt;
+
+double sigmoid(double z) { return 1.0 / (1.0 + std::exp(-z)); }
+
+struct ForwardResult {
+    std::vector&lt;double&gt; Yhat, H1, Z1, Z2;
+};
+
+ForwardResult forward(
+    const std::vector&lt;double&gt;&amp; X,
+    const std::vector&lt;std::vector&lt;double&gt;&gt;&amp; W1,
+    const std::vector&lt;double&gt;&amp; b1,
+    const std::vector&lt;std::vector&lt;double&gt;&gt;&amp; W2,
+    const std::vector&lt;double&gt;&amp; b2)
+{
+    int nHid = W1.size(), nIn = X.size(), nOut = W2.size();
+    std::vector&lt;double&gt; Z1(nHid), H1(nHid), Z2(nOut), Yhat(nOut);
+
+    for (int i = 0; i &lt; nHid; i++) {
+        Z1[i] = b1[i];
+        for (int j = 0; j &lt; nIn; j++) Z1[i] += W1[i][j] * X[j];
+        H1[i] = sigmoid(Z1[i]);
+    }
+    for (int i = 0; i &lt; nOut; i++) {
+        Z2[i] = b2[i];
+        for (int j = 0; j &lt; nHid; j++) Z2[i] += W2[i][j] * H1[j];
+        Yhat[i] = sigmoid(Z2[i]);
+    }
+    return {Yhat, H1, Z1, Z2};
+}
+
+int main() {
+    auto [Yhat, H1, Z1, Z2] = forward(
+        {0.5, 0.8},
+        {{0.2, 0.4}, {0.3, 0.1}}, {0.1, 0.1},
+        {{0.5, 0.6}}, {0.2}
+    );
+    std::cout &lt;&lt; "H1=[" &lt;&lt; H1[0] &lt;&lt; ", " &lt;&lt; H1[1] &lt;&lt; "]  Yhat=" &lt;&lt; Yhat[0] &lt;&lt; "\n";
+}</code></pre></div>
+    <div class="ct-panel" data-tab="bp-fwd-java"><pre><code>public class ForwardPass {
+
+    static double sigmoid(double z) { return 1.0 / (1.0 + Math.exp(-z)); }
+
+    // Returns [Yhat, H1, Z1, Z2] flattened for simplicity
+    static double[][] forward(double[] X,
+                               double[][] W1, double[] b1,
+                               double[][] W2, double[] b2) {
+        int nHid = W1.length, nIn = X.length, nOut = W2.length;
+        double[] Z1 = new double[nHid], H1 = new double[nHid];
+        double[] Z2 = new double[nOut], Yhat = new double[nOut];
+
+        for (int i = 0; i &lt; nHid; i++) {
+            Z1[i] = b1[i];
+            for (int j = 0; j &lt; nIn; j++) Z1[i] += W1[i][j] * X[j];
+            H1[i] = sigmoid(Z1[i]);
+        }
+        for (int i = 0; i &lt; nOut; i++) {
+            Z2[i] = b2[i];
+            for (int j = 0; j &lt; nHid; j++) Z2[i] += W2[i][j] * H1[j];
+            Yhat[i] = sigmoid(Z2[i]);
+        }
+        return new double[][] {Yhat, H1, Z1, Z2};
+    }
+
+    public static void main(String[] args) {
+        double[] X  = {0.5, 0.8};
+        double[][] W1 = {{0.2, 0.4}, {0.3, 0.1}};
+        double[] b1 = {0.1, 0.1};
+        double[][] W2 = {{0.5, 0.6}};
+        double[] b2 = {0.2};
+
+        double[][] result = forward(X, W1, b1, W2, b2);
+        System.out.printf("H1=[%.4f, %.4f]  Yhat=%.4f%n",
+            result[1][0], result[1][1], result[0][0]);
+    }
+}</code></pre></div>
+    <div class="ct-panel" data-tab="bp-fwd-go"><pre><code>package main
+
+import (
+    "fmt"
+    "math"
+)
+
+func sigmoid(z float64) float64 { return 1.0 / (1.0 + math.Exp(-z)) }
+
+type ForwardResult struct {
+    Yhat, H1, Z1, Z2 []float64
+}
+
+func forward(X []float64,
+    W1 [][]float64, b1 []float64,
+    W2 [][]float64, b2 []float64) ForwardResult {
+
+    nHid, nIn, nOut := len(W1), len(X), len(W2)
+    Z1 := make([]float64, nHid)
+    H1 := make([]float64, nHid)
+    Z2 := make([]float64, nOut)
+    Yhat := make([]float64, nOut)
+
+    for i := 0; i &lt; nHid; i++ {
+        Z1[i] = b1[i]
+        for j := 0; j &lt; nIn; j++ {
+            Z1[i] += W1[i][j] * X[j]
+        }
+        H1[i] = sigmoid(Z1[i])
+    }
+    for i := 0; i &lt; nOut; i++ {
+        Z2[i] = b2[i]
+        for j := 0; j &lt; nHid; j++ {
+            Z2[i] += W2[i][j] * H1[j]
+        }
+        Yhat[i] = sigmoid(Z2[i])
+    }
+    return ForwardResult{Yhat, H1, Z1, Z2}
+}
+
+func main() {
+    r := forward(
+        []float64{0.5, 0.8},
+        [][]float64{{0.2, 0.4}, {0.3, 0.1}}, []float64{0.1, 0.1},
+        [][]float64{{0.5, 0.6}}, []float64{0.2},
+    )
+    fmt.Printf("H1=%v  Yhat=%v\n", r.H1, r.Yhat)
+}</code></pre></div>
+  </div>
+</details>
+
     <!-- ========================================================== -->
     <h2 id="loss">6. The loss function</h2>
     <p>Once we have a prediction $\hat{y}$, we measure how wrong it is with a <em>loss function</em>. For regression and for pedagogical clarity we'll use the squared error:</p>
@@ -258,6 +506,283 @@ z^{(2)}  &= w^{(2)}_{1} h_1 + w^{(2)}_{2} h_2 + b^{(2)}    & \hat{y} &= \sigma(z
       <p>$L = \frac{1}{2}(0.703 - 1)^2 = \frac{1}{2}(0.0881) \approx 0.0441$</p>
       <p>The network got $\hat{y} = 0.703$ but wanted $y = 1$. Our job now is to adjust every weight so that the <em>next</em> forward pass produces a $\hat{y}$ slightly closer to 1 — and therefore a slightly smaller loss.</p>
     </div>
+
+    <details class="algo-code">
+  <summary>Source — Loss Functions</summary>
+  <div class="code-tabs">
+    <div class="ct-header">
+      <button class="ct-tab active" data-tab="bp-loss-pseudo">Pseudocode</button>
+      <button class="ct-tab" data-tab="bp-loss-py">Python</button>
+      <button class="ct-tab" data-tab="bp-loss-js">JavaScript</button>
+      <button class="ct-tab" data-tab="bp-loss-c">C</button>
+      <button class="ct-tab" data-tab="bp-loss-cpp">C++</button>
+      <button class="ct-tab" data-tab="bp-loss-java">Java</button>
+      <button class="ct-tab" data-tab="bp-loss-go">Go</button>
+    </div>
+    <div class="ct-panel active" data-tab="bp-loss-pseudo"><pre><code>function mse_loss(y_pred, y_true):
+    # Mean squared error (with 1/2 factor for clean derivative)
+    return 0.5 * (y_pred - y_true)^2
+
+function mse_loss_grad(y_pred, y_true):
+    # dL/dy_pred = y_pred - y_true
+    return y_pred - y_true
+
+function cross_entropy_loss(logits, y_true):
+    # logits: raw pre-softmax scores, y_true: one-hot or class index
+    probs = softmax(logits)
+    return -sum(y_true * log(probs))   # sum over classes
+
+function softmax(z):
+    e = exp(z - max(z))                # subtract max for numerical stability
+    return e / sum(e)</code></pre></div>
+    <div class="ct-panel" data-tab="bp-loss-py"><pre><code>import numpy as np
+
+def mse_loss(y_pred, y_true):
+    """Scalar MSE with 1/2 factor. y_pred, y_true are scalars or arrays."""
+    return 0.5 * np.sum((y_pred - y_true) ** 2)
+
+def mse_loss_grad(y_pred, y_true):
+    """dL/dy_pred for MSE. Same shape as y_pred."""
+    return y_pred - y_true
+
+def softmax(logits):
+    """Numerically stable softmax. logits: (n_classes,)"""
+    e = np.exp(logits - np.max(logits))
+    return e / e.sum()
+
+def cross_entropy_loss(logits, y_true):
+    """
+    logits: (n_classes,) raw scores
+    y_true: (n_classes,) one-hot vector  OR  scalar class index
+    """
+    probs = softmax(logits)
+    if np.isscalar(y_true) or y_true.ndim == 0:
+        # class index form
+        return -np.log(probs[int(y_true)] + 1e-15)
+    # one-hot form
+    return -np.sum(y_true * np.log(probs + 1e-15))
+
+def cross_entropy_grad(logits, y_true):
+    """
+    Gradient of cross-entropy + softmax w.r.t. logits.
+    Simplifies to: softmax(logits) - y_true  (famous cancellation).
+    """
+    probs = softmax(logits)
+    if np.isscalar(y_true) or y_true.ndim == 0:
+        one_hot = np.zeros_like(probs)
+        one_hot[int(y_true)] = 1.0
+        return probs - one_hot
+    return probs - y_true
+
+# --- Demonstrations ---
+y_pred, y_true = 0.703, 1.0
+print(f"MSE loss:      {mse_loss(y_pred, y_true):.4f}")
+print(f"MSE gradient:  {mse_loss_grad(y_pred, y_true):.4f}")
+
+logits = np.array([2.0, 1.0, 0.5])
+y_cls  = 0  # true class is index 0
+print(f"CE loss:       {cross_entropy_loss(logits, y_cls):.4f}")
+print(f"CE gradient:   {cross_entropy_grad(logits, y_cls)}")</code></pre></div>
+    <div class="ct-panel" data-tab="bp-loss-js"><pre><code>function mseLoss(yPred, yTrue) {
+  // Scalar MSE with 1/2 factor
+  const diff = yPred - yTrue;
+  return 0.5 * diff * diff;
+}
+
+function mseLossGrad(yPred, yTrue) {
+  return yPred - yTrue;
+}
+
+function softmax(logits) {
+  const maxL = Math.max(...logits);
+  const e = logits.map(x => Math.exp(x - maxL));
+  const sum = e.reduce((a, b) => a + b, 0);
+  return e.map(x => x / sum);
+}
+
+function crossEntropyLoss(logits, yTrue) {
+  // yTrue: one-hot array or class index
+  const probs = softmax(logits);
+  if (typeof yTrue === 'number') {
+    return -Math.log(probs[yTrue] + 1e-15);
+  }
+  return -yTrue.reduce((s, t, i) => s + t * Math.log(probs[i] + 1e-15), 0);
+}
+
+function crossEntropyGrad(logits, yTrue) {
+  const probs = softmax(logits);
+  if (typeof yTrue === 'number') {
+    return probs.map((p, i) => p - (i === yTrue ? 1 : 0));
+  }
+  return probs.map((p, i) => p - yTrue[i]);
+}
+
+console.log("MSE loss:", mseLoss(0.703, 1.0).toFixed(4));
+console.log("CE loss:", crossEntropyLoss([2.0, 1.0, 0.5], 0).toFixed(4));</code></pre></div>
+    <div class="ct-panel" data-tab="bp-loss-c"><pre><code>#include &lt;stdio.h&gt;
+#include &lt;math.h&gt;
+
+double mse_loss(double y_pred, double y_true) {
+    double d = y_pred - y_true;
+    return 0.5 * d * d;
+}
+
+double mse_loss_grad(double y_pred, double y_true) {
+    return y_pred - y_true;
+}
+
+/* Softmax in-place; n = number of classes */
+void softmax(double *z, int n) {
+    double max = z[0];
+    for (int i = 1; i &lt; n; i++) if (z[i] &gt; max) max = z[i];
+    double sum = 0.0;
+    for (int i = 0; i &lt; n; i++) { z[i] = exp(z[i] - max); sum += z[i]; }
+    for (int i = 0; i &lt; n; i++) z[i] /= sum;
+}
+
+/* Cross-entropy: one-hot y_true as array */
+double cross_entropy_loss(double *logits, double *y_true, int n) {
+    double probs[n];
+    for (int i = 0; i &lt; n; i++) probs[i] = logits[i];
+    softmax(probs, n);
+    double loss = 0.0;
+    for (int i = 0; i &lt; n; i++) loss -= y_true[i] * log(probs[i] + 1e-15);
+    return loss;
+}
+
+int main(void) {
+    printf("MSE loss: %.4f\n", mse_loss(0.703, 1.0));
+    printf("MSE grad: %.4f\n", mse_loss_grad(0.703, 1.0));
+    double logits[] = {2.0, 1.0, 0.5};
+    double y_true[] = {1.0, 0.0, 0.0};
+    printf("CE loss:  %.4f\n", cross_entropy_loss(logits, y_true, 3));
+    return 0;
+}</code></pre></div>
+    <div class="ct-panel" data-tab="bp-loss-cpp"><pre><code>#include &lt;cmath&gt;
+#include &lt;vector&gt;
+#include &lt;algorithm&gt;
+#include &lt;iostream&gt;
+
+double mseLoss(double yPred, double yTrue) {
+    double d = yPred - yTrue;
+    return 0.5 * d * d;
+}
+
+std::vector&lt;double&gt; softmax(const std::vector&lt;double&gt;&amp; logits) {
+    double maxL = *std::max_element(logits.begin(), logits.end());
+    std::vector&lt;double&gt; e(logits.size());
+    double sum = 0;
+    for (size_t i = 0; i &lt; logits.size(); i++) {
+        e[i] = std::exp(logits[i] - maxL);
+        sum += e[i];
+    }
+    for (auto&amp; v : e) v /= sum;
+    return e;
+}
+
+double crossEntropyLoss(const std::vector&lt;double&gt;&amp; logits,
+                         const std::vector&lt;double&gt;&amp; yTrue) {
+    auto probs = softmax(logits);
+    double loss = 0;
+    for (size_t i = 0; i &lt; probs.size(); i++)
+        loss -= yTrue[i] * std::log(probs[i] + 1e-15);
+    return loss;
+}
+
+int main() {
+    std::cout &lt;&lt; "MSE loss: " &lt;&lt; mseLoss(0.703, 1.0) &lt;&lt; "\n";
+    std::vector&lt;double&gt; logits{2.0, 1.0, 0.5};
+    std::vector&lt;double&gt; yTrue{1.0, 0.0, 0.0};
+    std::cout &lt;&lt; "CE loss:  " &lt;&lt; crossEntropyLoss(logits, yTrue) &lt;&lt; "\n";
+}</code></pre></div>
+    <div class="ct-panel" data-tab="bp-loss-java"><pre><code>public class LossFunctions {
+
+    static double mseLoss(double yPred, double yTrue) {
+        double d = yPred - yTrue;
+        return 0.5 * d * d;
+    }
+
+    static double mseLossGrad(double yPred, double yTrue) {
+        return yPred - yTrue;
+    }
+
+    static double[] softmax(double[] logits) {
+        double max = logits[0];
+        for (double v : logits) if (v &gt; max) max = v;
+        double[] e = new double[logits.length];
+        double sum = 0;
+        for (int i = 0; i &lt; logits.length; i++) {
+            e[i] = Math.exp(logits[i] - max);
+            sum += e[i];
+        }
+        for (int i = 0; i &lt; e.length; i++) e[i] /= sum;
+        return e;
+    }
+
+    static double crossEntropyLoss(double[] logits, double[] yTrue) {
+        double[] probs = softmax(logits);
+        double loss = 0;
+        for (int i = 0; i &lt; probs.length; i++)
+            loss -= yTrue[i] * Math.log(probs[i] + 1e-15);
+        return loss;
+    }
+
+    public static void main(String[] args) {
+        System.out.printf("MSE loss: %.4f%n", mseLoss(0.703, 1.0));
+        double[] logits = {2.0, 1.0, 0.5};
+        double[] yTrue  = {1.0, 0.0, 0.0};
+        System.out.printf("CE loss:  %.4f%n", crossEntropyLoss(logits, yTrue));
+    }
+}</code></pre></div>
+    <div class="ct-panel" data-tab="bp-loss-go"><pre><code>package main
+
+import (
+    "fmt"
+    "math"
+)
+
+func mseLoss(yPred, yTrue float64) float64 {
+    d := yPred - yTrue
+    return 0.5 * d * d
+}
+
+func mseLossGrad(yPred, yTrue float64) float64 {
+    return yPred - yTrue
+}
+
+func softmax(logits []float64) []float64 {
+    maxL := logits[0]
+    for _, v := range logits {
+        if v &gt; maxL { maxL = v }
+    }
+    e := make([]float64, len(logits))
+    sum := 0.0
+    for i, v := range logits {
+        e[i] = math.Exp(v - maxL)
+        sum += e[i]
+    }
+    for i := range e { e[i] /= sum }
+    return e
+}
+
+func crossEntropyLoss(logits, yTrue []float64) float64 {
+    probs := softmax(logits)
+    loss := 0.0
+    for i := range probs {
+        loss -= yTrue[i] * math.Log(probs[i]+1e-15)
+    }
+    return loss
+}
+
+func main() {
+    fmt.Printf("MSE loss: %.4f\n", mseLoss(0.703, 1.0))
+    fmt.Printf("CE loss:  %.4f\n", crossEntropyLoss(
+        []float64{2.0, 1.0, 0.5},
+        []float64{1.0, 0.0, 0.0},
+    ))
+}</code></pre></div>
+  </div>
+</details>
 
     <!-- ========================================================== -->
     <h2 id="four-eqs">7. The four fundamental equations</h2>
@@ -448,6 +973,380 @@ $$\begin{aligned}
       </div>
     </div>
 
+    <details class="algo-code">
+  <summary>Source — Backpropagation (Chain Rule)</summary>
+  <div class="code-tabs">
+    <div class="ct-header">
+      <button class="ct-tab active" data-tab="bp-bwd-pseudo">Pseudocode</button>
+      <button class="ct-tab" data-tab="bp-bwd-py">Python</button>
+      <button class="ct-tab" data-tab="bp-bwd-js">JavaScript</button>
+      <button class="ct-tab" data-tab="bp-bwd-c">C</button>
+      <button class="ct-tab" data-tab="bp-bwd-cpp">C++</button>
+      <button class="ct-tab" data-tab="bp-bwd-java">Java</button>
+      <button class="ct-tab" data-tab="bp-bwd-go">Go</button>
+    </div>
+    <div class="ct-panel active" data-tab="bp-bwd-pseudo"><pre><code># Assumes forward pass already ran, storing Z1, H1, Z2, Yhat
+# Loss: MSE  L = 0.5*(Yhat - y)^2
+
+function backward(X, y, W1, b1, W2, b2, Z1, H1, Z2, Yhat):
+    # BP1: output error
+    dL_dYhat = Yhat - y
+    dYhat_dZ2 = Yhat * (1 - Yhat)        # sigmoid derivative
+    delta2 = dL_dYhat * dYhat_dZ2        # scalar (1,)
+
+    # BP4 / BP3 at output layer
+    dL_dW2 = delta2 * H1                 # (n_hid,)
+    dL_db2 = delta2                      # scalar
+
+    # BP2: propagate error to hidden layer
+    dZ2_dH1 = W2                         # (n_hid,)
+    dH1_dZ1 = H1 * (1 - H1)             # sigmoid derivative, element-wise
+    delta1 = (W2 * delta2) * dH1_dZ1    # (n_hid,)
+
+    # BP4 / BP3 at hidden layer
+    dL_dW1 = outer(delta1, X)            # (n_hid, n_in)
+    dL_db1 = delta1                      # (n_hid,)
+
+    return dL_dW2, dL_db2, dL_dW1, dL_db1</code></pre></div>
+    <div class="ct-panel" data-tab="bp-bwd-py"><pre><code>import numpy as np
+
+def sigmoid(z):     return 1.0 / (1.0 + np.exp(-z))
+def sig_prime(a):   return a * (1.0 - a)   # a = sigmoid(z)
+
+def backward(X, y, W2, H1, Yhat):
+    """
+    Gradients for a 2-layer MLP with sigmoid activations and MSE loss.
+    X:    (n_in,)  input
+    y:    scalar   target
+    W2:   (1, n_hid) output weights
+    H1:   (n_hid,) hidden activations from forward pass
+    Yhat: (1,)     output activation from forward pass
+    Returns: dW2, db2, dW1, db1
+    """
+    # BP1
+    delta2 = (Yhat - y) * sig_prime(Yhat)    # (1,)
+
+    # BP4 / BP3 for output layer
+    dW2 = delta2[:, None] * H1[None, :]      # (1, n_hid)
+    db2 = delta2                              # (1,)
+
+    # BP2: propagate to hidden layer
+    delta1 = (W2.T @ delta2) * sig_prime(H1) # (n_hid,)
+
+    # BP4 / BP3 for hidden layer
+    dW1 = np.outer(delta1, X)                # (n_hid, n_in)
+    db1 = delta1                             # (n_hid,)
+
+    return dW2, db2, dW1, db1
+
+# --- Full example ---
+W1 = np.array([[0.2, 0.4], [0.3, 0.1]])
+b1 = np.array([0.1, 0.1])
+W2 = np.array([[0.5, 0.6]])
+b2 = np.array([0.2])
+X  = np.array([0.5, 0.8])
+y  = 1.0
+
+Z1   = W1 @ X + b1
+H1   = sigmoid(Z1)
+Z2   = W2 @ H1 + b2
+Yhat = sigmoid(Z2)
+
+dW2, db2, dW1, db1 = backward(X, y, W2, H1, Yhat)
+print("dW2:", dW2)
+print("dW1:", dW1)</code></pre></div>
+    <div class="ct-panel" data-tab="bp-bwd-js"><pre><code>function sigmoid(z) { return 1 / (1 + Math.exp(-z)); }
+function sigPrime(a) { return a * (1 - a); }
+
+function backward(X, y, W2, H1, Yhat) {
+  // BP1: output error (scalar for 1-output network)
+  const delta2 = (Yhat[0] - y) * sigPrime(Yhat[0]);
+
+  // BP4 / BP3 for output layer
+  const dW2 = H1.map(h => [delta2 * h]);     // [[dw2_1], [dw2_2]] -> shape (n_hid,1)
+  const db2 = [delta2];
+
+  // BP2: propagate to hidden (W2 is [[w1, w2]])
+  const delta1 = H1.map((h, j) => W2[0][j] * delta2 * sigPrime(h));
+
+  // BP4 / BP3 for hidden layer
+  const dW1 = delta1.map(d => X.map(x => d * x));  // (n_hid, n_in)
+  const db1 = delta1;
+
+  return { dW2, db2, dW1, db1 };
+}
+
+// Example
+const W1 = [[0.2, 0.4], [0.3, 0.1]];
+const b1 = [0.1, 0.1];
+const W2 = [[0.5, 0.6]];
+const b2 = [0.2];
+const X  = [0.5, 0.8];
+const y  = 1.0;
+
+const Z1   = W1.map(row => row.reduce((s, w, j) => s + w * X[j], 0)).map((z, i) => z + b1[i]);
+const H1   = Z1.map(sigmoid);
+const Z2   = W2.map(row => row.reduce((s, w, j) => s + w * H1[j], 0)).map((z, i) => z + b2[i]);
+const Yhat = Z2.map(sigmoid);
+
+const { dW2, dW1 } = backward(X, y, W2, H1, Yhat);
+console.log("dW2:", dW2, "dW1:", dW1);</code></pre></div>
+    <div class="ct-panel" data-tab="bp-bwd-c"><pre><code>#include &lt;stdio.h&gt;
+#include &lt;math.h&gt;
+
+#define N_IN  2
+#define N_HID 2
+#define N_OUT 1
+
+double sigmoid(double z) { return 1.0 / (1.0 + exp(-z)); }
+double sig_prime(double a) { return a * (1.0 - a); }
+
+void backward(
+    double X[N_IN],
+    double y,
+    double W2[N_OUT][N_HID],
+    double H1[N_HID],
+    double Yhat[N_OUT],
+    double dW2[N_OUT][N_HID], double db2[N_OUT],
+    double dW1[N_HID][N_IN],  double db1[N_HID])
+{
+    double delta2[N_OUT];
+    for (int i = 0; i &lt; N_OUT; i++)
+        delta2[i] = (Yhat[i] - y) * sig_prime(Yhat[i]);
+
+    for (int i = 0; i &lt; N_OUT; i++) {
+        for (int j = 0; j &lt; N_HID; j++) dW2[i][j] = delta2[i] * H1[j];
+        db2[i] = delta2[i];
+    }
+
+    double delta1[N_HID];
+    for (int j = 0; j &lt; N_HID; j++) {
+        double s = 0.0;
+        for (int i = 0; i &lt; N_OUT; i++) s += W2[i][j] * delta2[i];
+        delta1[j] = s * sig_prime(H1[j]);
+    }
+
+    for (int j = 0; j &lt; N_HID; j++) {
+        for (int k = 0; k &lt; N_IN; k++) dW1[j][k] = delta1[j] * X[k];
+        db1[j] = delta1[j];
+    }
+}
+
+int main(void) {
+    double X[N_IN]           = {0.5, 0.8};
+    double W1[N_HID][N_IN]   = {{0.2, 0.4}, {0.3, 0.1}};
+    double b1[N_HID]         = {0.1, 0.1};
+    double W2[N_OUT][N_HID]  = {{0.5, 0.6}};
+    double b2[N_OUT]         = {0.2};
+    double Z1[N_HID], H1[N_HID], Z2[N_OUT], Yhat[N_OUT];
+
+    for (int i = 0; i &lt; N_HID; i++) {
+        Z1[i] = b1[i];
+        for (int j = 0; j &lt; N_IN; j++) Z1[i] += W1[i][j] * X[j];
+        H1[i] = sigmoid(Z1[i]);
+    }
+    for (int i = 0; i &lt; N_OUT; i++) {
+        Z2[i] = b2[i];
+        for (int j = 0; j &lt; N_HID; j++) Z2[i] += W2[i][j] * H1[j];
+        Yhat[i] = sigmoid(Z2[i]);
+    }
+
+    double dW2[N_OUT][N_HID], db2[N_OUT], dW1[N_HID][N_IN], db1[N_HID];
+    backward(X, 1.0, W2, H1, Yhat, dW2, db2, dW1, db1);
+    printf("dW2 = [%.5f, %.5f]\n", dW2[0][0], dW2[0][1]);
+    printf("dW1 = [[%.5f, %.5f], [%.5f, %.5f]]\n",
+           dW1[0][0], dW1[0][1], dW1[1][0], dW1[1][1]);
+    return 0;
+}</code></pre></div>
+    <div class="ct-panel" data-tab="bp-bwd-cpp"><pre><code>#include &lt;cmath&gt;
+#include &lt;vector&gt;
+#include &lt;iostream&gt;
+
+double sigmoid(double z) { return 1.0 / (1.0 + std::exp(-z)); }
+double sigPrime(double a) { return a * (1.0 - a); }
+
+struct Grads {
+    std::vector&lt;std::vector&lt;double&gt;&gt; dW2, dW1;
+    std::vector&lt;double&gt; db2, db1;
+};
+
+Grads backward(
+    const std::vector&lt;double&gt;&amp; X, double y,
+    const std::vector&lt;std::vector&lt;double&gt;&gt;&amp; W2,
+    const std::vector&lt;double&gt;&amp; H1,
+    const std::vector&lt;double&gt;&amp; Yhat)
+{
+    int nOut = Yhat.size(), nHid = H1.size(), nIn = X.size();
+    std::vector&lt;double&gt; delta2(nOut), delta1(nHid);
+    Grads g;
+
+    for (int i = 0; i &lt; nOut; i++)
+        delta2[i] = (Yhat[i] - y) * sigPrime(Yhat[i]);
+
+    g.dW2.resize(nOut, std::vector&lt;double&gt;(nHid));
+    g.db2.resize(nOut);
+    for (int i = 0; i &lt; nOut; i++) {
+        for (int j = 0; j &lt; nHid; j++) g.dW2[i][j] = delta2[i] * H1[j];
+        g.db2[i] = delta2[i];
+    }
+
+    for (int j = 0; j &lt; nHid; j++) {
+        double s = 0;
+        for (int i = 0; i &lt; nOut; i++) s += W2[i][j] * delta2[i];
+        delta1[j] = s * sigPrime(H1[j]);
+    }
+
+    g.dW1.resize(nHid, std::vector&lt;double&gt;(nIn));
+    g.db1.resize(nHid);
+    for (int j = 0; j &lt; nHid; j++) {
+        for (int k = 0; k &lt; nIn; k++) g.dW1[j][k] = delta1[j] * X[k];
+        g.db1[j] = delta1[j];
+    }
+    return g;
+}
+
+int main() {
+    // Forward pass first
+    std::vector&lt;double&gt; X{0.5, 0.8};
+    std::vector&lt;std::vector&lt;double&gt;&gt; W1{{0.2, 0.4}, {0.3, 0.1}};
+    std::vector&lt;double&gt; b1{0.1, 0.1};
+    std::vector&lt;std::vector&lt;double&gt;&gt; W2{{0.5, 0.6}};
+    std::vector&lt;double&gt; b2{0.2};
+
+    std::vector&lt;double&gt; H1(2), Yhat(1);
+    for (int i = 0; i &lt; 2; i++) {
+        double z = b1[i]; for (int j = 0; j &lt; 2; j++) z += W1[i][j]*X[j];
+        H1[i] = sigmoid(z);
+    }
+    { double z = b2[0]; for (int j = 0; j &lt; 2; j++) z += W2[0][j]*H1[j]; Yhat[0] = sigmoid(z); }
+
+    auto g = backward(X, 1.0, W2, H1, Yhat);
+    std::cout &lt;&lt; "dW2=[" &lt;&lt; g.dW2[0][0] &lt;&lt; ", " &lt;&lt; g.dW2[0][1] &lt;&lt; "]\n";
+}</code></pre></div>
+    <div class="ct-panel" data-tab="bp-bwd-java"><pre><code>public class Backprop {
+
+    static double sigmoid(double z) { return 1.0 / (1.0 + Math.exp(-z)); }
+    static double sigPrime(double a) { return a * (1.0 - a); }
+
+    static double[][][] backward(
+            double[] X, double y,
+            double[][] W2, double[] H1, double[] Yhat) {
+        int nOut = Yhat.length, nHid = H1.length, nIn = X.length;
+        double[] delta2 = new double[nOut];
+        double[] delta1 = new double[nHid];
+        double[][] dW2 = new double[nOut][nHid];
+        double[] db2 = new double[nOut];
+        double[][] dW1 = new double[nHid][nIn];
+        double[] db1 = new double[nHid];
+
+        for (int i = 0; i &lt; nOut; i++)
+            delta2[i] = (Yhat[i] - y) * sigPrime(Yhat[i]);
+
+        for (int i = 0; i &lt; nOut; i++) {
+            for (int j = 0; j &lt; nHid; j++) dW2[i][j] = delta2[i] * H1[j];
+            db2[i] = delta2[i];
+        }
+
+        for (int j = 0; j &lt; nHid; j++) {
+            double s = 0;
+            for (int i = 0; i &lt; nOut; i++) s += W2[i][j] * delta2[i];
+            delta1[j] = s * sigPrime(H1[j]);
+        }
+
+        for (int j = 0; j &lt; nHid; j++) {
+            for (int k = 0; k &lt; nIn; k++) dW1[j][k] = delta1[j] * X[k];
+            db1[j] = delta1[j];
+        }
+        // Pack for return: [dW2, dW1, db2_as_2d, db1_as_2d]
+        return new double[][][] {dW2, dW1};
+    }
+
+    public static void main(String[] args) {
+        double[] X    = {0.5, 0.8};
+        double[][] W1 = {{0.2, 0.4}, {0.3, 0.1}};
+        double[] b1   = {0.1, 0.1};
+        double[][] W2 = {{0.5, 0.6}};
+        double[] b2   = {0.2};
+
+        // Forward
+        double[] H1   = new double[2];
+        double[] Yhat = new double[1];
+        for (int i = 0; i &lt; 2; i++) {
+            double z = b1[i];
+            for (int j = 0; j &lt; 2; j++) z += W1[i][j] * X[j];
+            H1[i] = sigmoid(z);
+        }
+        double z = b2[0];
+        for (int j = 0; j &lt; 2; j++) z += W2[0][j] * H1[j];
+        Yhat[0] = sigmoid(z);
+
+        double[][][] grads = backward(X, 1.0, W2, H1, Yhat);
+        System.out.printf("dW2=[%.5f, %.5f]%n", grads[0][0][0], grads[0][0][1]);
+    }
+}</code></pre></div>
+    <div class="ct-panel" data-tab="bp-bwd-go"><pre><code>package main
+
+import (
+    "fmt"
+    "math"
+)
+
+func sigmoid(z float64) float64 { return 1.0 / (1.0 + math.Exp(-z)) }
+func sigPrime(a float64) float64 { return a * (1.0 - a) }
+
+type Grads struct {
+    DW2, DW1     [][]float64
+    Db2, Db1     []float64
+}
+
+func backward(X []float64, y float64,
+    W2 [][]float64, H1 []float64, Yhat []float64) Grads {
+
+    nOut, nHid, nIn := len(Yhat), len(H1), len(X)
+    delta2 := make([]float64, nOut)
+    delta1 := make([]float64, nHid)
+
+    for i := 0; i &lt; nOut; i++ {
+        delta2[i] = (Yhat[i] - y) * sigPrime(Yhat[i])
+    }
+
+    dW2 := make([][]float64, nOut)
+    db2 := make([]float64, nOut)
+    for i := 0; i &lt; nOut; i++ {
+        dW2[i] = make([]float64, nHid)
+        for j := 0; j &lt; nHid; j++ { dW2[i][j] = delta2[i] * H1[j] }
+        db2[i] = delta2[i]
+    }
+
+    for j := 0; j &lt; nHid; j++ {
+        s := 0.0
+        for i := 0; i &lt; nOut; i++ { s += W2[i][j] * delta2[i] }
+        delta1[j] = s * sigPrime(H1[j])
+    }
+
+    dW1 := make([][]float64, nHid)
+    db1 := make([]float64, nHid)
+    for j := 0; j &lt; nHid; j++ {
+        dW1[j] = make([]float64, nIn)
+        for k := 0; k &lt; nIn; k++ { dW1[j][k] = delta1[j] * X[k] }
+        db1[j] = delta1[j]
+    }
+    return Grads{dW2, dW1, db2, db1}
+}
+
+func main() {
+    // Forward pass values (from running forward() first)
+    H1   := []float64{0.6083, 0.5939}
+    Yhat := []float64{0.7029}
+    W2   := [][]float64{{0.5, 0.6}}
+    X    := []float64{0.5, 0.8}
+
+    g := backward(X, 1.0, W2, H1, Yhat)
+    fmt.Printf("dW2=%v\ndW1=%v\n", g.DW2, g.DW1)
+}</code></pre></div>
+  </div>
+</details>
+
     <!-- ========================================================== -->
     <h2 id="update">10. Gradient descent update</h2>
     <p>Now that we have every gradient, we apply the update rule to each weight and bias simultaneously. With learning rate $\eta = 0.5$:</p>
@@ -492,6 +1391,437 @@ for l in 1..L:
     </div>
 
     <p>Every deep learning framework (PyTorch, JAX, TensorFlow) implements a generalized version of this via <em>reverse-mode automatic differentiation</em>. You write the forward pass; the framework records the computation graph and then traverses it backward computing local derivatives. That's why you never have to write backward passes by hand anymore — but you still have to understand what's happening when gradients vanish, explode, or disappear mysteriously.</p>
+
+    <details class="algo-code">
+  <summary>Source — Full Training Loop</summary>
+  <div class="code-tabs">
+    <div class="ct-header">
+      <button class="ct-tab active" data-tab="bp-train-pseudo">Pseudocode</button>
+      <button class="ct-tab" data-tab="bp-train-py">Python</button>
+      <button class="ct-tab" data-tab="bp-train-js">JavaScript</button>
+      <button class="ct-tab" data-tab="bp-train-c">C</button>
+      <button class="ct-tab" data-tab="bp-train-cpp">C++</button>
+      <button class="ct-tab" data-tab="bp-train-java">Java</button>
+      <button class="ct-tab" data-tab="bp-train-go">Go</button>
+    </div>
+    <div class="ct-panel active" data-tab="bp-train-pseudo"><pre><code>function train(dataset, W1, b1, W2, b2, lr, n_epochs, batch_size):
+    for epoch in 1..n_epochs:
+        shuffle(dataset)
+        for batch in mini_batches(dataset, batch_size):
+            # Accumulate gradients over the batch
+            dW1, db1, dW2, db2 = zeros_like(W1, b1, W2, b2)
+            total_loss = 0
+            for (x, y) in batch:
+                Yhat, H1, Z1, Z2 = forward(x, W1, b1, W2, b2)
+                total_loss += mse_loss(Yhat, y)
+                gW2, gb2, gW1, gb1 = backward(x, y, W2, H1, Yhat)
+                dW2 += gW2
+                db2 += gb2
+                dW1 += gW1
+                db1 += gb1
+
+            # Average gradients and update
+            m = len(batch)
+            W2 -= lr * dW2 / m
+            b2 -= lr * db2 / m
+            W1 -= lr * dW1 / m
+            b1 -= lr * db1 / m
+
+        print(f"Epoch {epoch}  avg_loss={total_loss/len(dataset):.4f}")</code></pre></div>
+    <div class="ct-panel" data-tab="bp-train-py"><pre><code>import numpy as np
+
+def sigmoid(z):   return 1.0 / (1.0 + np.exp(-z))
+def sig_prime(a): return a * (1.0 - a)
+
+def forward(X, W1, b1, W2, b2):
+    Z1   = W1 @ X + b1
+    H1   = sigmoid(Z1)
+    Z2   = W2 @ H1 + b2
+    Yhat = sigmoid(Z2)
+    return Yhat, H1, Z1, Z2
+
+def backward(X, y, W2, H1, Yhat):
+    delta2 = (Yhat - y) * sig_prime(Yhat)
+    dW2    = delta2[:, None] * H1[None, :]
+    db2    = delta2
+    delta1 = (W2.T @ delta2) * sig_prime(H1)
+    dW1    = np.outer(delta1, X)
+    db1    = delta1
+    return dW2, db2, dW1, db1
+
+def train(X_data, y_data, W1, b1, W2, b2,
+          lr=0.5, n_epochs=100, batch_size=4):
+    m = len(X_data)
+    for epoch in range(n_epochs):
+        idx   = np.random.permutation(m)
+        total_loss = 0.0
+        for start in range(0, m, batch_size):
+            batch = idx[start:start + batch_size]
+            dW1_acc = np.zeros_like(W1)
+            db1_acc = np.zeros_like(b1)
+            dW2_acc = np.zeros_like(W2)
+            db2_acc = np.zeros_like(b2)
+            for i in batch:
+                Yhat, H1, _, _ = forward(X_data[i], W1, b1, W2, b2)
+                total_loss     += 0.5 * float((Yhat - y_data[i]) ** 2)
+                dW2, db2, dW1, db1 = backward(X_data[i], y_data[i], W2, H1, Yhat)
+                dW2_acc += dW2; db2_acc += db2
+                dW1_acc += dW1; db1_acc += db1
+            k = len(batch)
+            W2 -= lr * dW2_acc / k;  b2 -= lr * db2_acc / k
+            W1 -= lr * dW1_acc / k;  b1 -= lr * db1_acc / k
+        if (epoch + 1) % 10 == 0:
+            print(f"Epoch {epoch+1:3d}  loss={total_loss/m:.5f}")
+    return W1, b1, W2, b2
+
+# Tiny demo: learn XOR-like single-output
+rng = np.random.default_rng(42)
+W1 = rng.normal(0, 0.5, (4, 2))
+b1 = np.zeros(4)
+W2 = rng.normal(0, 0.5, (1, 4))
+b2 = np.zeros(1)
+
+X_data = np.array([[0.,0.],[0.,1.],[1.,0.],[1.,1.]])
+y_data = np.array([[0.],[1.],[1.],[0.]])
+
+W1, b1, W2, b2 = train(X_data, y_data, W1, b1, W2, b2, lr=1.0, n_epochs=500)</code></pre></div>
+    <div class="ct-panel" data-tab="bp-train-js"><pre><code>function sigmoid(z) { return 1 / (1 + Math.exp(-z)); }
+function sigPrime(a) { return a * (1 - a); }
+
+function matVec(A, v) {
+  return A.map(row => row.reduce((s, w, j) => s + w * v[j], 0));
+}
+
+function forward(X, W1, b1, W2, b2) {
+  const Z1   = matVec(W1, X).map((z, i) => z + b1[i]);
+  const H1   = Z1.map(sigmoid);
+  const Z2   = matVec(W2, H1).map((z, i) => z + b2[i]);
+  const Yhat = Z2.map(sigmoid);
+  return { Yhat, H1 };
+}
+
+function backward(X, y, W2, H1, Yhat) {
+  const delta2 = (Yhat[0] - y) * sigPrime(Yhat[0]);
+  const dW2    = H1.map(h => [delta2 * h]);
+  const db2    = [delta2];
+  const delta1 = H1.map((h, j) => W2[0][j] * delta2 * sigPrime(h));
+  const dW1    = delta1.map(d => X.map(x => d * x));
+  const db1    = delta1;
+  return { dW2, db2, dW1, db1 };
+}
+
+function train(Xdata, ydata, W1, b1, W2, b2, lr = 0.5, nEpochs = 200) {
+  for (let ep = 0; ep &lt; nEpochs; ep++) {
+    let totalLoss = 0;
+    for (let i = 0; i &lt; Xdata.length; i++) {
+      const { Yhat, H1 } = forward(Xdata[i], W1, b1, W2, b2);
+      totalLoss += 0.5 * (Yhat[0] - ydata[i]) ** 2;
+      const g = backward(Xdata[i], ydata[i], W2, H1, Yhat);
+      // update output layer
+      W2 = W2.map((row, i) => row.map((w, j) => w - lr * g.dW2[j][0]));
+      b2 = b2.map((b, i) => b - lr * g.db2[i]);
+      // update hidden layer
+      W1 = W1.map((row, i) => row.map((w, j) => w - lr * g.dW1[i][j]));
+      b1 = b1.map((b, i) => b - lr * g.db1[i]);
+    }
+    if ((ep + 1) % 50 === 0)
+      console.log(`Epoch ${ep + 1}  loss=${(totalLoss / Xdata.length).toFixed(5)}`);
+  }
+  return { W1, b1, W2, b2 };
+}
+
+// XOR demo
+const Xdata = [[0,0],[0,1],[1,0],[1,1]];
+const ydata = [0, 1, 1, 0];
+let W1 = [[0.5,-0.3],[0.1,0.8],[-0.4,0.6],[0.2,-0.5]];
+let b1 = [0,0,0,0];
+let W2 = [[0.3,-0.2,0.5,-0.1]];
+let b2 = [0];
+train(Xdata, ydata, W1, b1, W2, b2, 1.0, 500);</code></pre></div>
+    <div class="ct-panel" data-tab="bp-train-c"><pre><code>/* Compact training loop for a 2-2-1 MLP with MSE loss */
+#include &lt;stdio.h&gt;
+#include &lt;math.h&gt;
+#include &lt;string.h&gt;
+
+#define NIN 2
+#define NHID 2
+#define NOUT 1
+#define LR 0.5
+
+double sigmoid(double z)    { return 1.0 / (1.0 + exp(-z)); }
+double sig_prime(double a)  { return a * (1.0 - a); }
+
+void train_step(
+    double X[NIN], double y,
+    double W1[NHID][NIN], double b1[NHID],
+    double W2[NOUT][NHID], double b2[NOUT])
+{
+    /* Forward */
+    double Z1[NHID], H1[NHID], Z2[NOUT], Yhat[NOUT];
+    for (int i = 0; i &lt; NHID; i++) {
+        Z1[i] = b1[i];
+        for (int j = 0; j &lt; NIN; j++) Z1[i] += W1[i][j]*X[j];
+        H1[i] = sigmoid(Z1[i]);
+    }
+    for (int i = 0; i &lt; NOUT; i++) {
+        Z2[i] = b2[i];
+        for (int j = 0; j &lt; NHID; j++) Z2[i] += W2[i][j]*H1[j];
+        Yhat[i] = sigmoid(Z2[i]);
+    }
+    /* Backward */
+    double delta2[NOUT], delta1[NHID];
+    for (int i = 0; i &lt; NOUT; i++)
+        delta2[i] = (Yhat[i] - y) * sig_prime(Yhat[i]);
+    for (int j = 0; j &lt; NHID; j++) {
+        double s = 0;
+        for (int i = 0; i &lt; NOUT; i++) s += W2[i][j]*delta2[i];
+        delta1[j] = s * sig_prime(H1[j]);
+    }
+    /* Update */
+    for (int i = 0; i &lt; NOUT; i++) {
+        for (int j = 0; j &lt; NHID; j++) W2[i][j] -= LR * delta2[i] * H1[j];
+        b2[i] -= LR * delta2[i];
+    }
+    for (int j = 0; j &lt; NHID; j++) {
+        for (int k = 0; k &lt; NIN; k++) W1[j][k] -= LR * delta1[j] * X[k];
+        b1[j] -= LR * delta1[j];
+    }
+}
+
+int main(void) {
+    double W1[NHID][NIN] = {{0.2,0.4},{0.3,0.1}};
+    double b1[NHID]      = {0.1,0.1};
+    double W2[NOUT][NHID]= {{0.5,0.6}};
+    double b2[NOUT]      = {0.2};
+    double X[NIN] = {0.5, 0.8};
+    double y = 1.0;
+
+    for (int ep = 0; ep &lt; 200; ep++) {
+        train_step(X, y, W1, b1, W2, b2);
+        if ((ep+1) % 20 == 0) {
+            double h1[NHID], yh = b2[0];
+            for (int i=0;i&lt;NHID;i++){double z=b1[i];for(int j=0;j&lt;NIN;j++)z+=W1[i][j]*X[j];h1[i]=sigmoid(z);}
+            for (int j=0;j&lt;NHID;j++) yh+=W2[0][j]*h1[j];
+            yh=sigmoid(yh);
+            printf("Epoch %3d  yhat=%.4f  loss=%.5f\n", ep+1, yh, 0.5*(yh-y)*(yh-y));
+        }
+    }
+    return 0;
+}</code></pre></div>
+    <div class="ct-panel" data-tab="bp-train-cpp"><pre><code>#include &lt;cmath&gt;
+#include &lt;vector&gt;
+#include &lt;iostream&gt;
+#include &lt;random&gt;
+
+double sigmoid(double z)   { return 1.0 / (1.0 + std::exp(-z)); }
+double sigPrime(double a)  { return a * (1.0 - a); }
+
+struct MLP {
+    std::vector&lt;std::vector&lt;double&gt;&gt; W1, W2;
+    std::vector&lt;double&gt; b1, b2;
+
+    MLP(int nIn, int nHid, int nOut) {
+        std::mt19937 rng(42);
+        std::normal_distribution&lt;double&gt; nd(0, 0.5);
+        W1.assign(nHid, std::vector&lt;double&gt;(nIn));
+        b1.assign(nHid, 0);
+        W2.assign(nOut, std::vector&lt;double&gt;(nHid));
+        b2.assign(nOut, 0);
+        for (auto&amp; row : W1) for (auto&amp; v : row) v = nd(rng);
+        for (auto&amp; row : W2) for (auto&amp; v : row) v = nd(rng);
+    }
+
+    std::pair&lt;std::vector&lt;double&gt;, std::vector&lt;double&gt;&gt;
+    forward(const std::vector&lt;double&gt;&amp; X) {
+        std::vector&lt;double&gt; H1(W1.size()), Yhat(W2.size());
+        for (size_t i = 0; i &lt; W1.size(); i++) {
+            double z = b1[i];
+            for (size_t j = 0; j &lt; X.size(); j++) z += W1[i][j]*X[j];
+            H1[i] = sigmoid(z);
+        }
+        for (size_t i = 0; i &lt; W2.size(); i++) {
+            double z = b2[i];
+            for (size_t j = 0; j &lt; H1.size(); j++) z += W2[i][j]*H1[j];
+            Yhat[i] = sigmoid(z);
+        }
+        return {H1, Yhat};
+    }
+
+    void trainStep(const std::vector&lt;double&gt;&amp; X, double y, double lr) {
+        auto [H1, Yhat] = forward(X);
+        // delta2
+        std::vector&lt;double&gt; delta2(W2.size());
+        for (size_t i=0;i&lt;W2.size();i++) delta2[i]=(Yhat[i]-y)*sigPrime(Yhat[i]);
+        // update W2, b2
+        for (size_t i=0;i&lt;W2.size();i++){
+            for (size_t j=0;j&lt;H1.size();j++) W2[i][j]-=lr*delta2[i]*H1[j];
+            b2[i]-=lr*delta2[i];
+        }
+        // delta1
+        std::vector&lt;double&gt; delta1(W1.size());
+        for (size_t j=0;j&lt;W1.size();j++){
+            double s=0;
+            for (size_t i=0;i&lt;W2.size();i++) s+=W2[i][j]*delta2[i];
+            delta1[j]=s*sigPrime(H1[j]);
+        }
+        // update W1, b1
+        for (size_t j=0;j&lt;W1.size();j++){
+            for (size_t k=0;k&lt;X.size();k++) W1[j][k]-=lr*delta1[j]*X[k];
+            b1[j]-=lr*delta1[j];
+        }
+    }
+};
+
+int main() {
+    MLP net(2, 4, 1);
+    std::vector&lt;std::vector&lt;double&gt;&gt; Xs{{0,0},{0,1},{1,0},{1,1}};
+    std::vector&lt;double&gt; ys{0, 1, 1, 0};
+    for (int ep = 0; ep &lt; 500; ep++) {
+        double loss = 0;
+        for (size_t i = 0; i &lt; Xs.size(); i++) {
+            net.trainStep(Xs[i], ys[i], 1.0);
+            auto [H1, Yhat] = net.forward(Xs[i]);
+            double d = Yhat[0] - ys[i]; loss += 0.5*d*d;
+        }
+        if ((ep+1) % 100 == 0)
+            std::cout &lt;&lt; "Epoch " &lt;&lt; ep+1 &lt;&lt; "  loss=" &lt;&lt; loss/4 &lt;&lt; "\n";
+    }
+}</code></pre></div>
+    <div class="ct-panel" data-tab="bp-train-java"><pre><code>import java.util.Random;
+
+public class TrainingLoop {
+
+    static double sigmoid(double z)  { return 1.0 / (1.0 + Math.exp(-z)); }
+    static double sigPrime(double a) { return a * (1.0 - a); }
+
+    static double[] forward1(double[] X, double[][] W, double[] b) {
+        double[] out = new double[W.length];
+        for (int i = 0; i &lt; W.length; i++) {
+            out[i] = b[i];
+            for (int j = 0; j &lt; X.length; j++) out[i] += W[i][j] * X[j];
+            out[i] = sigmoid(out[i]);
+        }
+        return out;
+    }
+
+    static void trainStep(
+            double[] X, double y,
+            double[][] W1, double[] b1,
+            double[][] W2, double[] b2, double lr) {
+        double[] H1   = forward1(X, W1, b1);
+        double[] Yhat = forward1(H1, W2, b2);
+
+        double[] delta2 = new double[Yhat.length];
+        for (int i = 0; i &lt; Yhat.length; i++)
+            delta2[i] = (Yhat[i] - y) * sigPrime(Yhat[i]);
+
+        for (int i = 0; i &lt; W2.length; i++) {
+            for (int j = 0; j &lt; H1.length; j++) W2[i][j] -= lr * delta2[i] * H1[j];
+            b2[i] -= lr * delta2[i];
+        }
+
+        double[] delta1 = new double[H1.length];
+        for (int j = 0; j &lt; H1.length; j++) {
+            double s = 0;
+            for (int i = 0; i &lt; W2.length; i++) s += W2[i][j] * delta2[i];
+            delta1[j] = s * sigPrime(H1[j]);
+        }
+
+        for (int j = 0; j &lt; W1.length; j++) {
+            for (int k = 0; k &lt; X.length; k++) W1[j][k] -= lr * delta1[j] * X[k];
+            b1[j] -= lr * delta1[j];
+        }
+    }
+
+    public static void main(String[] args) {
+        double[][] W1 = {{0.2,0.4},{0.3,0.1}};
+        double[] b1   = {0.1, 0.1};
+        double[][] W2 = {{0.5, 0.6}};
+        double[] b2   = {0.2};
+        double[] X    = {0.5, 0.8};
+        double y      = 1.0;
+
+        for (int ep = 1; ep &lt;= 200; ep++) {
+            trainStep(X, y, W1, b1, W2, b2, 0.5);
+            if (ep % 20 == 0) {
+                double[] H1   = forward1(X, W1, b1);
+                double[] Yhat = forward1(H1, W2, b2);
+                System.out.printf("Epoch %3d  yhat=%.4f%n", ep, Yhat[0]);
+            }
+        }
+    }
+}</code></pre></div>
+    <div class="ct-panel" data-tab="bp-train-go"><pre><code>package main
+
+import (
+    "fmt"
+    "math"
+)
+
+func sigmoid(z float64) float64  { return 1.0 / (1.0 + math.Exp(-z)) }
+func sigPrime(a float64) float64 { return a * (1.0 - a) }
+
+func forwardLayer(X []float64, W [][]float64, b []float64) []float64 {
+    out := make([]float64, len(W))
+    for i, row := range W {
+        out[i] = b[i]
+        for j, w := range row { out[i] += w * X[j] }
+        out[i] = sigmoid(out[i])
+    }
+    return out
+}
+
+func trainStep(X []float64, y float64,
+    W1 [][]float64, b1 []float64,
+    W2 [][]float64, b2 []float64, lr float64) {
+
+    H1   := forwardLayer(X, W1, b1)
+    Yhat := forwardLayer(H1, W2, b2)
+
+    // delta2
+    delta2 := make([]float64, len(Yhat))
+    for i := range Yhat { delta2[i] = (Yhat[i] - y) * sigPrime(Yhat[i]) }
+
+    // update W2, b2
+    for i := range W2 {
+        for j := range H1 { W2[i][j] -= lr * delta2[i] * H1[j] }
+        b2[i] -= lr * delta2[i]
+    }
+
+    // delta1
+    delta1 := make([]float64, len(H1))
+    for j := range H1 {
+        s := 0.0
+        for i := range W2 { s += W2[i][j] * delta2[i] }
+        delta1[j] = s * sigPrime(H1[j])
+    }
+
+    // update W1, b1
+    for j := range W1 {
+        for k := range X { W1[j][k] -= lr * delta1[j] * X[k] }
+        b1[j] -= lr * delta1[j]
+    }
+}
+
+func main() {
+    W1 := [][]float64{{0.2, 0.4}, {0.3, 0.1}}
+    b1 := []float64{0.1, 0.1}
+    W2 := [][]float64{{0.5, 0.6}}
+    b2 := []float64{0.2}
+    X  := []float64{0.5, 0.8}
+    y  := 1.0
+
+    for ep := 1; ep &lt;= 200; ep++ {
+        trainStep(X, y, W1, b1, W2, b2, 0.5)
+        if ep%20 == 0 {
+            H1   := forwardLayer(X, W1, b1)
+            Yhat := forwardLayer(H1, W2, b2)
+            fmt.Printf("Epoch %3d  yhat=%.4f\n", ep, Yhat[0])
+        }
+    }
+}</code></pre></div>
+  </div>
+</details>
 
     <!-- ========================================================== -->
     <h2 id="training-demo">12. Multi-iteration training demo</h2>
