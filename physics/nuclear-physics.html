@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nuclear Physics — Fission, Fusion &amp; Radioactivity</title>
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError: false});"></script>
+<style>
+.nuke-callout {
+  background: rgba(234,179,8,.08);
+  border-left: 3px solid #eab308;
+  border-radius: 6px;
+  padding: .9rem 1.1rem;
+  margin: 1.2rem 0;
+  color: #fef08a;
+  font-size: .93rem;
+}
+.nuke-callout strong { color: #fde047; }
+.isotope-table { width: 100%; border-collapse: collapse; font-size: .88rem; margin: 1rem 0; }
+.isotope-table th { background: rgba(124,92,255,.18); color: #a78bfa; padding: .45rem .7rem; text-align: left; }
+.isotope-table td { padding: .4rem .7rem; border-bottom: 1px solid rgba(71,85,105,.5); color: #cbd5e1; }
+.isotope-table tr:last-child td { border-bottom: none; }
+.reactor-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .7rem; margin: 1rem 0; }
+.reactor-card { background: rgba(71,85,105,.15); border: 1px solid rgba(71,85,105,.4); border-radius: 6px; padding: .7rem .9rem; }
+.reactor-card h5 { color: #7c5cff; margin: 0 0 .3rem; font-size: .88rem; }
+.reactor-card p { color: #94a3b8; font-size: .82rem; margin: 0; }
+.stockpile-bar-wrap { margin: .5rem 0; }
+.stockpile-bar-label { font-size: .82rem; color: #94a3b8; display: flex; justify-content: space-between; margin-bottom: 3px; }
+.stockpile-bar { height: 8px; border-radius: 4px; background: #7c5cff; opacity: .75; }
+svg text { font-family: inherit; }
+</style>
+</head>
+<body>
+<div id="tooltip"></div>
+
+<nav class="topic-nav">
+  <a class="back" href="./index.html">← Physics Track</a>
+  <div class="crumb">Physics / <span class="topic-name">Nuclear Physics</span></div>
+</nav>
+
+<div class="topic-layout">
+<aside class="topic-toc">
+  <h4>ON THIS PAGE</h4>
+  <ul>
+    <li><a href="#foundations">1. Nuclear Basics</a></li>
+    <li><a href="#radioactivity">2. Radioactive Decay</a></li>
+    <li><a href="#fission">3. Nuclear Fission</a></li>
+    <li><a href="#fusion">4. Nuclear Fusion</a></li>
+    <li><a href="#weapons">5. Nuclear Weapons</a></li>
+    <li><a href="#current-state">6. Nuclear Energy Today</a></li>
+  </ul>
+</aside>
+
+<article class="topic-content">
+
+<!-- ═══════════════════════════════════════════ 1. FOUNDATIONS -->
+<section id="foundations">
+<h2>1. Nuclear Basics</h2>
+<p>The atomic nucleus is a dense, positively charged core containing <strong>protons</strong> (charge +e, count Z — the atomic number) and <strong>neutrons</strong> (neutral, count N). Together they are called <em>nucleons</em>. The <strong>mass number</strong> $A = Z + N$ gives the total nucleon count.</p>
+
+<p>Nuclear notation uses the form $^A_Z\text{X}$ — for example $^{238}_{92}\text{U}$ for uranium-238. Isotopes share the same Z but differ in N.</p>
+
+<h3>Nuclear size and density</h3>
+<p>The nuclear radius follows an empirical $A^{1/3}$ scaling:
+$$r = r_0 \, A^{1/3}, \qquad r_0 \approx 1.2 \text{ fm}$$
+This reflects the fact that nucleons pack at roughly constant density — nuclear matter is essentially <em>incompressible</em>. The resulting density is staggering:
+$$\rho_{\text{nuclear}} \approx 2.3 \times 10^{17}\ \text{kg/m}^3$$
+A teaspoon of nuclear matter would weigh about 1 billion tonnes.</p>
+
+<h3>Binding energy</h3>
+<p>A nucleus is lighter than the sum of its free nucleons. This <strong>mass defect</strong> $\Delta m$ converts to binding energy via $E = mc^2$:</p>
+$$B = \bigl(Z m_p + N m_n - M_{\text{nucleus}}\bigr)c^2$$
+
+<p>The <strong>Bethe–Weizsäcker semi-empirical mass formula</strong> models binding energy using five liquid-drop terms:</p>
+$$B(Z,A) = a_V A \;-\; a_S A^{2/3} \;-\; a_C \frac{Z(Z-1)}{A^{1/3}} \;-\; a_A \frac{(A-2Z)^2}{A} \;+\; \delta(A,Z)$$
+<p style="font-size:.88rem;color:#94a3b8">where $a_V \approx 15.8$, $a_S \approx 18.3$, $a_C \approx 0.714$, $a_A \approx 23.2$ (all in MeV), and the pairing term $\delta = +a_P A^{-1/2}$ for even-even, $0$ for odd-A, $-a_P A^{-1/2}$ for odd-odd nuclei ($a_P \approx 12$ MeV). The five terms represent: <strong>volume</strong> (bulk nuclear binding), <strong>surface</strong> (reduced binding at the surface), <strong>Coulomb</strong> (proton-proton repulsion), <strong>asymmetry</strong> (energy cost of proton–neutron imbalance), and <strong>pairing</strong> (extra stability for paired nucleons).</p>
+
+<h3>Binding energy per nucleon — B/A curve</h3>
+<p>Plotting $B/A$ versus $A$ reveals everything about why both fission and fusion release energy. The curve peaks near <sup>56</sup>Fe at about 8.8 MeV/nucleon; nuclei on either side are less tightly bound, meaning splitting heavy nuclei (fission) <em>or</em> fusing light ones (fusion) both yield net energy.</p>
+
+<!-- SVG 1: B/A curve -->
+<svg viewBox="0 0 560 260" width="100%" style="margin:1rem 0;display:block" aria-label="Binding energy per nucleon curve">
+  <rect width="560" height="260" fill="transparent"/>
+  <!-- axes -->
+  <line x1="52" y1="16" x2="52" y2="222" stroke="#475569" stroke-width="1.5"/>
+  <line x1="52" y1="222" x2="540" y2="222" stroke="#475569" stroke-width="1.5"/>
+  <!-- y-axis ticks & labels -->
+  <text x="46" y="226" fill="#94a3b8" font-size="11" text-anchor="end">0</text>
+  <text x="46" y="200" fill="#94a3b8" font-size="11" text-anchor="end">2</text>
+  <text x="46" y="174" fill="#94a3b8" font-size="11" text-anchor="end">4</text>
+  <text x="46" y="148" fill="#94a3b8" font-size="11" text-anchor="end">6</text>
+  <text x="46" y="122" fill="#94a3b8" font-size="11" text-anchor="end">8</text>
+  <line x1="49" y1="200" x2="52" y2="200" stroke="#475569"/>
+  <line x1="49" y1="174" x2="52" y2="174" stroke="#475569"/>
+  <line x1="49" y1="148" x2="52" y2="148" stroke="#475569"/>
+  <line x1="49" y1="122" x2="52" y2="122" stroke="#475569"/>
+  <!-- x-axis ticks & labels -->
+  <text x="52"  y="236" fill="#94a3b8" font-size="11" text-anchor="middle">0</text>
+  <text x="150" y="236" fill="#94a3b8" font-size="11" text-anchor="middle">50</text>
+  <text x="248" y="236" fill="#94a3b8" font-size="11" text-anchor="middle">100</text>
+  <text x="346" y="236" fill="#94a3b8" font-size="11" text-anchor="middle">150</text>
+  <text x="444" y="236" fill="#94a3b8" font-size="11" text-anchor="middle">200</text>
+  <text x="532" y="236" fill="#94a3b8" font-size="11" text-anchor="middle">240</text>
+  <!-- axis labels -->
+  <text x="296" y="254" fill="#94a3b8" font-size="12" text-anchor="middle">Mass Number A</text>
+  <text x="14" y="130" fill="#94a3b8" font-size="12" text-anchor="middle" transform="rotate(-90,14,130)">B/A (MeV/nucleon)</text>
+  <!-- The curve: approximate data points (x mapped: 52 + A*1.96, y mapped: 222 - B/A*26) -->
+  <!-- H-2: A=2, B/A=1.11 → x=56, y=193 -->
+  <!-- He-4: A=4, B/A=7.07 → x=60, y=106 -->
+  <!-- Li-7: A=7, B/A=5.6 → x=66, y=122 -->
+  <!-- C-12: A=12, B/A=7.68 → x=76, y=122 wait, let me recalc with 26px/MeV -->
+  <!-- y = 222 - B/A * 26; x = 52 + A * 1.96 -->
+  <!-- H-1: no binding. H-2: y=222-1.11*26=193, x=56. He-4: y=222-7.07*26=38→106 wait 7.07*26=183.8→222-183.8=38 -->
+  <!-- rescale: use 22px/MeV so 8.8MeV → 222-193.6=28, good headroom. y=222-B/A*22 -->
+  <!-- He-4: y=222-7.07*22=66, x=60 -->
+  <!-- Li-7: 5.6→y=222-123.2=99, x=66 -->
+  <!-- C-12: 7.68→y=222-169=53, x=75 -->
+  <!-- Fe-56: 8.79→y=222-193.4=29, x=162 -->
+  <!-- Sn-120: 8.51→y=222-187.2=35, x=287 -->
+  <!-- Pb-208: 7.87→y=222-173.1=49, x=460 -->
+  <!-- U-238: 7.57→y=222-166.5=56, x=518 -->
+  <polyline points="56,193 60,66 66,99 75,53 162,29 287,35 460,49 518,56"
+    fill="none" stroke="#7c5cff" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+  <!-- smooth intermediate points for realism -->
+  <path d="M56,193 C58,120 59,75 60,66 C62,60 64,85 66,99 C68,92 72,60 75,53
+           C90,42 120,31 162,29 C200,28 240,30 287,35 C340,39 400,44 460,49 C485,52 505,54 518,56"
+    fill="none" stroke="#7c5cff" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+  <!-- Fe-56 annotation -->
+  <circle cx="162" cy="29" r="4" fill="#7c5cff"/>
+  <line x1="162" y1="29" x2="175" y2="14" stroke="#7c5cff" stroke-width="1"/>
+  <text x="178" y="13" fill="#cbd5e1" font-size="11">⁵⁶Fe — 8.79 MeV</text>
+  <!-- U-238 annotation -->
+  <circle cx="518" cy="56" r="3.5" fill="#a78bfa"/>
+  <text x="490" y="72" fill="#94a3b8" font-size="10">²³⁸U</text>
+  <!-- H-2 annotation -->
+  <circle cx="56" cy="193" r="3.5" fill="#a78bfa"/>
+  <text x="59" y="188" fill="#94a3b8" font-size="10">²H</text>
+  <!-- He-4 annotation -->
+  <circle cx="60" cy="66" r="3.5" fill="#a78bfa"/>
+  <text x="63" y="62" fill="#94a3b8" font-size="10">⁴He</text>
+  <!-- fission arrow -->
+  <text x="470" y="100" fill="#f87171" font-size="11" text-anchor="middle">← fission releases energy</text>
+  <!-- fusion arrow -->
+  <text x="95" y="112" fill="#34d399" font-size="11">fusion →</text>
+  <text x="95" y="124" fill="#34d399" font-size="11">releases energy</text>
+</svg>
+
+</section>
+
+<!-- ═══════════════════════════════════════════ 2. RADIOACTIVITY -->
+<section id="radioactivity">
+<h2>2. Radioactive Decay</h2>
+<p>Unstable nuclei spontaneously transform to reach a lower energy state. The four principal decay modes are:</p>
+
+<h3>Alpha (α) decay</h3>
+<p>A $^4_2\text{He}$ nucleus (alpha particle) is emitted. The parent loses 2 protons and 2 neutrons:</p>
+<p>$^{238}_{92}\text{U} \;\rightarrow\; ^{234}_{90}\text{Th} \;+\; ^4_2\text{He} \;+\; E_k$</p>
+<p>Alpha particles have short range (~4 cm in air, stopped by paper) but high ionising power — dangerous when inhaled or ingested.</p>
+
+<h3>Beta-minus (β⁻) decay</h3>
+<p>A neutron converts to a proton, emitting an electron and an electron antineutrino:</p>
+<p>$n \;\rightarrow\; p^+ + e^- + \bar{\nu}_e$</p>
+<p>Example: $^{14}_6\text{C} \;\rightarrow\; ^{14}_7\text{N} + e^- + \bar{\nu}_e$ (used in radiocarbon dating, $T_{1/2} = 5730$ yr)</p>
+
+<h3>Beta-plus (β⁺) decay</h3>
+<p>A proton converts to a neutron, emitting a positron and a neutrino:</p>
+<p>$p^+ \;\rightarrow\; n + e^+ + \nu_e$</p>
+<p>Example: $^{22}_{11}\text{Na} \;\rightarrow\; ^{22}_{10}\text{Ne} + e^+ + \nu_e$ (used in PET scanning)</p>
+
+<h3>Gamma (γ) decay</h3>
+<p>A nucleus in an excited state drops to its ground state by emitting a high-energy photon. No change in $Z$ or $A$ — gamma decay is a purely electromagnetic transition. Example: $^{99m}_{43}\text{Tc}^* \rightarrow ^{99}_{43}\text{Tc} + \gamma$.</p>
+
+<h3>Decay law</h3>
+<p>Radioactive decay is a first-order stochastic process. If $N_0$ nuclei are present at $t=0$ and $\lambda$ is the decay constant:</p>
+$$N(t) = N_0 \, e^{-\lambda t}$$
+<p>The <strong>half-life</strong> $T_{1/2}$ is the time for half the nuclei to decay:</p>
+$$T_{1/2} = \frac{\ln 2}{\lambda} \approx \frac{0.693}{\lambda}$$
+<p>Activity (decays per second) is $A(t) = \lambda N(t)$, measured in becquerels (Bq) or curies (Ci = $3.7 \times 10^{10}$ Bq).</p>
+
+<h3>Isotopes in use</h3>
+<table class="isotope-table">
+  <thead><tr><th>Isotope</th><th>Half-life</th><th>Decay</th><th>Application</th></tr></thead>
+  <tbody>
+    <tr><td>Tc-99m</td><td>6.0 h</td><td>γ (isomeric)</td><td>Medical imaging (SPECT) — most widely used diagnostic isotope</td></tr>
+    <tr><td>F-18</td><td>109.8 min</td><td>β⁺</td><td>PET scanning (cancer, neurology)</td></tr>
+    <tr><td>I-131</td><td>8.02 d</td><td>β⁻, γ</td><td>Thyroid cancer treatment &amp; imaging</td></tr>
+    <tr><td>Co-60</td><td>5.27 yr</td><td>β⁻, γ</td><td>Radiotherapy, sterilisation, food irradiation</td></tr>
+    <tr><td>C-14</td><td>5,730 yr</td><td>β⁻</td><td>Radiocarbon dating (archaeology, geology)</td></tr>
+    <tr><td>U-238</td><td>4.47 Gyr</td><td>α</td><td>Uranium-lead dating of rocks; nuclear fuel parent</td></tr>
+    <tr><td>Pu-238</td><td>87.7 yr</td><td>α</td><td>Radioisotope thermoelectric generators (space probes)</td></tr>
+  </tbody>
+</table>
+
+<h3>U-238 decay chain (simplified)</h3>
+<p>Uranium-238 undergoes 14 decays (8α + 6β⁻) before reaching stable <sup>206</sup>Pb. Key intermediates:</p>
+
+<!-- SVG 2: Simplified U-238 decay chain -->
+<svg viewBox="0 0 580 200" width="100%" style="margin:.8rem 0;display:block" aria-label="U-238 decay chain">
+  <rect width="580" height="200" fill="transparent"/>
+  <!-- nodes: 8 alpha + 6 beta, simplified to 9 key nuclides -->
+  <!-- positions: evenly spaced across x=30..550, y alternating 50/120 -->
+  <!-- U-238(30,70) → Th-234(95,120) → Pa-234(155,70) → U-234(215,120) → Th-230(275,70) → Ra-226(335,120) → Rn-222(390,70) → Pb-210(455,120) → Pb-206(530,70) -->
+  <defs>
+    <marker id="arrowN" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#475569"/>
+    </marker>
+    <marker id="arrowA" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#f87171"/>
+    </marker>
+    <marker id="arrowB" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#34d399"/>
+    </marker>
+  </defs>
+  <!-- Alpha arrows (red) -->
+  <line x1="75" y1="75" x2="88" y2="114" stroke="#f87171" stroke-width="1.5" marker-end="url(#arrowA)"/>
+  <line x1="170" y1="75" x2="208" y2="114" stroke="#f87171" stroke-width="1.5" marker-end="url(#arrowA)"/>
+  <line x1="230" y1="114" x2="268" y2="76" stroke="#f87171" stroke-width="1.5" marker-end="url(#arrowA)"/>
+  <line x1="290" y1="70" x2="328" y2="114" stroke="#f87171" stroke-width="1.5" marker-end="url(#arrowA)"/>
+  <line x1="352" y1="114" x2="382" y2="76" stroke="#f87171" stroke-width="1.5" marker-end="url(#arrowA)"/>
+  <line x1="408" y1="70" x2="448" y2="114" stroke="#f87171" stroke-width="1.5" marker-end="url(#arrowA)"/>
+  <!-- Beta arrows (green) -->
+  <line x1="112" y1="114" x2="148" y2="76" stroke="#34d399" stroke-width="1.5" marker-end="url(#arrowB)"/>
+  <line x1="468" y1="114" x2="518" y2="76" stroke="#34d399" stroke-width="1.5" marker-end="url(#arrowB)"/>
+  <!-- Nodes -->
+  <g fill="#1e1e2e" stroke="#7c5cff" stroke-width="1.5">
+    <ellipse cx="55"  cy="70"  rx="34" ry="16"/>
+    <ellipse cx="100" cy="120" rx="34" ry="16"/>
+    <ellipse cx="160" cy="70"  rx="34" ry="16"/>
+    <ellipse cx="220" cy="120" rx="34" ry="16"/>
+    <ellipse cx="280" cy="70"  rx="34" ry="16"/>
+    <ellipse cx="340" cy="120" rx="34" ry="16"/>
+    <ellipse cx="395" cy="70"  rx="34" ry="16"/>
+    <ellipse cx="458" cy="120" rx="34" ry="16"/>
+    <ellipse cx="528" cy="70"  rx="34" ry="16"/>
+  </g>
+  <!-- Labels -->
+  <text x="55"  y="74" fill="#cbd5e1" font-size="11" text-anchor="middle">²³⁸U</text>
+  <text x="100" y="124" fill="#cbd5e1" font-size="11" text-anchor="middle">²³⁴Th</text>
+  <text x="160" y="74" fill="#cbd5e1" font-size="11" text-anchor="middle">²³⁴Pa</text>
+  <text x="220" y="124" fill="#cbd5e1" font-size="11" text-anchor="middle">²³⁴U</text>
+  <text x="280" y="74" fill="#cbd5e1" font-size="11" text-anchor="middle">²³⁰Th</text>
+  <text x="340" y="124" fill="#cbd5e1" font-size="11" text-anchor="middle">²²⁶Ra</text>
+  <text x="395" y="74" fill="#cbd5e1" font-size="11" text-anchor="middle">²²²Rn</text>
+  <text x="458" y="124" fill="#cbd5e1" font-size="11" text-anchor="middle">²¹⁰Pb</text>
+  <text x="528" y="74" fill="#cbd5e1" font-size="11" text-anchor="middle">²⁰⁶Pb ✓</text>
+  <!-- legend -->
+  <line x1="60" y1="170" x2="80" y2="170" stroke="#f87171" stroke-width="2"/>
+  <text x="83" y="174" fill="#94a3b8" font-size="11">α decay</text>
+  <line x1="145" y1="170" x2="165" y2="170" stroke="#34d399" stroke-width="2"/>
+  <text x="168" y="174" fill="#94a3b8" font-size="11">β⁻ decay</text>
+  <text x="260" y="174" fill="#94a3b8" font-size="11">(several intermediate steps omitted)</text>
+</svg>
+
+</section>
+
+<!-- ═══════════════════════════════════════════ 3. FISSION -->
+<section id="fission">
+<h2>3. Nuclear Fission</h2>
+<p>When a heavy nucleus such as <sup>235</sup>U absorbs a slow (thermal) neutron, it becomes highly excited, deforms into an elongated shape, and splits into two <strong>fission fragments</strong> plus additional neutrons and a large energy release — mostly as kinetic energy of the fragments.</p>
+
+<h3>Key reaction</h3>
+<p>A typical fission event:</p>
+$$^{235}_{92}\text{U} + n \;\longrightarrow\; ^{141}_{56}\text{Ba} + ^{92}_{36}\text{Kr} + 3n + \approx 200\ \text{MeV}$$
+<p>For comparison, burning one carbon atom releases about 4 eV — fission releases <em>50 million times</em> more energy per atom.</p>
+
+<h3>Q-value from binding energies</h3>
+<p>The energy released equals the difference in binding energies of products and reactants:</p>
+$$Q = B(\text{Ba-141}) + B(\text{Kr-92}) - B(\text{U-235})$$
+$$Q \approx (1173 + 783 - 1784)\ \text{MeV} \approx 172\ \text{MeV}$$
+<p>(The remaining ~28 MeV appears as prompt gamma radiation and neutrinos from fission-product beta decay.)</p>
+
+<h3>Chain reaction and criticality</h3>
+<p>Each fission releases on average 2–3 neutrons. If these cause further fissions, a <strong>chain reaction</strong> develops. The multiplication factor $k$ determines the regime:</p>
+<ul>
+  <li>$k < 1$ — subcritical: chain dies out</li>
+  <li>$k = 1$ — critical: sustained, steady reaction (nuclear reactor)</li>
+  <li>$k > 1$ — supercritical: exponential growth (weapon/runaway)</li>
+</ul>
+
+<!-- SVG 3: Chain reaction branching -->
+<svg viewBox="0 0 540 230" width="100%" style="margin:.8rem 0;display:block" aria-label="Branching chain reaction">
+  <rect width="540" height="230" fill="transparent"/>
+  <defs>
+    <marker id="arr2" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L7,3 z" fill="#7c5cff"/>
+    </marker>
+  </defs>
+  <!-- Generation 1: 1 fission at left -->
+  <circle cx="60" cy="115" r="14" fill="rgba(124,92,255,.25)" stroke="#7c5cff" stroke-width="1.5"/>
+  <text x="60" y="119" fill="#cbd5e1" font-size="10" text-anchor="middle">U</text>
+  <!-- Gen 1 → Gen 2 (2 nodes) -->
+  <line x1="74" y1="107" x2="148" y2="72"  stroke="#7c5cff" stroke-width="1.2" marker-end="url(#arr2)"/>
+  <line x1="74" y1="123" x2="148" y2="158" stroke="#7c5cff" stroke-width="1.2" marker-end="url(#arr2)"/>
+  <circle cx="163" cy="65"  r="13" fill="rgba(124,92,255,.25)" stroke="#7c5cff" stroke-width="1.5"/>
+  <circle cx="163" cy="165" r="13" fill="rgba(124,92,255,.25)" stroke="#7c5cff" stroke-width="1.5"/>
+  <text x="163" y="69"  fill="#cbd5e1" font-size="10" text-anchor="middle">U</text>
+  <text x="163" y="169" fill="#cbd5e1" font-size="10" text-anchor="middle">U</text>
+  <!-- Gen 2 → Gen 3 (4 nodes) -->
+  <line x1="176" y1="57"  x2="265" y2="35"  stroke="#7c5cff" stroke-width="1.2" marker-end="url(#arr2)"/>
+  <line x1="176" y1="73"  x2="265" y2="95"  stroke="#7c5cff" stroke-width="1.2" marker-end="url(#arr2)"/>
+  <line x1="176" y1="157" x2="265" y2="135" stroke="#7c5cff" stroke-width="1.2" marker-end="url(#arr2)"/>
+  <line x1="176" y1="173" x2="265" y2="195" stroke="#7c5cff" stroke-width="1.2" marker-end="url(#arr2)"/>
+  <circle cx="280" cy="30"  r="12" fill="rgba(167,139,250,.25)" stroke="#a78bfa" stroke-width="1.5"/>
+  <circle cx="280" cy="100" r="12" fill="rgba(167,139,250,.25)" stroke="#a78bfa" stroke-width="1.5"/>
+  <circle cx="280" cy="130" r="12" fill="rgba(167,139,250,.25)" stroke="#a78bfa" stroke-width="1.5"/>
+  <circle cx="280" cy="200" r="12" fill="rgba(167,139,250,.25)" stroke="#a78bfa" stroke-width="1.5"/>
+  <!-- Gen 3 → Gen 4 (8 nodes) -->
+  <line x1="292" y1="23"  x2="375" y2="15"  stroke="#a78bfa" stroke-width="1" marker-end="url(#arr2)"/>
+  <line x1="292" y1="37"  x2="375" y2="50"  stroke="#a78bfa" stroke-width="1" marker-end="url(#arr2)"/>
+  <line x1="292" y1="93"  x2="375" y2="80"  stroke="#a78bfa" stroke-width="1" marker-end="url(#arr2)"/>
+  <line x1="292" y1="107" x2="375" y2="115" stroke="#a78bfa" stroke-width="1" marker-end="url(#arr2)"/>
+  <line x1="292" y1="123" x2="375" y2="137" stroke="#a78bfa" stroke-width="1" marker-end="url(#arr2)"/>
+  <line x1="292" y1="137" x2="375" y2="172" stroke="#a78bfa" stroke-width="1" marker-end="url(#arr2)"/>
+  <line x1="292" y1="193" x2="375" y2="193" stroke="#a78bfa" stroke-width="1" marker-end="url(#arr2)"/>
+  <line x1="292" y1="207" x2="375" y2="215" stroke="#a78bfa" stroke-width="1" marker-end="url(#arr2)"/>
+  <g fill="rgba(248,113,113,.18)" stroke="#f87171" stroke-width="1.3">
+    <circle cx="388" cy="13"  r="10"/>
+    <circle cx="388" cy="53"  r="10"/>
+    <circle cx="388" cy="83"  r="10"/>
+    <circle cx="388" cy="118" r="10"/>
+    <circle cx="388" cy="140" r="10"/>
+    <circle cx="388" cy="175" r="10"/>
+    <circle cx="388" cy="196" r="10"/>
+    <circle cx="388" cy="217" r="10"/>
+  </g>
+  <!-- labels -->
+  <text x="45"  y="155" fill="#94a3b8" font-size="11" text-anchor="middle">Gen 1</text>
+  <text x="163" y="195" fill="#94a3b8" font-size="11" text-anchor="middle">Gen 2</text>
+  <text x="280" y="220" fill="#94a3b8" font-size="11" text-anchor="middle">Gen 3</text>
+  <text x="420" y="115" fill="#94a3b8" font-size="11">Gen 4</text>
+  <text x="450" y="132" fill="#f87171" font-size="11">(8 fissions)</text>
+</svg>
+
+<h3>Reactor design</h3>
+<p>A nuclear reactor sustains a controlled $k \approx 1$ chain reaction. Key components:</p>
+<ul>
+  <li><strong>Fuel:</strong> slightly enriched UO₂ pellets (3–5% U-235 for power reactors)</li>
+  <li><strong>Moderator:</strong> slows fast neutrons to thermal energies where fission cross-section is much higher (light water, heavy water, or graphite)</li>
+  <li><strong>Control rods:</strong> neutron-absorbing materials (boron, hafnium, cadmium) inserted/withdrawn to regulate $k$</li>
+  <li><strong>Coolant:</strong> carries heat to the steam turbine (water, CO₂, sodium)</li>
+  <li><strong>Containment:</strong> multi-layer structure to contain radioactive materials in any accident</li>
+</ul>
+
+<div class="reactor-grid">
+  <div class="reactor-card"><h5>PWR — Pressurised Water Reactor</h5><p>Most common type (~70% of fleet). Water at ~155 bar stays liquid, transfers heat to a secondary steam loop. Used in USA, France, China, Russia.</p></div>
+  <div class="reactor-card"><h5>BWR — Boiling Water Reactor</h5><p>Water boils directly in the reactor vessel, driving turbines. Simpler but slightly lower efficiency. Common in Japan and USA.</p></div>
+  <div class="reactor-card"><h5>CANDU</h5><p>Uses natural (unenriched) uranium fuel and heavy water moderator. Can be refuelled online. Canadian design, also in India and South Korea.</p></div>
+  <div class="reactor-card"><h5>Fast Breeder Reactor</h5><p>Uses fast neutrons; no moderator. Can breed fissile Pu-239 from U-238, multiplying fuel resources. Russia's BN-800 is operating; BN-1200 under development.</p></div>
+</div>
+
+<h3>Nuclear waste</h3>
+<p>Spent fuel contains fission products with half-lives ranging from seconds to thousands of years. High-level waste (HLW) — primarily actinides and fission products — requires geological disposal (deep borehole or mined repository). Finland's Onkalo repository is the world's first approved HLW site, currently under construction.</p>
+
+</section>
+
+<!-- ═══════════════════════════════════════════ 4. FUSION -->
+<section id="fusion">
+<h2>4. Nuclear Fusion</h2>
+<p>In fusion, two light nuclei overcome their mutual electrostatic repulsion (the Coulomb barrier) and merge, releasing energy because the product is more tightly bound — higher on the B/A curve. Fusion powers all stars and is the ultimate clean energy promise.</p>
+
+<h3>The primary reaction</h3>
+<p>The most accessible fusion reaction for terrestrial reactors uses deuterium ($^2$H) and tritium ($^3$H):</p>
+$$^2_1\text{H} + ^3_1\text{H} \;\longrightarrow\; ^4_2\text{He}\; (3.52\ \text{MeV}) + n\; (14.1\ \text{MeV})$$
+<p>Total energy: 17.6 MeV per reaction. The neutron carries most of the energy and is captured in a lithium blanket to breed more tritium and generate heat.</p>
+
+<h3>The Lawson criterion</h3>
+<p>For fusion to produce more energy than it takes to sustain the plasma, the product of plasma density $n$ and energy confinement time $\tau_E$ must exceed:</p>
+$$n \tau_E \gtrsim 10^{20}\ \text{m}^{-3}\text{s}$$
+<p>This is equivalent to requiring that the fusion power output exceeds plasma energy losses. At $T \approx 150$ million K (ten times hotter than the Sun's core), the D-T cross-section is maximised.</p>
+
+<h3>Why fusion needs extreme conditions</h3>
+<p>Nuclei carry positive charge, so they repel each other strongly at close range (the Coulomb barrier: $\sim$1 MeV for protons at fm distances). Two mechanisms allow fusion to proceed:</p>
+<ol>
+  <li><strong>Thermal energy:</strong> At temperatures of ~100 million K, particles in the tail of the Maxwell-Boltzmann distribution have enough kinetic energy to approach closely.</li>
+  <li><strong>Quantum tunnelling:</strong> Even below the classical barrier, there is a non-zero probability that nuclei tunnel through — this is critical in stellar cores at "only" 15 million K.</li>
+</ol>
+
+<h3>Stellar fusion: the pp chain</h3>
+<p>In main-sequence stars like the Sun ($T_{\text{core}} \approx 1.5 \times 10^7$ K), hydrogen burns via the <strong>proton-proton (pp) chain</strong>:</p>
+$$4\,p \;\longrightarrow\; ^4_2\text{He} + 2e^+ + 2\nu_e + 26.7\ \text{MeV}$$
+<p>The net reaction fuses four protons into one helium-4. In massive stars ($T > 2 \times 10^7$ K), the <strong>CNO cycle</strong> dominates, using carbon-12 as a catalyst to achieve the same net result faster.</p>
+
+<h3>Current state of fusion research (2024–2026)</h3>
+
+<p><strong>NIF — National Ignition Facility (USA):</strong> On December 5, 2022, NIF achieved <em>scientific ignition</em> — the first experiment to produce more fusion energy than laser energy delivered to the target: 3.15 MJ output from 2.05 MJ laser input (gain Q ≈ 1.5). This historic milestone demonstrated that inertial confinement fusion is physically feasible.</p>
+
+<p><strong>JET — Joint European Torus (UK):</strong> In February 2022, JET set the world record for sustained fusion energy: 59 MJ over 5 seconds (≈11 MW average). JET closed permanently in December 2023 after 40 years of operation, its data feeding directly into ITER design.</p>
+
+<p><strong>ITER (France):</strong> A 35-country, €20 billion tokamak under construction in Cadarache. Design goal: Q = 10 (500 MW fusion from 50 MW input). First plasma delayed to 2025/2026, deuterium-tritium operations planned ~2035.</p>
+
+<p><strong>Private sector:</strong></p>
+<ul>
+  <li><strong>Commonwealth Fusion Systems (SPARC):</strong> Demonstrated 20-tesla high-temperature superconducting (HTS) magnets in 2021 — a world record — enabling a much more compact tokamak. SPARC is projected for first plasma ~2025, commercial ARC plant ~2030s.</li>
+  <li><strong>Helion Energy:</strong> Field-reversed configuration, targets Q&gt;1 by ~2024–2025; has a power purchase agreement with Microsoft for 2028 delivery.</li>
+  <li><strong>TAE Technologies:</strong> Aneutronic p-¹¹B fusion (no neutrons), field-reversed configuration.</li>
+  <li><strong>Timeline to commercial fusion:</strong> Optimistic ~2035 (private ventures), realistic 2040–2050 (ITER pathway).</li>
+</ul>
+
+<!-- SVG 4: Tokamak cross-section -->
+<svg viewBox="0 0 440 300" width="100%" style="margin:.8rem 0;display:block;max-width:500px" aria-label="Simplified tokamak cross-section">
+  <rect width="440" height="300" fill="transparent"/>
+  <!-- outer toroidal vessel (elliptical cross-section, D-shaped) -->
+  <ellipse cx="220" cy="148" rx="155" ry="130" fill="none" stroke="#475569" stroke-width="10"/>
+  <!-- inner bore -->
+  <ellipse cx="220" cy="148" rx="85" ry="75" fill="none" stroke="#475569" stroke-width="8"/>
+  <!-- plasma region (D-shaped approximate) -->
+  <path d="M220,50 C290,52 340,90 340,148 C340,206 290,245 220,248 C195,248 175,235 175,235 C155,215 148,185 148,148 C148,111 155,82 175,62 Z"
+    fill="rgba(124,92,255,.12)" stroke="#7c5cff" stroke-width="2" stroke-dasharray="6,3"/>
+  <!-- plasma fill -->
+  <path d="M220,70 C275,72 315,102 315,148 C315,194 275,225 220,228 C200,228 182,218 182,218 C166,202 162,178 162,148 C162,118 166,96 182,80 Z"
+    fill="rgba(251,146,60,.18)" stroke="#fb923c" stroke-width="1.5"/>
+  <!-- magnetic coils (toroidal field coils - rectangles around the torus) -->
+  <g fill="rgba(124,92,255,.3)" stroke="#7c5cff" stroke-width="1.2">
+    <rect x="56"  y="75"  width="14" height="148" rx="3"/>
+    <rect x="370" y="75"  width="14" height="148" rx="3"/>
+    <rect x="105" y="25"  width="14" height="50"  rx="3"/>
+    <rect x="105" y="225" width="14" height="50"  rx="3"/>
+    <rect x="321" y="25"  width="14" height="50"  rx="3"/>
+    <rect x="321" y="225" width="14" height="50"  rx="3"/>
+    <rect x="170" y="12"  width="14" height="30"  rx="3"/>
+    <rect x="170" y="258" width="14" height="30"  rx="3"/>
+    <rect x="256" y="12"  width="14" height="30"  rx="3"/>
+    <rect x="256" y="258" width="14" height="30"  rx="3"/>
+  </g>
+  <!-- divertor at bottom -->
+  <path d="M185,240 Q220,268 255,240" fill="none" stroke="#34d399" stroke-width="2.5"/>
+  <text x="220" y="285" fill="#34d399" font-size="11" text-anchor="middle">divertor</text>
+  <!-- labels -->
+  <text x="220" y="145" fill="#fb923c" font-size="12" text-anchor="middle" font-weight="bold">plasma</text>
+  <text x="220" y="160" fill="#fb923c" font-size="11" text-anchor="middle">~150 M K</text>
+  <text x="35"  y="148" fill="#a78bfa" font-size="11" text-anchor="middle" transform="rotate(-90,35,148)">TF coil</text>
+  <text x="22"  y="148" fill="#94a3b8" font-size="10" text-anchor="middle" transform="rotate(-90,22,148)">(superconducting)</text>
+  <text x="220" y="20"  fill="#94a3b8" font-size="11" text-anchor="middle">poloidal field coils</text>
+  <text x="220" y="295" fill="#94a3b8" font-size="10" text-anchor="middle">(schematic cross-section — not to scale)</text>
+</svg>
+
+</section>
+
+<!-- ═══════════════════════════════════════════ 5. WEAPONS -->
+<section id="weapons">
+<h2>5. Nuclear Weapons: History &amp; Physics</h2>
+<div class="nuke-callout">
+  <strong>Note:</strong> This section covers nuclear weapons in a purely historical and physics-educational context. Understanding the science is essential for informed public discourse on nuclear policy, arms control, and nonproliferation.
+</div>
+
+<h3>The Manhattan Project (1942–1945)</h3>
+<p>In August 1939, Leo Szilárd and Albert Einstein sent a letter to President Roosevelt warning that Germany might be developing an atomic bomb using recently discovered fission. The US launched the <strong>Manhattan Project</strong> in 1942 — a secret $2 billion program employing ~130,000 people at sites including Los Alamos (NM), Oak Ridge (TN), and Hanford (WA).</p>
+
+<p>Key figures: <strong>J. Robert Oppenheimer</strong> (scientific director at Los Alamos), <strong>Enrico Fermi</strong> (first self-sustained nuclear chain reaction, Chicago Pile-1, December 2, 1942), <strong>Niels Bohr</strong>, <strong>Edward Teller</strong>, and <strong>Klaus Fuchs</strong> (who later passed secrets to the Soviets). Werner Heisenberg led the parallel German program, which never achieved a reactor.</p>
+
+<ul>
+  <li><strong>Trinity test:</strong> July 16, 1945, Jornada del Muerto desert, NM — world's first nuclear explosion, yield ~20 kt TNT equivalent.</li>
+  <li><strong>Little Boy</strong> (Aug 6, 1945, Hiroshima): gun-type U-235 bomb, ~15 kt, ~70,000–80,000 immediate deaths.</li>
+  <li><strong>Fat Man</strong> (Aug 9, 1945, Nagasaki): implosion Pu-239 bomb, ~21 kt, ~40,000–50,000 immediate deaths.</li>
+</ul>
+
+<h3>Bomb designs</h3>
+<p><strong>Gun-type:</strong> A subcritical mass of U-235 is fired at high speed into another subcritical mass, forming a supercritical assembly. Simple and reliable, but requires a large amount of highly enriched uranium (HEU) and is too slow for Pu-239 (which contains Pu-240 impurities that cause premature detonation). Used only once in combat (Little Boy).</p>
+
+<p><strong>Implosion design:</strong> A subcritical sphere of Pu-239 (or U-235) is surrounded by precisely shaped high-explosive lenses. Simultaneous detonation compresses the core to supercritical density in microseconds — increasing density increases $k$ above 1. This design is more compact and efficient, and is standard in modern warheads.</p>
+
+<p><strong>Thermonuclear (H-bomb) — Teller-Ulam design (1952):</strong> A fission "primary" stage produces X-rays that compress and ignite a fusion "secondary" stage containing lithium deuteride. The two stages are enclosed in a radiation case (typically uranium). Yields can reach tens of megatons — the Soviet Tsar Bomba (1961) yielded ~50 Mt, the largest ever detonated.</p>
+
+<h3>Critical mass physics</h3>
+<p>Critical mass is the minimum amount of fissile material in which a self-sustaining chain reaction can occur. The neutron multiplication factor:</p>
+$$k = \frac{\nu \,\Sigma_f}{\Sigma_a + \Sigma_{\text{leakage}}}$$
+<p>where $\nu$ is the average neutrons per fission (~2.4 for U-235), $\Sigma_f$ is the macroscopic fission cross-section, $\Sigma_a$ is the absorption cross-section, and $\Sigma_{\text{leakage}}$ accounts for neutrons escaping the assembly. A reflector (e.g., beryllium) scatters neutrons back, drastically reducing critical mass:</p>
+<ul>
+  <li><sup>235</sup>U bare critical mass: ~52 kg; with Be reflector: ~15 kg</li>
+  <li><sup>239</sup>Pu bare critical mass: ~10 kg; with Be reflector: ~4 kg</li>
+</ul>
+<p>The approximate fission energy yield:</p>
+$$E \approx f_{\text{eff}} \times m_{\text{fissile}} \times 1.7 \times 10^{13}\ \text{J/kg}$$
+<p>At Hiroshima, only ~1 kg of the 64 kg U-235 charge actually fissioned (~1.5% efficiency) before the bomb blew itself apart.</p>
+
+<h3>Arms race &amp; treaties</h3>
+<p>After the US, nuclear weapons were developed by: <strong>Soviet Union</strong> 1949 (Joe-1), <strong>UK</strong> 1952, <strong>France</strong> 1960, <strong>China</strong> 1964, <strong>India</strong> 1974, <strong>Pakistan</strong> 1998, <strong>North Korea</strong> 2006. Israel is widely believed to possess weapons but has never confirmed.</p>
+
+<p><strong>Key treaties:</strong> Nuclear Non-Proliferation Treaty (NPT, 1968, 191 parties); SALT I/II (1970s); START I/II/New START (strategic arms reductions); Comprehensive Nuclear-Test-Ban Treaty (CTBT, 1996 — signed but not yet in force, as key states have not ratified).</p>
+
+<p><strong>Current stockpiles (estimated, 2025):</strong></p>
+<div style="max-width:400px;margin:.8rem 0">
+  <div class="stockpile-bar-wrap"><div class="stockpile-bar-label"><span>Russia</span><span>~5,580</span></div><div class="stockpile-bar" style="width:100%"></div></div>
+  <div class="stockpile-bar-wrap"><div class="stockpile-bar-label"><span>USA</span><span>~5,044</span></div><div class="stockpile-bar" style="width:90%"></div></div>
+  <div class="stockpile-bar-wrap"><div class="stockpile-bar-label"><span>China</span><span>~350</span></div><div class="stockpile-bar" style="width:6.3%;background:#a78bfa"></div></div>
+  <div class="stockpile-bar-wrap"><div class="stockpile-bar-label"><span>France</span><span>290</span></div><div class="stockpile-bar" style="width:5.2%;background:#a78bfa"></div></div>
+  <div class="stockpile-bar-wrap"><div class="stockpile-bar-label"><span>UK</span><span>225</span></div><div class="stockpile-bar" style="width:4%;background:#a78bfa"></div></div>
+</div>
+</section>
+
+<!-- ═══════════════════════════════════════════ 6. CURRENT STATE -->
+<section id="current-state">
+<h2>6. Nuclear Energy Today (2026)</h2>
+<p>Nuclear power currently provides approximately <strong>10% of global electricity</strong> from 440 operating reactors in 31 countries, with a combined capacity of about 390 GWe. It is the world's second-largest source of low-carbon electricity after hydropower.</p>
+
+<h3>Active developments</h3>
+<ul>
+  <li><strong>China</strong> is the world's largest nuclear builder with ~20 reactors under construction. China's CANDU-derived HPR1000 and CAP1400 designs are being exported.</li>
+  <li><strong>UAE Barakah:</strong> The Arab world's first nuclear plant — all four Korean APR-1400 units are now operational (Units 1–4, 2020–2024).</li>
+  <li><strong>Finland Olkiluoto-3:</strong> Europe's first new reactor in 15 years finally reached full commercial operation in 2023 after significant delays.</li>
+  <li><strong>France:</strong> Plans to build 6–14 new EPR2 reactors, reversing a decade of nuclear phase-out policy.</li>
+</ul>
+
+<h3>Small Modular Reactors (SMRs)</h3>
+<p>SMRs (&lt;300 MWe) promise factory-fabricated, standardised units that can be installed faster and at lower upfront cost than large conventional plants. Leading designs include NuScale (US, 77 MWe iPWR — though its first project at Idaho Falls was cancelled in 2023 due to cost increases), Rolls-Royce SMR (UK, 470 MWe), and GE Hitachi's BWRX-300 (under licensing review in Canada and the US).</p>
+
+<h3>Nuclear and climate</h3>
+<p>Lifecycle greenhouse gas emissions from nuclear power (~12 g CO₂eq/kWh) are among the lowest of any energy technology — comparable to wind and lower than solar PV. The IPCC's net-zero scenarios generally retain or expand nuclear capacity.</p>
+
+<h3>Major accidents</h3>
+<table class="isotope-table">
+  <thead><tr><th>Event</th><th>Year</th><th>Reactor type</th><th>Cause</th><th>INES level</th></tr></thead>
+  <tbody>
+    <tr><td>Three Mile Island (USA)</td><td>1979</td><td>PWR</td><td>Loss-of-coolant + operator error; partial core meltdown. No deaths attributed.</td><td>5</td></tr>
+    <tr><td>Chernobyl (USSR)</td><td>1986</td><td>RBMK</td><td>Positive void coefficient design flaw + safety test; steam explosion. 31 acute deaths; long-term cancers disputed.</td><td>7</td></tr>
+    <tr><td>Fukushima Daiichi (Japan)</td><td>2011</td><td>BWR (GE Mk1)</td><td>Tōhoku earthquake &amp; tsunami caused station blackout; three core meltdowns. No direct radiation deaths.</td><td>7</td></tr>
+  </tbody>
+</table>
+
+<h3>Thorium reactors</h3>
+<p>Thorium-232 is fertile (not fissile): when irradiated with neutrons it converts to U-233, which is fissile. Potential advantages: more abundant than uranium, harder to weaponise, produces less long-lived transuranic waste. <strong>Molten Salt Reactors (MSRs)</strong> are the leading concept — the fuel is dissolved in liquid fluoride salts at atmospheric pressure. India, which holds one-third of global thorium reserves, has an active thorium reactor development program (AHWR). No commercial thorium reactor currently operates, though China and the Netherlands have active research programs.</p>
+
+</section>
+
+</article>
+</div>
+
+<script src="../search-index.js"></script>
+<script src="../search.js"></script>
+</body>
+</html>

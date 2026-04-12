@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Periodic Table — Elements, History &amp; Quantum Structure</title>
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError: false});"></script>
+<style>
+/* ── Periodic Table Grid ─────────────────────────── */
+.pt-wrap { overflow-x: auto; margin: 24px 0; }
+.pt-grid {
+  display: grid;
+  grid-template-columns: repeat(18, 44px);
+  grid-template-rows: repeat(10, 44px);
+  gap: 3px;
+  min-width: 820px;
+}
+.el {
+  width: 44px; height: 44px;
+  border-radius: 4px;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  cursor: pointer;
+  font-size: 9px; line-height: 1.2;
+  transition: transform .15s, filter .15s;
+  border: 1px solid rgba(255,255,255,.07);
+  position: relative;
+}
+.el:hover { transform: scale(1.25); z-index: 10; filter: brightness(1.35); }
+.el .num { font-size: 7.5px; opacity: .7; }
+.el .sym { font-size: 15px; font-weight: 700; }
+.el .name { font-size: 6.5px; opacity: .65; white-space: nowrap; overflow: hidden; max-width: 42px; text-align: center; }
+/* categories */
+.el.alkali      { background: rgba(239,68,68,.25);   border-color: rgba(239,68,68,.4); }
+.el.alkaline    { background: rgba(249,115,22,.22);  border-color: rgba(249,115,22,.4); }
+.el.transition  { background: rgba(234,179,8,.18);   border-color: rgba(234,179,8,.35); }
+.el.post-trans  { background: rgba(132,204,22,.18);  border-color: rgba(132,204,22,.35); }
+.el.metalloid   { background: rgba(34,211,238,.18);  border-color: rgba(34,211,238,.35); }
+.el.nonmetal    { background: rgba(99,102,241,.25);  border-color: rgba(99,102,241,.4); }
+.el.halogen     { background: rgba(168,85,247,.25);  border-color: rgba(168,85,247,.4); }
+.el.noble       { background: rgba(236,72,153,.22);  border-color: rgba(236,72,153,.4); }
+.el.lanthanide  { background: rgba(20,184,166,.18);  border-color: rgba(20,184,166,.35); }
+.el.actinide    { background: rgba(6,182,212,.16);   border-color: rgba(6,182,212,.3); }
+/* detail panel */
+#el-panel {
+  background: var(--surface);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin: 16px 0 28px;
+  display: none;
+  animation: fadeIn .2s ease;
+}
+#el-panel.visible { display: block; }
+#el-panel h3 { margin: 0 0 8px; font-size: 1.3rem; }
+#el-panel .el-meta { display: flex; gap: 24px; flex-wrap: wrap; margin-bottom: 12px; font-size: .85rem; color: var(--muted); }
+#el-panel .el-meta strong { color: var(--fg); }
+#el-panel .el-config { font-family: monospace; background: rgba(255,255,255,.06); border-radius: 6px; padding: 8px 14px; font-size: .85rem; margin: 8px 0; }
+/* legend */
+.pt-legend { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 4px; font-size: .78rem; }
+.pt-legend .leg { display: flex; align-items: center; gap: 5px; }
+.pt-legend .swatch { width: 12px; height: 12px; border-radius: 2px; }
+/* ── Timeline ──────────────────────────────────────── */
+.timeline-container {
+  overflow-x: auto;
+  overflow-y: visible;
+  position: relative;
+  margin: 28px 0;
+  padding-bottom: 60px;
+}
+.timeline-canvas { position: relative; height: 200px; }
+.tl-axis {
+  position: absolute; bottom: 40px; left: 0; right: 0;
+  height: 2px; background: rgba(255,255,255,.12);
+}
+.tl-event {
+  position: absolute; bottom: 40px;
+  transform: translateX(-50%);
+  cursor: default;
+}
+.tl-dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--accent); margin: 0 auto;
+  transition: transform .15s;
+}
+.tl-event:hover .tl-dot { transform: scale(1.6); }
+.tl-label {
+  position: absolute; bottom: 16px;
+  left: 50%; transform: translateX(-50%);
+  white-space: nowrap; font-size: 9px; color: var(--muted);
+  pointer-events: none;
+}
+.tl-text {
+  position: absolute;
+  font-size: 9.5px; line-height: 1.35;
+  max-width: 110px; text-align: center;
+  color: var(--fg); opacity: .85;
+  pointer-events: none;
+}
+.tl-text.above { bottom: 56px; transform: translateX(-50%); }
+.tl-text.below { top: 8px; transform: translateX(-50%); }
+.tl-mark {
+  position: absolute; bottom: 30px;
+  transform: translateX(-50%);
+  font-size: 9px; color: rgba(255,255,255,.35);
+  border-left: 1px solid rgba(255,255,255,.1);
+  padding-left: 3px; height: 18px;
+}
+.tl-break-line {
+  position: absolute; bottom: 0; top: 0;
+  width: 1px; background: rgba(124,92,255,.4);
+}
+.tl-break-label {
+  position: absolute; top: 4px;
+  font-size: 8px; color: rgba(124,92,255,.7);
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+/* ── Atom model diagrams ───────────────────────────── */
+.atom-models { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 16px; margin: 20px 0; }
+.atom-card { background: var(--surface); border: 1px solid rgba(255,255,255,.1); border-radius: 10px; padding: 14px; text-align: center; }
+.atom-card h4 { margin: 8px 0 4px; font-size: .85rem; }
+.atom-card p  { font-size: .75rem; color: var(--muted); margin: 0; }
+/* ── Quark diagram ─────────────────────────────────── */
+.quark-grid { display: flex; gap: 24px; flex-wrap: wrap; margin: 20px 0; align-items: center; }
+.quark-box { background: var(--surface); border: 1px solid rgba(255,255,255,.1); border-radius: 10px; padding: 14px 18px; }
+@keyframes fadeIn { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:translateY(0); } }
+</style>
+</head>
+<body>
+<div id="tooltip"></div>
+
+<nav class="topic-nav">
+  <a class="back" href="./index.html">← Chemistry Track</a>
+  <div class="crumb">Chemistry / <span class="topic-name">Periodic Table</span></div>
+</nav>
+
+<div class="topic-layout">
+  <aside class="topic-toc">
+    <h4>ON THIS PAGE</h4>
+    <ul>
+      <li><a href="#history">1. History &amp; Timeline</a></li>
+      <li><a href="#atom-models">2. Models of the Atom</a></li>
+      <li><a href="#table">3. The Periodic Table</a></li>
+      <li><a href="#electron-config">4. Electron Configuration</a></li>
+      <li><a href="#periodic-trends">5. Periodic Trends</a></li>
+      <li><a href="#quarks">6. Quarks &amp; Spin</a></li>
+      <li><a href="#spectroscopy">7. Spectroscopy</a></li>
+    </ul>
+  </aside>
+
+  <article class="topic-content">
+    <h1>Periodic Table — Elements, History &amp; Quantum Structure</h1>
+    <span class="chip">UPDATED Apr 11 2026 22:30</span>
+    <p class="subtitle">From ancient Greek four-elements theory to 118 confirmed elements and quantum chromodynamics — a complete tour of what matter is made of, how we discovered the pattern, and what quantum mechanics tells us about structure inside the atom.</p>
+    <div class="meta-tags">
+      <span>Prereq: <a href="./atomic-structure.html">atomic structure</a>, basic algebra</span>
+      <span>Read time: ~30 min</span>
+      <span>Interactive: periodic table grid</span>
+    </div>
+
+    <!-- ============================================================ -->
+    <h2 id="history">1. History &amp; Timeline of Discovery</h2>
+
+    <p>The idea that matter has elementary building blocks stretches back to antiquity. Two and a half millennia of experiment, argument, and mathematics compressed the question from "earth, water, fire, and air" to 118 precisely characterised particles — each with a measured atomic mass, electron configuration, and a place in a grid whose rows and columns reveal the laws of quantum mechanics.</p>
+
+    <div id="chem-timeline" class="timeline-container">
+      <div class="timeline-canvas" id="tl-canvas" style="min-width:5600px;">
+        <div class="tl-axis"></div>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <h2 id="atom-models">2. Models of the Atom</h2>
+
+    <p>Each era's model was the best fit to <em>then-available</em> experimental data. Each was eventually overturned not because it was careless, but because new experiments revealed phenomena it couldn't explain. The progression is one of the cleanest examples in the history of science of how models work.</p>
+
+    <div class="atom-models">
+      <!-- Dalton -->
+      <div class="atom-card">
+        <svg width="120" height="100" viewBox="0 0 120 100">
+          <circle cx="60" cy="50" r="28" fill="rgba(124,92,255,.25)" stroke="#7c5cff" stroke-width="2"/>
+          <text x="60" y="55" text-anchor="middle" fill="#7c5cff" font-size="13" font-weight="bold">●</text>
+          <text x="60" y="88" text-anchor="middle" fill="#94a3b8" font-size="9">solid sphere</text>
+        </svg>
+        <h4>Dalton (1808)</h4>
+        <p>Atoms are indivisible solid spheres. Each element has identical atoms. Compounds are fixed-ratio combinations.</p>
+      </div>
+      <!-- Thomson -->
+      <div class="atom-card">
+        <svg width="120" height="100" viewBox="0 0 120 100">
+          <circle cx="60" cy="50" r="30" fill="rgba(99,102,241,.22)" stroke="#6366f1" stroke-width="2"/>
+          <!-- electrons scattered -->
+          <circle cx="42" cy="42" r="5" fill="#ef4444"/>
+          <circle cx="72" cy="40" r="5" fill="#ef4444"/>
+          <circle cx="55" cy="64" r="5" fill="#ef4444"/>
+          <circle cx="75" cy="60" r="5" fill="#ef4444"/>
+          <text x="60" y="91" text-anchor="middle" fill="#94a3b8" font-size="9">plum pudding</text>
+        </svg>
+        <h4>Thomson (1904)</h4>
+        <p>Electrons (discovered 1897) embedded in a diffuse positive sphere — the "plum pudding" model.</p>
+      </div>
+      <!-- Rutherford -->
+      <div class="atom-card">
+        <svg width="120" height="100" viewBox="0 0 120 100">
+          <!-- nucleus -->
+          <circle cx="60" cy="50" r="7" fill="rgba(249,115,22,.8)" stroke="#f97316" stroke-width="1.5"/>
+          <!-- orbits -->
+          <ellipse cx="60" cy="50" rx="32" ry="10" fill="none" stroke="rgba(255,255,255,.2)" stroke-width="1"/>
+          <ellipse cx="60" cy="50" rx="20" ry="28" fill="none" stroke="rgba(255,255,255,.2)" stroke-width="1"/>
+          <!-- electrons -->
+          <circle cx="92" cy="50" r="4" fill="#22d3ee"/>
+          <circle cx="60" cy="22" r="4" fill="#22d3ee"/>
+          <text x="60" y="90" text-anchor="middle" fill="#94a3b8" font-size="9">nuclear model</text>
+        </svg>
+        <h4>Rutherford (1911)</h4>
+        <p>Gold-foil experiment: small dense nucleus with electrons orbiting at large distances. Mostly empty space.</p>
+      </div>
+      <!-- Bohr -->
+      <div class="atom-card">
+        <svg width="120" height="100" viewBox="0 0 120 100">
+          <circle cx="60" cy="50" r="7" fill="rgba(249,115,22,.8)" stroke="#f97316" stroke-width="1.5"/>
+          <!-- fixed orbit shells -->
+          <circle cx="60" cy="50" r="20" fill="none" stroke="rgba(34,211,238,.5)" stroke-width="1.5" stroke-dasharray="3,2"/>
+          <circle cx="60" cy="50" r="34" fill="none" stroke="rgba(34,211,238,.3)" stroke-width="1.5" stroke-dasharray="3,2"/>
+          <!-- electrons on shells -->
+          <circle cx="80" cy="50" r="4" fill="#22d3ee"/>
+          <circle cx="94" cy="50" r="4" fill="#22d3ee"/>
+          <circle cx="60" cy="16" r="4" fill="#22d3ee"/>
+          <text x="60" y="91" text-anchor="middle" fill="#94a3b8" font-size="9">quantised orbits</text>
+        </svg>
+        <h4>Bohr (1913)</h4>
+        <p>Electrons occupy fixed quantised orbits. Jumping between orbits emits or absorbs a photon of specific energy.</p>
+      </div>
+      <!-- Schrödinger -->
+      <div class="atom-card">
+        <svg width="120" height="100" viewBox="0 0 120 100">
+          <!-- probability cloud dots -->
+          <circle cx="60" cy="50" r="7" fill="rgba(249,115,22,.8)" stroke="#f97316" stroke-width="1.5"/>
+          <!-- 1s orbital cloud -->
+          <circle cx="60" cy="50" r="22" fill="rgba(124,92,255,.05)" stroke="none"/>
+          <circle cx="60" cy="50" r="30" fill="rgba(124,92,255,.04)" stroke="none"/>
+          <!-- dots simulating probability density -->
+          <circle cx="72" cy="42" r="2" fill="rgba(124,92,255,.7)"/>
+          <circle cx="52" cy="60" r="2.5" fill="rgba(124,92,255,.8)"/>
+          <circle cx="78" cy="58" r="1.5" fill="rgba(124,92,255,.5)"/>
+          <circle cx="44" cy="45" r="2" fill="rgba(124,92,255,.6)"/>
+          <circle cx="68" cy="68" r="1.5" fill="rgba(124,92,255,.4)"/>
+          <circle cx="50" cy="35" r="2" fill="rgba(124,92,255,.5)"/>
+          <circle cx="80" cy="35" r="1.5" fill="rgba(124,92,255,.3)"/>
+          <circle cx="38" cy="56" r="2" fill="rgba(124,92,255,.4)"/>
+          <circle cx="82" cy="66" r="1.5" fill="rgba(124,92,255,.3)"/>
+          <circle cx="55" cy="78" r="1.5" fill="rgba(124,92,255,.3)"/>
+          <text x="60" y="95" text-anchor="middle" fill="#94a3b8" font-size="9">wavefunction / orbital</text>
+        </svg>
+        <h4>Schrödinger (1926)</h4>
+        <p>Electrons are quantum wavefunctions $\psi(\mathbf r)$. Position is probabilistic — the electron is wherever $|\psi|^2$ is largest.</p>
+      </div>
+      <!-- QFT -->
+      <div class="atom-card">
+        <svg width="120" height="100" viewBox="0 0 120 100">
+          <!-- p orbital lobes (dumbbell) -->
+          <ellipse cx="60" cy="32" rx="14" ry="22" fill="rgba(34,211,238,.2)" stroke="rgba(34,211,238,.5)" stroke-width="1.5"/>
+          <ellipse cx="60" cy="68" rx="14" ry="22" fill="rgba(124,92,255,.2)" stroke="rgba(124,92,255,.5)" stroke-width="1.5"/>
+          <circle cx="60" cy="50" r="5" fill="rgba(249,115,22,.8)" stroke="#f97316" stroke-width="1.5"/>
+          <text x="60" y="97" text-anchor="middle" fill="#94a3b8" font-size="9">s / p / d / f orbitals</text>
+        </svg>
+        <h4>Modern QM</h4>
+        <p>Orbitals (s, p, d, f) are three-dimensional probability distributions. Pauli exclusion and spin fill the shells.</p>
+      </div>
+    </div>
+
+    <h3>The Rutherford Scattering Experiment (1909–1911)</h3>
+    <p>Geiger and Marsden, under Rutherford's direction, fired alpha particles at a thin gold foil. If Thomson's model were correct, alphas should pass straight through with minimal deflection — positive charge spread over a large volume is too dilute to strongly deflect a fast, massive alpha. Instead, roughly 1 in 8000 alphas bounced back at large angles. Rutherford's reaction: <em>"It was as if you fired artillery shells at tissue paper and they came back and hit you."</em> The only explanation: a tiny, extremely dense, positively charged nucleus at the atom's centre.</p>
+
+    <div class="callout">
+      <div class="label">Nuclear size vs atom size</div>
+      <p style="margin:6px 0">Atom diameter ≈ 1 Å = 10⁻¹⁰ m. Nucleus diameter ≈ 10⁻¹⁵ m (1 fm). The nucleus occupies 10⁻¹⁵ of the atom's volume — if the atom were a football stadium, the nucleus would be a grape seed at the centre.</p>
+    </div>
+
+    <!-- ============================================================ -->
+    <h2 id="table">3. The Periodic Table — All 118 Elements</h2>
+
+    <p>Click any element to see its full details.</p>
+
+    <div class="pt-legend" id="pt-legend"></div>
+    <div class="pt-wrap">
+      <div class="pt-grid" id="pt-grid"></div>
+    </div>
+    <div id="el-panel"></div>
+
+    <!-- ============================================================ -->
+    <h2 id="electron-config">4. Electron Configuration</h2>
+
+    <p>Electrons occupy atomic orbitals in order of increasing energy (Aufbau principle), subject to two rules:</p>
+    <ul>
+      <li><strong>Pauli exclusion principle:</strong> no two electrons in the same atom can have the same set of four quantum numbers. Each orbital holds at most two electrons (opposite spin).</li>
+      <li><strong>Hund's rule:</strong> within a subshell, electrons fill singly with parallel spins before any pairing occurs.</li>
+    </ul>
+
+    <p>Each electron is described by four quantum numbers:</p>
+
+    <div class="defn">
+      <strong>The four quantum numbers</strong>
+      <ul>
+        <li>$n$ — <strong>principal</strong>: shell number (1, 2, 3 …). Determines size and energy. </li>
+        <li>$\ell$ — <strong>angular momentum</strong>: 0 to $n-1$. Labels the subshell (s, p, d, f for $\ell$ = 0, 1, 2, 3).</li>
+        <li>$m_\ell$ — <strong>magnetic</strong>: $-\ell$ to $+\ell$. Specifies orbital orientation.</li>
+        <li>$m_s$ — <strong>spin</strong>: $+\tfrac{1}{2}$ (↑) or $-\tfrac{1}{2}$ (↓). Two electrons per orbital.</li>
+      </ul>
+    </div>
+
+    <p>The <strong>Aufbau filling order</strong> follows the $(n + \ell)$ rule, giving the sequence:</p>
+    <p style="font-family:monospace; background:rgba(255,255,255,.06); border-radius:6px; padding:10px 14px; font-size:.88rem;">
+      1s → 2s → 2p → 3s → 3p → <strong>4s → 3d</strong> → 4p → <strong>5s → 4d</strong> → 5p → 6s → 4f → 5d → 6p → 7s → 5f → 6d → 7p
+    </p>
+    <p>This explains the anomalous positions of d-block elements: 4s fills <em>before</em> 3d, placing transition metals in period 4 despite having a partially-filled 3d subshell.</p>
+
+    <h3>Energy of hydrogen-like orbitals</h3>
+
+    $$E_n = -\frac{Z^2 \cdot 13.6\,\text{eV}}{n^2}$$
+
+    <p>For multi-electron atoms, electron–electron repulsion shifts energies so that subshells of the same $n$ are no longer degenerate — 3s sits below 3p, which sits below 3d.</p>
+
+    <h3>Orbital shapes</h3>
+    <div class="atom-models" style="grid-template-columns: repeat(auto-fill, minmax(140px,1fr));">
+      <div class="atom-card">
+        <svg width="110" height="90" viewBox="0 0 110 90">
+          <circle cx="55" cy="45" r="28" fill="rgba(124,92,255,.18)" stroke="#7c5cff" stroke-width="1.5"/>
+          <circle cx="55" cy="45" r="4" fill="#f97316"/>
+          <text x="55" y="83" text-anchor="middle" fill="#94a3b8" font-size="10">s orbital</text>
+        </svg>
+        <h4>s orbital ($\ell=0$)</h4>
+        <p>Spherical. 1 orientation. Holds 2e⁻.</p>
+      </div>
+      <div class="atom-card">
+        <svg width="110" height="90" viewBox="0 0 110 90">
+          <!-- p_z dumbbell -->
+          <ellipse cx="55" cy="25" rx="12" ry="20" fill="rgba(34,211,238,.2)" stroke="rgba(34,211,238,.6)" stroke-width="1.5"/>
+          <ellipse cx="55" cy="65" rx="12" ry="20" fill="rgba(34,211,238,.12)" stroke="rgba(34,211,238,.4)" stroke-width="1.5"/>
+          <circle cx="55" cy="45" r="4" fill="#f97316"/>
+          <text x="55" y="89" text-anchor="middle" fill="#94a3b8" font-size="10">p orbital</text>
+        </svg>
+        <h4>p orbital ($\ell=1$)</h4>
+        <p>Dumbbell. 3 orientations (x,y,z). Holds 6e⁻ total.</p>
+      </div>
+      <div class="atom-card">
+        <svg width="110" height="90" viewBox="0 0 110 90">
+          <!-- d_z2: torus + lobes -->
+          <ellipse cx="55" cy="45" rx="22" ry="8" fill="none" stroke="rgba(168,85,247,.5)" stroke-width="1.5"/>
+          <ellipse cx="55" cy="22" rx="9" ry="17" fill="rgba(168,85,247,.18)" stroke="rgba(168,85,247,.5)" stroke-width="1.5"/>
+          <ellipse cx="55" cy="68" rx="9" ry="17" fill="rgba(168,85,247,.12)" stroke="rgba(168,85,247,.4)" stroke-width="1.5"/>
+          <circle cx="55" cy="45" r="4" fill="#f97316"/>
+          <text x="55" y="88" text-anchor="middle" fill="#94a3b8" font-size="10">d orbital</text>
+        </svg>
+        <h4>d orbital ($\ell=2$)</h4>
+        <p>Cloverleaf. 5 orientations. Holds 10e⁻ total.</p>
+      </div>
+      <div class="atom-card">
+        <svg width="110" height="90" viewBox="0 0 110 90">
+          <!-- f: 4 lobes -->
+          <ellipse cx="38" cy="25" rx="9" ry="17" fill="rgba(236,72,153,.18)" stroke="rgba(236,72,153,.5)" stroke-width="1.5" transform="rotate(-30,38,25)"/>
+          <ellipse cx="72" cy="25" rx="9" ry="17" fill="rgba(236,72,153,.12)" stroke="rgba(236,72,153,.4)" stroke-width="1.5" transform="rotate(30,72,25)"/>
+          <ellipse cx="38" cy="65" rx="9" ry="17" fill="rgba(236,72,153,.18)" stroke="rgba(236,72,153,.5)" stroke-width="1.5" transform="rotate(30,38,65)"/>
+          <ellipse cx="72" cy="65" rx="9" ry="17" fill="rgba(236,72,153,.12)" stroke="rgba(236,72,153,.4)" stroke-width="1.5" transform="rotate(-30,72,65)"/>
+          <circle cx="55" cy="45" r="4" fill="#f97316"/>
+          <text x="55" y="89" text-anchor="middle" fill="#94a3b8" font-size="10">f orbital</text>
+        </svg>
+        <h4>f orbital ($\ell=3$)</h4>
+        <p>Complex multi-lobe. 7 orientations. Holds 14e⁻ total.</p>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <h2 id="periodic-trends">5. Periodic Trends</h2>
+
+    <p>The table's power is that physical and chemical properties repeat with period. The main trends:</p>
+
+    <div class="defn">
+      <strong>Atomic radius</strong> — decreases left → right (more protons pull electrons in); increases top → bottom (more shells added).
+    </div>
+    <div class="defn">
+      <strong>Ionisation energy</strong> — energy to remove the outermost electron. Increases left → right (nucleus pulls harder). Noble gases highest; alkali metals lowest. Notable dip at group 3 (p subshell starts) and group 6 (pairing in p forces an electron to double up, making it easier to remove).
+    </div>
+    <div class="defn">
+      <strong>Electronegativity</strong> — Pauling scale tendency to attract electrons. F = 4.0 (highest). Cs = 0.7 (lowest). Increases left→right, decreases top→bottom.
+    </div>
+    <div class="defn">
+      <strong>Electron affinity</strong> — energy released when an atom gains one electron. Halogens most strongly negative (they "want" one more electron to complete their p subshell).
+    </div>
+
+    <h3>Why period 4 has 18 elements instead of 8</h3>
+    <p>Period 3 fills 3s + 3p = 8 electrons. Period 4 also fills 4s, then 3d (10 electrons), then 4p = 8 more. The 3d transition metals are the 10 extra elements. Similarly, period 6 gains 14 lanthanides filling 4f, giving 32 elements total.</p>
+
+    <!-- ============================================================ -->
+    <h2 id="quarks">6. Quarks, Spin &amp; Nuclear Structure</h2>
+
+    <p>Chemistry deals with electrons around nuclei. But the nucleus itself has structure — nucleons (protons and neutrons) are composed of quarks, the truly elementary constituents of matter in the Standard Model.</p>
+
+    <h3>Quarks</h3>
+    <div class="quark-grid">
+      <div class="quark-box">
+        <svg width="160" height="130" viewBox="0 0 160 130">
+          <!-- proton: uud -->
+          <circle cx="80" cy="60" r="45" fill="rgba(249,115,22,.1)" stroke="rgba(249,115,22,.4)" stroke-width="2"/>
+          <circle cx="55" cy="75" r="18" fill="rgba(34,211,238,.35)" stroke="#22d3ee" stroke-width="1.5"/>
+          <text x="55" y="80" text-anchor="middle" fill="white" font-size="12" font-weight="bold">u</text>
+          <circle cx="105" cy="75" r="18" fill="rgba(34,211,238,.35)" stroke="#22d3ee" stroke-width="1.5"/>
+          <text x="105" y="80" text-anchor="middle" fill="white" font-size="12" font-weight="bold">u</text>
+          <circle cx="80" cy="38" r="18" fill="rgba(168,85,247,.35)" stroke="#a855f7" stroke-width="1.5"/>
+          <text x="80" y="43" text-anchor="middle" fill="white" font-size="12" font-weight="bold">d</text>
+          <!-- gluon lines (simplified) -->
+          <line x1="70" y1="56" x2="68" y2="68" stroke="rgba(255,255,0,.4)" stroke-width="1.5" stroke-dasharray="3,2"/>
+          <line x1="90" y1="56" x2="92" y2="68" stroke="rgba(255,255,0,.4)" stroke-width="1.5" stroke-dasharray="3,2"/>
+          <line x1="55" y1="57" x2="80" y2="57" stroke="rgba(255,255,0,.3)" stroke-width="1" stroke-dasharray="3,2"/>
+          <text x="80" y="120" text-anchor="middle" fill="#f97316" font-size="11">Proton (uud)</text>
+          <text x="80" y="132" text-anchor="middle" fill="#94a3b8" font-size="9">charge: +1, spin: ½</text>
+        </svg>
+      </div>
+      <div class="quark-box">
+        <svg width="160" height="130" viewBox="0 0 160 130">
+          <!-- neutron: udd -->
+          <circle cx="80" cy="60" r="45" fill="rgba(99,102,241,.1)" stroke="rgba(99,102,241,.4)" stroke-width="2"/>
+          <circle cx="55" cy="75" r="18" fill="rgba(168,85,247,.35)" stroke="#a855f7" stroke-width="1.5"/>
+          <text x="55" y="80" text-anchor="middle" fill="white" font-size="12" font-weight="bold">d</text>
+          <circle cx="105" cy="75" r="18" fill="rgba(168,85,247,.35)" stroke="#a855f7" stroke-width="1.5"/>
+          <text x="105" y="80" text-anchor="middle" fill="white" font-size="12" font-weight="bold">d</text>
+          <circle cx="80" cy="38" r="18" fill="rgba(34,211,238,.35)" stroke="#22d3ee" stroke-width="1.5"/>
+          <text x="80" y="43" text-anchor="middle" fill="white" font-size="12" font-weight="bold">u</text>
+          <line x1="70" y1="56" x2="68" y2="68" stroke="rgba(255,255,0,.4)" stroke-width="1.5" stroke-dasharray="3,2"/>
+          <line x1="90" y1="56" x2="92" y2="68" stroke="rgba(255,255,0,.4)" stroke-width="1.5" stroke-dasharray="3,2"/>
+          <line x1="55" y1="57" x2="80" y2="57" stroke="rgba(255,255,0,.3)" stroke-width="1" stroke-dasharray="3,2"/>
+          <text x="80" y="120" text-anchor="middle" fill="#6366f1" font-size="11">Neutron (udd)</text>
+          <text x="80" y="132" text-anchor="middle" fill="#94a3b8" font-size="9">charge: 0, spin: ½</text>
+        </svg>
+      </div>
+      <div class="quark-box" style="max-width:260px;">
+        <h4 style="margin:0 0 8px; font-size:.9rem;">The six quarks</h4>
+        <table style="font-size:.8rem; width:100%; border-collapse:collapse;">
+          <tr style="color:var(--muted)"><th>Flavour</th><th>Charge</th><th>Mass</th><th>Spin</th></tr>
+          <tr><td>up (u)</td><td>+⅔</td><td>2.2 MeV/c²</td><td>½</td></tr>
+          <tr><td>down (d)</td><td>−⅓</td><td>4.7 MeV/c²</td><td>½</td></tr>
+          <tr><td>charm (c)</td><td>+⅔</td><td>1.28 GeV/c²</td><td>½</td></tr>
+          <tr><td>strange (s)</td><td>−⅓</td><td>93 MeV/c²</td><td>½</td></tr>
+          <tr><td>top (t)</td><td>+⅔</td><td>173 GeV/c²</td><td>½</td></tr>
+          <tr><td>bottom (b)</td><td>−⅓</td><td>4.18 GeV/c²</td><td>½</td></tr>
+        </table>
+        <p style="font-size:.75rem; color:var(--muted); margin-top:8px;">Quarks carry "colour charge" (red/green/blue) and are bound by gluons (the strong-force carrier) into colour-neutral hadrons.</p>
+      </div>
+    </div>
+
+    <h3>Spin</h3>
+    <p>Spin is an intrinsic quantum property with no classical analogue. It is not literally rotation. For a spin-½ particle (all quarks, electrons, protons, neutrons):</p>
+
+    $$S = \sqrt{s(s+1)}\,\hbar = \frac{\sqrt{3}}{2}\,\hbar$$
+
+    <p>The $z$-component can only be $m_s = +\tfrac{1}{2}$ or $-\tfrac{1}{2}$ (spin-up ↑ or spin-down ↓). This is why each orbital holds exactly two electrons. Protons and neutrons are composite spin-½ particles: in a proton (uud), two up quarks align anti-parallel, net spin ½.</p>
+
+    <p>Bosons (integer spin: photon=1, gluon=1, Higgs=0) follow Bose-Einstein statistics. Fermions (half-integer spin: electrons, quarks) follow Fermi-Dirac statistics and obey the Pauli exclusion principle. This distinction is the single deepest reason why matter has structure at all — without exclusion, all electrons would collapse to the 1s ground state.</p>
+
+    <!-- ============================================================ -->
+    <h2 id="spectroscopy">7. Spectroscopy</h2>
+
+    <p>Spectroscopy measures how atoms and molecules interact with electromagnetic radiation. Because electron energy levels are quantised, absorption and emission occur only at specific wavelengths — each element has a unique spectral fingerprint.</p>
+
+    <h3>The Rydberg formula (hydrogen)</h3>
+
+    $$\frac{1}{\lambda} = R_H\left(\frac{1}{n_1^2} - \frac{1}{n_2^2}\right)$$
+
+    <p>where $R_H = 1.097 \times 10^7\,\text{m}^{-1}$ (the Rydberg constant). The named series:</p>
+    <ul>
+      <li><strong>Lyman series</strong> ($n_1=1$): UV — transitions to/from ground state</li>
+      <li><strong>Balmer series</strong> ($n_1=2$): visible — the famous red, blue-green, violet hydrogen lines</li>
+      <li><strong>Paschen series</strong> ($n_1=3$): near-infrared</li>
+    </ul>
+
+    <div class="callout">
+      <div class="label">How we know what stars are made of</div>
+      <p style="margin:6px 0">The Sun's spectrum shows dark absorption lines (Fraunhofer lines) where specific wavelengths are absorbed by elements in its atmosphere. Helium was discovered in 1868 from a solar spectral line before it was isolated on Earth — 27 years later. The technique now identifies element abundances in galaxies billions of light-years away.</p>
+    </div>
+
+    <h3>Types of spectroscopy</h3>
+    <ul>
+      <li><strong>Atomic emission / absorption:</strong> identifies elements, used in flames, stars, forensics</li>
+      <li><strong>IR spectroscopy:</strong> molecular bond vibrations; identifies functional groups in organic chemistry</li>
+      <li><strong>NMR (Nuclear Magnetic Resonance):</strong> nuclei in a magnetic field; basis of MRI in medicine; reveals molecular structure</li>
+      <li><strong>Mass spectrometry:</strong> ionises molecules, separates by mass/charge ratio; identifies unknown compounds, measures isotope ratios</li>
+      <li><strong>X-ray crystallography:</strong> scattering of X-rays off crystal lattices; revealed DNA double helix (Franklin, 1952), protein structures</li>
+    </ul>
+
+  </article>
+</div>
+
+<script src="../search-index.js" defer></script>
+<script src="../search.js" defer></script>
+<script>
+/* ========================================================
+   ELEMENT DATA — 118 elements
+   Fields: Z, sym, name, cat, group, period, mass, config, valence, disc
+   ======================================================== */
+const ELEMENTS = [
+  {Z:1,  sym:"H",  name:"Hydrogen",      cat:"nonmetal",   g:1,  p:1, mass:"1.008",   config:"1s¹",                      valence:1,  disc:1766},
+  {Z:2,  sym:"He", name:"Helium",        cat:"noble",      g:18, p:1, mass:"4.003",   config:"1s²",                      valence:0,  disc:1868},
+  {Z:3,  sym:"Li", name:"Lithium",       cat:"alkali",     g:1,  p:2, mass:"6.941",   config:"[He] 2s¹",                 valence:1,  disc:1817},
+  {Z:4,  sym:"Be", name:"Beryllium",     cat:"alkaline",   g:2,  p:2, mass:"9.012",   config:"[He] 2s²",                 valence:2,  disc:1798},
+  {Z:5,  sym:"B",  name:"Boron",         cat:"metalloid",  g:13, p:2, mass:"10.81",   config:"[He] 2s² 2p¹",             valence:3,  disc:1808},
+  {Z:6,  sym:"C",  name:"Carbon",        cat:"nonmetal",   g:14, p:2, mass:"12.011",  config:"[He] 2s² 2p²",             valence:4,  disc:-3000},
+  {Z:7,  sym:"N",  name:"Nitrogen",      cat:"nonmetal",   g:15, p:2, mass:"14.007",  config:"[He] 2s² 2p³",             valence:3,  disc:1772},
+  {Z:8,  sym:"O",  name:"Oxygen",        cat:"nonmetal",   g:16, p:2, mass:"15.999",  config:"[He] 2s² 2p⁴",             valence:2,  disc:1774},
+  {Z:9,  sym:"F",  name:"Fluorine",      cat:"halogen",    g:17, p:2, mass:"18.998",  config:"[He] 2s² 2p⁵",             valence:1,  disc:1886},
+  {Z:10, sym:"Ne", name:"Neon",          cat:"noble",      g:18, p:2, mass:"20.180",  config:"[He] 2s² 2p⁶",             valence:0,  disc:1898},
+  {Z:11, sym:"Na", name:"Sodium",        cat:"alkali",     g:1,  p:3, mass:"22.990",  config:"[Ne] 3s¹",                 valence:1,  disc:1807},
+  {Z:12, sym:"Mg", name:"Magnesium",     cat:"alkaline",   g:2,  p:3, mass:"24.305",  config:"[Ne] 3s²",                 valence:2,  disc:1755},
+  {Z:13, sym:"Al", name:"Aluminum",      cat:"post-trans", g:13, p:3, mass:"26.982",  config:"[Ne] 3s² 3p¹",             valence:3,  disc:1825},
+  {Z:14, sym:"Si", name:"Silicon",       cat:"metalloid",  g:14, p:3, mass:"28.086",  config:"[Ne] 3s² 3p²",             valence:4,  disc:1824},
+  {Z:15, sym:"P",  name:"Phosphorus",    cat:"nonmetal",   g:15, p:3, mass:"30.974",  config:"[Ne] 3s² 3p³",             valence:3,  disc:1669},
+  {Z:16, sym:"S",  name:"Sulfur",        cat:"nonmetal",   g:16, p:3, mass:"32.06",   config:"[Ne] 3s² 3p⁴",             valence:2,  disc:-2000},
+  {Z:17, sym:"Cl", name:"Chlorine",      cat:"halogen",    g:17, p:3, mass:"35.45",   config:"[Ne] 3s² 3p⁵",             valence:1,  disc:1774},
+  {Z:18, sym:"Ar", name:"Argon",         cat:"noble",      g:18, p:3, mass:"39.948",  config:"[Ne] 3s² 3p⁶",             valence:0,  disc:1894},
+  {Z:19, sym:"K",  name:"Potassium",     cat:"alkali",     g:1,  p:4, mass:"39.098",  config:"[Ar] 4s¹",                 valence:1,  disc:1807},
+  {Z:20, sym:"Ca", name:"Calcium",       cat:"alkaline",   g:2,  p:4, mass:"40.078",  config:"[Ar] 4s²",                 valence:2,  disc:1808},
+  {Z:21, sym:"Sc", name:"Scandium",      cat:"transition", g:3,  p:4, mass:"44.956",  config:"[Ar] 3d¹ 4s²",             valence:3,  disc:1879},
+  {Z:22, sym:"Ti", name:"Titanium",      cat:"transition", g:4,  p:4, mass:"47.867",  config:"[Ar] 3d² 4s²",             valence:4,  disc:1791},
+  {Z:23, sym:"V",  name:"Vanadium",      cat:"transition", g:5,  p:4, mass:"50.942",  config:"[Ar] 3d³ 4s²",             valence:5,  disc:1801},
+  {Z:24, sym:"Cr", name:"Chromium",      cat:"transition", g:6,  p:4, mass:"51.996",  config:"[Ar] 3d⁵ 4s¹",             valence:6,  disc:1798},
+  {Z:25, sym:"Mn", name:"Manganese",     cat:"transition", g:7,  p:4, mass:"54.938",  config:"[Ar] 3d⁵ 4s²",             valence:7,  disc:1774},
+  {Z:26, sym:"Fe", name:"Iron",          cat:"transition", g:8,  p:4, mass:"55.845",  config:"[Ar] 3d⁶ 4s²",             valence:3,  disc:-5000},
+  {Z:27, sym:"Co", name:"Cobalt",        cat:"transition", g:9,  p:4, mass:"58.933",  config:"[Ar] 3d⁷ 4s²",             valence:3,  disc:1735},
+  {Z:28, sym:"Ni", name:"Nickel",        cat:"transition", g:10, p:4, mass:"58.693",  config:"[Ar] 3d⁸ 4s²",             valence:2,  disc:1751},
+  {Z:29, sym:"Cu", name:"Copper",        cat:"transition", g:11, p:4, mass:"63.546",  config:"[Ar] 3d¹⁰ 4s¹",            valence:2,  disc:-8000},
+  {Z:30, sym:"Zn", name:"Zinc",          cat:"transition", g:12, p:4, mass:"65.38",   config:"[Ar] 3d¹⁰ 4s²",            valence:2,  disc:1746},
+  {Z:31, sym:"Ga", name:"Gallium",       cat:"post-trans", g:13, p:4, mass:"69.723",  config:"[Ar] 3d¹⁰ 4s² 4p¹",        valence:3,  disc:1875},
+  {Z:32, sym:"Ge", name:"Germanium",     cat:"metalloid",  g:14, p:4, mass:"72.630",  config:"[Ar] 3d¹⁰ 4s² 4p²",        valence:4,  disc:1886},
+  {Z:33, sym:"As", name:"Arsenic",       cat:"metalloid",  g:15, p:4, mass:"74.922",  config:"[Ar] 3d¹⁰ 4s² 4p³",        valence:3,  disc:1250},
+  {Z:34, sym:"Se", name:"Selenium",      cat:"nonmetal",   g:16, p:4, mass:"78.971",  config:"[Ar] 3d¹⁰ 4s² 4p⁴",        valence:2,  disc:1817},
+  {Z:35, sym:"Br", name:"Bromine",       cat:"halogen",    g:17, p:4, mass:"79.904",  config:"[Ar] 3d¹⁰ 4s² 4p⁵",        valence:1,  disc:1826},
+  {Z:36, sym:"Kr", name:"Krypton",       cat:"noble",      g:18, p:4, mass:"83.798",  config:"[Ar] 3d¹⁰ 4s² 4p⁶",        valence:0,  disc:1898},
+  {Z:37, sym:"Rb", name:"Rubidium",      cat:"alkali",     g:1,  p:5, mass:"85.468",  config:"[Kr] 5s¹",                 valence:1,  disc:1861},
+  {Z:38, sym:"Sr", name:"Strontium",     cat:"alkaline",   g:2,  p:5, mass:"87.62",   config:"[Kr] 5s²",                 valence:2,  disc:1790},
+  {Z:39, sym:"Y",  name:"Yttrium",       cat:"transition", g:3,  p:5, mass:"88.906",  config:"[Kr] 4d¹ 5s²",             valence:3,  disc:1794},
+  {Z:40, sym:"Zr", name:"Zirconium",     cat:"transition", g:4,  p:5, mass:"91.224",  config:"[Kr] 4d² 5s²",             valence:4,  disc:1789},
+  {Z:41, sym:"Nb", name:"Niobium",       cat:"transition", g:5,  p:5, mass:"92.906",  config:"[Kr] 4d⁴ 5s¹",             valence:5,  disc:1801},
+  {Z:42, sym:"Mo", name:"Molybdenum",    cat:"transition", g:6,  p:5, mass:"95.96",   config:"[Kr] 4d⁵ 5s¹",             valence:6,  disc:1781},
+  {Z:43, sym:"Tc", name:"Technetium",    cat:"transition", g:7,  p:5, mass:"(97)",    config:"[Kr] 4d⁵ 5s²",             valence:7,  disc:1937},
+  {Z:44, sym:"Ru", name:"Ruthenium",     cat:"transition", g:8,  p:5, mass:"101.07",  config:"[Kr] 4d⁷ 5s¹",             valence:4,  disc:1844},
+  {Z:45, sym:"Rh", name:"Rhodium",       cat:"transition", g:9,  p:5, mass:"102.91",  config:"[Kr] 4d⁸ 5s¹",             valence:3,  disc:1803},
+  {Z:46, sym:"Pd", name:"Palladium",     cat:"transition", g:10, p:5, mass:"106.42",  config:"[Kr] 4d¹⁰",                valence:2,  disc:1803},
+  {Z:47, sym:"Ag", name:"Silver",        cat:"transition", g:11, p:5, mass:"107.87",  config:"[Kr] 4d¹⁰ 5s¹",            valence:1,  disc:-4000},
+  {Z:48, sym:"Cd", name:"Cadmium",       cat:"transition", g:12, p:5, mass:"112.41",  config:"[Kr] 4d¹⁰ 5s²",            valence:2,  disc:1817},
+  {Z:49, sym:"In", name:"Indium",        cat:"post-trans", g:13, p:5, mass:"114.82",  config:"[Kr] 4d¹⁰ 5s² 5p¹",        valence:3,  disc:1863},
+  {Z:50, sym:"Sn", name:"Tin",           cat:"post-trans", g:14, p:5, mass:"118.71",  config:"[Kr] 4d¹⁰ 5s² 5p²",        valence:4,  disc:-3500},
+  {Z:51, sym:"Sb", name:"Antimony",      cat:"metalloid",  g:15, p:5, mass:"121.76",  config:"[Kr] 4d¹⁰ 5s² 5p³",        valence:3,  disc:-800},
+  {Z:52, sym:"Te", name:"Tellurium",     cat:"metalloid",  g:16, p:5, mass:"127.60",  config:"[Kr] 4d¹⁰ 5s² 5p⁴",        valence:2,  disc:1782},
+  {Z:53, sym:"I",  name:"Iodine",        cat:"halogen",    g:17, p:5, mass:"126.90",  config:"[Kr] 4d¹⁰ 5s² 5p⁵",        valence:1,  disc:1811},
+  {Z:54, sym:"Xe", name:"Xenon",         cat:"noble",      g:18, p:5, mass:"131.29",  config:"[Kr] 4d¹⁰ 5s² 5p⁶",        valence:0,  disc:1898},
+  {Z:55, sym:"Cs", name:"Cesium",        cat:"alkali",     g:1,  p:6, mass:"132.91",  config:"[Xe] 6s¹",                 valence:1,  disc:1860},
+  {Z:56, sym:"Ba", name:"Barium",        cat:"alkaline",   g:2,  p:6, mass:"137.33",  config:"[Xe] 6s²",                 valence:2,  disc:1808},
+  {Z:57, sym:"La", name:"Lanthanum",     cat:"lanthanide", g:3,  p:6, mass:"138.91",  config:"[Xe] 5d¹ 6s²",             valence:3,  disc:1839},
+  {Z:58, sym:"Ce", name:"Cerium",        cat:"lanthanide", g:null,p:8,mass:"140.12",  config:"[Xe] 4f¹ 5d¹ 6s²",         valence:3,  disc:1803},
+  {Z:59, sym:"Pr", name:"Praseodymium",  cat:"lanthanide", g:null,p:8,mass:"140.91",  config:"[Xe] 4f³ 6s²",             valence:3,  disc:1885},
+  {Z:60, sym:"Nd", name:"Neodymium",     cat:"lanthanide", g:null,p:8,mass:"144.24",  config:"[Xe] 4f⁴ 6s²",             valence:3,  disc:1885},
+  {Z:61, sym:"Pm", name:"Promethium",    cat:"lanthanide", g:null,p:8,mass:"(145)",   config:"[Xe] 4f⁵ 6s²",             valence:3,  disc:1945},
+  {Z:62, sym:"Sm", name:"Samarium",      cat:"lanthanide", g:null,p:8,mass:"150.36",  config:"[Xe] 4f⁶ 6s²",             valence:3,  disc:1879},
+  {Z:63, sym:"Eu", name:"Europium",      cat:"lanthanide", g:null,p:8,mass:"151.96",  config:"[Xe] 4f⁷ 6s²",             valence:3,  disc:1901},
+  {Z:64, sym:"Gd", name:"Gadolinium",    cat:"lanthanide", g:null,p:8,mass:"157.25",  config:"[Xe] 4f⁷ 5d¹ 6s²",         valence:3,  disc:1880},
+  {Z:65, sym:"Tb", name:"Terbium",       cat:"lanthanide", g:null,p:8,mass:"158.93",  config:"[Xe] 4f⁹ 6s²",             valence:3,  disc:1843},
+  {Z:66, sym:"Dy", name:"Dysprosium",    cat:"lanthanide", g:null,p:8,mass:"162.50",  config:"[Xe] 4f¹⁰ 6s²",            valence:3,  disc:1886},
+  {Z:67, sym:"Ho", name:"Holmium",       cat:"lanthanide", g:null,p:8,mass:"164.93",  config:"[Xe] 4f¹¹ 6s²",            valence:3,  disc:1878},
+  {Z:68, sym:"Er", name:"Erbium",        cat:"lanthanide", g:null,p:8,mass:"167.26",  config:"[Xe] 4f¹² 6s²",            valence:3,  disc:1843},
+  {Z:69, sym:"Tm", name:"Thulium",       cat:"lanthanide", g:null,p:8,mass:"168.93",  config:"[Xe] 4f¹³ 6s²",            valence:3,  disc:1879},
+  {Z:70, sym:"Yb", name:"Ytterbium",     cat:"lanthanide", g:null,p:8,mass:"173.04",  config:"[Xe] 4f¹⁴ 6s²",            valence:3,  disc:1878},
+  {Z:71, sym:"Lu", name:"Lutetium",      cat:"lanthanide", g:3,  p:6, mass:"174.97",  config:"[Xe] 4f¹⁴ 5d¹ 6s²",        valence:3,  disc:1907},
+  {Z:72, sym:"Hf", name:"Hafnium",       cat:"transition", g:4,  p:6, mass:"178.49",  config:"[Xe] 4f¹⁴ 5d² 6s²",        valence:4,  disc:1923},
+  {Z:73, sym:"Ta", name:"Tantalum",      cat:"transition", g:5,  p:6, mass:"180.95",  config:"[Xe] 4f¹⁴ 5d³ 6s²",        valence:5,  disc:1802},
+  {Z:74, sym:"W",  name:"Tungsten",      cat:"transition", g:6,  p:6, mass:"183.84",  config:"[Xe] 4f¹⁴ 5d⁴ 6s²",        valence:6,  disc:1783},
+  {Z:75, sym:"Re", name:"Rhenium",       cat:"transition", g:7,  p:6, mass:"186.21",  config:"[Xe] 4f¹⁴ 5d⁵ 6s²",        valence:7,  disc:1925},
+  {Z:76, sym:"Os", name:"Osmium",        cat:"transition", g:8,  p:6, mass:"190.23",  config:"[Xe] 4f¹⁴ 5d⁶ 6s²",        valence:4,  disc:1803},
+  {Z:77, sym:"Ir", name:"Iridium",       cat:"transition", g:9,  p:6, mass:"192.22",  config:"[Xe] 4f¹⁴ 5d⁷ 6s²",        valence:4,  disc:1803},
+  {Z:78, sym:"Pt", name:"Platinum",      cat:"transition", g:10, p:6, mass:"195.08",  config:"[Xe] 4f¹⁴ 5d⁹ 6s¹",        valence:4,  disc:1748},
+  {Z:79, sym:"Au", name:"Gold",          cat:"transition", g:11, p:6, mass:"196.97",  config:"[Xe] 4f¹⁴ 5d¹⁰ 6s¹",       valence:3,  disc:-6000},
+  {Z:80, sym:"Hg", name:"Mercury",       cat:"transition", g:12, p:6, mass:"200.59",  config:"[Xe] 4f¹⁴ 5d¹⁰ 6s²",       valence:2,  disc:-2000},
+  {Z:81, sym:"Tl", name:"Thallium",      cat:"post-trans", g:13, p:6, mass:"204.38",  config:"[Xe] 4f¹⁴ 5d¹⁰ 6s² 6p¹",   valence:3,  disc:1861},
+  {Z:82, sym:"Pb", name:"Lead",          cat:"post-trans", g:14, p:6, mass:"207.2",   config:"[Xe] 4f¹⁴ 5d¹⁰ 6s² 6p²",   valence:4,  disc:-6000},
+  {Z:83, sym:"Bi", name:"Bismuth",       cat:"post-trans", g:15, p:6, mass:"208.98",  config:"[Xe] 4f¹⁴ 5d¹⁰ 6s² 6p³",   valence:3,  disc:1753},
+  {Z:84, sym:"Po", name:"Polonium",      cat:"post-trans", g:16, p:6, mass:"(209)",   config:"[Xe] 4f¹⁴ 5d¹⁰ 6s² 6p⁴",   valence:4,  disc:1898},
+  {Z:85, sym:"At", name:"Astatine",      cat:"halogen",    g:17, p:6, mass:"(210)",   config:"[Xe] 4f¹⁴ 5d¹⁰ 6s² 6p⁵",   valence:1,  disc:1940},
+  {Z:86, sym:"Rn", name:"Radon",         cat:"noble",      g:18, p:6, mass:"(222)",   config:"[Xe] 4f¹⁴ 5d¹⁰ 6s² 6p⁶",   valence:0,  disc:1900},
+  {Z:87, sym:"Fr", name:"Francium",      cat:"alkali",     g:1,  p:7, mass:"(223)",   config:"[Rn] 7s¹",                 valence:1,  disc:1939},
+  {Z:88, sym:"Ra", name:"Radium",        cat:"alkaline",   g:2,  p:7, mass:"(226)",   config:"[Rn] 7s²",                 valence:2,  disc:1898},
+  {Z:89, sym:"Ac", name:"Actinium",      cat:"actinide",   g:3,  p:7, mass:"(227)",   config:"[Rn] 6d¹ 7s²",             valence:3,  disc:1899},
+  {Z:90, sym:"Th", name:"Thorium",       cat:"actinide",   g:null,p:9,mass:"232.04",  config:"[Rn] 6d² 7s²",             valence:4,  disc:1829},
+  {Z:91, sym:"Pa", name:"Protactinium",  cat:"actinide",   g:null,p:9,mass:"231.04",  config:"[Rn] 5f² 6d¹ 7s²",         valence:5,  disc:1913},
+  {Z:92, sym:"U",  name:"Uranium",       cat:"actinide",   g:null,p:9,mass:"238.03",  config:"[Rn] 5f³ 6d¹ 7s²",         valence:6,  disc:1789},
+  {Z:93, sym:"Np", name:"Neptunium",     cat:"actinide",   g:null,p:9,mass:"(237)",   config:"[Rn] 5f⁴ 6d¹ 7s²",         valence:5,  disc:1940},
+  {Z:94, sym:"Pu", name:"Plutonium",     cat:"actinide",   g:null,p:9,mass:"(244)",   config:"[Rn] 5f⁶ 7s²",             valence:4,  disc:1940},
+  {Z:95, sym:"Am", name:"Americium",     cat:"actinide",   g:null,p:9,mass:"(243)",   config:"[Rn] 5f⁷ 7s²",             valence:3,  disc:1944},
+  {Z:96, sym:"Cm", name:"Curium",        cat:"actinide",   g:null,p:9,mass:"(247)",   config:"[Rn] 5f⁷ 6d¹ 7s²",         valence:3,  disc:1944},
+  {Z:97, sym:"Bk", name:"Berkelium",     cat:"actinide",   g:null,p:9,mass:"(247)",   config:"[Rn] 5f⁹ 7s²",             valence:3,  disc:1949},
+  {Z:98, sym:"Cf", name:"Californium",   cat:"actinide",   g:null,p:9,mass:"(251)",   config:"[Rn] 5f¹⁰ 7s²",            valence:3,  disc:1950},
+  {Z:99, sym:"Es", name:"Einsteinium",   cat:"actinide",   g:null,p:9,mass:"(252)",   config:"[Rn] 5f¹¹ 7s²",            valence:3,  disc:1952},
+  {Z:100,sym:"Fm", name:"Fermium",       cat:"actinide",   g:null,p:9,mass:"(257)",   config:"[Rn] 5f¹² 7s²",            valence:3,  disc:1952},
+  {Z:101,sym:"Md", name:"Mendelevium",   cat:"actinide",   g:null,p:9,mass:"(258)",   config:"[Rn] 5f¹³ 7s²",            valence:3,  disc:1955},
+  {Z:102,sym:"No", name:"Nobelium",      cat:"actinide",   g:null,p:9,mass:"(259)",   config:"[Rn] 5f¹⁴ 7s²",            valence:2,  disc:1958},
+  {Z:103,sym:"Lr", name:"Lawrencium",    cat:"actinide",   g:3,  p:7, mass:"(266)",   config:"[Rn] 5f¹⁴ 7s² 7p¹",        valence:3,  disc:1961},
+  {Z:104,sym:"Rf", name:"Rutherfordium", cat:"transition", g:4,  p:7, mass:"(267)",   config:"[Rn] 5f¹⁴ 6d² 7s²",        valence:4,  disc:1969},
+  {Z:105,sym:"Db", name:"Dubnium",       cat:"transition", g:5,  p:7, mass:"(268)",   config:"[Rn] 5f¹⁴ 6d³ 7s²",        valence:5,  disc:1970},
+  {Z:106,sym:"Sg", name:"Seaborgium",    cat:"transition", g:6,  p:7, mass:"(269)",   config:"[Rn] 5f¹⁴ 6d⁴ 7s²",        valence:6,  disc:1974},
+  {Z:107,sym:"Bh", name:"Bohrium",       cat:"transition", g:7,  p:7, mass:"(270)",   config:"[Rn] 5f¹⁴ 6d⁵ 7s²",        valence:7,  disc:1981},
+  {Z:108,sym:"Hs", name:"Hassium",       cat:"transition", g:8,  p:7, mass:"(269)",   config:"[Rn] 5f¹⁴ 6d⁶ 7s²",        valence:8,  disc:1984},
+  {Z:109,sym:"Mt", name:"Meitnerium",    cat:"transition", g:9,  p:7, mass:"(278)",   config:"[Rn] 5f¹⁴ 6d⁷ 7s²",        valence:null,disc:1982},
+  {Z:110,sym:"Ds", name:"Darmstadtium",  cat:"transition", g:10, p:7, mass:"(281)",   config:"[Rn] 5f¹⁴ 6d⁸ 7s²",        valence:null,disc:1994},
+  {Z:111,sym:"Rg", name:"Roentgenium",   cat:"transition", g:11, p:7, mass:"(282)",   config:"[Rn] 5f¹⁴ 6d¹⁰ 7s¹",       valence:null,disc:1994},
+  {Z:112,sym:"Cn", name:"Copernicium",   cat:"transition", g:12, p:7, mass:"(285)",   config:"[Rn] 5f¹⁴ 6d¹⁰ 7s²",       valence:null,disc:1996},
+  {Z:113,sym:"Nh", name:"Nihonium",      cat:"post-trans", g:13, p:7, mass:"(286)",   config:"[Rn] 5f¹⁴ 6d¹⁰ 7s² 7p¹",   valence:null,disc:2004},
+  {Z:114,sym:"Fl", name:"Flerovium",     cat:"post-trans", g:14, p:7, mass:"(289)",   config:"[Rn] 5f¹⁴ 6d¹⁰ 7s² 7p²",   valence:null,disc:1999},
+  {Z:115,sym:"Mc", name:"Moscovium",     cat:"post-trans", g:15, p:7, mass:"(290)",   config:"[Rn] 5f¹⁴ 6d¹⁰ 7s² 7p³",   valence:null,disc:2003},
+  {Z:116,sym:"Lv", name:"Livermorium",   cat:"post-trans", g:16, p:7, mass:"(293)",   config:"[Rn] 5f¹⁴ 6d¹⁰ 7s² 7p⁴",   valence:null,disc:2000},
+  {Z:117,sym:"Ts", name:"Tennessine",    cat:"halogen",    g:17, p:7, mass:"(294)",   config:"[Rn] 5f¹⁴ 6d¹⁰ 7s² 7p⁵",   valence:null,disc:2010},
+  {Z:118,sym:"Og", name:"Oganesson",     cat:"noble",      g:18, p:7, mass:"(294)",   config:"[Rn] 5f¹⁴ 6d¹⁰ 7s² 7p⁶",   valence:null,disc:2002},
+];
+
+const CAT_COLORS = {
+  alkali:     '#ef4444', alkaline: '#f97316', transition: '#eab308',
+  'post-trans':'#84cc16', metalloid: '#22d3ee', nonmetal: '#6366f1',
+  halogen:    '#a855f7', noble: '#ec4899', lanthanide: '#14b8a6', actinide: '#06b6d4'
+};
+const CAT_NAMES = {
+  alkali:'Alkali metals', alkaline:'Alkaline earth', transition:'Transition metals',
+  'post-trans':'Post-transition', metalloid:'Metalloids', nonmetal:'Nonmetals',
+  halogen:'Halogens', noble:'Noble gases', lanthanide:'Lanthanides', actinide:'Actinides'
+};
+
+/* Build legend */
+const legend = document.getElementById('pt-legend');
+Object.entries(CAT_NAMES).forEach(([k,v]) => {
+  const div = document.createElement('div'); div.className='leg';
+  div.innerHTML=`<div class="swatch" style="background:${CAT_COLORS[k]};opacity:.7"></div><span>${v}</span>`;
+  legend.appendChild(div);
+});
+
+/* Build grid
+   Standard layout: groups 1-18, periods 1-7
+   Lanthanides row 8 (groups 4-17 offset), Actinides row 9 */
+const grid = document.getElementById('pt-grid');
+// Create 10 rows × 18 cols of placeholder slots
+const slots = [];
+for(let r=0;r<10;r++){
+  const row=[];
+  for(let c=0;c<18;c++) row.push(null);
+  slots.push(row);
+}
+
+ELEMENTS.forEach(el => {
+  // Lanthanide (Z 57-71) → row index 7, cols 2-16
+  if(el.Z>=57 && el.Z<=71){ slots[7][el.Z-57+2]=el; return; }
+  // Actinide (Z 89-103) → row index 8, cols 2-16
+  if(el.Z>=89 && el.Z<=103){ slots[8][el.Z-89+2]=el; return; }
+  if(el.g && el.p){
+    slots[el.p-1][el.g-1]=el;
+  }
+});
+
+// Blank row 7 (index 6) placeholders for La/Ac
+// slots[5][2] = {sym:'*',name:'Lanthanides',cat:'lanthanide',Z:'',mass:'',config:'',placeholder:true};
+// slots[6][2] = {sym:'**',name:'Actinides',cat:'actinide',Z:'',mass:'',config:'',placeholder:true};
+
+slots.forEach((row, ri) => {
+  if(ri===9) return; // unused
+  row.forEach((el, ci) => {
+    const cell = document.createElement('div');
+    if(el){
+      cell.className=`el ${el.cat}`;
+      cell.innerHTML=`<span class="num">${el.Z}</span><span class="sym">${el.sym}</span><span class="name">${el.name}</span>`;
+      cell.addEventListener('click', ()=>showElement(el));
+    } else {
+      cell.style.visibility='hidden';
+    }
+    cell.style.gridColumn = (ci+1)+'';
+    cell.style.gridRow = (ri+1)+'';
+    grid.appendChild(cell);
+  });
+});
+
+/* spacer rows for lanthanide/actinide separation */
+// Already handled by grid rows 8 and 9
+
+function showElement(el){
+  const panel = document.getElementById('el-panel');
+  const disc = el.disc < 0 ? `~${Math.abs(el.disc)} BCE (antiquity)` : el.disc > 2000 ? `${el.disc} (synthetic)` : el.disc;
+  const valStr = el.valence == null ? 'under study' : el.valence;
+  panel.innerHTML = `
+    <h3>${el.Z}. ${el.name} (${el.sym})</h3>
+    <div class="el-meta">
+      <span><strong>Atomic number:</strong> ${el.Z}</span>
+      <span><strong>Mass:</strong> ${el.mass} u</span>
+      <span><strong>Category:</strong> ${CAT_NAMES[el.cat]}</span>
+      <span><strong>Common valence:</strong> ${valStr}</span>
+      <span><strong>Discovered:</strong> ${disc}</span>
+    </div>
+    <div class="el-config">Electron configuration: ${el.config}</div>
+    <p style="margin:4px 0;font-size:.85rem;color:var(--muted)">Period ${el.p}${el.g?', Group '+el.g:''}. ${getCatDesc(el.cat,el.sym)}</p>
+  `;
+  panel.className='visible';
+}
+
+function getCatDesc(cat, sym){
+  const descs = {
+    alkali:'Highly reactive metal. Reacts vigorously with water to form hydroxide + hydrogen gas.',
+    alkaline:'Reactive metal. Forms 2+ ions. Important in biology (Ca, Mg) and industry (Be, Ba).',
+    transition:'d-block metal. Variable oxidation states, forms coloured compounds, catalytic activity.',
+    'post-trans':'Metal with higher electronegativity than transition metals. Often forms amphoteric oxides.',
+    metalloid:'Properties between metal and nonmetal. Many are semiconductors.',
+    nonmetal:'Poor conductor, high electronegativity, forms covalent/ionic bonds.',
+    halogen:'Highly reactive nonmetal. One electron short of a noble-gas configuration.',
+    noble:'Full outer shell, extremely low reactivity under normal conditions.',
+    lanthanide:'f-block rare-earth metal. Similar chemistry across series. Used in magnets, lasers, phosphors.',
+    actinide:'f-block. Most are radioactive. Heavy actinides are entirely synthetic.'
+  };
+  return descs[cat]||'';
+}
+
+/* ========================================================
+   TIMELINE
+   ======================================================== */
+const TL_EVENTS = [
+  {year:-450, text:"Empedocles: 4 elements theory (earth, water, fire, air)", side:"above"},
+  {year:-400, text:"Democritus: atomism — matter made of indivisible 'atomos'", side:"below"},
+  {year:-300, text:"Aristotle adds 5th element: aether", side:"above"},
+  {year:1661, text:"Boyle: 'The Sceptical Chymist' — modern element concept", side:"below"},
+  {year:1669, text:"Brandt discovers Phosphorus — first 'new' element", side:"above"},
+  {year:1766, text:"Cavendish isolates Hydrogen", side:"below"},
+  {year:1772, text:"Rutherford & Scheele isolate Nitrogen", side:"above"},
+  {year:1774, text:"Priestley & Scheele discover Oxygen; Scheele finds Chlorine", side:"below"},
+  {year:1789, text:"Lavoisier: law of conservation of mass; names 33 elements", side:"above"},
+  {year:1800, text:"Volta's battery enables electrolysis; Humphry Davy isolates Na, K, Ca, Mg, Ba, Sr, B", side:"below"},
+  {year:1803, text:"Dalton: atomic theory, law of multiple proportions", side:"above"},
+  {year:1811, text:"Avogadro: equal volumes of gases → equal numbers of molecules", side:"below"},
+  {year:1817, text:"Döbereiner: triads of similar elements (Law of Triads)", side:"above"},
+  {year:1826, text:"Balard discovers Bromine", side:"below"},
+  {year:1828, text:"Wöhler synthesises urea: organic ≠ 'vital force'", side:"above"},
+  {year:1838, text:"Dumas: equivalent weights systematic measurement", side:"below"},
+  {year:1858, text:"Cannizzaro: standard atomic weights from Avogadro", side:"above"},
+  {year:1860, text:"Cs, Rb discovered by spectroscopy (Bunsen & Kirchhoff)", side:"below"},
+  {year:1868, text:"Helium found in Sun's spectrum (Lockyer)", side:"above"},
+  {year:1869, text:"Mendeleev: Periodic Law — properties periodic by atomic weight. Predicts Ga, Sc, Ge", side:"below"},
+  {year:1871, text:"Meyer: periodic law independently; atomic volume curve", side:"above"},
+  {year:1875, text:"Lecoq de Boisbaudran discovers Gallium (predicted by Mendeleev)", side:"below"},
+  {year:1886, text:"Winkler discovers Germanium (eka-silicon, predicted 1871)", side:"above"},
+  {year:1894, text:"Ramsay & Rayleigh discover Argon — first noble gas", side:"below"},
+  {year:1895, text:"Helium isolated on Earth (Ramsay)", side:"above"},
+  {year:1897, text:"Thomson discovers electron (cathode ray experiments)", side:"below"},
+  {year:1898, text:"Curie & Curie discover Polonium and Radium", side:"above"},
+  {year:1900, text:"Planck: quantum hypothesis — energy in discrete packets", side:"below"},
+  {year:1904, text:"Thomson: plum-pudding model of the atom", side:"above"},
+  {year:1909, text:"Geiger-Marsden gold foil experiment (Rutherford's lab)", side:"below"},
+  {year:1911, text:"Rutherford: nuclear model — dense positive nucleus", side:"above"},
+  {year:1913, text:"Bohr: quantised electron orbits for hydrogen", side:"below"},
+  {year:1913, text:"Moseley: atomic number Z defines an element (not mass)", side:"above"},
+  {year:1916, text:"Lewis: electron-pair bonding theory", side:"below"},
+  {year:1919, text:"Rutherford: first artificial nuclear reaction (N→O + p)", side:"above"},
+  {year:1922, text:"Bohr wins Nobel; Hevesy proposes hafnium (found 1923)", side:"below"},
+  {year:1924, text:"de Broglie: electron has wave nature (λ=h/p)", side:"above"},
+  {year:1925, text:"Pauli: exclusion principle; Heisenberg: matrix mechanics", side:"below"},
+  {year:1926, text:"Schrödinger: wave equation ψ — quantum mechanical atom", side:"above"},
+  {year:1927, text:"Heitler-London: quantum mechanical theory of H₂ bond", side:"below"},
+  {year:1932, text:"Chadwick discovers neutron; Urey discovers deuterium", side:"above"},
+  {year:1940, text:"McMillan & Abelson: Neptunium (first transuranium element)", side:"below"},
+  {year:1944, text:"Seaborg: actinide concept — 14-element f-block row", side:"above"},
+  {year:1952, text:"Einsteinium & Fermium found in Ivy Mike H-bomb debris", side:"below"},
+  {year:1955, text:"First anti-proton detected (Segrè, Chamberlain)", side:"above"},
+  {year:1964, text:"Gell-Mann & Zweig: quark model", side:"below"},
+  {year:1974, text:"IUPAC rules on systematic element names", side:"above"},
+  {year:1994, text:"Element 111 Roentgenium synthesised (GSI, Germany)", side:"below"},
+  {year:2010, text:"Tennessine (117) synthesised; completes period 7", side:"above"},
+  {year:2016, text:"IUPAC approves names for elements 113–118 (Nh,Fl,Mc,Lv,Ts,Og)", side:"below"},
+];
+
+const BREAK = 1700;
+const BREAK_PCT = 15;
+function yearToPercent(y){
+  if(y <= BREAK){
+    return ((y - (-500)) / (BREAK - (-500))) * BREAK_PCT;
+  } else {
+    return BREAK_PCT + ((y - BREAK) / (2025 - BREAK)) * (100 - BREAK_PCT);
+  }
+}
+
+const totalWidth = 5600;
+const canvas = document.getElementById('tl-canvas');
+
+/* break indicator */
+const bLine = document.createElement('div'); bLine.className='tl-break-line';
+bLine.style.left = (yearToPercent(BREAK)/100*totalWidth)+'px';
+canvas.appendChild(bLine);
+const bLbl = document.createElement('div'); bLbl.className='tl-break-label';
+bLbl.style.left = (yearToPercent(BREAK)/100*totalWidth)+'px';
+bLbl.textContent = '← compressed · expanded →';
+canvas.appendChild(bLbl);
+
+/* year marks */
+const ancientMarks = [-400,-300,-200,-100,0,500,1000,1500,1600,1700];
+const modernMarks = [];
+for(let y=1720;y<=2020;y+=20) modernMarks.push(y);
+[...ancientMarks,...modernMarks].forEach(y=>{
+  const x = yearToPercent(y)/100*totalWidth;
+  const m = document.createElement('div'); m.className='tl-mark';
+  m.style.left=x+'px';
+  m.textContent = y < 0 ? Math.abs(y)+'BCE' : y;
+  canvas.appendChild(m);
+});
+
+/* place events with simple above/below alternation */
+TL_EVENTS.forEach(ev=>{
+  const x = yearToPercent(ev.year)/100*totalWidth;
+  const wrap = document.createElement('div'); wrap.className='tl-event';
+  wrap.style.left=x+'px';
+
+  const dot = document.createElement('div'); dot.className='tl-dot';
+  wrap.appendChild(dot);
+
+  const lbl = document.createElement('div'); lbl.className='tl-label';
+  lbl.textContent = ev.year < 0 ? Math.abs(ev.year)+'BCE' : ev.year;
+  wrap.appendChild(lbl);
+
+  const txt = document.createElement('div');
+  txt.className = 'tl-text ' + (ev.side==='above'?'above':'below');
+  txt.style.left='50%';
+  txt.textContent = ev.text;
+  wrap.appendChild(txt);
+
+  canvas.appendChild(wrap);
+});
+</script>
+</body>
+</html>
