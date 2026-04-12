@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Astrophysics — A Guide to the Observable Universe</title>
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError: false});"></script>
+</head>
+<body>
+<div id="tooltip"></div>
+
+<nav class="topic-nav">
+  <a class="back" href="./index.html">← Physics Track</a>
+  <div class="crumb">Physics / <span class="topic-name">Astrophysics</span></div>
+</nav>
+
+<div class="topic-layout">
+  <aside class="topic-toc">
+    <h4>ON THIS PAGE</h4>
+    <ul>
+      <li><a href="#telescopes">1. Telescopes and observatories</a></li>
+      <li><a href="#exoplanets">2. The search for exoplanets</a></li>
+      <li><a href="#habitable">3. Habitable worlds</a></li>
+      <li><a href="#neighbors">4. Nearest star systems</a></li>
+      <li><a href="#types">5. Types of stars and objects</a></li>
+      <li><a href="#hr-diagram">6. Interactive: HR diagram</a></li>
+      <li><a href="#galaxies">7. Named galaxies</a></li>
+      <li><a href="#anomalies">8. Cosmic anomalies</a></li>
+      <li><a href="#curvature">9. Curvature and the fate of the universe</a></li>
+      <li><a href="#scale-map">10. Interactive: local universe scale</a></li>
+    </ul>
+  </aside>
+
+  <article class="topic-content">
+    <h1>Astrophysics — A Guide to the Observable Universe</h1>
+    <span class="chip">UPDATED Apr 11 2026 21:00</span>
+    <p class="subtitle">From the nearest star systems to the edge of the observable universe — the telescopes we use, the worlds we've found, the stars that fill the cosmos, the galaxies we've named, the anomalies we can't explain, and whether the universe will expand forever or eventually end.</p>
+    <div class="meta-tags">
+      <span>Prereq: <a href="./general-relativity.html">general relativity</a>, <a href="./quantum-mechanics.html">quantum mechanics</a> (light touch)</span>
+      <span>Read time: ~40 min</span>
+      <span>Interactive figures: 2</span>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="telescopes">1. Telescopes and observatories — how we see</h2>
+
+    <p>Every claim in astrophysics is downstream of photons — or now, gravitational waves and neutrinos. The instruments we build determine which questions we can ask. Since the 1990s, the dominant theme has been multi-messenger astronomy: combining information across the full electromagnetic spectrum, plus entirely new messengers that pass through matter almost unimpeded.</p>
+
+    <h3>Space telescopes</h3>
+
+    <p>The <strong>Hubble Space Telescope (HST)</strong>, launched in 1990 with a 2.4 m primary mirror, transformed astrophysics. Its UV/visible/NIR coverage above Earth's atmosphere enabled the Hubble Deep Field (1995), Hubble Ultra Deep Field (2004), and Hubble eXtreme Deep Field (2012) — each revealing thousands of galaxies in a patch of sky the angular size of a grain of sand held at arm's length. HST's key scientific results include: a measurement of the Hubble constant via Cepheid distances, the discovery of <span class="term" data-label="dark energy" data-def="The unknown form of energy that makes up ~68% of the total energy budget of the universe and is responsible for the observed accelerating expansion. First inferred in 1998 from Type Ia supernova distances. Its equation of state w = P/(ρc²) is consistent with −1 (a cosmological constant) to present measurements, but its physical nature is unknown.">dark energy</span> via Type Ia supernovae (jointly with ground telescopes), and transmission spectroscopy of exoplanet atmospheres. As of 2026, Hubble continues to operate on reduced capacity following gyroscope failures, now in reduced three-gyro mode.</p>
+
+    <p>The <strong>James Webb Space Telescope (JWST)</strong>, launched December 25, 2021, is the most powerful space observatory ever deployed. Its 6.5 m gold-coated beryllium segmented primary mirror is optimized for near-infrared (NIR) and mid-infrared (MIRI) wavelengths, placing it in a halo orbit at the L2 Lagrange point 1.5 million km from Earth. JWST's primary science goals included observing the first galaxies to form after the Big Bang (redshift $z > 10$). By 2026 it has delivered results beyond expectations: confirmed galaxies at $z \sim 12$–$16$ existing just 300–900 million years after the Big Bang, some with stellar masses that challenge standard galaxy formation models. It directly detected CO₂ and SO₂ in the atmosphere of the hot Jupiter WASP-39b, and tentatively detected dimethyl sulfide (DMS) on the mini-Neptune K2-18b — a potential biosignature under intense scrutiny. It has also re-measured Cepheid distances independently to assess the <span class="term" data-label="Hubble tension" data-def="The statistically significant (≈5σ) discrepancy between the Hubble constant measured from the CMB (H₀ ≈ 67.4 km/s/Mpc, Planck 2018) and from the local distance ladder using Cepheid variables and Type Ia supernovae (H₀ ≈ 73.0 km/s/Mpc, Riess et al.). JWST observations confirm the local measurement, ruling out Cepheid systematics as the explanation.">Hubble tension</span>, confirming the local measurement is not a systematic error in Cepheid calibration.</p>
+
+    <p>The <strong>Chandra X-ray Observatory</strong> (NASA, 1999–present) provides sub-arcsecond X-ray imaging, revealing hot gas in galaxy clusters, neutron stars, X-ray binaries, and supernova remnants with spatial resolution no other X-ray mission has matched. <strong>XMM-Newton</strong> (ESA) offers larger collecting area but lower angular resolution. The <strong>Fermi Gamma-ray Space Telescope</strong> conducts an all-sky gamma-ray survey, detecting blazars, gamma-ray bursts, pulsars, and providing the most sensitive constraints on dark matter annihilation signals. <strong>Spitzer Space Telescope</strong> (2003–2020) pioneered infrared exoplanet atmosphere characterization; many of its methods were inherited by JWST.</p>
+
+    <p>Looking forward: <strong>Euclid</strong> (ESA, launched 2023) is conducting a wide-field visible/NIR survey of billions of galaxies out to $z \sim 2$ to map the large-scale structure of the universe via <span class="term" data-label="gravitational lensing" data-def="The deflection and distortion of light from distant sources by intervening mass concentrations. Strong lensing produces arcs and Einstein rings. Weak lensing produces subtle statistical shape distortions used to map dark matter distributions and constrain cosmological parameters.">gravitational lensing</span> and baryon acoustic oscillations (BAO), constraining the properties of dark energy. The <strong>Nancy Grace Roman Space Telescope</strong> (scheduled ~2027) will complement Euclid with a wide-field IR survey targeting dark energy, microlensing exoplanets, and supernovae.</p>
+
+    <h3>Ground-based observatories</h3>
+
+    <p>The <strong>Very Large Array (VLA)</strong> in New Mexico — 27 dishes arranged in a Y-configuration — remains a workhorse of radio astronomy. Its successor in sensitivity at submillimeter wavelengths is <strong>ALMA</strong> (Atacama Large Millimeter/submillimeter Array): 66 antennas at 5,000 m altitude in the Chilean Atacama Desert, sensitive to cold molecular gas, protoplanetary disks, and distant star-forming galaxies.</p>
+
+    <p>The <strong>Event Horizon Telescope (EHT)</strong> is a global network of radio telescopes linked via <span class="term" data-label="VLBI" data-def="Very Long Baseline Interferometry — a technique that combines signals from radio telescopes separated by intercontinental distances (up to the diameter of Earth) to achieve angular resolution equivalent to a single dish of that separation. The EHT uses VLBI at 230/345 GHz to resolve structures on scales of ~20 microarcseconds.">VLBI</span> at 230 and 345 GHz, giving an effective resolution equivalent to an Earth-sized telescope. It produced the first image of a black hole shadow: M87* in 2019 (6.5 billion solar masses) and Sgr A* (the Milky Way's central black hole, 4 million solar masses) in 2022.</p>
+
+    <p>The <strong>Extremely Large Telescope (ELT)</strong> — ESO's 39 m primary mirror telescope under construction at Cerro Armazones, Chile — will be the largest optical/NIR telescope ever built, with first light expected in 2028. Its adaptive optics system will correct for atmospheric turbulence, enabling direct imaging of exoplanet atmospheres and spectroscopy of stars in the first galaxies. The <strong>Keck Observatory</strong> (twin 10 m telescopes on Mauna Kea) and the <strong>Very Large Telescope (VLT)</strong> (four 8.2 m Unit Telescopes at Cerro Paranal) remain the most scientifically productive large optical telescopes currently operational.</p>
+
+    <h3>Gravitational wave detectors</h3>
+
+    <p><span class="term" data-label="gravitational wave detectors" data-def="Laser interferometers that detect the tiny spacetime distortions (strains h ~ 10⁻²¹) caused by accelerating masses. LIGO's 4 km arm-length interferometers achieved sensitivity to displacements 1/1000th the diameter of a proton, enabling the first gravitational wave detection in 2015.">LIGO</span>'s two 4 km interferometers (Hanford, WA and Livingston, LA) made the first direct detection of gravitational waves in September 2015 (GW150914, from a binary black hole merger), earning the 2017 Nobel Prize in Physics. Together with <strong>Virgo</strong> (3 km, Italy) and <strong>KAGRA</strong> (3 km underground, Japan), LIGO is in its fourth observing run (O4). The planned space-based <strong>LISA</strong> (Laser Interferometer Space Antenna, ~2035) will have 2.5 million km arms, sensitive to millihertz gravitational waves from supermassive black hole mergers, compact binaries, and potentially cosmological sources from the early universe.</p>
+
+    <h3>Neutrino observatories</h3>
+
+    <p><strong>IceCube</strong> at the South Pole instruments 1 km³ of Antarctic ice with 5,160 optical sensors. It detected the first astrophysical neutrino flux in 2013 and identified the first point source of astrophysical neutrinos: the blazar TXS 0506+056 in 2017. <strong>Hyper-Kamiokande</strong> (under construction in Japan, expected 2027) will hold 260 kilotons of ultra-pure water, enabling studies of supernova neutrinos, proton decay, and atmospheric/solar neutrinos.</p>
+
+    <div class="defn">
+      <strong>Multi-messenger astronomy.</strong> The 2017 detection of neutron star merger GW170817 was observed simultaneously in gravitational waves (LIGO/Virgo), gamma rays (Fermi, INTEGRAL), optical (dozens of telescopes), X-rays (Chandra), and radio (VLA). In a single event, this confirmed that neutron star mergers produce short gamma-ray bursts, synthesize heavy r-process elements (gold, platinum, uranium), and that gravitational waves travel at the speed of light to better than $10^{-15}$. It marked the dawn of multi-messenger astronomy with standard sirens.
+    </div>
+
+    <table class="rank-table">
+      <thead>
+        <tr><th>Instrument</th><th>Type</th><th>Wavelength / Method</th><th>Key result</th><th>Status (2026)</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Hubble (HST)</td><td>Space</td><td>UV / Vis / NIR</td><td>Dark energy, Cepheid distances, deep fields</td><td>Operating (reduced)</td></tr>
+        <tr><td>JWST</td><td>Space</td><td>NIR / Mid-IR</td><td>First galaxies, exo-atmospheres, Hubble tension</td><td>Operating</td></tr>
+        <tr><td>Chandra</td><td>Space</td><td>X-ray (0.1–10 keV)</td><td>Cluster gas, neutron stars, SNRs</td><td>Operating</td></tr>
+        <tr><td>Fermi LAT</td><td>Space</td><td>Gamma-ray (20 MeV–300 GeV)</td><td>Blazar catalog, GRBs, dark matter limits</td><td>Operating</td></tr>
+        <tr><td>Euclid</td><td>Space</td><td>Vis / NIR wide-field</td><td>Dark energy via WL + BAO</td><td>Operating</td></tr>
+        <tr><td>VLA</td><td>Ground radio</td><td>Radio (1–50 GHz)</td><td>FRBs, AGN jets, transients</td><td>Operating</td></tr>
+        <tr><td>ALMA</td><td>Ground submm</td><td>Submillimeter</td><td>Protoplanetary disks, high-z ISM</td><td>Operating</td></tr>
+        <tr><td>EHT</td><td>Ground VLBI</td><td>Radio 1.3 mm</td><td>M87* image (2019), Sgr A* (2022)</td><td>Operating</td></tr>
+        <tr><td>ELT</td><td>Ground optical</td><td>Visible / NIR</td><td>Exoplanet atmospheres, first-galaxy spectroscopy</td><td>Construction (2028)</td></tr>
+        <tr><td>LIGO / Virgo / KAGRA</td><td>GW interferometer</td><td>Gravitational waves</td><td>BH/NS mergers, GW170817</td><td>O4 run</td></tr>
+        <tr><td>LISA</td><td>Space GW</td><td>mHz gravitational waves</td><td>SMBH mergers, compact binaries</td><td>Planned ~2035</td></tr>
+        <tr><td>IceCube</td><td>Neutrino detector</td><td>TeV neutrinos</td><td>Astrophysical neutrino flux, TXS 0506+056</td><td>Operating</td></tr>
+      </tbody>
+    </table>
+
+    <!-- ========================================================== -->
+    <h2 id="exoplanets">2. The search for exoplanets</h2>
+
+    <p>As of 2026, astronomers have confirmed more than 5,700 exoplanets, with roughly 10,000 additional candidates awaiting confirmation. The diversity is staggering: hot Jupiters on 2-day orbits, super-Earths with no solar-system analog, ocean worlds, lava planets, and — most excitingly — rocky planets in the habitable zones of their host stars. Every detection method carries its own selection biases; no single method gives a complete census.</p>
+
+    <div class="callout">
+      <div class="label">THE DEMOGRAPHIC REVOLUTION</div>
+      <p>The Kepler Space Telescope's 9-year primary + extended mission (2009–2018) established that planets are extraordinarily common. Roughly every Sun-like star hosts at least one planet, and small rocky planets (1–2 Earth radii) are far more common than giant planets. The galaxy contains more planets than stars. The question has shifted from "are there other planets?" to "which of them might be habitable?"</p>
+    </div>
+
+    <h3>Detection methods</h3>
+
+    <p>The <span class="term" data-label="transit method" data-def="A planet detection technique that monitors the brightness of a star over time. When a planet passes in front of its host star (a transit), it blocks a fraction of starlight proportional to (R_planet/R_star)². The transit depth, duration, and period constrain the planet's radius and orbital period. Requires the orbital plane to be nearly edge-on as seen from Earth (~1% chance for Earth-Sun geometry).">transit method</span> is currently the most productive: Kepler yielded ~2,700 confirmed planets, and TESS (Transiting Exoplanet Survey Satellite, 2018–present) surveys the entire sky in strips, discovering hundreds of confirmed planets per year with a focus on nearby, bright host stars amenable to follow-up observations.</p>
+
+    <p>The <span class="term" data-label="radial velocity" data-def="A planet detection method that measures the Doppler shift of the host star's spectral lines as it orbits the center of mass of the star-planet system. The measured quantity is M_planet × sin(i), where i is the orbital inclination — so the true mass is a lower bound unless the inclination is known from transits or astrometry. Best ground-based spectrographs now achieve 30 cm/s precision (ESPRESSO on VLT).">radial velocity</span> (RV) method was the first to discover exoplanets around Sun-like stars (Mayor &amp; Queloz, 51 Pegasi b, 1995 — Nobel Prize 2019). It measures the Doppler wobble of the star as the planet tugs on it. It measures $M \sin i$, so combined with transit geometry it gives true planetary mass. RV is the primary tool for mass measurements of transiting planets.</p>
+
+    <p><strong>Direct imaging</strong> blocks starlight with a coronagraph or starshade to directly photograph a planet. It is currently limited to wide-orbit, young, massive planets that emit their own thermal radiation — examples include the four directly imaged planets of HR 8799, and β Pictoris b. The ELT with its extreme adaptive optics system is expected to directly image reflected light from nearby Earth-like planets.</p>
+
+    <p><span class="term" data-label="gravitational lensing" data-def="The deflection and distortion of light from distant sources by intervening mass concentrations. Strong lensing produces arcs and Einstein rings. Weak lensing produces subtle statistical shape distortions used to map dark matter distributions and constrain cosmological parameters.">Gravitational microlensing</span> occurs when a foreground star (and its planet) pass in front of a background star. The combined gravity creates a lens, amplifying the background star. The planet's gravitational perturbation creates a brief secondary brightening spike. Microlensing is sensitive to planets near the Einstein ring radius (~1–5 AU) and to free-floating (unbound) planets. The Roman Space Telescope's microlensing survey is expected to yield thousands of exoplanet detections. <strong>Astrometry</strong> — measuring the star's positional wobble on the sky — complements RV. The Gaia spacecraft's final data release is expected to yield ~10,000 giant exoplanets detected astrometrically.</p>
+
+    <table class="rank-table">
+      <thead>
+        <tr><th>Method</th><th>What it measures</th><th>Best for</th><th>Limitation</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Transit</td><td>Radius ratio $R_p/R_*$, orbital period</td><td>Small planets, statistics</td><td>Requires edge-on orbit; no mass</td></tr>
+        <tr><td>Radial velocity</td><td>$M_p \sin i$, orbital eccentricity</td><td>Close-in, massive planets</td><td>Inclination degeneracy; needs stable star</td></tr>
+        <tr><td>Direct imaging</td><td>Planetary flux, atmospheric spectrum</td><td>Wide-orbit young giant planets</td><td>Contrast ratio $\sim 10^{-9}$ for Earth-like</td></tr>
+        <tr><td>Microlensing</td><td>Planet mass ratio, projected separation</td><td>Mid-orbit planets, free-floaters</td><td>Events not repeatable; host star often unresolved</td></tr>
+        <tr><td>Astrometry</td><td>$M_p$ (true mass), orbital inclination</td><td>Giant planets near Sun-like stars</td><td>Requires long baselines, tiny angles</td></tr>
+      </tbody>
+    </table>
+
+    <!-- ========================================================== -->
+    <h2 id="habitable">3. Habitable worlds — the search for Earth-like planets</h2>
+
+    <p>The concept of a <span class="term" data-label="habitable zone" data-def="The range of orbital distances around a star within which a rocky planet with a sufficient atmosphere could maintain liquid water on its surface. For the Sun, the conservative habitable zone spans roughly 0.95–1.67 AU. The exact boundaries depend on planetary albedo, greenhouse gas inventory, and the stellar spectral energy distribution. The habitable zone is a necessary but not sufficient condition for habitability.">habitable zone</span> (HZ) is a useful first filter but not a sufficient condition for life. A planet in the HZ might lack an atmosphere, have a runaway greenhouse effect (like Venus), be tidally locked, or lack the liquid water it needs because it formed too dry. Conversely, moons like Europa and Enceladus may harbor liquid water oceans under ice far outside their star's HZ.</p>
+
+    <p>Most known HZ rocky planets orbit <span class="term" data-label="red dwarf" data-def="A main-sequence star of spectral type M, with mass 0.08–0.6 M☉ and temperature 2,400–3,700 K. The most common type of star in the galaxy (~75% by number). Red dwarfs are extremely long-lived (trillions of years for the lowest-mass ones) and their habitable zones are very close-in, making planets likely tidally locked. They are prone to frequent ultraviolet and X-ray flares that could strip planetary atmospheres.">red dwarf</span> (M-dwarf) stars, because M dwarfs are the most common stars and their HZs are close enough (0.1–0.4 AU) that transit and radial velocity surveys naturally find planets there. But M-dwarf planets face challenges: tidal locking, intense stellar flares, and high XUV radiation during the star's early life when the HZ planet is forming its atmosphere.</p>
+
+    <div class="callout">
+      <div class="label">TRAPPIST-1 — THE MOST STUDIED SYSTEM</div>
+      <p>The TRAPPIST-1 system (40 light-years away, ultra-cool M8 dwarf) contains 7 rocky planets — three of which (e, f, g) lie in the habitable zone. JWST observed TRAPPIST-1b and 1c and found no evidence for thick CO₂ atmospheres, suggesting they may be bare rocks. TRAPPIST-1e remains the most promising target for atmospheric characterization with JWST: it requires ~100 transits of transmission spectroscopy to detect an Earth-like atmosphere at marginal significance — a multi-year campaign. The system is considered the best test case for M-dwarf habitability.</p>
+    </div>
+
+    <h3>Biosignatures and technosignatures</h3>
+
+    <p>A <span class="term" data-label="biosignature" data-def="A chemical or physical feature of a planet's atmosphere or surface that could indicate the presence of life. Strong biosignatures are gases maintained far from chemical equilibrium: O₂ + CH₄ (which react and destroy each other in centuries without a continuous biological source), O₃, N₂O, and dimethyl sulfide (DMS). No single biosignature is definitive; false positives from abiotic chemistry are possible for all candidates.">biosignature</span> is an atmospheric signal that life could produce and that would be difficult to explain abiotically. JWST can detect these for nearby M-dwarf transiting planets through transmission spectroscopy — though doing so requires repeated transits over years. In 2023, JWST reported a tentative detection of dimethyl sulfide (DMS) on K2-18b; this remains contested and unconfirmed as of 2026. SETI searches via Breakthrough Listen scan radio wavelengths and optical laser pulses from nearby stars; no confirmed technosignatures have been detected.</p>
+
+    <table class="rank-table">
+      <thead>
+        <tr><th>Name</th><th>Host star type</th><th>Distance (ly)</th><th>Radius</th><th>In HZ?</th><th>Notes</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Proxima Cen b</td><td>M5 red dwarf</td><td>4.24</td><td>~1.07 R⊕ (mass)</td><td>Yes</td><td>Nearest exoplanet; intense flares</td></tr>
+        <tr><td>TRAPPIST-1 e,f,g</td><td>M8 ultra-cool dwarf</td><td>40</td><td>~0.9–1.0 R⊕</td><td>Yes (3 of 7)</td><td>Best-studied HZ rocky system; JWST target</td></tr>
+        <tr><td>LHS 1140 b</td><td>M dwarf</td><td>49</td><td>1.7 R⊕ (dense, rocky)</td><td>Yes</td><td>Top atmosphere-characterization candidate</td></tr>
+        <tr><td>TOI-700 d/e</td><td>M dwarf</td><td>102</td><td>~1.0 R⊕</td><td>Yes</td><td>Earth-sized; both confirmed in HZ</td></tr>
+        <tr><td>K2-18 b</td><td>M dwarf</td><td>124</td><td>2.6 R⊕ (mini-Neptune)</td><td>Yes</td><td>JWST: CO₂, CH₄, tentative DMS</td></tr>
+        <tr><td>GJ 667C c</td><td>M dwarf</td><td>24</td><td>~1.5 R⊕ (est.)</td><td>Yes</td><td>Super-Earth; multi-planet system</td></tr>
+        <tr><td>Kepler-452 b</td><td>G2 (Sun-like)</td><td>1,400</td><td>1.6 R⊕</td><td>Yes</td><td>"Earth cousin"; possibly gaseous</td></tr>
+      </tbody>
+    </table>
+
+    <!-- ========================================================== -->
+    <h2 id="neighbors">4. Nearest star systems and stellar neighborhoods</h2>
+
+    <p>The Sun resides in a relatively sparse region of the Milky Way's Orion Arm. Its nearest neighbors span a variety of stellar types and offer the best-studied cases for the full range of stellar evolution. Distance measurements out to a few hundred parsecs are now done directly by parallax — measuring the apparent shift in a star's position as Earth orbits the Sun — with the Hipparcos and Gaia spacecraft providing microarcsecond astrometry for over a billion stars.</p>
+
+    <table class="rank-table">
+      <thead>
+        <tr><th>Name</th><th>Distance (ly)</th><th>Star type</th><th>Planets?</th><th>Notes</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Proxima Centauri</td><td>4.24</td><td>M5.5Ve red dwarf</td><td>Yes (b, d)</td><td>Nearest star; intense flares; b in HZ</td></tr>
+        <tr><td>α Cen A (Rigil Kentaurus)</td><td>4.37</td><td>G2V (Sun-like)</td><td>Uncertain</td><td>Binary with α Cen B; Proxima may be loosely bound</td></tr>
+        <tr><td>α Cen B (Toliman)</td><td>4.37</td><td>K1V orange dwarf</td><td>Uncertain</td><td>Companion to α Cen A</td></tr>
+        <tr><td>Barnard's Star</td><td>5.96</td><td>M4Ve red dwarf</td><td>Disputed (b)</td><td>Highest proper motion star; ~3.3 M⊕ candidate</td></tr>
+        <tr><td>Luhman 16 A/B</td><td>6.5</td><td>T / Y brown dwarfs</td><td>No</td><td>Nearest known brown dwarfs; discovered 2013</td></tr>
+        <tr><td>WISE 0855−0714</td><td>7.4</td><td>Y brown dwarf (~250 K)</td><td>No</td><td>Coldest known brown dwarf; near water's freezing point</td></tr>
+        <tr><td>Sirius A + B</td><td>8.6</td><td>A1V + white dwarf</td><td>No confirmed</td><td>Brightest star in night sky; Sirius B = first recognized WD</td></tr>
+        <tr><td>Epsilon Eridani</td><td>10.5</td><td>K2V orange dwarf</td><td>Possible</td><td>Debris disk; young Sun analog</td></tr>
+        <tr><td>61 Cygni A + B</td><td>11.4</td><td>K5V + K7V binary</td><td>No confirmed</td><td>First stellar parallax measured (Bessel, 1838)</td></tr>
+        <tr><td>Tau Ceti</td><td>11.9</td><td>G8V (near-solar)</td><td>4–5 candidates</td><td>One candidate in HZ; high dust disk</td></tr>
+        <tr><td>40 Eridani (Keid)</td><td>16.3</td><td>K1V + WD + M</td><td>No confirmed</td><td>WD companion 40 Eri B; Star Trek's "Vulcan" system</td></tr>
+        <tr><td>Vega</td><td>25</td><td>A0V</td><td>Debris disk</td><td>Second-brightest northern star; rapid rotator</td></tr>
+      </tbody>
+    </table>
+
+    <div class="defn">
+      <strong>The local bubble.</strong> The Sun sits inside a roughly spherical cavity of hot, low-density plasma — the Local Bubble — roughly 300 light-years in diameter. It was carved out by a series of supernova explosions over the past few million years. The X-ray-emitting hot gas filling this cavity was mapped by the ROSAT satellite; more recently, Gaia parallaxes have mapped the surrounding walls of dense molecular gas where new stars are forming. The Orion Molecular Cloud complex, at ~1,300 ly, is one of the nearest major star-forming regions.
+    </div>
+
+    <h3>Nearest star clusters</h3>
+
+    <p>The Sun's nearest open cluster is the <strong>Hyades</strong> (153 ly, ~200 stars, age ~625 Myr), which provides one of the most important rungs on the cosmic distance ladder — its proximity meant it was among the first clusters with directly measured parallax distances. The <strong>Pleiades (M45)</strong> at 444 ly (~1,000 stars, ~100 Myr old) are one of the most recognizable naked-eye objects and a standard benchmark for stellar evolution models. The <strong>Ursa Major Moving Group</strong> is a stream of co-moving stars (including Mizar and most of the Big Dipper bowl stars) sharing common origin ~80 ly away — a dissolving cluster spread across the sky.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="types">5. Types of stars and objects — a scale tour</h2>
+
+    <p>The <span class="term" data-label="Hertzsprung-Russell diagram" data-def="A scatter plot of stars with luminosity (or absolute magnitude) on the y-axis and surface temperature (or spectral type/color) on the x-axis. First constructed independently by Ejnar Hertzsprung (1911) and Henry Norris Russell (1913). Stars spend most of their lives on the main sequence (a diagonal band from hot-luminous to cool-dim), and their evolutionary tracks through the diagram encode their mass and age.">Hertzsprung-Russell (HR) diagram</span> is the organizing framework of stellar astrophysics. It plots luminosity versus temperature, and the structure it reveals is not arbitrary — it encodes the physics of stellar interiors. The <span class="term" data-label="main sequence" data-def="The diagonal band on the HR diagram populated by stars fusing hydrogen in their cores. A star's position on the main sequence is determined almost entirely by its mass: more massive stars are hotter, more luminous, and shorter-lived. The Sun is a middle-aged, middle-mass main-sequence star. Stars leave the main sequence when hydrogen in their cores is exhausted.">main sequence</span> is a band running diagonally from hot-luminous O stars (upper left) to cool-dim M stars (lower right). Stars spend ~90% of their lives on the main sequence.</p>
+
+    <div class="defn">
+      <strong>Physical scales of stellar objects.</strong> White dwarfs are roughly Earth-sized (~0.01 R☉ ≈ 6,400 km radius). Neutron stars are about 10 km radius — city-sized. The Sun has a radius of ~696,000 km. Giant branch stars expand to ~10–100 R☉ (roughly Mercury to Earth orbit). Red supergiants such as Betelgeuse reach ~700 R☉ (placing their surface near Jupiter's orbit). Red hypergiants such as VY Canis Majoris reach ~1,400–2,000 R☉. This is a span of nearly five orders of magnitude in radius — from a 10 km neutron star to a star the size of the inner solar system.
+    </div>
+
+    <h3>Main-sequence spectral types (OBAFGKM)</h3>
+
+    <table class="rank-table">
+      <thead>
+        <tr><th>Type</th><th>Temperature (K)</th><th>Mass (M☉)</th><th>Luminosity (L☉)</th><th>Lifetime</th><th>Fate</th><th>Example</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>O</td><td>&gt;30,000</td><td>&gt;16</td><td>&gt;30,000</td><td>3–10 Myr</td><td>Core-collapse SN → NS or BH</td><td>Naos (ζ Puppis), θ¹ Ori C</td></tr>
+        <tr><td>B</td><td>10,000–30,000</td><td>2–16</td><td>25–30,000</td><td>10–400 Myr</td><td>SN (high mass) or WD (low B)</td><td>Rigel (B8Ia), Spica</td></tr>
+        <tr><td>A</td><td>7,500–10,000</td><td>1.4–2.1</td><td>5–25</td><td>1–3 Gyr</td><td>White dwarf</td><td>Sirius A, Vega, Altair</td></tr>
+        <tr><td>F</td><td>6,000–7,500</td><td>1.0–1.4</td><td>1.5–5</td><td>2–5 Gyr</td><td>White dwarf</td><td>Procyon A</td></tr>
+        <tr><td>G</td><td>5,200–6,000</td><td>0.8–1.0</td><td>0.6–1.5</td><td>7–15 Gyr</td><td>Red giant → white dwarf</td><td>Sun, Alpha Cen A</td></tr>
+        <tr><td>K</td><td>3,700–5,200</td><td>0.45–0.8</td><td>0.08–0.6</td><td>15–70 Gyr</td><td>White dwarf</td><td>Epsilon Eridani, α Cen B</td></tr>
+        <tr><td>M</td><td>2,400–3,700</td><td>0.08–0.45</td><td>0.0001–0.08</td><td>0.1–10 trillion yr</td><td>White dwarf (very far future)</td><td>Proxima Cen, TRAPPIST-1</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Evolved and exotic objects</h3>
+
+    <p><strong>Red giants and supergiants:</strong> when a star exhausts hydrogen in its core, the core contracts and the envelope expands dramatically. For solar-mass stars this produces a red giant (radius ~10–100 R☉) on the Red Giant Branch (RGB). Massive stars ($> 8$ M☉) become red supergiants: Betelgeuse (~700 R☉, 10–20 M☉) is the most familiar example — a semi-regular variable that dimmed dramatically in 2019–2020 (the "Great Dimming," caused by a surface mass ejection and subsequent dust formation).</p>
+
+    <p>A <span class="term" data-label="white dwarf" data-def="The remnant of a low-to-intermediate mass star (M ≲ 8 M☉) after it has shed its outer layers as a planetary nebula. Composed of electron-degenerate carbon and oxygen, roughly Earth-sized (~6,000 km radius). Supported by electron degeneracy pressure rather than thermal pressure — no nuclear burning. The maximum mass before gravitational collapse is the Chandrasekhar limit (1.4 M☉).">white dwarf</span> is the eventual fate of the Sun and ~97% of all stars. The <span class="term" data-label="Chandrasekhar limit" data-def="The maximum mass of a white dwarf, approximately 1.4 M☉, above which electron degeneracy pressure cannot support the star against gravity. First derived by Subrahmanyan Chandrasekhar in 1930. White dwarfs above this limit undergo catastrophic collapse or explosion. Type Ia supernovae occur when a white dwarf in a binary system accretes enough mass to approach this limit.">Chandrasekhar limit</span> of 1.4 M☉ is the maximum mass a white dwarf can have. Above this, electron degeneracy pressure fails and the star collapses or explodes.</p>
+
+    <p>A <span class="term" data-label="neutron star" data-def="The remnant of a core-collapse supernova from a progenitor of 8–20 M☉. Composed almost entirely of neutrons in a quantum fluid, with a radius of ~10–12 km and mass of 1.4–2 M☉, giving a density of ~10¹⁷ kg/m³. The equation of state of dense matter at these densities is not yet known — a key physics problem. Neutron stars appear as pulsars (rotating radio beacons) or magnetars (extremely magnetized, flaring objects).">neutron star</span> forms from the core-collapse of a star with initial mass roughly 8–20 M☉. With typical radius ~10 km and mass ~1.4–2 M☉, their mean density is $\sim 10^{17}$ kg/m³ — comparable to the density of an atomic nucleus. A <span class="term" data-label="pulsar" data-def="A rapidly rotating neutron star that emits beams of electromagnetic radiation (usually radio waves) from its magnetic poles. As the star rotates, the beam sweeps past Earth like a lighthouse, producing regular pulses — some millisecond pulsars are more stable than atomic clocks. The Crab Pulsar, at the center of the Crab Nebula, rotates 30 times per second.">pulsar</span> is a neutron star whose rotating magnetic field drives beamed radio emission; a <span class="term" data-label="magnetar" data-def="A neutron star with an exceptionally strong magnetic field (~10¹⁰–10¹¹ T, compared to ~10⁸ T for ordinary pulsars). Magnetars are the source of Soft Gamma Repeaters and Anomalous X-ray Pulsars. The decay of their extreme magnetic field powers energetic X-ray and gamma-ray flares; SGR 1935+2154 produced a Galactic fast radio burst in 2020.">magnetar</span> has a surface field of $\sim 10^{11}$ T and produces intense X-ray/gamma-ray flares.</p>
+
+    <p><span class="term" data-label="brown dwarf" data-def="A substellar object with mass between ~13 and ~80 Jupiter masses — too light to sustain hydrogen fusion (which requires >0.08 M☉) but massive enough to briefly fuse deuterium. Brown dwarfs are classified with spectral types L, T, and Y (the coolest). They cool steadily over billions of years. The nearest known are Luhman 16 (6.5 ly). Brown dwarfs outnumber stars in some estimates but are hard to detect due to their low luminosity.">Brown dwarfs</span> occupy the gap between the heaviest planets and the lightest stars: 13–80 Jupiter masses. They fuse deuterium but not hydrogen, and they cool steadily over billions of years. T-class brown dwarfs show methane absorption; the coldest Y-class dwarfs (like WISE 0855-0714 at ~250 K) are barely warmer than some hot planets.</p>
+
+    <p><strong>Wolf-Rayet stars</strong> are massive evolved stars shedding their outer layers via strong stellar winds, exposing their hot cores. They are the immediate precursors to core-collapse supernovae and gamma-ray bursts. Eta Carinae, a binary totaling ~170 M☉ in the Carina Nebula, experienced a "Great Eruption" in the 1840s that temporarily made it the second-brightest star in the sky; it is considered one of the most likely near-future supernova candidates in the Milky Way.</p>
+
+    <div class="callout">
+      <div class="label">NEBULAE — STELLAR CRADLES AND GRAVES</div>
+      <p><strong>Emission nebulae</strong> are clouds of ionized hydrogen gas glowing from ultraviolet radiation by nearby O/B stars — the Orion Nebula (M42), the Carina Nebula, and the Eagle Nebula's Pillars of Creation (imaged in unprecedented detail by JWST in 2022) are canonical examples. <strong>Planetary nebulae</strong> are shells of gas expelled by dying low-mass stars as their cores collapse to white dwarfs — the Ring Nebula (M57) and the Helix Nebula are nearby examples. <strong>Supernova remnants</strong> are expanding shells from explosive stellar deaths: the Crab Nebula (from a 1054 CE supernova observed by Chinese astronomers) contains a pulsar at its center still powering the nebula's X-ray and optical emission.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="hr-diagram">6. Interactive: Hertzsprung-Russell diagram</h2>
+
+    <p>The HR diagram below plots luminosity versus surface temperature for a selection of well-known stars. The main sequence runs diagonally from upper-left (hot, luminous) to lower-right (cool, dim). Giant and supergiant stars are displaced above the main sequence; white dwarfs lie below and to the left. Hover over each dot for the star's name and basic properties.</p>
+
+    <div style="width:100%; max-width:720px; margin: 0 auto;">
+      <svg id="hrSvg" viewBox="0 0 700 460" width="100%" style="display:block; background:#0f1117; border-radius:8px; border:1px solid #2a3446;"></svg>
+    </div>
+    <p id="hrCaption" style="font-size:12px; color:#7a8a9a; text-align:center; margin-top:8px;">HR Diagram — hover dots for star details. Temperature decreases left to right (astronomical convention).</p>
+
+    <!-- ========================================================== -->
+    <h2 id="galaxies">7. Named galaxies — a field guide</h2>
+
+    <p>A <span class="term" data-label="starburst galaxy" data-def="A galaxy undergoing an exceptionally high rate of star formation — often triggered by a merger or interaction with another galaxy. The elevated star-formation rate produces large numbers of massive stars, supernovae, and stellar winds, driving a 'superwind' of ionized gas outward from the galactic disk. M82 (the Cigar Galaxy) is the nearest starburst galaxy.">starburst galaxy</span> is our first stop beyond the Local Group. Galaxies are grouped by morphology into the Hubble sequence: spirals (S), barred spirals (SB), lenticular (S0), and ellipticals (E, en0 to E7). Irregular galaxies don't fit the sequence. <span class="term" data-label="quasar" data-def="A quasi-stellar object — the luminous active nucleus of a distant galaxy powered by accretion onto a supermassive black hole. Quasars are the most luminous persistent objects in the universe, outshining their host galaxies by factors of ~100–1000. The most distant known quasars (z > 7) existed when the universe was less than 1 billion years old and their black hole masses (~10⁹ M☉) challenge theories of early black hole growth.">Quasars</span> are the most luminous class of active galactic nuclei (AGN) — supermassive black holes accreting at near-Eddington rates in distant galaxies. The nearest quasar is 3C 273 at 2.4 billion light-years.</p>
+
+    <div class="defn">
+      <strong>The Local Group.</strong> The Milky Way, Andromeda (M31), and Triangulum (M33) are the three large galaxies of the Local Group — a gravitationally bound system of ~80 galaxies spanning roughly 10 million light-years. The Milky Way and Andromeda are currently approaching each other at ~110 km/s; the merger (sometimes called "Milkdromeda") will begin in roughly 4.5 billion years. The two galaxies will not collide in the everyday sense — stars will pass each other — but the gravitational interaction will dramatically scramble both galactic structures over billions of years.
+    </div>
+
+    <table class="rank-table">
+      <thead>
+        <tr><th>Name</th><th>Type</th><th>Distance</th><th>Diameter</th><th>Notable features</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Milky Way</td><td>Barred spiral (SBbc)</td><td>—</td><td>~100,000 ly</td><td>Our galaxy; Sgr A* (4M M☉); ~200–400B stars; Orion Arm</td></tr>
+        <tr><td>Andromeda (M31)</td><td>Spiral (Sb)</td><td>2.537 Mly</td><td>~220,000 ly</td><td>Largest Local Group galaxy; ~1 trillion stars; approaching MW</td></tr>
+        <tr><td>Triangulum (M33)</td><td>Spiral (Scd)</td><td>2.73 Mly</td><td>~60,000 ly</td><td>Third-largest in Local Group; no confirmed central SMBH</td></tr>
+        <tr><td>LMC</td><td>Irr / dwarf spiral</td><td>163,000 ly</td><td>~14,000 ly</td><td>30 Doradus nebula; most active star-forming region in Local Group</td></tr>
+        <tr><td>SMC</td><td>Irregular dwarf</td><td>200,000 ly</td><td>~7,000 ly</td><td>Source of Magellanic Stream; first used to calibrate Cepheids</td></tr>
+        <tr><td>Sagittarius Dwarf</td><td>Dwarf spheroidal</td><td>~70,000 ly</td><td>~10,000 ly</td><td>Being cannibalized by MW; multiple stellar streams</td></tr>
+        <tr><td>M81 (Bode's)</td><td>Grand design spiral</td><td>12 Mly</td><td>~90,000 ly</td><td>Companion to starburst M82; M81 Group</td></tr>
+        <tr><td>M82 (Cigar)</td><td>Starburst irregular</td><td>12 Mly</td><td>~37,000 ly</td><td>Superwind perpendicular to disk; JWST imaged in 2022</td></tr>
+        <tr><td>M87 (Virgo A)</td><td>Giant elliptical (E1)</td><td>55 Mly</td><td>~240,000 ly</td><td>EHT black hole image (2019); 6.5B M☉ BH; 5,000-ly jet</td></tr>
+        <tr><td>Sombrero (M104)</td><td>Sa spiral</td><td>31 Mly</td><td>~50,000 ly</td><td>Prominent dust lane; large central bulge; 1B M☉ SMBH</td></tr>
+        <tr><td>NGC 1300</td><td>Barred spiral (SBbc)</td><td>61 Mly</td><td>~110,000 ly</td><td>Textbook example of a barred spiral</td></tr>
+        <tr><td>NGC 4889</td><td>Giant elliptical</td><td>300 Mly</td><td>~239,000 ly</td><td>Coma Cluster; estimated SMBH ~21 billion M☉</td></tr>
+        <tr><td>IC 1101</td><td>Supergiant elliptical</td><td>1.04 Bly</td><td>~6 Mly</td><td>One of the largest known galaxies (60× Milky Way)</td></tr>
+        <tr><td>Tadpole (UGC 10214)</td><td>Disrupted spiral</td><td>420 Mly</td><td>280,000-ly tail</td><td>Longest known tidal tail from galaxy interaction</td></tr>
+        <tr><td>Cartwheel</td><td>Ring galaxy</td><td>500 Mly</td><td>~150,000 ly</td><td>Head-on collision ring; JWST detail image 2022</td></tr>
+        <tr><td>Hoag's Object</td><td>Ring galaxy</td><td>~600 Mly</td><td>~100,000 ly</td><td>Near-perfect blue ring around yellow nucleus; origin debated</td></tr>
+      </tbody>
+    </table>
+
+    <p>A <span class="term" data-label="ring galaxy" data-def="A galaxy with a ring of stars and star formation surrounding an older central nucleus, typically formed by a nearly head-on collision with a companion galaxy. The impactor passes through the disk and generates an outward-propagating density wave — like a ripple in a pond — that triggers star formation in a ring. The Cartwheel Galaxy and Hoag's Object are the best-known examples, though Hoag's has an unusual origin that may not involve a collision.">ring galaxy</span> forms when a companion galaxy punches nearly head-on through the disk of a larger galaxy, generating an outward-propagating ring of star formation. The Cartwheel Galaxy is the clearest example; JWST revealed the detailed structure of its outer ring in 2022, showing knots of intense star formation and young blue star clusters.</p>
+
+    <p>Alongside mergers, active galactic nuclei are also fed by <span class="term" data-label="tidal disruption event" data-def="A tidal disruption event (TDE) occurs when a star passes close enough to a supermassive black hole to be torn apart by tidal forces. About half the stellar debris falls back onto the black hole in a flare of accretion lasting months to years, briefly outshining the entire host galaxy. TDEs are detected as transients in optical, UV, and X-ray surveys; ~100 have been confirmed. They provide a rare way to observe dormant black holes in otherwise quiet galaxies.">tidal disruption events (TDEs)</span> — stars that wander too close to the central black hole and are shredded by tidal forces. About half the stellar debris falls back in an accretion flare, temporarily brightening the galactic nucleus by factors of hundreds. TDEs are now routinely discovered by wide-field transient surveys like ZTF (Zwicky Transient Facility) and ASAS-SN.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="anomalies">8. Cosmic anomalies and unexplained phenomena</h2>
+
+    <p>Astrophysics is full of things we understand well enough to measure but not well enough to explain. Some are likely mundane (insufficient data, underestimated systematics); others may genuinely point toward new physics or biology.</p>
+
+    <div class="callout">
+      <div class="label">FAST RADIO BURSTS — THE NEWEST MYSTERY</div>
+      <p>A <span class="term" data-label="fast radio burst" data-def="A bright, millisecond-duration radio pulse of astrophysical origin, typically arriving from extragalactic distances. First discovered in 2007 (the Lorimer burst). As of 2026, over 1,000 have been catalogued; roughly 50 sources repeat. The leading explanation is magnetar flares: SGR 1935+2154 produced a Galactic FRB-like burst in 2020, directly linking magnetars to at least some FRBs. Extremely bright non-repeating FRBs may have a different mechanism.">fast radio burst</span> (FRB) is a millisecond-duration radio flash of extraordinary brightness from cosmological distances (gigaparsecs away). First detected in 2007 from archival Parkes data (the Lorimer burst). By 2026, over 1,000 have been catalogued by CHIME (Canadian Hydrogen Intensity Mapping Experiment). The leading explanation is magnetar flares — confirmed in 2020 when SGR 1935+2154 in our own galaxy produced an FRB-like event bright enough to be detected at ~30,000 ly. However, the most energetic non-repeating FRBs still lack a clear physical model.</p>
+    </div>
+
+    <h3>The major anomalies</h3>
+
+    <p><strong>The Wow! Signal (1977):</strong> A 72-second narrowband radio signal at 1420 MHz (the hydrogen line, considered a natural frequency for SETI searches) was detected by the Big Ear telescope at Ohio State University. Astronomer Jerry Ehman circled it on the printout and wrote "Wow!" It was never repeated despite many follow-up observations. No confirmed natural or artificial explanation exists. As of 2026, it remains the strongest candidate signal in the history of SETI — and also one of the most ambiguous.</p>
+
+    <p><strong>The Great Attractor:</strong> The Milky Way, Andromeda, and hundreds of other galaxies are flowing toward a region in the direction of Centaurus and Norma, roughly 250 million light-years away, at peculiar velocities of ~600 km/s. This "Great Attractor" is largely explained by the <strong>Shapley Supercluster</strong> — a massive concentration of thousands of galaxies that dominates the gravitational landscape of our cosmic neighborhood. X-ray surveys have mapped much of the mass behind the Zone of Avoidance (the part of the sky obscured by our galaxy's dust lane) where the attractor is centered.</p>
+
+    <p><strong>Boötes Void:</strong> A roughly spherical void ~330 million light-years in diameter discovered in 1981, containing only ~60 known galaxies where statistical models predict thousands. It is one of the largest known voids in the cosmic web. While striking, its existence is within (if at the edge of) what ΛCDM structure formation predicts.</p>
+
+    <p><strong>1I/ʻOumuamua (2017):</strong> The first confirmed interstellar object to pass through the solar system was unlike anything in our solar system. It was elongated (estimated 6:1 aspect ratio from its lightcurve), showed a non-gravitational acceleration away from the Sun that could not be explained by visible outgassing (which would also have caused it to spin up or slow down its rotation), and had no detectable coma. Proposed explanations include a hydrogen iceberg, a nitrogen shard from a disrupted Pluto-like body, a fractal dust aggregate, and — controversially — an alien lightsail (Loeb et al.). The mainstream view is that ʻOumuamua was an unusual but natural cometary body whose specific nature remains unresolved.</p>
+
+    <p><strong>2I/Borisov (2019):</strong> The second interstellar visitor was far more mundane — a normal-appearing comet with expected cometary outgassing, CO and CO₂ detections, and a round coma. It tells us that normal comets also travel between stars, and ʻOumuamua was the unusual one.</p>
+
+    <p><strong>The Hubble Tension:</strong> The universe's expansion rate measured from the CMB (Planck satellite, $H_0 = 67.4 \pm 0.5$ km/s/Mpc) disagrees at roughly $5\sigma$ with the value measured from the local distance ladder — Cepheid variables calibrated against parallaxes and used to calibrate Type Ia supernovae (Riess et al., $H_0 = 73.0 \pm 1.0$ km/s/Mpc). JWST has independently verified the Cepheid and Type Ia supernova calibrations, ruling out instrumental systematics as the explanation. If the discrepancy is real, it implies unknown new physics: early dark energy, extra relativistic species, self-interacting dark matter, or modified gravity.</p>
+
+    <div class="math-display">$$H_0^{\rm CMB} = 67.4 \pm 0.5 \;\text{km s}^{-1}\text{Mpc}^{-1} \qquad \text{vs.} \qquad H_0^{\rm local} = 73.0 \pm 1.0 \;\text{km s}^{-1}\text{Mpc}^{-1}$$</div>
+
+    <p><strong>The BOAT — GRB 221009A (October 9, 2022):</strong> The Brightest Of All Time gamma-ray burst saturated detectors across the entire space-based gamma-ray fleet. Its afterglow was detected in every band from radio to TeV gamma rays. The Fermi LAT detected photons up to 99 GeV. It triggered a large-area X-ray aurora in Earth's ionosphere. It was likely a once-per-10,000-year event — a collimated jet from a stellar collapse pointed almost directly at Earth at a distance of ~2.4 billion light-years.</p>
+
+    <p><strong>The Giant Arc (2021):</strong> A structure of galaxies spanning 3.3 billion light-years was identified at redshift $z \approx 0.8$. If confirmed as a coherent filament rather than a chance alignment, it challenges the cosmological principle — the assumption that the universe is homogeneous on large scales. The theoretical threshold for homogeneity is thought to be ~1.2 billion light-years; the Giant Arc and the Hercules-Corona Borealis Great Wall (~10 billion light-years, if confirmed) both exceed this. Most cosmologists treat these as statistical curiosities pending deeper surveys.</p>
+
+    <p><strong>The CMB Cold Spot and the Axis of Evil:</strong> The CMB power spectrum is beautifully consistent with ΛCDM on most angular scales, but the low-multipole ($\ell = 2, 3$) modes show unexpected alignments with both the ecliptic plane and the galactic plane — dubbed the "Axis of Evil" by Tegmark et al. A large, anomalously cold region (the Cold Spot) at $\sim 5°$ scale is partially explained by a supervoid at $z \sim 0.15$ along the line of sight, but the Integrated Sachs-Wolfe effect alone does not fully account for its depth. Both anomalies could be statistical fluctuations.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="curvature">9. Space curvature and the fate of the universe</h2>
+
+    <p>General relativity allows the large-scale geometry of space itself to be curved. The universe's geometry is described by the <strong>FLRW metric</strong> (Friedmann-Lemaître-Robertson-Walker), which assumes homogeneity and isotropy. The spatial curvature is characterized by a parameter $k$:</p>
+
+    <div class="math-display">$$ds^2 = -c^2\,dt^2 + a(t)^2\!\left[\frac{dr^2}{1-kr^2} + r^2\,d\Omega^2\right]$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">FLRW metric terms</p>
+      <dl>
+        <dt>$a(t)$</dt><dd>The scale factor — a dimensionless function of cosmic time that describes how distances between comoving points expand. Today by convention $a(t_0) = 1$. Expansion means $\dot a > 0$; acceleration means $\ddot a > 0$.</dd>
+        <dt>$k$</dt><dd>Spatial curvature constant. $k = +1$: positively curved (closed, like a 3-sphere, finite volume); $k = 0$: flat (infinite, Euclidean geometry); $k = -1$: negatively curved (open, hyperbolic, infinite).</dd>
+        <dt>$d\Omega^2$</dt><dd>The metric on the 2-sphere: $d\theta^2 + \sin^2\!\theta\,d\phi^2$.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>What "flat" means physically.</strong> Parallel lines never meet and never diverge on large scales. The geometry of the observable universe is Euclidean to within 0.2%. But "flat" does not mean the universe is infinite — it could be a flat 3-torus with finite volume, just with a scale larger than the observable universe. Current constraints place the minimum size at $>10^{23}$ ly if it is a 3-sphere.</p>
+    </div>
+
+    <p>The curvature is determined by the total energy density relative to the <strong>critical density</strong>:</p>
+
+    <div class="math-display">$$\Omega_{\rm total} = \frac{\rho_{\rm total}}{\rho_{\rm crit}}, \qquad \rho_{\rm crit} = \frac{3H_0^2}{8\pi G}$$</div>
+
+    <p>If $\Omega_{\rm total} = 1$: flat. $> 1$: closed. $< 1$: open. The Planck 2018 result, confirmed by BAO and weak lensing measurements, gives $\Omega_{\rm total} = 1.0007 \pm 0.0019$ — flat to better than 0.2%.</p>
+
+    <p>The fate of the universe depends on both the geometry and the nature of <span class="term" data-label="dark energy" data-def="The unknown form of energy that makes up ~68% of the total energy budget of the universe and is responsible for the observed accelerating expansion. First inferred in 1998 from Type Ia supernova distances. Its equation of state w = P/(ρc²) is consistent with −1 (a cosmological constant) to present measurements, but its physical nature is unknown.">dark energy</span>. The key parameter is the dark energy equation of state $w \equiv P/(\rho c^2)$. The <span class="term" data-label="cosmological constant" data-def="A constant term Λ in Einstein's field equations, originally introduced by Einstein to produce a static universe and later abandoned. Reinterpreted as the energy density of empty space (vacuum energy). The cosmological constant corresponds to dark energy with w = −1 (pressure = −energy density). The 'cosmological constant problem' is the 120-order-of-magnitude discrepancy between the QFT prediction of vacuum energy and the observed value.">cosmological constant</span> ($\Lambda$) has $w = -1$ exactly.</p>
+
+    <div class="callout">
+      <div class="label">VACUUM METASTABILITY</div>
+      <p><span class="term" data-label="metastability" data-def="A state that is stable against small perturbations but not the true ground state — like a ball resting in a shallow valley that could tunnel quantum-mechanically to a deeper valley. The Higgs field's vacuum state appears to be metastable based on measurements of the Higgs boson mass (~125 GeV) and top quark mass (~173 GeV): the running quartic Higgs coupling λ becomes negative at ~10¹⁰–10¹² GeV, implying the electroweak vacuum is a local but not global minimum of the Higgs potential.">Metastability</span> of the electroweak vacuum: measurements of the Higgs boson mass (~125 GeV) and top quark mass (~173 GeV) place the electroweak vacuum in the "metastable" region of the Higgs potential phase diagram — a local minimum, but not the global minimum. A quantum fluctuation anywhere in the observable universe could nucleate a bubble of true vacuum that expands at the speed of light, instantly altering the laws of physics inside. The estimated lifetime before such an event is far greater than the current age of the universe ($\gg 10^{100}$ yr) but is not provably infinite. You would never see it coming — the bubble wall travels at $c$.
+    </p>
+    </div>
+
+    <h3>The fate scenarios</h3>
+
+    <table class="rank-table">
+      <thead>
+        <tr><th>Fate</th><th>Condition</th><th>Timescale</th><th>What happens</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>Heat death</strong> (current best-fit)</td><td>$w = -1$, flat universe</td><td>$10^{14}$–$10^{100}$ yr</td><td>Stars burn out (~10¹⁴ yr). BHs evaporate via Hawking radiation (~10⁶⁷–10¹⁰⁰ yr). Maximum entropy — no more free energy</td></tr>
+        <tr><td><strong>Big Rip</strong></td><td>$w &lt; -1$ (phantom dark energy)</td><td>~22 Gyr (if $w = -1.5$)</td><td>Dark energy density grows; galaxies, stars, atoms successively ripped apart in finite time</td></tr>
+        <tr><td><strong>Big Crunch</strong></td><td>$\Omega &gt; 1$, dark energy reverses</td><td>Tens of billions yr</td><td>Expansion halts; gravity wins; universe recollapses to a singularity</td></tr>
+        <tr><td><strong>Big Bounce / Cyclic</strong></td><td>LQC, Penrose CCC, ekpyrosis</td><td>Infinite cycles</td><td>Singularity replaced by a bounce into a new expansion phase; no true end</td></tr>
+        <tr><td><strong>Vacuum decay</strong></td><td>Higgs field metastable</td><td>$\gg 10^{100}$ yr (or any time)</td><td>True-vacuum bubble nucleates, expands at $c$, instantly alters physics — undetectable until arrival</td></tr>
+      </tbody>
+    </table>
+
+    <p>The <strong>heat death</strong> is the current best-fit prediction. Assuming dark energy is a true cosmological constant and the universe is flat, expansion continues indefinitely. Galaxies beyond the Local Group redshift beyond our event horizon one by one, leaving only the bound Local Group (then merged into Milkdromeda). Over $\sim 10^{14}$ yr the last stars burn out. Over $\sim 10^{40}$ yr, stellar remnants are ejected from or spiral into the central black hole via gravitational scattering. Sgr A*-mass black holes evaporate via Hawking radiation in $\sim 10^{100}$ yr. The universe approaches a cold, dark, equilibrium state at maximum entropy.</p>
+
+    <p>The <strong>Big Rip</strong> is possible if $w < -1$. The 2024 DESI BAO measurements have opened marginal hints that $w$ may be slightly evolving with time (possibly $w_0 > -1$ and $w_a < 0$), which could in principle tip toward a Big Rip or Big Crunch depending on the trajectory. No current data conclusively distinguish these scenarios from $w = -1$.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="scale-map">10. Interactive: local universe scale map</h2>
+
+    <p>The diagram below shows the logarithmic scale of cosmic structures centered on the solar system. Each ring represents a characteristic scale. Note that going from the solar system to the observable universe spans 13 orders of magnitude in distance.</p>
+
+    <div style="width:100%; max-width:680px; margin: 0 auto;">
+      <svg id="scaleSvg" viewBox="0 0 680 680" width="100%" style="display:block; background:#0f1117; border-radius:8px; border:1px solid #2a3446;"></svg>
+    </div>
+    <p id="scaleCaption" style="font-size:12px; color:#7a8a9a; text-align:center; margin-top:8px;">Logarithmic scale map — rings are log-spaced. Each step outward represents roughly 3× the previous scale.</p>
+
+    <div class="next-card">
+      <div class="label">NEXT UP</div>
+      <a href="./black-holes.html">→ Black Holes</a>
+      <p>The deepest objects in the known universe — how they form, what happens at the event horizon, Hawking radiation, the information paradox, and what the EHT images actually show.</p>
+    </div>
+
+  </article>
+</div>
+
+<script>
+// =========================================================
+// Tooltip engine
+(function() {
+  const tooltip = document.getElementById('tooltip');
+  if (!tooltip) return;
+  document.querySelectorAll('.term').forEach(el => {
+    el.addEventListener('mouseenter', e => {
+      const label = el.getAttribute('data-label');
+      const def   = el.getAttribute('data-def');
+      tooltip.innerHTML = '<strong>' + label + '</strong><br>' + def;
+      tooltip.style.display = 'block';
+    });
+    el.addEventListener('mousemove', e => {
+      tooltip.style.left = (e.pageX + 14) + 'px';
+      tooltip.style.top  = (e.pageY + 14) + 'px';
+    });
+    el.addEventListener('mouseleave', () => {
+      tooltip.style.display = 'none';
+    });
+  });
+})();
+
+// =========================================================
+// HR Diagram
+(function() {
+  const svg = document.getElementById('hrSvg');
+  if (!svg) return;
+  const NS = 'http://www.w3.org/2000/svg';
+
+  function mk(tag, attrs) {
+    const el = document.createElementNS(NS, tag);
+    for (const k in attrs) el.setAttribute(k, attrs[k]);
+    return el;
+  }
+  function mkText(x, y, text, fill, size, anchor) {
+    const t = mk('text', {x, y, fill, 'font-size': size || 12,
+      'font-family': 'monospace', 'text-anchor': anchor || 'start',
+      'dominant-baseline': 'middle'});
+    t.textContent = text;
+    return t;
+  }
+
+  // Layout
+  const W = 700, H = 460;
+  const ml = 64, mr = 20, mt = 30, mb = 54;
+  const pw = W - ml - mr, ph = H - mt - mb;
+
+  // Background
+  svg.appendChild(mk('rect', {x:0, y:0, width:W, height:H, fill:'#0f1117'}));
+
+  // The x-axis is temperature (K), plotted DECREASING left to right (astro convention)
+  // We use log scale. Range: 3000 K (M, right) to 50000 K (O, left)
+  const Tmin = 3000, Tmax = 50000;
+  // x pixel from temperature
+  function xT(T) {
+    // left = hot, right = cool
+    return ml + (Math.log10(Tmax) - Math.log10(T)) / (Math.log10(Tmax) - Math.log10(Tmin)) * pw;
+  }
+
+  // y-axis is luminosity (log scale, L/L_sun). Range 1e-4 to 1e6
+  const Lmin = 1e-4, Lmax = 1e7;
+  function yL(L) {
+    return mt + ph - (Math.log10(L) - Math.log10(Lmin)) / (Math.log10(Lmax) - Math.log10(Lmin)) * ph;
+  }
+
+  // Grid lines
+  const Tgrid = [3000, 5000, 7500, 10000, 20000, 30000, 50000];
+  Tgrid.forEach(T => {
+    const x = xT(T);
+    svg.appendChild(mk('line', {x1:x, y1:mt, x2:x, y2:mt+ph, stroke:'#1e2535', 'stroke-width':1}));
+    const label = T >= 1000 ? (T/1000).toFixed(0) + 'k' : T;
+    svg.appendChild(mkText(x, mt+ph+16, label + ' K', '#4a5a6a', 10, 'middle'));
+  });
+
+  const Lgrid = [1e-4, 1e-2, 1, 1e2, 1e4, 1e6];
+  Lgrid.forEach(L => {
+    const y = yL(L);
+    svg.appendChild(mk('line', {x1:ml, y1:y, x2:ml+pw, y2:y, stroke:'#1e2535', 'stroke-width':1}));
+    const exp = Math.round(Math.log10(L));
+    const label = exp === 0 ? '1 L☉' : '10' + (exp < 0 ? '\u207B' + Math.abs(exp) : exp);
+    svg.appendChild(mkText(ml-8, y, label, '#4a5a6a', 10, 'end'));
+  });
+
+  // Axes
+  svg.appendChild(mk('rect', {x:ml, y:mt, width:pw, height:ph, fill:'none', stroke:'#2a3446', 'stroke-width':1.5}));
+
+  // Axis labels
+  svg.appendChild(mkText(ml + pw/2, H-10, 'Temperature (K)  ←  hotter', '#7a8a9a', 11, 'middle'));
+  const yLabel = mk('text', {x:14, y:mt + ph/2, fill:'#7a8a9a', 'font-size':11,
+    'font-family':'monospace', 'text-anchor':'middle', 'dominant-baseline':'middle',
+    'transform':'rotate(-90, 14, ' + (mt + ph/2) + ')'});
+  yLabel.textContent = 'Luminosity (L☉)';
+  svg.appendChild(yLabel);
+
+  // Main sequence band (approximate diagonal)
+  // We draw it as a slightly blurred gradient-filled polygon
+  const msPoints = [
+    [50000, 6e5], [30000, 1e5], [15000, 8e3], [9000, 60], [7500, 6],
+    [6000, 1.2], [5000, 0.3], [3500, 0.02], [3000, 0.005]
+  ];
+  const msTop = msPoints.map(([T,L]) => `${xT(T).toFixed(1)},${yL(L*40).toFixed(1)}`).join(' ');
+  const msBot = [...msPoints].reverse().map(([T,L]) => `${xT(T).toFixed(1)},${yL(L/25).toFixed(1)}`).join(' ');
+  const msBand = mk('polygon', {points: msTop + ' ' + msBot,
+    fill:'rgba(100,180,255,0.07)', stroke:'rgba(100,180,255,0.15)', 'stroke-width':1});
+  svg.appendChild(msBand);
+
+  // Giant branch band (upper right region)
+  const giantPts = '320,270 370,200 420,190 460,210 500,240 520,290 490,310 440,305 380,300 330,290';
+  svg.appendChild(mk('polygon', {points:giantPts, fill:'rgba(255,160,60,0.07)', stroke:'rgba(255,160,60,0.12)', 'stroke-width':1}));
+
+  // Region labels
+  function regionLabel(x, y, text, color) {
+    const rect = mk('rect', {x:x-2, y:y-9, width: text.length*6+4, height:16, fill:'rgba(15,17,23,0.7)', rx:3});
+    svg.appendChild(rect);
+    svg.appendChild(mkText(x, y, text, color, 10));
+  }
+
+  regionLabel(ml+8, mt+ph*0.35, 'Main Sequence', '#5baaf5');
+  regionLabel(ml+pw*0.55, mt+ph*0.28, 'Giants', '#ffaa3c');
+  regionLabel(ml+pw*0.05, mt+ph*0.05, 'Supergiants', '#ff7070');
+  regionLabel(ml+pw*0.75, mt+ph*0.85, 'White Dwarfs', '#cceeff');
+
+  // Stars: [name, T(K), L(L_sun), color, shortInfo]
+  const stars = [
+    ['Sun',          5778,  1,      '#ffe87a', 'G2V — 1 M☉ — main sequence'],
+    ['Sirius A',     9940,  25.4,   '#ddeeff', 'A1V — 2.0 M☉ — brightest star (naked eye)'],
+    ['Vega',         9602,  40,     '#eef5ff', 'A0V — 2.1 M☉ — rapid rotator, debris disk'],
+    ['Betelgeuse',   3500,  1.1e5,  '#ff5533', 'M2Iab — red supergiant — ~700 R☉'],
+    ['Proxima Cen',  3042,  1.5e-4, '#ff6644', 'M5.5Ve — 0.12 M☉ — nearest star'],
+    ['Rigel',        12100, 1.3e5,  '#aad4ff', 'B8Ia — 21 M☉ — blue supergiant'],
+    ['Aldebaran',    3910,  518,    '#ff9955', 'K5III — red giant — 44 R☉'],
+    ['Sirius B',     25000, 5.6e-3, '#ddeeff', 'DA2 white dwarf — 1.02 M☉ — first WD identified'],
+    ['VY CMa',       3490,  2.7e5,  '#ff4422', 'M3-5Ia — red hypergiant — ~1,400 R☉'],
+    ['Procyon A',    6530,  6.9,    '#fff4cc', 'F5IV-V — 1.5 M☉ — slightly evolved'],
+  ];
+
+  const starGroup = mk('g', {});
+  svg.appendChild(starGroup);
+
+  stars.forEach(([name, T, L, col, info]) => {
+    const cx = xT(T), cy = yL(L);
+    // Glow
+    const glow = mk('circle', {cx, cy, r:9, fill:col, opacity:'0.15'});
+    starGroup.appendChild(glow);
+    const dot = mk('circle', {cx, cy, r:5, fill:col, stroke:'#0f1117', 'stroke-width':1.2,
+      style:'cursor:pointer'});
+    dot.setAttribute('data-name', name);
+    dot.setAttribute('data-info', info);
+    starGroup.appendChild(dot);
+
+    // Label placement — nudge to avoid overlap
+    let lx = cx + 8, ly = cy - 6;
+    if (name === 'Sun') { lx = cx + 8; ly = cy - 10; }
+    if (name === 'Betelgeuse') { lx = cx - 72; ly = cy - 8; }
+    if (name === 'VY CMa') { lx = cx + 8; ly = cy + 14; }
+    if (name === 'Proxima Cen') { lx = cx + 8; ly = cy + 14; }
+    if (name === 'Sirius B') { lx = cx - 62; ly = cy - 8; }
+    if (name === 'Rigel') { lx = cx + 8; ly = cy + 14; }
+    svg.appendChild(mkText(lx, ly, name, '#9ab0c4', 10));
+  });
+
+  // Hover tooltip for stars
+  const tt = document.getElementById('tooltip');
+  starGroup.querySelectorAll('circle[data-name]').forEach(dot => {
+    dot.addEventListener('mouseenter', e => {
+      if (!tt) return;
+      tt.innerHTML = '<strong>' + dot.getAttribute('data-name') + '</strong><br>' + dot.getAttribute('data-info');
+      tt.style.display = 'block';
+    });
+    dot.addEventListener('mousemove', e => {
+      if (!tt) return;
+      tt.style.left = (e.pageX + 14) + 'px';
+      tt.style.top  = (e.pageY + 14) + 'px';
+    });
+    dot.addEventListener('mouseleave', () => {
+      if (!tt) return;
+      tt.style.display = 'none';
+    });
+  });
+
+  // Title
+  svg.appendChild(mkText(ml + pw/2, mt - 14, 'Hertzsprung-Russell Diagram', '#b4c4d4', 13, 'middle'));
+})();
+
+// =========================================================
+// Local Universe Scale Map
+(function() {
+  const svg = document.getElementById('scaleSvg');
+  if (!svg) return;
+  const NS = 'http://www.w3.org/2000/svg';
+
+  function mk(tag, attrs) {
+    const el = document.createElementNS(NS, tag);
+    for (const k in attrs) el.setAttribute(k, attrs[k]);
+    return el;
+  }
+  function mkText(x, y, text, fill, size, anchor) {
+    const t = mk('text', {x, y, fill, 'font-size': size || 12,
+      'font-family': 'monospace', 'text-anchor': anchor || 'middle',
+      'dominant-baseline': 'middle'});
+    t.textContent = text;
+    return t;
+  }
+
+  const W = 680, H = 680;
+  const cx = W / 2, cy = H / 2;
+
+  svg.appendChild(mk('rect', {x:0, y:0, width:W, height:H, fill:'#0f1117'}));
+
+  // Scales in light-years, labels, and colors
+  const scales = [
+    { ly: 0.001,    label: 'Solar System (~0.001 ly)',         color: '#ffee66' },
+    { ly: 4,        label: 'Nearest stars (~4 ly)',            color: '#88ddff' },
+    { ly: 300,      label: 'Local Bubble (~300 ly)',           color: '#66aaff' },
+    { ly: 3000,     label: 'Orion Arm segment (~3,000 ly)',    color: '#8866ff' },
+    { ly: 100000,   label: 'Milky Way (~100,000 ly)',          color: '#cc66ff' },
+    { ly: 3e6,      label: 'Local Group (~3 Mly)',             color: '#ff66cc' },
+    { ly: 1e8,      label: 'Virgo Supercluster (~100 Mly)',    color: '#ff8866' },
+    { ly: 4.6e10,   label: 'Observable Universe (~46 Bly)',    color: '#ff4444' },
+  ];
+
+  // Log-space radii from minimum to maximum pixel radius
+  const rMin = 6, rMax = 308;
+  const lyMin = Math.log10(scales[0].ly);
+  const lyMax = Math.log10(scales[scales.length-1].ly);
+
+  function lyToR(ly) {
+    return rMin + (Math.log10(ly) - lyMin) / (lyMax - lyMin) * (rMax - rMin);
+  }
+
+  // Draw rings outward (back to front)
+  for (let i = scales.length - 1; i >= 0; i--) {
+    const s = scales[i];
+    const r = lyToR(s.ly);
+    // Filled disk (gradient-like via opacity)
+    const alpha = 0.04 + 0.02 * (scales.length - i);
+    svg.appendChild(mk('circle', {cx, cy, r, fill: s.color, opacity: alpha.toFixed(2),
+      stroke: s.color, 'stroke-width': 1.2, 'stroke-opacity': '0.35'}));
+  }
+
+  // Draw ring outlines and labels on top
+  scales.forEach((s, i) => {
+    const r = lyToR(s.ly);
+    svg.appendChild(mk('circle', {cx, cy, r, fill:'none',
+      stroke: s.color, 'stroke-width': i === 0 ? 1.5 : 1,
+      'stroke-opacity': '0.55', 'stroke-dasharray': i < 3 ? 'none' : '4,3'}));
+
+    // Place label at angle to avoid pile-up
+    const angles = [25, 50, 75, 100, 125, 150, 175, 200];
+    const angle = angles[i] * Math.PI / 180;
+    const lx = cx + (r + 10) * Math.cos(angle);
+    const ly_ = cy + (r + 10) * Math.sin(angle);
+
+    // Label background
+    const textW = s.label.length * 5.5 + 8;
+    svg.appendChild(mk('rect', {
+      x: lx - textW/2 - 2, y: ly_ - 8,
+      width: textW + 4, height: 14,
+      fill: 'rgba(15,17,23,0.82)', rx: 3
+    }));
+    svg.appendChild(mkText(lx, ly_, s.label, s.color, 9));
+  });
+
+  // Center dot + label
+  svg.appendChild(mk('circle', {cx, cy, r:4, fill:'#ffffff'}));
+  svg.appendChild(mk('circle', {cx, cy, r:8, fill:'none', stroke:'#ffffff', 'stroke-width':1, 'stroke-opacity':'0.4'}));
+  svg.appendChild(mkText(cx, cy - 18, 'You are here', '#ffffff', 10));
+
+  // Title
+  svg.appendChild(mkText(cx, 18, 'Local Universe — Logarithmic Scale Map', '#b4c4d4', 13));
+})();
+</script>
+<script defer src="../search-index.js"></script>
+<script defer src="../search.js"></script>
+</body>
+</html>
