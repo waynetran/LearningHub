@@ -40,6 +40,9 @@
   table.props td { padding: 7px 10px; border-bottom: 1px solid #1e2535; color: #c8d0de; vertical-align: top; }
   table.props tr:last-child td { border-bottom: none; }
   table.props td:first-child { font-weight: 600; color: #e2e8f0; white-space: nowrap; }
+  /* Timeline dot color override */
+  .timeline .event .dot { background: #f97316; box-shadow: 0 0 0 2px rgba(249,115,22,0.25); }
+  .timeline .event:hover .dot { background: #fb923c; box-shadow: 0 0 0 3px rgba(249,115,22,0.35), 0 0 14px #f97316; }
 </style>
 </head>
 <body>
@@ -66,11 +69,23 @@
 <!-- ============================================================ -->
 <div class="hero">
   <div class="hero-inner">
-    <span class="chip">UPDATED Apr 11 2026 19:32</span>
+    <span class="chip">UPDATED Apr 11 2026 19:46</span>
     <h1>Blockchain — Distributed Ledgers, Consensus, and Programmable Money</h1>
     <p class="lede">A pragmatic tour of blockchain technology: what the cryptographic primitives actually are, how distributed consensus works without a trusted centre, what smart contracts can and cannot do, and where DeFi, ZK proofs, and layer-2 scaling fit into the picture. Hover any <span class="term" data-label="Term" data-def="Words with a dotted underline carry hover definitions. Try one throughout the page.">dotted term</span> for a definition. Poke at the interactive figures. Each section is self-contained — skip what you know.</p>
   </div>
 </div>
+
+<header class="timeline-header">
+  <div class="timeline-inner">
+    <h3>&gt; <span class="highlight">TIMELINE · 1991 – 2026</span> &nbsp;&nbsp;FROM DIGICASH TO ROLLUPS</h3>
+    <p class="sub">Scroll horizontally · click any marker to jump to its section</p>
+    <div class="timeline-scroll">
+      <div class="timeline" id="timeline">
+        <div class="axis"></div>
+      </div>
+    </div>
+  </div>
+</header>
 
 <div class="layout">
   <aside class="sidebar">
@@ -831,197 +846,6 @@ function withdraw(uint256 amount) external {
         <p>The most durable applications are those where all four properties are genuinely required: international currency transfers across jurisdictions with no banking relationship, censorship-resistant publishing in authoritarian states, permissionless financial access for the unbanked, and credibly-neutral infrastructure that competing institutions can use without trusting one another. The applications most likely to overpromise are those where "blockchain" provides transparency theater without real benefit — logging data that a single company controls, on a chain that company runs.</p>
       </section>
 
-    </div>
-  </main>
-</div>
-
-<script>
-// ============================================================
-// MOBILE MENU
-// ============================================================
-const mobileToggle = document.getElementById('mobile-menu-toggle');
-const sidebarEl = document.querySelector('aside.sidebar');
-const sidebarBackdrop = document.getElementById('sidebar-backdrop');
-function closeMobileMenu() {
-  sidebarEl.classList.remove('open');
-  sidebarBackdrop.classList.remove('show');
-  mobileToggle.textContent = '☰';
-}
-function openMobileMenu() {
-  sidebarEl.classList.add('open');
-  sidebarBackdrop.classList.add('show');
-  mobileToggle.textContent = '✕';
-}
-mobileToggle.addEventListener('click', () => {
-  if (sidebarEl.classList.contains('open')) closeMobileMenu();
-  else openMobileMenu();
-});
-sidebarBackdrop.addEventListener('click', closeMobileMenu);
-document.querySelectorAll('aside.sidebar nav a').forEach(a => {
-  a.addEventListener('click', () => {
-    if (window.innerWidth <= 900) closeMobileMenu();
-  });
-});
-
-// ============================================================
-// TOOLTIPS
-// ============================================================
-const tooltip = document.getElementById('tooltip');
-document.addEventListener('mouseover', (e) => {
-  const t = e.target.closest('.term');
-  if (!t) return;
-  const def = t.getAttribute('data-def');
-  const label = t.getAttribute('data-label') || 'Definition';
-  if (!def) return;
-  tooltip.innerHTML = `<div style="font-family: var(--mono); font-size: 10px; color: #f97316; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px;">${label}</div>${def}`;
-  tooltip.classList.add('show');
-});
-document.addEventListener('mousemove', (e) => {
-  if (!tooltip.classList.contains('show')) return;
-  let x = e.clientX + 16, y = e.clientY + 16;
-  const tw = tooltip.offsetWidth, th = tooltip.offsetHeight;
-  if (x + tw > window.innerWidth - 10) x = e.clientX - tw - 16;
-  if (y + th > window.innerHeight - 10) y = e.clientY - th - 16;
-  tooltip.style.left = x + 'px';
-  tooltip.style.top = y + 'px';
-});
-document.addEventListener('mouseout', (e) => {
-  if (e.target.closest && e.target.closest('.term')) tooltip.classList.remove('show');
-});
-
-// ============================================================
-// COLLAPSIBLE SIDEBAR + SCROLL SPY
-// ============================================================
-const sections = document.querySelectorAll('main section[id]');
-const navLinks = document.querySelectorAll('aside nav a');
-const catGroups = document.querySelectorAll('.cat-group');
-const catToggles = document.querySelectorAll('.cat-toggle');
-
-catToggles.forEach(btn => {
-  btn.addEventListener('click', () => {
-    const expanded = btn.getAttribute('aria-expanded') === 'true';
-    btn.setAttribute('aria-expanded', expanded ? 'false' : 'true');
-    try {
-      const group = btn.closest('.cat-group')?.dataset.group;
-      if (group) {
-        const key = 'sidenav-chain:' + group;
-        localStorage.setItem(key, expanded ? 'closed' : 'open');
-      }
-    } catch (e) { /* ignore */ }
-  });
-});
-
-catGroups.forEach(group => {
-  try {
-    const key = 'sidenav-chain:' + group.dataset.group;
-    const saved = localStorage.getItem(key);
-    if (saved === 'open' || saved === 'closed') {
-      const btn = group.querySelector('.cat-toggle');
-      if (btn) btn.setAttribute('aria-expanded', saved === 'open' ? 'true' : 'false');
-    }
-  } catch (e) { /* ignore */ }
-});
-
-let lastActiveGroup = null;
-function updateActiveNav() {
-  let active = null;
-  sections.forEach(sec => {
-    const rect = sec.getBoundingClientRect();
-    if (rect.top < 240) active = sec.id;
-  });
-  navLinks.forEach(a => {
-    const href = a.getAttribute('href');
-    a.classList.toggle('active', href === '#' + active);
-  });
-  if (active) {
-    const activeLink = document.querySelector('aside nav a.active');
-    const activeGroup = activeLink ? activeLink.closest('.cat-group') : null;
-    catGroups.forEach(g => g.classList.toggle('is-active', g === activeGroup));
-    if (activeGroup && activeGroup !== lastActiveGroup) {
-      const btn = activeGroup.querySelector('.cat-toggle');
-      if (btn && btn.getAttribute('aria-expanded') !== 'true') {
-        btn.setAttribute('aria-expanded', 'true');
-      }
-      lastActiveGroup = activeGroup;
-    }
-  }
-}
-window.addEventListener('scroll', updateActiveNav, { passive: true });
-updateActiveNav();
-
-// ============================================================
-// AMM INTERACTIVE FIGURE
-// ============================================================
-(function () {
-  const xSlider = document.getElementById('amm-x');
-  const ySlider = document.getElementById('amm-y');
-  const kEl = document.getElementById('amm-k');
-  const priceEl = document.getElementById('amm-price');
-  const xvalEl = document.getElementById('amm-xval');
-  const yvalEl = document.getElementById('amm-yval');
-  const svg = document.getElementById('amm-svg');
-  const curvePath = document.getElementById('amm-curve');
-  const pointEl = document.getElementById('amm-point');
-
-  const PAD = 36, W = 480, H = 280;
-  const MAX_VAL = 210;
-
-  function toSvgX(v) { return PAD + (v / MAX_VAL) * (W - PAD * 2); }
-  function toSvgY(v) { return H - PAD - (v / MAX_VAL) * (H - PAD * 2); }
-
-  function drawAxes() {
-    // draw inside the SVG once
-    let g = document.getElementById('amm-axes');
-    if (g) return;
-    g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-    g.id = 'amm-axes';
-    // x axis
-    const xa = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-    xa.setAttribute('x1', PAD); xa.setAttribute('y1', H - PAD);
-    xa.setAttribute('x2', W - PAD + 10); xa.setAttribute('y2', H - PAD);
-    xa.setAttribute('stroke', '#384050'); xa.setAttribute('stroke-width', '1');
-    g.appendChild(xa);
-    // y axis
-    const ya = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-    ya.setAttribute('x1', PAD); ya.setAttribute('y1', PAD - 10);
-    ya.setAttribute('x2', PAD); ya.setAttribute('y2', H - PAD);
-    ya.setAttribute('stroke', '#384050'); ya.setAttribute('stroke-width', '1');
-    g.appendChild(ya);
-    svg.insertBefore(g, curvePath);
-  }
-
-  function render() {
-    drawAxes();
-    const rx = parseFloat(xSlider.value);
-    const ry = parseFloat(ySlider.value);
-    const k = rx * ry;
-
-    kEl.textContent = k.toFixed(0);
-    priceEl.textContent = (ry / rx).toFixed(3);
-    xvalEl.textContent = rx.toFixed(0);
-    yvalEl.textContent = ry.toFixed(0);
-
-    // Draw hyperbola y = k/x for x from small to MAX_VAL
-    const pts = [];
-    for (let xi = 3; xi <= MAX_VAL; xi += 2) {
-      const yi = k / xi;
-      if (yi > MAX_VAL) continue;
-      pts.push(`${toSvgX(xi).toFixed(1)},${toSvgY(yi).toFixed(1)}`);
-    }
-    curvePath.setAttribute('d', pts.length > 1 ? 'M' + pts.join('L') : '');
-
-    // Current point
-    pointEl.setAttribute('cx', toSvgX(rx).toFixed(1));
-    pointEl.setAttribute('cy', toSvgY(ry).toFixed(1));
-  }
-
-  xSlider.addEventListener('input', render);
-  ySlider.addEventListener('input', render);
-  render();
-})();
-</script>
-
-      <!-- ============================================================ -->
       <section id="chains">
         <h2>Popular blockchains <span class="era">// tech, market, and what makes each unique</span></h2>
         <p>Hundreds of blockchains exist, but a small number dominate by market capitalisation, developer activity, and real usage. Each made a different set of trade-offs across security, decentralisation, throughput, programmability, and ecosystem strategy. This section covers the ten most consequential — what they actually are under the hood, not just marketing descriptions.</p>
@@ -1273,6 +1097,302 @@ updateActiveNav();
         </div>
 
       </section>
+
+
+    </div>
+  </main>
+</div>
+
+<script>
+// ============================================================
+// MOBILE MENU
+// ============================================================
+const mobileToggle = document.getElementById('mobile-menu-toggle');
+const sidebarEl = document.querySelector('aside.sidebar');
+const sidebarBackdrop = document.getElementById('sidebar-backdrop');
+function closeMobileMenu() {
+  sidebarEl.classList.remove('open');
+  sidebarBackdrop.classList.remove('show');
+  mobileToggle.textContent = '☰';
+}
+function openMobileMenu() {
+  sidebarEl.classList.add('open');
+  sidebarBackdrop.classList.add('show');
+  mobileToggle.textContent = '✕';
+}
+mobileToggle.addEventListener('click', () => {
+  if (sidebarEl.classList.contains('open')) closeMobileMenu();
+  else openMobileMenu();
+});
+sidebarBackdrop.addEventListener('click', closeMobileMenu);
+document.querySelectorAll('aside.sidebar nav a').forEach(a => {
+  a.addEventListener('click', () => {
+    if (window.innerWidth <= 900) closeMobileMenu();
+  });
+});
+
+// ============================================================
+// TOOLTIPS
+// ============================================================
+const tooltip = document.getElementById('tooltip');
+document.addEventListener('mouseover', (e) => {
+  const t = e.target.closest('.term');
+  if (!t) return;
+  const def = t.getAttribute('data-def');
+  const label = t.getAttribute('data-label') || 'Definition';
+  if (!def) return;
+  tooltip.innerHTML = `<div style="font-family: var(--mono); font-size: 10px; color: #f97316; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px;">${label}</div>${def}`;
+  tooltip.classList.add('show');
+});
+document.addEventListener('mousemove', (e) => {
+  if (!tooltip.classList.contains('show')) return;
+  let x = e.clientX + 16, y = e.clientY + 16;
+  const tw = tooltip.offsetWidth, th = tooltip.offsetHeight;
+  if (x + tw > window.innerWidth - 10) x = e.clientX - tw - 16;
+  if (y + th > window.innerHeight - 10) y = e.clientY - th - 16;
+  tooltip.style.left = x + 'px';
+  tooltip.style.top = y + 'px';
+});
+document.addEventListener('mouseout', (e) => {
+  if (e.target.closest && e.target.closest('.term')) tooltip.classList.remove('show');
+});
+
+// ============================================================
+// COLLAPSIBLE SIDEBAR + SCROLL SPY
+// ============================================================
+const sections = document.querySelectorAll('main section[id]');
+const navLinks = document.querySelectorAll('aside nav a');
+const catGroups = document.querySelectorAll('.cat-group');
+const catToggles = document.querySelectorAll('.cat-toggle');
+
+catToggles.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const expanded = btn.getAttribute('aria-expanded') === 'true';
+    btn.setAttribute('aria-expanded', expanded ? 'false' : 'true');
+    try {
+      const group = btn.closest('.cat-group')?.dataset.group;
+      if (group) {
+        const key = 'sidenav-chain:' + group;
+        localStorage.setItem(key, expanded ? 'closed' : 'open');
+      }
+    } catch (e) { /* ignore */ }
+  });
+});
+
+catGroups.forEach(group => {
+  try {
+    const key = 'sidenav-chain:' + group.dataset.group;
+    const saved = localStorage.getItem(key);
+    if (saved === 'open' || saved === 'closed') {
+      const btn = group.querySelector('.cat-toggle');
+      if (btn) btn.setAttribute('aria-expanded', saved === 'open' ? 'true' : 'false');
+    }
+  } catch (e) { /* ignore */ }
+});
+
+let lastActiveGroup = null;
+function updateActiveNav() {
+  let active = null;
+  sections.forEach(sec => {
+    const rect = sec.getBoundingClientRect();
+    if (rect.top < 240) active = sec.id;
+  });
+  navLinks.forEach(a => {
+    const href = a.getAttribute('href');
+    a.classList.toggle('active', href === '#' + active);
+  });
+  if (active) {
+    const activeLink = document.querySelector('aside nav a.active');
+    const activeGroup = activeLink ? activeLink.closest('.cat-group') : null;
+    catGroups.forEach(g => g.classList.toggle('is-active', g === activeGroup));
+    if (activeGroup && activeGroup !== lastActiveGroup) {
+      const btn = activeGroup.querySelector('.cat-toggle');
+      if (btn && btn.getAttribute('aria-expanded') !== 'true') {
+        btn.setAttribute('aria-expanded', 'true');
+      }
+      lastActiveGroup = activeGroup;
+    }
+  }
+}
+window.addEventListener('scroll', updateActiveNav, { passive: true });
+updateActiveNav();
+
+// ============================================================
+// AMM INTERACTIVE FIGURE
+// ============================================================
+(function () {
+  const xSlider = document.getElementById('amm-x');
+  const ySlider = document.getElementById('amm-y');
+  const kEl = document.getElementById('amm-k');
+  const priceEl = document.getElementById('amm-price');
+  const xvalEl = document.getElementById('amm-xval');
+  const yvalEl = document.getElementById('amm-yval');
+  const svg = document.getElementById('amm-svg');
+  const curvePath = document.getElementById('amm-curve');
+  const pointEl = document.getElementById('amm-point');
+
+  const PAD = 36, W = 480, H = 280;
+  const MAX_VAL = 210;
+
+  function toSvgX(v) { return PAD + (v / MAX_VAL) * (W - PAD * 2); }
+  function toSvgY(v) { return H - PAD - (v / MAX_VAL) * (H - PAD * 2); }
+
+  function drawAxes() {
+    // draw inside the SVG once
+    let g = document.getElementById('amm-axes');
+    if (g) return;
+    g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    g.id = 'amm-axes';
+    // x axis
+    const xa = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    xa.setAttribute('x1', PAD); xa.setAttribute('y1', H - PAD);
+    xa.setAttribute('x2', W - PAD + 10); xa.setAttribute('y2', H - PAD);
+    xa.setAttribute('stroke', '#384050'); xa.setAttribute('stroke-width', '1');
+    g.appendChild(xa);
+    // y axis
+    const ya = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    ya.setAttribute('x1', PAD); ya.setAttribute('y1', PAD - 10);
+    ya.setAttribute('x2', PAD); ya.setAttribute('y2', H - PAD);
+    ya.setAttribute('stroke', '#384050'); ya.setAttribute('stroke-width', '1');
+    g.appendChild(ya);
+    svg.insertBefore(g, curvePath);
+  }
+
+  function render() {
+    drawAxes();
+    const rx = parseFloat(xSlider.value);
+    const ry = parseFloat(ySlider.value);
+    const k = rx * ry;
+
+    kEl.textContent = k.toFixed(0);
+    priceEl.textContent = (ry / rx).toFixed(3);
+    xvalEl.textContent = rx.toFixed(0);
+    yvalEl.textContent = ry.toFixed(0);
+
+    // Draw hyperbola y = k/x for x from small to MAX_VAL
+    const pts = [];
+    for (let xi = 3; xi <= MAX_VAL; xi += 2) {
+      const yi = k / xi;
+      if (yi > MAX_VAL) continue;
+      pts.push(`${toSvgX(xi).toFixed(1)},${toSvgY(yi).toFixed(1)}`);
+    }
+    curvePath.setAttribute('d', pts.length > 1 ? 'M' + pts.join('L') : '');
+
+    // Current point
+    pointEl.setAttribute('cx', toSvgX(rx).toFixed(1));
+    pointEl.setAttribute('cy', toSvgY(ry).toFixed(1));
+  }
+
+  xSlider.addEventListener('input', render);
+  ySlider.addEventListener('input', render);
+  render();
+})();
+</script>
+
+      <!-- ============================================================ -->
+
+<script>
+const timelineEvents = [
+  { year: 1991, name: "Hash-linked blocks", org: "Haber & Stornetta", section: "overview" },
+  { year: 1997, name: "Hashcash (PoW)", org: "Adam Back", section: "consensus" },
+  { year: 2004, name: "RPOW", org: "Hal Finney", section: "consensus" },
+  { year: 2008, name: "Bitcoin whitepaper", org: "Satoshi Nakamoto", section: "overview" },
+  { year: 2009, name: "Genesis block", org: "Bitcoin", section: "overview" },
+  { year: 2011, name: "Litecoin fork", org: "Charlie Lee", section: "history" },
+  { year: 2013, name: "Ethereum whitepaper", org: "Vitalik Buterin", section: "smart-contracts" },
+  { year: 2014, name: "Ethereum ICO", org: "Ethereum Foundation", section: "smart-contracts" },
+  { year: 2015, name: "Ethereum mainnet", org: "Ethereum", section: "smart-contracts" },
+  { year: 2016, name: "The DAO hack", org: "$60M exploit", section: "smart-contracts" },
+  { year: 2017, name: "CryptoKitties / ICOs", org: "ERC-721", section: "defi" },
+  { year: 2017, name: "SegWit", org: "Bitcoin", section: "scaling" },
+  { year: 2019, name: "DeFi Summer begins", org: "Compound / Uniswap", section: "defi" },
+  { year: 2020, name: "Beacon Chain", org: "Ethereum 2.0", section: "consensus" },
+  { year: 2020, name: "Solana mainnet", org: "Ava Labs / Anatoly Y.", section: "chains" },
+  { year: 2021, name: "BTC legal tender", org: "El Salvador", section: "chains" },
+  { year: 2021, name: "Beeple NFT $69M", org: "Christie's", section: "defi" },
+  { year: 2021, name: "Bitcoin Taproot", org: "Bitcoin", section: "crypto" },
+  { year: 2022, name: "LUNA collapse", org: "Terra", section: "history" },
+  { year: 2022, name: "The Merge (PoS)", org: "Ethereum", section: "consensus" },
+  { year: 2022, name: "FTX collapse", org: "SBF", section: "history" },
+  { year: 2023, name: "Bitcoin Ordinals", org: "Casey Rodarmor", section: "scaling" },
+  { year: 2024, name: "BTC spot ETF", org: "BlackRock / Fidelity", section: "chains" },
+  { year: 2024, name: "BTC halving (#4)", org: "Bitcoin", section: "chains" },
+  { year: 2024, name: "EIP-4844 blobs", org: "Ethereum", section: "scaling" },
+  { year: 2025, name: "zkEVM production", org: "Polygon / zkSync", section: "scaling" },
+  { year: 2026, name: "L2 rollup dominance", org: "Arbitrum / Base", section: "scaling" }
+];
+
+function renderTimeline() {
+  const timeline = document.getElementById('timeline');
+  const minYear = 1986, maxYear = 2027;
+
+  // Approximate width of the scrollable track (matches min-width in CSS)
+  const totalWidth = 2800;
+
+  // year marks every 5 years
+  const yearMarks = document.createElement('div');
+  yearMarks.className = 'year-marks';
+  for (let y = 1995; y <= 2025; y += 5) {
+    const span = document.createElement('span');
+    span.style.left = (((y - minYear) / (maxYear - minYear)) * 100) + '%';
+    span.textContent = y;
+    yearMarks.appendChild(span);
+  }
+  timeline.appendChild(yearMarks);
+
+  // Compute x-positions and sort left→right
+  const enriched = timelineEvents.map(e => {
+    const pct = ((e.year - minYear) / (maxYear - minYear)) * 100;
+    return { ...e, xPct: pct, xPx: (pct / 100) * totalWidth };
+  }).sort((a, b) => a.xPx - b.xPx);
+
+  // Estimated label footprint (px) — allow two events to share a slot only
+  // if they're farther apart than this.
+  const estimateLabelWidth = (ev) => Math.max(80, ev.name.length * 5.8 + 30);
+
+  // 4 vertical slots: -2 (far above), -1 (close above), 1 (close below), 2 (far below)
+  // Prefer inner slots first (closer to the axis) so the silhouette stays tight.
+  const slotOrder = [-1, 1, -2, 2];
+  const placed = [];
+
+  enriched.forEach((ev) => {
+    const halfW = estimateLabelWidth(ev) / 2;
+    let chosen = null;
+    for (const slot of slotOrder) {
+      const conflict = placed.some(p => {
+        if (p.slot !== slot) return false;
+        const minDist = halfW + estimateLabelWidth(p) / 2 + 4;
+        return Math.abs(p.xPx - ev.xPx) < minDist;
+      });
+      if (!conflict) { chosen = slot; break; }
+    }
+    // Fallback: pick the slot whose nearest neighbor is farthest away
+    if (chosen === null) {
+      let best = slotOrder[0], bestDist = -Infinity;
+      for (const slot of slotOrder) {
+        const nearest = placed
+          .filter(p => p.slot === slot)
+          .reduce((m, p) => Math.min(m, Math.abs(p.xPx - ev.xPx)), Infinity);
+        if (nearest > bestDist) { bestDist = nearest; best = slot; }
+      }
+      chosen = best;
+    }
+    placed.push({ ...ev, slot: chosen });
+
+    const el = document.createElement('div');
+    el.className = 'event';
+    el.style.left = ev.xPct + '%';
+    el.setAttribute('data-slot', chosen);
+    el.setAttribute('title', `${ev.year} · ${ev.name} — ${ev.org}`);
+    el.innerHTML = `<div class="dot"></div><div class="label"><span class="year">${ev.year}</span><span class="name">${ev.name}</span></div>`;
+    el.addEventListener('click', () => {
+      document.getElementById(ev.section)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+    timeline.appendChild(el);
+  });
+}
+renderTimeline();
+</script>
 
 </body>
 </html>

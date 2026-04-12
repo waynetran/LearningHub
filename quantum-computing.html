@@ -190,6 +190,10 @@
   .compare-table tr:last-child td { border-bottom: none; }
   .compare-table .classical { color: var(--accent-2); font-family: var(--mono); font-size: 12px; }
   .compare-table .quantum { color: var(--qc); font-family: var(--mono); font-size: 12px; }
+
+  /* Timeline dot color override to match QC violet */
+  .timeline .event .dot { background: #a855f7; box-shadow: 0 0 0 2px rgba(168,85,247,0.25); }
+  .timeline .event:hover .dot { background: #c084fc; box-shadow: 0 0 0 3px rgba(168,85,247,0.35), 0 0 14px #a855f7; }
 </style>
 </head>
 <body>
@@ -216,11 +220,23 @@
 <!-- ============================================================ -->
 <div class="hero">
   <div class="hero-inner">
-    <span class="chip">UPDATED Apr 11 2026 18:45</span>
+    <span class="chip">UPDATED Apr 11 2026 19:46</span>
     <h1>Quantum Computing — Harnessing Superposition, Entanglement, and Interference</h1>
     <p class="lede">A rigorous tour of quantum computation: from the postulates of quantum mechanics to qubits, gates, and circuits; through landmark algorithms that outrun every classical machine; to the hardware realities of 2026 and what's hype vs. what's real. Hover any <span class="term" data-label="Qubit" data-def="A quantum bit — the fundamental unit of quantum information. Unlike a classical bit (0 or 1), a qubit can exist in a superposition of both simultaneously until measured.">dotted term</span> for a quick definition. Poke at the interactive Bloch sphere.</p>
   </div>
 </div>
+
+<header class="timeline-header">
+  <div class="timeline-inner">
+    <h3>> <span class="highlight">TIMELINE · 1959 – 2026</span> &nbsp;&nbsp;FROM FEYNMAN'S IDEA TO 1000-QUBIT PROCESSORS</h3>
+    <p class="sub">Scroll horizontally · click any marker to jump to its section</p>
+    <div class="timeline-scroll">
+      <div class="timeline" id="timeline">
+        <div class="axis"></div>
+      </div>
+    </div>
+  </div>
+</header>
 
 <div class="layout">
   <aside class="sidebar">
@@ -356,6 +372,26 @@
               <li><a href="#vqe">VQE</a></li>
               <li><a href="#qaoa">QAOA</a></li>
               <li><a href="#quantum-ml">Quantum ML</a></li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+
+      <div class="cat-group" data-group="players">
+        <button class="cat cat-toggle" aria-expanded="false">
+          <span class="cat-icon">10</span><span class="cat-title">Industry players</span><span class="cat-chev">▾</span>
+        </button>
+        <ul class="cat-body">
+          <li><a href="#players">Overview</a>
+            <ul>
+              <li><a href="#player-ibm">IBM Quantum</a></li>
+              <li><a href="#player-google">Google</a></li>
+              <li><a href="#player-ionq">IonQ</a></li>
+              <li><a href="#player-quantinuum">Quantinuum</a></li>
+              <li><a href="#player-microsoft">Microsoft</a></li>
+              <li><a href="#player-rigetti">Rigetti</a></li>
+              <li><a href="#player-dwave">D-Wave</a></li>
+              <li><a href="#player-amazon">Amazon Braket</a></li>
             </ul>
           </li>
         </ul>
@@ -857,6 +893,183 @@ Bob:  apply X and/or Z conditioned on the 2 bits → |ψ⟩ restored</div>
         </div>
       </section>
 
+      <!-- ============================================================ -->
+      <section id="players">
+        <h2>Industry players <span class="era">// who is building quantum computers and how</span></h2>
+        <p class="lede">Quantum computing hardware is no longer confined to university labs. A global cohort of companies — spanning superconducting transmons, trapped ions, photonic waveguides, neutral atoms, and exotic topological qubits — are competing to demonstrate fault-tolerant, commercially useful quantum processors. Here is a deep look at the major players, their technical approaches, and where each stands in mid-2026.</p>
+
+        <div class="callout qc">
+          <div class="label">Key metric context</div>
+          <p>Raw qubit count is an unreliable metric. What matters is <strong>circuit layer operations per second (CLOPS)</strong>, 2-qubit gate fidelity (how accurately a two-qubit unitary is applied), and coherence times T1 (energy relaxation) and T2 (dephasing). A 50-qubit processor with 99.9% 2-qubit fidelity is more powerful for deep circuits than a 1,000-qubit processor at 99.0%.</p>
+        </div>
+
+        <!-- IBM Quantum -->
+        <h3 id="player-ibm">IBM Quantum</h3>
+        <p><strong>Technology approach:</strong> Superconducting transmon qubits on dilution refrigerators cooled to ~15 mK. IBM uses fixed-frequency qubits coupled via cross-resonance gates, enabling all-to-nearest-neighbour connectivity on heavy-hex lattice topologies. The heavy-hex layout reduces error rates by limiting each qubit to at most three nearest-neighbour couplers, suppressing frequency-collision errors.</p>
+        <p><strong>Qubit count and quality (2026):</strong> The flagship Heron r2 processor delivers 156 qubits at 99.9% median 2-qubit gate fidelity — a significant leap over the 433-qubit Osprey's 99.1%. IBM's philosophy since 2023 has deliberately traded raw qubit count for quality: fewer, better qubits connected with tunable couplers. T1 coherence times on Heron approach 300 µs; T2 exceeds 200 µs. The 1,121-qubit Condor remains a research showcase rather than a production system.</p>
+        <p><strong>Key milestones:</strong> IBM launched the first publicly accessible quantum computer via cloud (IBM QX) in 2016, democratising quantum experimentation at a stroke. The 2022 Osprey and 2023 Condor systems demonstrated that a kilobit-scale chip was physically possible. In 2023, IBM published a landmark <em>Nature</em> paper using Heron to out-perform classical simulation on a 127-qubit kicked Ising model, offering a credible demonstration of quantum utility — though the claim remains debated. IBM's roadmap targets 100,000+ physical qubits in modular architectures by the late 2020s using quantum interconnects.</p>
+        <p><strong>Cloud access and SDK:</strong> IBM Quantum Platform provides free and premium cloud access. <strong>Qiskit</strong> (open-source, Python) is the world's most-used quantum SDK with over 550,000 registered users. Qiskit Runtime executes workloads close to hardware with classical pre/post-processing, reducing I/O latency. Qiskit Transpiler optimises circuit depth for target topologies.</p>
+        <p><strong>Business model:</strong> IBM offers a freemium model with open access to small processors and IBM Quantum Premium Plans for enterprise. Revenue is primarily from cloud compute time, system sales to national labs, and consulting. Target markets include financial services (portfolio optimisation, Monte Carlo), life sciences (molecular simulation), and logistics.</p>
+        <p><strong>What makes IBM unique:</strong> The combination of Qiskit's ecosystem dominance, the IBM Quantum Network (200+ member organisations), and the heavy-hex topology that enables the highest qubit counts at useful fidelities in the superconducting space. No other player has come close to IBM's developer community or educational investment.</p>
+        <p><strong>Assessment:</strong> IBM is the strongest ecosystem player by a wide margin. Qiskit and the IBM Quantum Network give it unmatched developer mindshare. Hardware quality has improved dramatically since 2022, and the modular architecture strategy is technically credible. The main challenge is the classic superconducting problem: scaling qubit count without degrading fidelity across a monolithic chip, and achieving the ~1,000:1 physical-to-logical qubit ratio needed for fault-tolerant Shor at cryptographic scales.</p>
+
+        <!-- Google Quantum AI -->
+        <h3 id="player-google">Google Quantum AI</h3>
+        <p><strong>Technology approach:</strong> Superconducting transmon qubits with tunable couplers, operating at ~10–15 mK. Google uses a 2D grid topology and is the pioneer of the cross-entropy benchmarking (XEB) metric for characterising circuit fidelity at scale. Tunable couplers allow gate times of 20–40 ns with high on/off ratio, enabling fast, high-fidelity 2-qubit operations.</p>
+        <p><strong>Qubit count and quality (2026):</strong> The Willow chip (105 qubits, announced late 2024) achieves below-threshold quantum error correction: adding more physical qubits to a surface code logical qubit actually reduces the logical error rate — the first demonstration of this key QEC threshold condition. Willow's 2-qubit gate fidelity runs at ~99.7% with T1 values around 100 µs. Google has not publicly disclosed a 2026 successor beyond roadmap hints at 1,000+ qubit systems.</p>
+        <p><strong>Key milestones:</strong> Google's 2019 "quantum supremacy" paper claimed 200 seconds for a task that would take Summit 10,000 years — a landmark instantly contested by IBM (who argued a better classical simulation could run in 2.5 days). Regardless, the Sycamore experiment was a genuine demonstration of quantum circuits outrunning any available classical simulation at that moment. The Willow threshold result is arguably more significant: it provides concrete evidence that the surface code approach to error correction works as theory predicts.</p>
+        <p><strong>Cloud access and SDK:</strong> <strong>Cirq</strong> (open-source, Python) is Google's primary quantum SDK. Cloud access is restricted: Google Quantum AI hardware is not generally available on Google Cloud; select research partners get access via Google's internal programs. This is a strategic weakness versus IBM's open ecosystem.</p>
+        <p><strong>Business model:</strong> Google funds quantum AI as a long-term strategic research bet, not primarily for near-term cloud revenue. The priority is demonstrating fault-tolerant advantage for real computational problems — molecular simulation is the stated first target. Revenue generation from quantum compute is a secondary concern to establishing technical leadership.</p>
+        <p><strong>What makes Google unique:</strong> Willow's below-threshold QEC result is a genuine scientific milestone. Google has the deepest physics and materials science team in the field, and its tunable coupler architecture achieves some of the fastest and most accurate 2-qubit gates of any superconducting system. The XEB benchmarking framework they pioneered is now used across the industry.</p>
+        <p><strong>Assessment:</strong> Google has the strongest published results on gate fidelity and error correction below threshold. The Willow paper is the most compelling QEC demonstration in the superconducting space. The closed-access model limits ecosystem growth and developer adoption, which is a structural disadvantage if broad quantum software development matters in the long run. Google vs. IBM is the superconducting arms race to watch.</p>
+
+        <!-- IonQ -->
+        <h3 id="player-ionq">IonQ</h3>
+        <p><strong>Technology approach:</strong> Trapped-ion qubits — individual ytterbium (Yb+) ions suspended in electromagnetic Paul traps and laser-cooled to near absolute zero. All-to-all connectivity: any two ions in a chain can directly interact via a shared motional mode without routing through intermediate qubits. This eliminates SWAP overhead that plagues superconducting architectures. Gate operations are slower (100 µs–1 ms range) than superconducting (~20–100 ns) but far more accurate.</p>
+        <p><strong>Qubit count and quality (2026):</strong> IonQ uses <strong>Algorithmic Qubits (AQ)</strong> as its primary metric — a hardware-agnostic measure of how many qubits you can usefully run a full algorithm on, accounting for connectivity and fidelity. IonQ Forte Enterprise (launched 2024–2025) is rated at 35 AQ. In raw terms, the system uses 36 trapped ions with 2-qubit gate fidelity exceeding 99.9% for native Mølmer–Sørensen gates. T2 coherence times on trapped ions can reach seconds to minutes — orders of magnitude longer than superconducting qubits.</p>
+        <p><strong>Key milestones:</strong> IonQ became the first publicly traded pure-play quantum company (NYSE: IONQ, 2021). It was the first to demonstrate 32 AQ capability and has consistently published best-in-class fidelity numbers. IonQ is developing barium (Ba+) ions as a second species, which emits photons in the visible range suitable for photonic interconnects between traps — a key step toward distributed trapped-ion systems at scale.</p>
+        <p><strong>Cloud access and SDK:</strong> Available on <strong>Amazon Braket</strong>, <strong>Microsoft Azure Quantum</strong>, and <strong>Google Cloud</strong>. IonQ is cloud-platform agnostic, which is a strategic strength. Supports Qiskit, Cirq, and native <strong>IonQ SDK</strong>. IonQ has also partnered with the US Air Force Research Laboratory and Oak Ridge National Lab.</p>
+        <p><strong>Business model:</strong> SaaS cloud quantum access; enterprise contracts with defence, finance, and pharma; government research contracts. IonQ is publicly traded and must balance R&D spend against quarterly reporting, which creates tension with long-horizon hardware investment.</p>
+        <p><strong>What makes IonQ unique:</strong> The AQ metric is the most honest single-number summary of useful circuit capacity in the industry. All-to-all connectivity means a 35-AQ IonQ system can run circuits that would require hundreds of additional SWAP gates on a nearest-neighbour superconducting chip of the same size. Long coherence times make IonQ the natural choice for algorithms requiring many sequential gates.</p>
+        <p><strong>Assessment:</strong> IonQ has the best gate fidelity of any commercially available system and the AQ metric gives a more honest picture of real algorithmic capability than raw qubit count. The challenge is scaling: ion chains become unstable beyond ~30–50 ions, so scaling requires shuttling ions between multiple traps or building photonic links between separate modules — both hard engineering problems. Clock speed is also slow; a 1,000-gate deep circuit may take hundreds of milliseconds.</p>
+
+        <!-- Quantinuum -->
+        <h3 id="player-quantinuum">Quantinuum</h3>
+        <p><strong>Technology approach:</strong> Trapped-ion using ytterbium ions in a surface-electrode "racetrack" trap architecture. Quantinuum's QCCD (Quantum Charge-Coupled Device) architecture allows ions to be physically shuttled through junctions within the trap chip, combining the long coherence of trapped ions with the scalability of modular racetrack designs. This is distinct from the static-chain architecture used by IonQ.</p>
+        <p><strong>Qubit count and quality (2026):</strong> The H2-1 processor achieves 56 physical qubits with 2-qubit gate fidelity of 99.9%+ and a System Model H2 quantum volume of 2<sup>17</sup> = 131,072 — the highest published quantum volume as of early 2026. T1 and T2 times extend to seconds. Quantinuum's gate fidelity benchmarks have been independently verified and are among the most credible in the industry.</p>
+        <p><strong>Key milestones:</strong> Quantinuum was formed in 2021 from the merger of Honeywell Quantum Solutions and Cambridge Quantum Computing. In 2023, H2 demonstrated the creation of non-Abelian anyons — exotic quasiparticles with topological properties relevant to topological quantum memory. In 2024, Quantinuum published results on real-time error correction with mid-circuit measurements and conditional logic on H2, a key capability for fault-tolerant computation. The TKET compiler (from Cambridge Quantum) is considered one of the most capable hardware-agnostic optimising compilers available.</p>
+        <p><strong>Cloud access and SDK:</strong> Accessible via <strong>Azure Quantum</strong> and Quantinuum's own platform. The <strong>pytket</strong> SDK supports multiple backends including IBM, IonQ, and Quantinuum hardware. Quantinuum also develops <strong>InQuanto</strong> (quantum chemistry) and <strong>LAMBEQ</strong> (quantum NLP) application libraries.</p>
+        <p><strong>Business model:</strong> Premium enterprise and research access; Honeywell parent provides deep industrial application expertise in chemistry, materials, and process optimisation. Quantinuum targets pharmaceutical discovery and financial risk modelling as near-term high-value verticals.</p>
+        <p><strong>What makes Quantinuum unique:</strong> The QCCD racetrack architecture is the most credible path to scaling trapped-ion systems beyond ~100 qubits while maintaining fidelity. Quantinuum is the only company with both world-class hardware and a full application software stack (InQuanto, LAMBEQ, TKET) for domain-specific quantum advantage. The Honeywell parentage gives it exceptional manufacturing process control.</p>
+        <p><strong>Assessment:</strong> Quantinuum has arguably the strongest combination of fidelity, quantum volume, and mid-circuit measurement capability in the industry. The QCCD architecture is technically superior to static ion chains for scaling. The main bottleneck is the same as IonQ: scaling to thousands of qubits while maintaining fidelity, and increasing gate speed to make deep circuits tractable in wall-clock time.</p>
+
+        <!-- Microsoft Azure Quantum -->
+        <h3 id="player-microsoft">Microsoft Azure Quantum</h3>
+        <p><strong>Technology approach:</strong> Microsoft is pursuing <strong>topological qubits</strong> based on Majorana zero modes — exotic non-Abelian anyons predicted to arise at the ends of specially engineered semiconductor-superconductor (InAs-Al) nanowires. Topological qubits are theoretically far more intrinsically stable against local noise than transmon or trapped-ion qubits, potentially requiring orders of magnitude fewer physical qubits per logical qubit. This is the highest-risk, highest-reward bet in quantum hardware.</p>
+        <p><strong>Qubit count and quality (2026):</strong> In early 2025, Microsoft published a landmark Nature paper reporting the creation of a "topological gap" in InAs-Al nanowires consistent with a topological phase — a necessary (though not sufficient) condition for Majorana qubits. In 2025–2026, Microsoft demonstrated an 8-qubit "Topological Core" prototype with coherence properties consistent with topological protection. No large-scale universal topological quantum computer exists yet. On the practical side, Azure Quantum provides cloud access to IonQ, Quantinuum, Rigetti, and neutral-atom hardware from partners while the topological platform matures.</p>
+        <p><strong>Key milestones:</strong> Microsoft's 2018 retraction of a high-profile Science paper (claiming Majorana signatures later found to be artefacts) set the program back years and damaged credibility. The 2025 Nature paper and Topological Core demonstration represent a genuine rehabilitation, though independent experimental replication remains in progress. Microsoft's <strong>Q# programming language</strong> and <strong>Azure Quantum Development Kit</strong> are mature developer tools with good classical simulation infrastructure.</p>
+        <p><strong>Cloud access and SDK:</strong> <strong>Azure Quantum</strong> aggregates multiple hardware providers under a single API. <strong>Q#</strong> is a domain-specific language optimised for quantum algorithms with tight integration into the Azure ecosystem. The <strong>Azure Quantum Resource Estimator</strong> is the most comprehensive publicly available tool for projecting physical resource requirements of fault-tolerant algorithms — invaluable for understanding how far away a useful quantum computer actually is.</p>
+        <p><strong>Business model:</strong> Azure Quantum is integrated into Microsoft's cloud business. Near-term revenue comes from selling cloud compute time on partner hardware and quantum simulation. The long-term bet is that topological qubits will enable a generation of fault-tolerant systems that leapfrog competitors requiring 1,000:1 physical-to-logical qubit overhead.</p>
+        <p><strong>What makes Microsoft unique:</strong> The topological qubit bet, if it works, would be transformative — the theoretical overhead reduction compared to surface codes is enormous. Azure Quantum's multi-vendor aggregation is also uniquely positioned for enterprise customers who want hardware optionality. The Resource Estimator is a genuinely differentiated tool that helps customers plan quantum roadmaps honestly.</p>
+        <p><strong>Assessment:</strong> Microsoft's topological bet is bold and scientifically credible. If Majorana qubits work at scale, the overhead advantages are enormous. But the timeline is deeply uncertain, and every other player will have multiple generations of superconducting and trapped-ion systems deployed commercially before topological systems reach parity. Microsoft's cloud aggregation strategy is smart hedging. The Azure Quantum Resource Estimator is the best available tool for understanding what fault-tolerant quantum computing actually requires.</p>
+
+        <!-- Rigetti -->
+        <h3 id="player-rigetti">Rigetti Computing</h3>
+        <p><strong>Technology approach:</strong> Superconducting transmon qubits with a proprietary multi-chip module (MCM) approach — bonding multiple smaller chips to create larger processors, similar to chiplet architectures in classical computing. Rigetti operates its own full-stack fabrication facility (Fab-1), giving it end-to-end control from chip design through software, which competitors using external fabs lack.</p>
+        <p><strong>Qubit count and quality (2026):</strong> The Ankaa-3 system delivers 84 qubits with median 2-qubit (iSWAP) gate fidelity around 99.0–99.5%. T1 coherence times run ~60–80 µs. Rigetti lags IBM and Google on fidelity but has focused on improving CLOPS (circuit execution throughput) and fast parametric compilation — important for variational algorithms that require many repeated circuit evaluations with varying parameters.</p>
+        <p><strong>Key milestones:</strong> Rigetti was among the earliest companies to offer cloud quantum access (Forest platform, 2017). It was the first company to fabricate a multi-chip quantum processor (Aspen series). Rigetti pioneered the parametric compilation approach that enables fast parameter sweeps for VQE and QAOA workloads. As a publicly traded company (RGTI), Rigetti has faced significant revenue pressure but remains one of the few companies with end-to-end vertical integration.</p>
+        <p><strong>Cloud access and SDK:</strong> <strong>Rigetti QCS</strong> (Quantum Cloud Services) provides direct hardware access with low-latency QPU scheduling. <strong>pyQuil</strong> is Rigetti's Python SDK; circuits can also be submitted via Qiskit through a provider plugin. Rigetti also offers <strong>Quil</strong> (Quantum Instruction Language), a low-level assembly-like language for direct QPU control at the gate pulse level.</p>
+        <p><strong>Business model:</strong> Cloud quantum access; on-premises system sales to government and defence customers; DARPA and DOE research contracts. Rigetti's vertical integration is a cost differentiator for government procurement where supply chain control matters.</p>
+        <p><strong>What makes Rigetti unique:</strong> End-to-end fabrication control. Rigetti can iterate on qubit design, packaging, and control electronics in-house on a timescale that external-fab-dependent competitors cannot match. The MCM chiplet approach is a credible path to larger processor sizes without the yield problems of single monolithic chips at scale.</p>
+        <p><strong>Assessment:</strong> Rigetti is the scrappiest of the major players — a lean team with genuine fabrication expertise that larger players outsource. The MCM approach to scaling is technically interesting and may prove important for modular architectures. The risk is falling further behind IBM and Google on fidelity, which makes it harder to win enterprise workloads requiring circuit depth. Rigetti's survival as a public company through 2026 has been notable given its small revenue base.</p>
+
+        <!-- D-Wave -->
+        <h3 id="player-dwave">D-Wave Systems</h3>
+        <p><strong>Technology approach:</strong> <strong>Quantum annealing</strong> — a fundamentally different paradigm from gate-model quantum computing. D-Wave processors implement a physical Ising Hamiltonian that is adiabatically evolved from an easy ground state to one encoding a combinatorial optimisation problem. The processor is not a universal quantum computer; it cannot run Shor's or Grover's algorithms. It is purpose-built for quadratic unconstrained binary optimisation (QUBO) problems.</p>
+        <p><strong>Qubit count and quality (2026):</strong> The Advantage2 system implements 4,400 qubits with the Pegasus topology (each qubit connected to up to 20 others). Coherence times are microseconds — extremely short compared to gate-model systems — because annealing doesn't require gate-level coherence. The relevant quality metric is solution quality on optimisation benchmarks relative to classical solvers, not gate fidelity. D-Wave also offers a gate-model prototype for exploratory work.</p>
+        <p><strong>Key milestones:</strong> D-Wave sold the first commercial quantum computing system to Lockheed Martin in 2011 — the world's first commercial quantum computer sale, predating gate-model cloud access by five years. Google, NASA, and USRA operated a D-Wave 2X at the Quantum AI Lab from 2013–2017. Despite persistent academic debate over whether D-Wave's advantage was truly quantum, more recent Advantage2 benchmarks on structured hard instances show genuine quantum-enhanced sampling that classical solvers struggle to match on specific problem families.</p>
+        <p><strong>Cloud access and SDK:</strong> <strong>Leap</strong> quantum cloud service; <strong>Ocean</strong> SDK (Python) provides problem formulation, hybrid solvers, and direct QPU access. D-Wave's <strong>Hybrid Solver Service</strong> breaks large problems into sub-problems that run on QPU and classical CPU, enabling optimisation over problems with millions of variables — far beyond what any gate-model system can handle today.</p>
+        <p><strong>Business model:</strong> Cloud subscriptions (Leap), enterprise hybrid solver contracts, on-premises system sales. D-Wave targets logistics (routing, scheduling), finance (portfolio optimisation), life sciences (protein folding sub-problems), and materials science. It is the only pure-play quantum company with a decade of enterprise revenue history.</p>
+        <p><strong>What makes D-Wave unique:</strong> D-Wave is the only company delivering quantum hardware at a scale (4,400 qubits) and problem size where the quantum device operates on inputs that would be computationally infeasible to fully simulate classically. The hybrid solver approach is also the most mature integration of quantum and classical heuristics for real enterprise problems. Their commercial track record is unmatched.</p>
+        <p><strong>Assessment:</strong> D-Wave occupies a unique niche. Annealing is not the path to universal fault-tolerant quantum computing, but it may deliver commercial value on specific optimisation problem classes sooner than gate-model systems. The hybrid approach that mixes QPU annealing with classical heuristics is pragmatic. The main risk is that advances in classical optimisation (GPU-accelerated solvers, learned heuristics) keep narrowing the gap D-Wave needs to demonstrate. Their honest framing — "we solve specific optimisation problems, not general computation" — is refreshingly grounded.</p>
+
+        <!-- Amazon Braket -->
+        <h3 id="player-amazon">Amazon Braket</h3>
+        <p><strong>Technology approach:</strong> Amazon Braket is a <strong>quantum cloud aggregator</strong> rather than a hardware manufacturer. It provides unified API access to multiple hardware backends: IonQ (trapped ion), Rigetti (superconducting), OQC (superconducting, UK), QuEra (neutral atom / analog), and formerly D-Wave. Amazon's own hardware research arm (AWS Center for Quantum Computing at Caltech) is developing superconducting qubits, but no commercial AWS-native QPU was publicly available as of mid-2026.</p>
+        <p><strong>Qubit count and quality (2026):</strong> Via hosted hardware partners. QuEra's Aquila neutral-atom processor (256 qubits, analog mode) is the largest system on Braket; it runs quantum simulation via programmable Rydberg atom arrays rather than discrete gate-model circuits. IonQ Forte and Rigetti Ankaa-3 provide gate-model access. OQC's Lucy superconducting processor rounds out the offering.</p>
+        <p><strong>Key milestones:</strong> Braket launched in 2019 as the first major cloud provider to offer quantum hardware as a managed service. AWS introduced <strong>Amazon Braket Direct</strong> (dedicated QPU reservations) and <strong>Hybrid Jobs</strong> (co-locating classical EC2 compute with QPU calls to minimise round-trip latency). The <strong>Amazon Quantum Solutions Lab</strong> provides enterprise consulting for customers exploring quantum applications.</p>
+        <p><strong>Cloud access and SDK:</strong> <strong>Amazon Braket SDK</strong> (Python, open-source) supports all hardware backends with a unified circuit model. Integration with SageMaker, Lambda, and S3 allows quantum workloads to be embedded in standard ML and data pipelines. Supports OpenQASM 3.0 for hardware-agnostic circuit description. Braket also runs a free simulator tier.</p>
+        <p><strong>Business model:</strong> Pay-per-task QPU access (per-shot pricing), hybrid job compute time, and Braket Direct reservations. Amazon's quantum strategy is to be the infrastructure layer: capture quantum cloud revenue regardless of which hardware technology wins, while conducting its own hardware research as a long-term hedge.</p>
+        <p><strong>What makes Amazon Braket unique:</strong> The tightest integration of quantum compute with classical cloud infrastructure of any provider. IAM roles, VPC isolation, CloudWatch metrics, and SageMaker integration mean enterprise security and observability requirements are met out of the box — something that standalone quantum cloud platforms cannot yet match. Braket's hardware-agnostic SDK abstracts away vendor lock-in.</p>
+        <p><strong>Assessment:</strong> Braket's multi-vendor model gives customers hardware optionality and a single integration target. The lack of AWS-native QPU hardware means Amazon hasn't differentiated on quantum performance, but its classical cloud integration is a genuine operational advantage for enterprise deployments. If Amazon's internal superconducting program matures, Braket becomes a full-stack competitor overnight. For enterprises wanting to experiment with quantum without committing to a single vendor, Braket is the pragmatic choice.</p>
+
+        <!-- Comparison table -->
+        <h3>Side-by-side comparison (mid-2026)</h3>
+        <table class="props">
+          <thead>
+            <tr>
+              <th>Player</th>
+              <th>Qubit technology</th>
+              <th>Qubit count (2026)</th>
+              <th>2-qubit gate fidelity</th>
+              <th>Cloud platform</th>
+              <th>Primary use case</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>IBM Quantum</strong></td>
+              <td>Superconducting transmon (heavy-hex)</td>
+              <td>156 (Heron r2)</td>
+              <td>~99.9%</td>
+              <td>IBM Quantum Platform / Qiskit</td>
+              <td>Utility-scale simulation, finance, logistics</td>
+            </tr>
+            <tr>
+              <td><strong>Google Quantum AI</strong></td>
+              <td>Superconducting transmon (2D grid)</td>
+              <td>105 (Willow)</td>
+              <td>~99.7%</td>
+              <td>Research partners only (Cirq)</td>
+              <td>QEC threshold demos, molecular simulation</td>
+            </tr>
+            <tr>
+              <td><strong>IonQ</strong></td>
+              <td>Trapped ion (Yb+, static chain)</td>
+              <td>36 / 35 AQ (Forte)</td>
+              <td>~99.9%+</td>
+              <td>Braket / Azure / GCP / IonQ Cloud</td>
+              <td>High-fidelity NISQ circuits, chemistry</td>
+            </tr>
+            <tr>
+              <td><strong>Quantinuum</strong></td>
+              <td>Trapped ion (Yb+, QCCD racetrack)</td>
+              <td>56 (H2-1)</td>
+              <td>~99.9%+</td>
+              <td>Azure Quantum / Quantinuum Platform</td>
+              <td>Drug discovery, financial risk, QEC research</td>
+            </tr>
+            <tr>
+              <td><strong>Microsoft</strong></td>
+              <td>Topological (Majorana nanowire) + partners</td>
+              <td>8 (Topological Core prototype)</td>
+              <td>TBD (topological)</td>
+              <td>Azure Quantum (multi-vendor)</td>
+              <td>Long-horizon fault-tolerant computing</td>
+            </tr>
+            <tr>
+              <td><strong>Rigetti</strong></td>
+              <td>Superconducting transmon (MCM chiplet)</td>
+              <td>84 (Ankaa-3)</td>
+              <td>~99.0–99.5%</td>
+              <td>Rigetti QCS</td>
+              <td>Variational algorithms, VQE, QAOA</td>
+            </tr>
+            <tr>
+              <td><strong>D-Wave</strong></td>
+              <td>Quantum annealing (flux qubits, Pegasus)</td>
+              <td>4,400 (Advantage2)</td>
+              <td>N/A (annealing)</td>
+              <td>D-Wave Leap (Ocean SDK)</td>
+              <td>Combinatorial optimisation (QUBO)</td>
+            </tr>
+            <tr>
+              <td><strong>Amazon Braket</strong></td>
+              <td>Aggregator (IonQ, Rigetti, QuEra, OQC)</td>
+              <td>Via partners</td>
+              <td>Via partners</td>
+              <td>Amazon Braket SDK</td>
+              <td>Cloud-native quantum workflows, hybrid jobs</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="callout qc">
+          <div class="label">The honest 2026 outlook</div>
+          <p>No quantum computer in 2026 can solve a practically important problem that a well-resourced classical computer cannot. The gap is closing — IBM's quantum utility result and Google's Willow threshold result are genuine milestones — but the ~1,000× overhead required to turn NISQ physical qubits into fault-tolerant logical qubits remains the central unsolved engineering challenge. The companies that figure out how to manufacture high-fidelity qubits at scale, connect them with quantum interconnects, and run real-time error correction will define the quantum era. The race is genuinely open.</p>
+        </div>
+      </section>
+
     </div>
   </main>
 </div>
@@ -1050,6 +1263,108 @@ function blochPreset(theta, phi) {
 document.getElementById('bloch-theta').addEventListener('input', updateBloch);
 document.getElementById('bloch-phi').addEventListener('input', updateBloch);
 updateBloch();
+</script>
+
+<script>
+// ============================================================
+// TIMELINE
+// ============================================================
+const timelineEvents = [
+  { year: 1959, name: "Feynman: simulating physics", org: "Feynman / Caltech", section: "why-quantum" },
+  { year: 1982, name: "Quantum simulation proposal", org: "Feynman", section: "why-quantum" },
+  { year: 1985, name: "Deutsch algorithm", org: "David Deutsch", section: "algorithms" },
+  { year: 1994, name: "Shor's algorithm", org: "Peter Shor / Bell Labs", section: "algorithms" },
+  { year: 1995, name: "Grover's search", org: "Lov Grover", section: "algorithms" },
+  { year: 1995, name: "First qubit (ion trap)", org: "NIST", section: "hardware" },
+  { year: 1997, name: "Quantum error correction", org: "Steane / Shor", section: "error-correction" },
+  { year: 1999, name: "First superconducting qubit", org: "Yale / NEC", section: "hardware" },
+  { year: 2001, name: "Shor's alg. on NMR (7 qubits)", org: "IBM", section: "algorithms" },
+  { year: 2007, name: "D-Wave adiabatic QC", org: "D-Wave Systems", section: "players" },
+  { year: 2011, name: "D-Wave One commercial", org: "D-Wave", section: "players" },
+  { year: 2014, name: "Surface code milestone", org: "UCSB", section: "error-correction" },
+  { year: 2016, name: "IBM QX (cloud access)", org: "IBM", section: "players" },
+  { year: 2019, name: "Google supremacy claim", org: "Google Sycamore", section: "players" },
+  { year: 2019, name: "IBM Q System One", org: "IBM", section: "players" },
+  { year: 2021, name: "IBM Eagle (127 qubits)", org: "IBM", section: "players" },
+  { year: 2022, name: "IBM Osprey (433 qubits)", org: "IBM", section: "players" },
+  { year: 2023, name: "IBM Condor (1,121 qubits)", org: "IBM", section: "players" },
+  { year: 2023, name: "IonQ Forte (36 AQ)", org: "IonQ", section: "players" },
+  { year: 2024, name: "Google Willow (105 qubits)", org: "Google", section: "players" },
+  { year: 2024, name: "Microsoft topological qubits", org: "Microsoft", section: "players" },
+  { year: 2025, name: "Fault-tolerant demos", org: "Multiple labs", section: "error-correction" },
+  { year: 2026, name: "NISQ era peak", org: "Industry", section: "nisq" }
+];
+
+function renderTimeline() {
+  const timeline = document.getElementById('timeline');
+  const minYear = 1954, maxYear = 2027;
+
+  // Approximate width of the scrollable track (matches min-width in CSS)
+  const totalWidth = 2800;
+
+  // year marks every 5 years
+  const yearMarks = document.createElement('div');
+  yearMarks.className = 'year-marks';
+  for (let y = 1960; y <= 2025; y += 5) {
+    const span = document.createElement('span');
+    span.style.left = (((y - minYear) / (maxYear - minYear)) * 100) + '%';
+    span.textContent = y;
+    yearMarks.appendChild(span);
+  }
+  timeline.appendChild(yearMarks);
+
+  // Compute x-positions and sort left→right
+  const enriched = timelineEvents.map(e => {
+    const pct = ((e.year - minYear) / (maxYear - minYear)) * 100;
+    return { ...e, xPct: pct, xPx: (pct / 100) * totalWidth };
+  }).sort((a, b) => a.xPx - b.xPx);
+
+  // Estimated label footprint (px) — allow two events to share a slot only
+  // if they're farther apart than this.
+  const estimateLabelWidth = (ev) => Math.max(80, ev.name.length * 5.8 + 30);
+
+  // 4 vertical slots: -2 (far above), -1 (close above), 1 (close below), 2 (far below)
+  // Prefer inner slots first (closer to the axis) so the silhouette stays tight.
+  const slotOrder = [-1, 1, -2, 2];
+  const placed = [];
+
+  enriched.forEach((ev) => {
+    const halfW = estimateLabelWidth(ev) / 2;
+    let chosen = null;
+    for (const slot of slotOrder) {
+      const conflict = placed.some(p => {
+        if (p.slot !== slot) return false;
+        const minDist = halfW + estimateLabelWidth(p) / 2 + 4;
+        return Math.abs(p.xPx - ev.xPx) < minDist;
+      });
+      if (!conflict) { chosen = slot; break; }
+    }
+    // Fallback: pick the slot whose nearest neighbor is farthest away
+    if (chosen === null) {
+      let best = slotOrder[0], bestDist = -Infinity;
+      for (const slot of slotOrder) {
+        const nearest = placed
+          .filter(p => p.slot === slot)
+          .reduce((m, p) => Math.min(m, Math.abs(p.xPx - ev.xPx)), Infinity);
+        if (nearest > bestDist) { bestDist = nearest; best = slot; }
+      }
+      chosen = best;
+    }
+    placed.push({ ...ev, slot: chosen });
+
+    const el = document.createElement('div');
+    el.className = 'event';
+    el.style.left = ev.xPct + '%';
+    el.setAttribute('data-slot', chosen);
+    el.setAttribute('title', `${ev.year} · ${ev.name} — ${ev.org}`);
+    el.innerHTML = `<div class="dot"></div><div class="label"><span class="year">${ev.year}</span><span class="name">${ev.name}</span></div>`;
+    el.addEventListener('click', () => {
+      document.getElementById(ev.section)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+    timeline.appendChild(el);
+  });
+}
+renderTimeline();
 </script>
 </body>
 </html>
