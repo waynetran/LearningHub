@@ -10,17 +10,21 @@
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
   onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError: false});"></script>
 <style>
+/* ── Allow content column to expand for the wide periodic table ── */
+.topic-layout { max-width: 1400px; }
+.topic-content { max-width: none; }
+
 /* ── Periodic Table Grid ─────────────────────────── */
 .pt-wrap { overflow-x: auto; margin: 24px 0; }
 .pt-grid {
   display: grid;
-  grid-template-columns: repeat(18, 44px);
-  grid-template-rows: repeat(10, 44px);
+  grid-template-columns: repeat(18, 40px);
+  grid-template-rows: repeat(10, 40px);
   gap: 3px;
-  min-width: 820px;
+  width: fit-content;
 }
 .el {
-  width: 44px; height: 44px;
+  width: 40px; height: 40px;
   border-radius: 4px;
   display: flex; flex-direction: column;
   align-items: center; justify-content: center;
@@ -155,7 +159,7 @@
 
   <article class="topic-content">
     <h1>Periodic Table — Elements, History &amp; Quantum Structure</h1>
-    <span class="chip">UPDATED Apr 11 2026 22:30</span>
+    <span class="chip">UPDATED Apr 11 2026 23:30</span>
     <p class="subtitle">From ancient Greek four-elements theory to 118 confirmed elements and quantum chromodynamics — a complete tour of what matter is made of, how we discovered the pattern, and what quantum mechanics tells us about structure inside the atom.</p>
     <div class="meta-tags">
       <span>Prereq: <a href="./atomic-structure.html">atomic structure</a>, basic algebra</span>
