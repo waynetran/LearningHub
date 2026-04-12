@@ -5,6 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Physics — The Behavior of Matter and Energy at Every Scale</title>
 <link rel="stylesheet" href="../styles.css">
+<style>
+  .timeline .event .dot { background: #22c55e; box-shadow: 0 0 0 2px rgba(34,197,94,0.25); }
+  .timeline .event:hover .dot { background: #4ade80; box-shadow: 0 0 0 3px rgba(34,197,94,0.35), 0 0 14px #22c55e; }
+</style>
 </head>
 <body>
 <div id="tooltip"></div>
@@ -27,11 +31,23 @@
 <!-- ============================================================ -->
 <div class="hero">
   <div class="hero-inner">
-    <span class="chip">UPDATED Apr 11 2026 18:45</span>
+    <span class="chip">UPDATED Apr 11 2026 21:00</span>
     <h1>Physics — The Behavior of Matter and Energy at Every Scale</h1>
     <p class="lede">A working tour of the ten subjects that describe how the universe runs, from quarks to galaxies. Classical mechanics for machines and vehicles, electromagnetism for chips and motors, thermodynamics for engines and data centers, relativity and quantum mechanics for the two revolutions that refuse to die. Each card opens a deep-dive page with worked examples, interactive figures, and practice problems. No formula appears without a glossary that names every symbol.</p>
   </div>
 </div>
+
+<header class="timeline-header">
+  <div class="timeline-inner">
+    <h3>&gt; <span class="highlight">TIMELINE · 300 BCE – 2026</span> &nbsp;&nbsp;FROM ARCHIMEDES TO GRAVITATIONAL WAVES</h3>
+    <p class="sub">Scroll horizontally · click any marker to jump to its section</p>
+    <div class="timeline-scroll">
+      <div class="timeline" id="timeline">
+        <div class="axis"></div>
+      </div>
+    </div>
+  </div>
+</header>
 
 <main>
   <div class="container">
@@ -126,6 +142,12 @@
           <p>Quantum gravity, the measurement problem, the hierarchy problem, dark sector searches, and what might break the Standard Model next.</p>
           <span class="tag">speculative</span>
         </a>
+        <a class="card card-link" href="./history-of-physics.html">
+          <h4>History of Physics</h4>
+          <p class="meta">philosophy → science · 2,500 years</p>
+          <p>From Aristotle's elements and the Islamic Golden Age through the Scientific Revolution to quantum mechanics. Includes correlations with ancient Eastern philosophy and why physics and philosophy are still entangled.</p>
+          <span class="tag hot">context</span>
+        </a>
       </div>
     </section>
 
@@ -204,11 +226,356 @@
       <p>Newton's laws are the traditional entry point. You'll recognize most of it from high school, but we'll build it back up from first principles and go as far as Lagrangian mechanics so you can see where modern physics actually starts.</p>
     </div>
 
+    <!-- ============================================================ -->
+    <section id="physicists">
+      <h2>The physicists who built it all <span class="era">// portraits in ideas</span></h2>
+      <p>Physics is an unusually personal science — its history is largely the history of a small number of people who saw something no one else did. These are the individuals whose frameworks we still use daily.</p>
+      <div class="physicist-grid">
+
+        <div class="physicist-card">
+          <img class="pc-photo" src="https://upload.wikimedia.org/wikipedia/commons/thumb/3/3b/Portrait_of_Sir_Isaac_Newton%2C_1689.jpg/300px-Portrait_of_Sir_Isaac_Newton%2C_1689.jpg" alt="Isaac Newton portrait" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+          <div class="pc-avatar" style="display:none">IN</div>
+          <div class="pc-body">
+            <div class="pc-name">Isaac Newton</div>
+            <div class="pc-dates">1643–1727</div>
+            <div class="pc-field">Classical mechanics · Gravitation · Optics</div>
+            <p class="pc-bio">Principia Mathematica unified terrestrial and celestial mechanics. Invented calculus and the inverse-square law of gravity. The most consequential single work in the history of science.</p>
+          </div>
+        </div>
+
+        <div class="physicist-card">
+          <img class="pc-photo" src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/57/James_Clerk_Maxwell.png/300px-James_Clerk_Maxwell.png" alt="James Clerk Maxwell portrait" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+          <div class="pc-avatar" style="display:none">JM</div>
+          <div class="pc-body">
+            <div class="pc-name">James Clerk Maxwell</div>
+            <div class="pc-dates">1831–1879</div>
+            <div class="pc-field">Electromagnetism · Statistical mechanics</div>
+            <p class="pc-bio">Four equations unified electricity, magnetism, and optics; predicted electromagnetic waves at the speed of light 22 years before Hertz confirmed them. Also founded statistical mechanics.</p>
+          </div>
+        </div>
+
+        <div class="physicist-card">
+          <img class="pc-photo" src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c8/Marie_Curie_c._1920s.jpg/300px-Marie_Curie_c._1920s.jpg" alt="Marie Curie portrait" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+          <div class="pc-avatar" style="display:none">MC</div>
+          <div class="pc-body">
+            <div class="pc-name">Marie Curie</div>
+            <div class="pc-dates">1867–1934</div>
+            <div class="pc-field">Radioactivity · Nuclear physics</div>
+            <p class="pc-bio">Discovered polonium and radium; coined "radioactivity." The only person to win Nobel Prizes in two sciences: Physics 1903, Chemistry 1911.</p>
+            <span class="pc-nobel">⭐ Nobel 1903 &amp; 1911</span>
+          </div>
+        </div>
+
+        <div class="physicist-card">
+          <img class="pc-photo" src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a3/Max_Planck_%281858-1947%29.jpg/300px-Max_Planck_%281858-1947%29.jpg" alt="Max Planck portrait" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+          <div class="pc-avatar" style="display:none">MP</div>
+          <div class="pc-body">
+            <div class="pc-name">Max Planck</div>
+            <div class="pc-dates">1858–1947</div>
+            <div class="pc-field">Quantum theory</div>
+            <p class="pc-bio">Quantized energy to fix blackbody radiation — called it "an act of desperation." Spent the rest of his career uncomfortable with what he had started. He started quantum mechanics.</p>
+            <span class="pc-nobel">⭐ Nobel 1918</span>
+          </div>
+        </div>
+
+        <div class="physicist-card">
+          <img class="pc-photo" src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/d3/Albert_Einstein_Head.jpg/300px-Albert_Einstein_Head.jpg" alt="Albert Einstein portrait" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+          <div class="pc-avatar" style="display:none">AE</div>
+          <div class="pc-body">
+            <div class="pc-name">Albert Einstein</div>
+            <div class="pc-dates">1879–1955</div>
+            <div class="pc-field">Special &amp; general relativity · QM</div>
+            <p class="pc-bio">In 1905: special relativity, photoelectric effect, Brownian motion, E=mc². In 1915: gravity as curved spacetime. Also predicted stimulated emission — the mechanism behind the laser.</p>
+            <span class="pc-nobel">⭐ Nobel 1921</span>
+          </div>
+        </div>
+
+        <div class="physicist-card">
+          <img class="pc-photo" src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/6d/Niels_Bohr.jpg/300px-Niels_Bohr.jpg" alt="Niels Bohr portrait" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+          <div class="pc-avatar" style="display:none">NB</div>
+          <div class="pc-body">
+            <div class="pc-name">Niels Bohr</div>
+            <div class="pc-dates">1885–1962</div>
+            <div class="pc-field">Atomic model · Copenhagen interpretation</div>
+            <p class="pc-bio">Quantum hydrogen atom model (1913) explained spectral lines. Articulated the Copenhagen interpretation and complementarity. His Copenhagen institute was the discipline's intellectual center for 20 years.</p>
+            <span class="pc-nobel">⭐ Nobel 1922</span>
+          </div>
+        </div>
+
+        <div class="physicist-card">
+          <img class="pc-photo" src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/f8/Heisenberg_10.jpg/300px-Heisenberg_10.jpg" alt="Werner Heisenberg portrait" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+          <div class="pc-avatar" style="display:none">WH</div>
+          <div class="pc-body">
+            <div class="pc-name">Werner Heisenberg</div>
+            <div class="pc-dates">1901–1976</div>
+            <div class="pc-field">Matrix mechanics · Uncertainty principle</div>
+            <p class="pc-bio">Matrix mechanics (1925) — quantum's first complete mathematical form. Uncertainty principle (1927): ΔxΔp ≥ ℏ/2. His algebraic formulation remains the natural language of modern field theory.</p>
+            <span class="pc-nobel">⭐ Nobel 1932</span>
+          </div>
+        </div>
+
+        <div class="physicist-card">
+          <img class="pc-photo" src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/2e/Erwin_Schr%C3%B6dinger_%281933%29.jpg/300px-Erwin_Schr%C3%B6dinger_%281933%29.jpg" alt="Erwin Schrödinger portrait" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+          <div class="pc-avatar" style="display:none">ES</div>
+          <div class="pc-body">
+            <div class="pc-name">Erwin Schrödinger</div>
+            <div class="pc-dates">1887–1961</div>
+            <div class="pc-field">Wave mechanics</div>
+            <p class="pc-bio">Wave equation (1926) gave quantum mechanics a form physicists could work with. His cat paradox — intended as reductio ad absurdum — became the most famous illustration of the measurement problem.</p>
+            <span class="pc-nobel">⭐ Nobel 1933</span>
+          </div>
+        </div>
+
+        <div class="physicist-card">
+          <img class="pc-photo" src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/00/Paul_Dirac%2C_1933.jpg/300px-Paul_Dirac%2C_1933.jpg" alt="Paul Dirac portrait" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+          <div class="pc-avatar" style="display:none">PD</div>
+          <div class="pc-body">
+            <div class="pc-name">Paul Dirac</div>
+            <div class="pc-dates">1902–1984</div>
+            <div class="pc-field">QFT · Antimatter</div>
+            <p class="pc-bio">Dirac equation (1928) combined QM and special relativity and predicted antimatter before any antiparticle was observed. His bra-ket notation remains standard. Papers are models of mathematical economy.</p>
+            <span class="pc-nobel">⭐ Nobel 1933</span>
+          </div>
+        </div>
+
+        <div class="physicist-card">
+          <img class="pc-photo" src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/d4/Enrico_Fermi_1943-49.jpg/300px-Enrico_Fermi_1943-49.jpg" alt="Enrico Fermi portrait" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+          <div class="pc-avatar" style="display:none">EF</div>
+          <div class="pc-body">
+            <div class="pc-name">Enrico Fermi</div>
+            <div class="pc-dates">1901–1954</div>
+            <div class="pc-field">Nuclear physics · Weak force</div>
+            <p class="pc-bio">Built the first nuclear reactor (Chicago Pile-1, 1942). Theory of beta decay and the weak interaction. Fermi statistics for half-integer spin particles. Originator of "Fermi estimation."</p>
+            <span class="pc-nobel">⭐ Nobel 1938</span>
+          </div>
+        </div>
+
+        <div class="physicist-card">
+          <img class="pc-photo" src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/1a/RichardFeynman-PaineMansionWoods1984_copyrightTamikoThiel_bw.jpg/300px-RichardFeynman-PaineMansionWoods1984_copyrightTamikoThiel_bw.jpg" alt="Richard Feynman portrait" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+          <div class="pc-avatar" style="display:none">RF</div>
+          <div class="pc-body">
+            <div class="pc-name">Richard Feynman</div>
+            <div class="pc-dates">1918–1988</div>
+            <div class="pc-field">QED · Path integrals</div>
+            <p class="pc-bio">Path integral formulation of QM and Feynman diagrams. Led the Challenger investigation. The Feynman Lectures on Physics remain the best physics introduction written. The most gifted communicator the field has produced.</p>
+            <span class="pc-nobel">⭐ Nobel 1965</span>
+          </div>
+        </div>
+
+        <div class="physicist-card">
+          <img class="pc-photo" src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e5/Noether.jpg/300px-Noether.jpg" alt="Emmy Noether portrait" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+          <div class="pc-avatar" style="display:none">EN</div>
+          <div class="pc-body">
+            <div class="pc-name">Emmy Noether</div>
+            <div class="pc-dates">1882–1935</div>
+            <div class="pc-field">Mathematical physics · Symmetry</div>
+            <p class="pc-bio">Noether's theorem: every continuous symmetry gives a conserved quantity. Arguably the most important theorem in theoretical physics. Einstein called her the most significant creative mathematical genius he'd encountered. Barred from faculty positions for being a woman.</p>
+          </div>
+        </div>
+
+        <div class="physicist-card">
+          <img class="pc-photo" src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/22/Murray_Gell-Mann_%281969%29.jpeg/300px-Murray_Gell-Mann_%281969%29.jpeg" alt="Murray Gell-Mann portrait" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+          <div class="pc-avatar" style="display:none">MG</div>
+          <div class="pc-body">
+            <div class="pc-name">Murray Gell-Mann</div>
+            <div class="pc-dates">1929–2019</div>
+            <div class="pc-field">Particle physics · QCD</div>
+            <p class="pc-bio">Quark model and the Eightfold Way. Co-developed QCD. Named quarks after Joyce's Finnegans Wake. Brought order to the particle zoo of the 1950s.</p>
+            <span class="pc-nobel">⭐ Nobel 1969</span>
+          </div>
+        </div>
+
+        <div class="physicist-card">
+          <img class="pc-photo" src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/eb/Stephen_Hawking.StarChild.jpg/300px-Stephen_Hawking.StarChild.jpg" alt="Stephen Hawking portrait" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+          <div class="pc-avatar" style="display:none">SH</div>
+          <div class="pc-body">
+            <div class="pc-name">Stephen Hawking</div>
+            <div class="pc-dates">1942–2018</div>
+            <div class="pc-field">Black holes · Cosmology</div>
+            <p class="pc-bio">Singularity theorems (with Penrose). Hawking radiation: black holes emit thermal radiation, connecting QM, thermodynamics, and gravity. Did his most important work after his ALS diagnosis.</p>
+          </div>
+        </div>
+
+        <div class="physicist-card">
+          <img class="pc-photo" src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/9c/Vera_Rubin.jpg/300px-Vera_Rubin.jpg" alt="Vera Rubin portrait" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+          <div class="pc-avatar" style="display:none">VR</div>
+          <div class="pc-body">
+            <div class="pc-name">Vera Rubin</div>
+            <div class="pc-dates">1928–2016</div>
+            <div class="pc-field">Dark matter · Observational astronomy</div>
+            <p class="pc-bio">First definitive evidence for dark matter from galaxy rotation curves: outer stars orbit too fast for visible mass to hold them. One of the most important observational discoveries of the century. Never awarded the Nobel Prize.</p>
+          </div>
+        </div>
+
+        <div class="physicist-card">
+          <img class="pc-photo" src="https://upload.wikimedia.org/wikipedia/commons/thumb/3/35/Steven_weinberg_2010.jpg/300px-Steven_weinberg_2010.jpg" alt="Steven Weinberg portrait" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+          <div class="pc-avatar" style="display:none">SW</div>
+          <div class="pc-body">
+            <div class="pc-name">Steven Weinberg</div>
+            <div class="pc-dates">1933–2021</div>
+            <div class="pc-field">Electroweak theory · Standard Model</div>
+            <p class="pc-bio">Co-developed electroweak unification: EM and weak forces are one at high energy. Framed the Standard Model as an effective field theory. Also wrote two of the finest physics books for general readers.</p>
+            <span class="pc-nobel">⭐ Nobel 1979</span>
+          </div>
+        </div>
+
+        <div class="physicist-card">
+          <img class="pc-photo" src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/46/Peter_Higgs%2C_2009.jpg/300px-Peter_Higgs%2C_2009.jpg" alt="Peter Higgs portrait" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+          <div class="pc-avatar" style="display:none">PH</div>
+          <div class="pc-body">
+            <div class="pc-name">Peter Higgs</div>
+            <div class="pc-dates">1929–2024</div>
+            <div class="pc-field">Higgs mechanism · Mass generation</div>
+            <p class="pc-bio">Higgs mechanism (1964): W and Z bosons acquire mass via spontaneous symmetry breaking. Waited 48 years for CERN to confirm the Higgs boson in 2012. Nobel followed in 2013.</p>
+            <span class="pc-nobel">⭐ Nobel 2013</span>
+          </div>
+        </div>
+
+        <div class="physicist-card">
+          <img class="pc-photo" src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/8e/AsSalam.jpg/300px-AsSalam.jpg" alt="Abdus Salam portrait" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+          <div class="pc-avatar" style="display:none">AS</div>
+          <div class="pc-body">
+            <div class="pc-name">Abdus Salam</div>
+            <div class="pc-dates">1926–1996</div>
+            <div class="pc-field">Electroweak unification</div>
+            <p class="pc-bio">Independently co-developed electroweak theory. First Pakistani and Muslim Nobel laureate in science. Founded the Abdus Salam ICTP in Trieste to build scientific capacity in developing nations.</p>
+            <span class="pc-nobel">⭐ Nobel 1979</span>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="next-card">
+        <div class="label">START HERE</div>
+        <a href="./classical-mechanics.html">→ Classical Mechanics</a>
+        <p>The entry point to the physics track: Newton's laws, energy, momentum, and Lagrangian mechanics — the language everything else is written in.</p>
+      </div>
+    </section>
+
   </div>
 </main>
 
 <script defer src="../search-index.js"></script>
 <script defer src="../search.js"></script>
+
+<script>
+// ============================================================
+// TIMELINE
+// ============================================================
+const timelineEvents = [
+  { year: 1609, name: "Galileo: kinematics & telescope", org: "Galileo Galilei", section: "overview" },
+  { year: 1687, name: "Principia Mathematica", org: "Isaac Newton", section: "overview" },
+  { year: 1798, name: "Cavendish: measures G", org: "Henry Cavendish", section: "overview" },
+  { year: 1820, name: "Electromagnetism link", org: "Ørsted / Ampère", section: "subjects" },
+  { year: 1831, name: "Electromagnetic induction", org: "Michael Faraday", section: "subjects" },
+  { year: 1865, name: "Maxwell's equations", org: "James Clerk Maxwell", section: "physicists" },
+  { year: 1887, name: "Michelson-Morley null result", org: "Michelson & Morley", section: "subjects" },
+  { year: 1895, name: "X-rays discovered", org: "Wilhelm Röntgen", section: "subjects" },
+  { year: 1896, name: "Radioactivity", org: "Henri Becquerel", section: "physicists" },
+  { year: 1900, name: "Planck's quantum", org: "Max Planck", section: "physicists" },
+  { year: 1905, name: "Einstein's miracle year", org: "Albert Einstein", section: "physicists" },
+  { year: 1911, name: "Rutherford atomic nucleus", org: "Ernest Rutherford", section: "subjects" },
+  { year: 1915, name: "General relativity", org: "Albert Einstein", section: "subjects" },
+  { year: 1919, name: "Eddington eclipse: GR confirmed", org: "Eddington", section: "subjects" },
+  { year: 1925, name: "Matrix mechanics", org: "Heisenberg", section: "physicists" },
+  { year: 1926, name: "Wave equation", org: "Schrödinger", section: "physicists" },
+  { year: 1927, name: "Uncertainty principle", org: "Heisenberg", section: "subjects" },
+  { year: 1928, name: "Dirac equation (antimatter)", org: "Paul Dirac", section: "physicists" },
+  { year: 1932, name: "Positron & neutron", org: "Anderson / Chadwick", section: "subjects" },
+  { year: 1942, name: "First nuclear reactor", org: "Fermi / CP-1", section: "physicists" },
+  { year: 1948, name: "QED renormalization", org: "Feynman / Schwinger / Tomonaga", section: "subjects" },
+  { year: 1954, name: "Yang-Mills gauge theory", org: "Yang & Mills", section: "subjects" },
+  { year: 1957, name: "BCS superconductivity", org: "Bardeen / Cooper / Schrieffer", section: "subjects" },
+  { year: 1964, name: "Quarks proposed", org: "Gell-Mann / Zweig", section: "physicists" },
+  { year: 1964, name: "Higgs mechanism", org: "Higgs / Englert / Brout", section: "physicists" },
+  { year: 1967, name: "Electroweak unification", org: "Weinberg / Salam", section: "physicists" },
+  { year: 1973, name: "Asymptotic freedom / QCD", org: "Gross / Politzer / Wilczek", section: "subjects" },
+  { year: 1974, name: "J/ψ: charm quark found", org: "SLAC / BNL", section: "subjects" },
+  { year: 1974, name: "Hawking radiation", org: "Stephen Hawking", section: "physicists" },
+  { year: 1977, name: "Dark matter rotation curves", org: "Vera Rubin", section: "physicists" },
+  { year: 1981, name: "Inflation theory", org: "Alan Guth", section: "subjects" },
+  { year: 1983, name: "W and Z bosons", org: "CERN / Rubbia", section: "subjects" },
+  { year: 1995, name: "Top quark", org: "Fermilab / CDF & D0", section: "subjects" },
+  { year: 1998, name: "Accelerating expansion", org: "Perlmutter / Riess / Schmidt", section: "subjects" },
+  { year: 2012, name: "Higgs boson", org: "CERN / ATLAS & CMS", section: "subjects" },
+  { year: 2015, name: "Gravitational waves (GW150914)", org: "LIGO", section: "subjects" },
+  { year: 2019, name: "Black hole image (M87*)", org: "Event Horizon Telescope", section: "subjects" },
+  { year: 2022, name: "Sgr A* imaged", org: "EHT", section: "subjects" },
+  { year: 2023, name: "Nanohertz GW background", org: "NANOGrav / PTA", section: "subjects" },
+  { year: 2024, name: "DESI: dark energy evolves?", org: "DESI Collaboration", section: "subjects" }
+];
+
+function renderTimeline() {
+  const timeline = document.getElementById('timeline');
+  const minYear = 1580, maxYear = 2027;
+
+  // Approximate width of the scrollable track (matches min-width in CSS)
+  const totalWidth = 3200;
+
+  // year marks every 25 years from 1600
+  const yearMarks = document.createElement('div');
+  yearMarks.className = 'year-marks';
+  for (let y = 1600; y <= 2025; y += 25) {
+    const span = document.createElement('span');
+    span.style.left = (((y - minYear) / (maxYear - minYear)) * 100) + '%';
+    span.textContent = y;
+    yearMarks.appendChild(span);
+  }
+  timeline.appendChild(yearMarks);
+
+  // Compute x-positions and sort left→right
+  const enriched = timelineEvents.map(e => {
+    const pct = ((e.year - minYear) / (maxYear - minYear)) * 100;
+    return { ...e, xPct: pct, xPx: (pct / 100) * totalWidth };
+  }).sort((a, b) => a.xPx - b.xPx);
+
+  // Estimated label footprint (px) — allow two events to share a slot only
+  // if they're farther apart than this.
+  const estimateLabelWidth = (ev) => Math.max(80, ev.name.length * 5.8 + 30);
+
+  // 4 vertical slots: -2 (far above), -1 (close above), 1 (close below), 2 (far below)
+  // Prefer inner slots first (closer to the axis) so the silhouette stays tight.
+  const slotOrder = [-1, 1, -2, 2];
+  const placed = [];
+
+  enriched.forEach((ev) => {
+    const halfW = estimateLabelWidth(ev) / 2;
+    let chosen = null;
+    for (const slot of slotOrder) {
+      const conflict = placed.some(p => {
+        if (p.slot !== slot) return false;
+        const minDist = halfW + estimateLabelWidth(p) / 2 + 4;
+        return Math.abs(p.xPx - ev.xPx) < minDist;
+      });
+      if (!conflict) { chosen = slot; break; }
+    }
+    // Fallback: pick the slot whose nearest neighbor is farthest away
+    if (chosen === null) {
+      let best = slotOrder[0], bestDist = -Infinity;
+      for (const slot of slotOrder) {
+        const nearest = placed
+          .filter(p => p.slot === slot)
+          .reduce((m, p) => Math.min(m, Math.abs(p.xPx - ev.xPx)), Infinity);
+        if (nearest > bestDist) { bestDist = nearest; best = slot; }
+      }
+      chosen = best;
+    }
+    placed.push({ ...ev, slot: chosen });
+
+    const el = document.createElement('div');
+    el.className = 'event';
+    el.style.left = ev.xPct + '%';
+    el.setAttribute('data-slot', chosen);
+    el.setAttribute('title', `${ev.year} · ${ev.name} — ${ev.org}`);
+    el.innerHTML = `<div class="dot"></div><div class="label"><span class="year">${ev.year}</span><span class="name">${ev.name}</span></div>`;
+    el.addEventListener('click', () => {
+      document.getElementById(ev.section)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+    timeline.appendChild(el);
+  });
+}
+renderTimeline();
+</script>
 </body>
 </html>
 </content>

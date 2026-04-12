@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>String Theory — Extra Dimensions, Dualities, and AdS/CFT</title>
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError: false});"></script>
+</head>
+<body>
+<div id="tooltip"></div>
+
+<nav class="topic-nav">
+  <a class="back" href="./index.html">← Physics Track</a>
+  <div class="crumb">Physics / <span class="topic-name">String Theory</span></div>
+</nav>
+
+<div class="topic-layout">
+  <aside class="topic-toc">
+    <h4>ON THIS PAGE</h4>
+    <ul>
+      <li><a href="#why">1. Why string theory?</a></li>
+      <li><a href="#bosonic">2. Bosonic string theory</a></li>
+      <li><a href="#superstrings">3. Superstrings and D=10</a></li>
+      <li><a href="#mtheory">4. M-theory and dualities</a></li>
+      <li><a href="#dbranes">5. D-branes</a></li>
+      <li><a href="#landscape">6. Compactification and the landscape</a></li>
+      <li><a href="#adscft">7. AdS/CFT and holography</a></li>
+      <li><a href="#blackholes">8. Strings and black holes</a></li>
+      <li><a href="#status">9. Experimental signatures and status</a></li>
+    </ul>
+  </aside>
+
+  <article class="topic-content">
+    <h1>String Theory</h1>
+    <p class="subtitle">From the original dual resonance model to M-theory, D-branes, holography, and the landscape. What string theory actually predicts, what it doesn't, and why physicists still work on it.</p>
+    <div class="meta-tags">
+      <span>Prereq: <a href="./quantum-mechanics.html">quantum mechanics</a>, <a href="./quantum-field-theory.html">quantum field theory</a>, <a href="./special-relativity.html">special relativity</a></span>
+      <span>Read time: ~50 min</span>
+      <span>Interactive figures: 1</span>
+      <span class="chip">UPDATED Apr 11 2026 20:00</span>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="why">1. Why string theory?</h2>
+
+    <p>Every successful quantum field theory relies on a crucial assumption: the fundamental objects are point particles — zero-dimensional objects occupying a single spacetime point at any instant. For the strong, weak, and electromagnetic forces this works beautifully. The Standard Model built from this assumption has passed every experimental test for fifty years. The trouble starts when you try to add <span class="term" data-label="Quantum gravity" data-def="A theory unifying general relativity (which describes spacetime curvature) with quantum mechanics. No fully satisfactory version exists — this is the central open problem of theoretical physics.">quantum gravity</span>.</p>
+
+    <p>Gravity is described by general relativity, and its force carrier is the <span class="term" data-label="Graviton" data-def="The hypothetical quantum particle that mediates gravitational force, analogous to the photon for electromagnetism. It is a massless spin-2 particle. No graviton has been detected directly.">graviton</span> — a massless spin-2 boson. If you write down a quantum field theory of gravitons as point particles and compute loop diagrams (corrections due to virtual graviton exchanges), you find that each loop integral diverges worse than the previous one. A theory that requires infinitely many independent counter-terms to absorb infinities is called <strong>non-renormalizable</strong>: perturbation theory breaks down completely at the <span class="term" data-label="Planck scale" data-def="The energy scale ~10¹⁹ GeV (or length ~10⁻³⁵ m) at which quantum gravitational effects become order-one. Current accelerators reach ~10⁴ GeV, so the Planck scale is 15 orders of magnitude away.">Planck scale</span> $E_{Pl} = \sqrt{\hbar c^5 / G} \approx 1.2 \times 10^{19}$ GeV.</p>
+
+    <p>The <span class="term" data-label="Ultraviolet divergence" data-def="A divergence in a loop integral that comes from integrating over arbitrarily large loop momenta (short distances). In renormalizable theories these are absorbed into finitely many parameters; in non-renormalizable theories they proliferate without bound.">ultraviolet divergence</span> problem in quantum gravity is not an accident of bad bookkeeping — it is a structural feature of point particles. When two point particles collide, their interaction happens at a single point of zero extent. The contribution to the amplitude from that collision grows without bound as you integrate over arbitrarily short distances. There is simply no geometric mechanism to cut off the integral.</p>
+
+    <p>The string-theoretic fix is conceptually simple: replace point particles with one-dimensional objects — <strong>strings</strong> — of a characteristic length $\ell_s$ (the <span class="term" data-label="String length" data-def="The characteristic size of a string, typically around the Planck length 10⁻³⁵ m. Below this scale the notion of spacetime itself is uncertain.">string length</span>). When two strings interact, the interaction is spread out over the string's extent. Instead of a pointlike vertex, you have a smooth worldsheet merging and splitting. Loop integrals receive a natural damping at momenta above $1/\ell_s$, making the UV behavior far better. In fact, it was proved in the 1980s that superstring theory is <strong>UV finite</strong> at every order in perturbation theory — the infinities that plague point-particle quantum gravity simply do not arise.</p>
+
+    <div class="callout">
+      <div class="label">THE COMPELLING ACCIDENT</div>
+      <p>String theory was not invented to fix quantum gravity. It was invented in 1968 by Gabriele Veneziano to describe the strong nuclear force. The <strong>Veneziano amplitude</strong> — a formula that matched the pattern of hadronic resonances at the time — turned out to be the scattering amplitude of relativistic strings. Dual resonance models were then abandoned when QCD was discovered. But in 1974, John Schwarz, Joel Scherk, and Tamiaki Yoneya noticed that the massless spin-2 mode that had seemed like a nuisance in the hadronic context was, in fact, a graviton — and the theory was not describing hadrons but quantum gravity. What started as an unwanted feature became the whole point.</p>
+    </div>
+
+    <p>Why is the spin-2 mode compelling? In any <span class="term" data-label="Consistent quantum theory" data-def="A quantum theory free of infinities, negative probabilities, and violations of unitarity (probability conservation).">consistent</span> relativistic quantum theory, a massless spin-2 particle mediating long-range interactions is forced by the <span class="term" data-label="Weinberg-Witten theorem" data-def="A theorem proving that a massless spin-2 particle cannot arise as a composite in theories with a Lorentz-covariant energy-momentum tensor. Gravitons must be fundamental.">spin-2 uniqueness theorem</span> to obey the same equations as a graviton. So string theory does not merely accommodate gravity — it requires it. Every consistent string theory contains gravity. This is remarkable: you start with a theory of 1D oscillating objects, and gravity falls out automatically.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="bosonic">2. Bosonic string theory</h2>
+
+    <p>The simplest string theory contains only bosons — no fermions, no supersymmetry. It is not physically realistic (it has a <span class="term" data-label="Tachyon" data-def="A particle with imaginary mass, meaning it travels faster than light in classical physics. In QFT, a tachyonic mode signals an instability of the vacuum. Bosonic string theory contains a tachyon in its spectrum, indicating the theory sits at an unstable point.">tachyon</span> in its spectrum), but it cleanly illustrates the mathematical structure that all string theories share.</p>
+
+    <h3>The worldsheet</h3>
+
+    <p>A point particle sweeps out a <strong>worldline</strong> in spacetime — a one-dimensional curve parameterized by proper time $\tau$. A string sweeps out a <span class="term" data-label="Worldsheet" data-def="The two-dimensional surface swept out by a string as it propagates through spacetime. Parameterized by two coordinates: τ (timelike) and σ (spacelike along the string). The worldsheet is to strings what the worldline is to particles.">worldsheet</span> — a two-dimensional surface parameterized by $(\tau, \sigma)$, where $\tau$ is a timelike coordinate and $\sigma \in [0, \pi]$ is a spacelike coordinate running along the string. The embedding of the worldsheet in $D$-dimensional spacetime is given by $D$ functions $X^\mu(\tau, \sigma)$, $\mu = 0, 1, \ldots, D-1$.</p>
+
+    <p>The classical action that minimizes the area of the worldsheet is the <strong>Nambu-Goto action</strong>:</p>
+
+    <div class="math-display">$$S_{NG} = -\frac{1}{2\pi\alpha'} \int d\tau\, d\sigma\, \sqrt{-\det(\partial_a X^\mu \partial_b X_\mu)}.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Nambu-Goto action</p>
+      <dl>
+        <dt>$\alpha'$</dt><dd>The Regge slope, related to the string tension $T$ by $\alpha' = 1/(2\pi T)$. Also written $\ell_s^2$. Sets the characteristic energy scale of string excitations: $m_{\text{string}} \sim 1/\sqrt{\alpha'}$.</dd>
+        <dt>$\partial_a X^\mu$</dt><dd>Derivatives of the embedding coordinates with respect to worldsheet coordinates $a \in \{\tau, \sigma\}$. There are two of them, giving a $2 \times 2$ induced metric on the worldsheet.</dd>
+        <dt>$\det(\partial_a X^\mu \partial_b X_\mu)$</dt><dd>The determinant of the induced worldsheet metric. Its square root is the infinitesimal area element.</dd>
+        <dt>$-1/(2\pi\alpha')$</dt><dd>The string tension factor, making the action dimensionless (in natural units). More tension means heavier excited states.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Analogy.</strong> A soap film minimizes its area — that is its classical equation of motion. The Nambu-Goto string does the same thing in spacetime: it evolves to minimize the area of the worldsheet it sweeps. The quantum string is then a path integral over all worldsheet shapes, weighted by $e^{iS_{NG}/\hbar}$.</p>
+    </div>
+
+    <p>The Nambu-Goto action has a square root, which makes quantization awkward. The equivalent but more tractable form is the <strong>Polyakov action</strong>, which introduces an auxiliary worldsheet metric $h_{ab}$:</p>
+
+    <div class="math-display">$$S_P = -\frac{T}{2}\int d^2\sigma\, \sqrt{-h}\, h^{ab} \partial_a X^\mu \partial_b X_\mu.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Polyakov action</p>
+      <dl>
+        <dt>$T$</dt><dd>The string tension, $T = 1/(2\pi\alpha')$. It has dimensions of mass per unit length (energy per unit length in natural units).</dd>
+        <dt>$d^2\sigma$</dt><dd>Integration over the two worldsheet coordinates $(\tau,\sigma)$. This is a two-dimensional integral — a profound simplification over the four-dimensional spacetime integrals of ordinary QFT.</dd>
+        <dt>$h_{ab}$</dt><dd>An auxiliary worldsheet metric — an independent variable in the action. Its equation of motion sets it equal to the induced metric from $X^\mu$, recovering the Nambu-Goto action on shell.</dd>
+        <dt>$\sqrt{-h}$</dt><dd>The square root of $-\det(h_{ab})$, the invariant worldsheet volume element. Makes the action independent of the choice of worldsheet coordinates.</dd>
+        <dt>$h^{ab}$</dt><dd>The inverse of $h_{ab}$. Used to contract worldsheet indices.</dd>
+        <dt>$\partial_a X^\mu \partial_b X_\mu$</dt><dd>The pullback of the spacetime metric to the worldsheet. This is the kinetic term: it measures how the string's embedding curves through spacetime.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why this matters.</strong> The Polyakov action is quadratic in $X^\mu$, which means the equations of motion are linear wave equations. You can solve them by mode expansion (Fourier series along the string), and then quantize each mode as a harmonic oscillator — the same strategy that works for the free scalar field in QFT.</p>
+    </div>
+
+    <h3>Mode expansion and the Virasoro algebra</h3>
+
+    <p>In <span class="term" data-label="Conformal gauge" data-def="A choice of worldsheet coordinates in which the worldsheet metric is conformally flat: h_{ab} = e^φ η_{ab}. This simplifies the equations of motion enormously and is the standard gauge choice in string theory.">conformal gauge</span> ($h_{ab} \propto \eta_{ab}$), the Polyakov equations of motion become free 2D wave equations $(\partial_\tau^2 - \partial_\sigma^2) X^\mu = 0$, solved by a Fourier mode expansion. A closed string (periodic in $\sigma$) has both <strong>left-movers</strong> and <strong>right-movers</strong>:</p>
+
+    <div class="math-display">$$X^\mu(\tau,\sigma) = X^\mu_L(\tau + \sigma) + X^\mu_R(\tau - \sigma).$$</div>
+
+    <p>Each sector contains an infinite tower of oscillator modes $\alpha^\mu_n$ (right) and $\tilde\alpha^\mu_n$ (left), $n \in \mathbb{Z}$. Canonical quantization promotes these to operators satisfying $[\alpha^\mu_m, \alpha^\nu_n] = m \delta_{m+n,0} \eta^{\mu\nu}$. The physical state conditions — that the stress-energy tensor of the worldsheet vanishes — generate the <span class="term" data-label="Virasoro algebra" data-def="The infinite-dimensional algebra of constraints that physical string states must satisfy. It is generated by modes L_n of the worldsheet stress tensor, satisfying [L_m, L_n] = (m-n)L_{m+n} + (c/12)(m³-m)δ_{m+n,0}, where c is the central charge.">Virasoro algebra</span> $[L_m, L_n] = (m-n)L_{m+n} + \frac{c}{12}(m^3-m)\delta_{m+n,0}$.</p>
+
+    <h3>Critical dimension</h3>
+
+    <p>When you <span class="term" data-label="Normal ordering" data-def="A prescription for ordering operators in quantum field theory that puts all creation operators to the left of all annihilation operators. This removes the infinite zero-point energy from each mode, but leaves a finite residual that depends on the number of dimensions.">normal-order</span> the Virasoro constraints, you find a vacuum energy contribution from each spacetime dimension. The Virasoro algebra has a central charge $c$ equal to the number of bosonic worldsheet fields, which equals the number of spacetime dimensions $D$. Requiring that the quantum constraints be consistent — specifically that ghost states decouple from all physical observables — forces $c = 26$ for the bosonic string, i.e., $D = 26$.</p>
+
+    <div class="defn">
+      <strong>Critical dimension.</strong> The bosonic string requires spacetime to have exactly 26 dimensions for the quantum theory to be consistent. The superstring requires exactly 10. These are not inputs; they are outputs of requiring the worldsheet conformal field theory to be anomaly-free.
+    </div>
+
+    <p>The mass spectrum includes a ground state (lowest-mode oscillation) with $m^2 = -1/\alpha'$ — a tachyon, signaling the instability of the bosonic string vacuum. The next level contains a massless spin-2 state — the graviton — plus massless scalars. Higher levels give an infinite tower of massive particles with masses $m^2 \sim n/\alpha'$. For open strings (with Neumann or Dirichlet boundary conditions at the endpoints), the spectrum is halved: only right-movers or only left-movers, and the gauge group resides on the endpoints.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="superstrings">3. Superstrings and the critical dimension D=10</h2>
+
+    <p>The bosonic string has two fatal problems: the tachyon and the absence of fermions. Both are cured by adding <span class="term" data-label="Worldsheet supersymmetry" data-def="A symmetry of the worldsheet action that relates the bosonic embedding coordinates X^μ to fermionic partners ψ^μ. It eliminates the tachyon and halves the critical dimension from 26 to 10.">worldsheet supersymmetry</span>: for each bosonic coordinate $X^\mu$ you add a fermionic partner $\psi^\mu$ — a two-component Majorana spinor on the worldsheet.</p>
+
+    <h3>NS and R sectors</h3>
+
+    <p>Fermions on a worldsheet can be periodic or antiperiodic. This gives two sectors:</p>
+    <ul>
+      <li><strong>Neveu-Schwarz (NS) sector</strong>: $\psi^\mu$ antiperiodic around the string. The ground state is a spacetime boson. The tachyon lives here but is projected out.</li>
+      <li><strong>Ramond (R) sector</strong>: $\psi^\mu$ periodic. The ground state is a spacetime spinor — the first appearance of fermions.</li>
+    </ul>
+
+    <p>The <span class="term" data-label="GSO projection" data-def="The Gliozzi-Scherk-Olive projection: a restriction to states of definite worldsheet fermion number. It eliminates the tachyon from the NS sector and produces a spectrum with spacetime supersymmetry. Without GSO, the superstring is inconsistent.">GSO projection</span> (Gliozzi, Scherk, Olive, 1977) keeps only states of definite worldsheet fermion parity. The result is: the tachyon is projected out; the spectrum is tachyon-free; and the NS and R sectors pair up into a spacetime supersymmetric spectrum. The critical dimension drops from 26 to $D = 10$.</p>
+
+    <h3>The five superstring theories</h3>
+
+    <p>Depending on how left-movers and right-movers are handled and what boundary conditions are applied, there are five consistent superstring theories in 10 dimensions:</p>
+
+    <table class="rank-table">
+      <thead>
+        <tr>
+          <th>Theory</th>
+          <th>Open/Closed</th>
+          <th>Supersymmetry (spacetime)</th>
+          <th>Gauge group</th>
+          <th>Allowed D-brane dimensions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Type I</strong></td>
+          <td>Open + closed, unoriented</td>
+          <td>$\mathcal{N}=1$, $D=10$</td>
+          <td>$SO(32)$</td>
+          <td>D1, D5, D9</td>
+        </tr>
+        <tr>
+          <td><strong>Type IIA</strong></td>
+          <td>Closed, oriented</td>
+          <td>$\mathcal{N}=(1,1)$, non-chiral</td>
+          <td>$U(1)$ (from R-R)</td>
+          <td>D0, D2, D4, D6, D8</td>
+        </tr>
+        <tr>
+          <td><strong>Type IIB</strong></td>
+          <td>Closed, oriented</td>
+          <td>$\mathcal{N}=(2,0)$, chiral</td>
+          <td>None (from perturbative sector)</td>
+          <td>D(-1), D1, D3, D5, D7, D9</td>
+        </tr>
+        <tr>
+          <td><strong>Het SO(32)</strong></td>
+          <td>Closed, oriented</td>
+          <td>$\mathcal{N}=1$, $D=10$</td>
+          <td>$SO(32)$</td>
+          <td>None (perturbative)</td>
+        </tr>
+        <tr>
+          <td><strong>Het E₈×E₈</strong></td>
+          <td>Closed, oriented</td>
+          <td>$\mathcal{N}=1$, $D=10$</td>
+          <td>$E_8 \times E_8$</td>
+          <td>None (perturbative)</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p>The <span class="term" data-label="Heterotic string" data-def="A string theory where left-movers and right-movers are treated differently: left-movers are bosonic (D=26), right-movers are supersymmetric (D=10). The mismatch is resolved by adding a 16-dimensional lattice compactification that produces an E₈×E₈ or SO(32) gauge group. Heterotic strings are closed only.">heterotic theories</span> are hybrid constructions where left-movers are bosonic (living in 26 dimensions) and right-movers are supersymmetric (living in 10 dimensions). The extra 16 dimensions of the left-movers are compactified on one of two special lattices, producing either $SO(32)$ or $E_8 \times E_8$ gauge symmetry. The $E_8 \times E_8$ heterotic string was for a long time considered the most promising for phenomenology because $E_8 \supset SU(5) \supset SU(3) \times SU(2) \times U(1)$ — the Standard Model gauge group can be embedded inside it.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="mtheory">4. M-theory and dualities</h2>
+
+    <p>By the early 1990s, physicists had five superstring theories and one 11-dimensional supergravity. That felt like five too many. In 1995, Edward Witten gave a celebrated talk proposing that all five superstring theories — plus 11D supergravity — are different limiting descriptions of a single 11-dimensional theory he called <strong>M-theory</strong>. The web of <span class="term" data-label="Duality" data-def="In string theory, a duality is an exact equivalence between two apparently different theories. Under a duality map, every state and observable in one theory corresponds to a state and observable in the other — they are literally the same theory in different variables.">dualities</span> connecting them is one of the most striking structures in modern theoretical physics.</p>
+
+    <div class="defn">
+      <strong>M-theory.</strong> An 11-dimensional theory (9 spatial + 1 time) whose low-energy limit is 11-dimensional supergravity. The five 10-dimensional superstring theories emerge as special limits when one of the 11 dimensions is compactified or when the string coupling is taken to zero. M-theory has no known Lagrangian — only its low-energy effective field theory and its spectrum of extended objects (M2-branes and M5-branes) are known.
+    </div>
+
+    <h3>T-duality</h3>
+
+    <p><span class="term" data-label="T-duality" data-def="A string theory duality that maps a string compactified on a circle of radius R to a string on a circle of radius α'/R. It exchanges momentum modes with winding modes. T-duality relates Type IIA ↔ Type IIB and the two heterotic theories.">T-duality</span> is a perturbative duality visible even at weak string coupling. Compactify one spatial dimension on a circle of radius $R$. A string can have momentum modes (quantized as $n/R$) and winding modes (wrapping the circle $w$ times, with energy $wR/\alpha'$). The spectrum is invariant under the exchange $R \leftrightarrow \alpha'/R$ combined with swapping $n \leftrightarrow w$. This maps Type IIA on a small circle to Type IIB on a large circle, and vice versa. At the self-dual radius $R = \sqrt{\alpha'}$, the spectrum develops an enhanced gauge symmetry.</p>
+
+    <h3>S-duality</h3>
+
+    <p><span class="term" data-label="S-duality" data-def="A duality that maps the coupling constant g_s to 1/g_s, exchanging weak and strong coupling. It maps Type I to heterotic SO(32), and maps Type IIB to itself. S-duality is non-perturbative — it cannot be seen in perturbation theory.">S-duality</span> maps a theory at string coupling $g_s$ to another theory at coupling $1/g_s$. This exchanges the weakly coupled description with the strongly coupled one. Type I with coupling $g_s$ is dual to the $SO(32)$ heterotic string at coupling $1/g_s$. Type IIB is self-dual under S-duality. S-duality implies that heavy non-perturbative objects (D-branes) in one theory become light perturbative strings in another.</p>
+
+    <h3>The 11D limit</h3>
+
+    <p>Type IIA string theory at strong coupling $g_s \to \infty$ grows an extra circular dimension of radius $R_{11} = g_s^{2/3} \ell_s$. The tower of D0-branes becomes the Kaluza-Klein momentum modes of an 11-dimensional theory — 11D supergravity. The fundamental string becomes the M2-brane wrapped on the emerging circle. This is why the web of dualities converges on an 11-dimensional theory: the string coupling is not a free parameter but a geometric modulus — the radius of an extra dimension.</p>
+
+    <p>M-theory also contains <strong>M2-branes</strong> (membranes, 2 spatial dimensions) and <strong>M5-branes</strong> (5 spatial dimensions). These are the fundamental extended objects of M-theory, and all the branes of the five string theories can be understood as M-branes wrapped or reduced on the extra dimensions.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="dbranes">5. D-branes</h2>
+
+    <p>In 1995, Joseph Polchinski showed that certain extended objects called <span class="term" data-label="D-brane" data-def="A dynamical hypersurface (extended object) in string theory on which open strings can end. 'D' stands for Dirichlet: the open string endpoint satisfies Dirichlet boundary conditions in the directions transverse to the brane. D-branes are non-perturbative objects with tension proportional to 1/g_s.">D-branes</span> are required for the consistency of string dualities — they are not optional add-ons but necessary components of the theory. A Dp-brane is an object with $p$ spatial dimensions: a D0-brane is a point, a D1-brane is a string, a D2-brane is a membrane, and so on.</p>
+
+    <div class="defn">
+      <strong>D-brane definition.</strong> A Dp-brane is a $(p+1)$-dimensional hypersurface in spacetime on which open strings end. The endpoints of open strings satisfy Dirichlet boundary conditions in the $9-p$ transverse directions (they are fixed to the brane's location) and Neumann boundary conditions along the brane (they move freely along it).
+    </div>
+
+    <p>The tension (energy per unit volume) of a Dp-brane scales as $T_{Dp} \propto 1/(g_s \ell_s^{p+1})$. At weak coupling $g_s \ll 1$, D-branes are very heavy — much heavier than fundamental strings (which have tension $\sim 1/\ell_s^2$, independent of $g_s$). This is why they do not appear in perturbation theory. At strong coupling, D-branes become light and dominate.</p>
+
+    <h3>Gauge theory from D-branes</h3>
+
+    <p>The <span class="term" data-label="Open string spectrum" data-def="The spectrum of states of an open string whose endpoints are attached to a D-brane. The massless sector contains a gauge field A_μ (one per brane) and scalar fields describing transverse fluctuations of the brane.">open string spectrum</span> on a single Dp-brane contains a massless $U(1)$ gauge field $A_\mu$ (the photon) living on the brane's $(p+1)$-dimensional worldvolume, plus $9-p$ real scalar fields describing the brane's transverse position in spacetime. Now stack $N$ coincident Dp-branes. An open string can begin on any of the $N$ branes and end on any of the $N$ branes, giving $N^2$ possible string types labelled by a pair of indices $i, j \in \{1, \ldots, N\}$ — the <span class="term" data-label="Chan-Paton factors" data-def="Matrix labels i,j attached to the endpoints of an open string indicating which brane each endpoint lives on. For N coincident branes, these give N² types of open strings, whose massless sector organizes into a U(N) gauge field.">Chan-Paton factors</span>. The massless vector fields then form an $N \times N$ matrix — a non-abelian $U(N)$ gauge field. At low energies, the D-brane worldvolume theory is $U(N)$ Yang-Mills gauge theory.</p>
+
+    <p>This is a profound result: <strong>non-abelian gauge theories live on D-branes</strong>. It is the starting point for the AdS/CFT correspondence (Section 7) and for string phenomenology attempts to derive the Standard Model from intersecting D-branes wrapping cycles of a compact Calabi-Yau manifold.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="landscape">6. Compactification and the landscape</h2>
+
+    <p>String theory requires 10 spacetime dimensions. We observe 4. The standard resolution is <span class="term" data-label="Compactification" data-def="The process of making extra dimensions too small to be directly observed by wrapping them on a compact manifold. If the manifold has radius R, extra dimensions become visible only at energies above ℏc/R, which for R ~ Planck length is far above any accelerator.">compactification</span>: the 6 extra spatial dimensions are curled up on a compact manifold too small to see at accessible energies. The shape and topology of this manifold determine the effective 4-dimensional physics — the particle content, gauge group, and coupling constants.</p>
+
+    <h3>Calabi-Yau manifolds</h3>
+
+    <p>Preserving $\mathcal{N}=1$ supersymmetry in 4D (needed for the lightest superpartners to remain light and protect the Higgs mass) requires the internal 6-manifold to be a <span class="term" data-label="Calabi-Yau manifold" data-def="A complex 3-fold (6 real dimensions) with SU(3) holonomy and vanishing first Chern class. It admits a Ricci-flat Kähler metric. The number of independent 3-cycles (counted by Hodge numbers h^{1,1} and h^{2,1}) determines how many chiral multiplets appear in 4D.">Calabi-Yau manifold</span> — a complex three-fold with $SU(3)$ holonomy and vanishing first Chern class $c_1 = 0$. These are characterized by two <span class="term" data-label="Hodge numbers" data-def="Topological invariants h^{p,q} of a complex manifold counting the independent (p,q)-forms. For a Calabi-Yau threefold, the relevant ones are h^{1,1} (counting Kähler moduli, related to sizes of 2-cycles) and h^{2,1} (counting complex structure moduli, related to shapes).">Hodge numbers</span> $h^{1,1}$ and $h^{2,1}$. The total number of massless scalar fields (moduli) in 4D is $h^{1,1} + h^{2,1}$: the Kähler moduli describe the sizes of the internal two-cycles, and the complex structure moduli describe their shapes. The Euler characteristic of the Calabi-Yau determines the number of chiral generations in the 4D theory.</p>
+
+    <h3>The moduli problem and flux compactification</h3>
+
+    <p>A compactification with unfixed <span class="term" data-label="Moduli" data-def="Massless scalar fields that parameterize flat directions of the potential — the shape and size parameters of the compact manifold. They are problematic because massless scalars mediate long-range forces not observed in nature, and because the low-energy physics depends on their values.">moduli</span> is phenomenologically disastrous: massless scalars couple to matter with gravitational strength, mediating unobserved fifth forces. The moduli must be stabilized — given masses by some mechanism that generates a potential.</p>
+
+    <p><strong>Flux compactification</strong> turns on quantized background <span class="term" data-label="Fluxes" data-def="Quantized background values of antisymmetric tensor fields (generalizations of a magnetic flux through a surface) threading the compact cycles. Their presence generates a potential for the geometric moduli, stabilizing them at specific values. Different flux quanta give different vacua.">fluxes</span> — higher-dimensional generalizations of magnetic flux threading the compact cycles. Each choice of flux quantum numbers (integers) gives a different vacuum, with different values of the moduli, different effective cosmological constant, and different low-energy physics. The <strong>KKLT mechanism</strong> (Kachru, Kallosh, Linde, Trivedi, 2003) stabilizes all moduli in a supersymmetric anti-de Sitter vacuum and then lifts it to a de Sitter (positive cosmological constant) vacuum using anti-D3-branes.</p>
+
+    <h3>The landscape</h3>
+
+    <div class="defn">
+      <strong>The landscape.</strong> The totality of all metastable vacua of string theory obtained by flux compactification. Current estimates suggest approximately $10^{500}$ distinct vacua, each with different gauge groups, particle content, and cosmological constant. There is no known dynamical principle that selects one over another.
+    </div>
+
+    <p>This enormous number has a profound implication: if the landscape is real, our universe is just one particular vacuum, selected not by any theoretical principle but perhaps by <span class="term" data-label="Anthropic reasoning" data-def="The argument that observers can only find themselves in vacua where the laws of physics permit complex structures (galaxies, stars, chemistry, life). Applied to the cosmological constant: most landscape vacua have |Λ| too large for structure formation; we live in one of the rare vacua with Λ ~ 10⁻¹²² M_Pl⁴.">anthropic reasoning</span>: we live in a vacuum compatible with the existence of observers. This was anticipated by Steven Weinberg's 1987 prediction that the cosmological constant cannot be much larger than the observed value $\Lambda \sim 10^{-122} M_{Pl}^4$, because larger values would have prevented galaxies from forming. The prediction was confirmed in 1998 when supernovae measurements revealed the accelerating expansion of the universe.</p>
+
+    <h3>The swampland</h3>
+
+    <p>The <span class="term" data-label="Swampland" data-def="The set of effective field theories that look consistent at low energies but cannot be embedded in any consistent quantum gravity theory. The landscape is the set of EFTs that CAN be embedded. Swampland conjectures aim to identify which theories are in the swampland.">swampland program</span> asks: which effective field theories can be consistently embedded in quantum gravity? Swampland conjectures (Vafa and collaborators, 2005–present) propose constraints on any consistent theory of quantum gravity. Two prominent examples: the <strong>de Sitter conjecture</strong> suggests that stable de Sitter vacua (with positive $\Lambda$) cannot exist in string theory, in tension with KKLT; the <strong>distance conjecture</strong> says that as you move far in field space, an infinite tower of light states appears, preventing you from taking a simple effective field theory limit. These conjectures offer a new approach to falsifiability: they make predictions about what kinds of physics (dark energy models, inflationary models) are or are not consistent with quantum gravity.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="adscft">7. AdS/CFT and holography</h2>
+
+    <p>In 1997, Juan Maldacena published a paper proposing an exact equivalence between a theory of quantum gravity and a quantum field theory with no gravity at all — living in one fewer dimension. This is the <span class="term" data-label="AdS/CFT correspondence" data-def="Anti-de Sitter/Conformal Field Theory correspondence. Maldacena's 1997 duality proposing that Type IIB string theory on AdS₅×S⁵ is exactly equivalent to 4-dimensional N=4 super Yang-Mills theory. The most studied and most convincingly established duality in string theory.">AdS/CFT correspondence</span>, also called the Maldacena duality or gauge/gravity duality. It is the most important discovery in string theory since the second superstring revolution.</p>
+
+    <div class="callout">
+      <div class="label">THE DUALITY STATEMENT</div>
+      <p>Type IIB superstring theory on <span class="term" data-label="Anti-de Sitter space" data-def="AdS space: a maximally symmetric spacetime with constant negative curvature. In Lorentzian signature, AdS_d is the hyperboloid x₀² + x_d² - x₁² - ... - x_{d-1}² = R² in (d+1)-dimensional flat space. It has a timelike boundary at spatial infinity — on which the dual CFT lives.">$\text{AdS}_5 \times S^5$</span> is exactly dual to 4-dimensional $\mathcal{N}=4$ <span class="term" data-label="Super Yang-Mills" data-def="N=4 super Yang-Mills: a maximally supersymmetric gauge theory in 4D with gauge group SU(N). It is a conformal field theory (no running coupling) and is the boundary theory in the AdS₅×S⁵ duality. Its coupling constant is g_YM.">super Yang-Mills</span> with gauge group $SU(N)$. The two theories have identical Hilbert spaces, identical operator algebras, and identical S-matrices. Every state, every observable, every correlation function in one theory maps to a corresponding quantity in the other.
+      </p>
+    </div>
+
+    <h3>The dictionary</h3>
+
+    <p>The precise identification of parameters between the two sides is:</p>
+
+    <div class="math-display">$$g_s = \frac{g_{YM}^2}{4\pi}, \qquad \left(\frac{R}{\ell_s}\right)^4 = 4\pi g_s N = g_{YM}^2 N \equiv \lambda,$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">AdS/CFT parameter dictionary</p>
+      <dl>
+        <dt>$g_s$</dt><dd>String coupling constant. Controls the quantum string loop expansion on the bulk (gravity) side.</dd>
+        <dt>$g_{YM}$</dt><dd>Yang-Mills coupling on the boundary gauge theory side.</dd>
+        <dt>$R$</dt><dd>The AdS radius (= the S⁵ radius). Sets the curvature of the bulk spacetime. Large $R$ means weakly curved, tractable classical gravity.</dd>
+        <dt>$\ell_s$</dt><dd>String length. The ratio $R/\ell_s$ controls whether the bulk description is classical supergravity ($R \gg \ell_s$) or requires full string theory ($R \sim \ell_s$).</dd>
+        <dt>$\lambda = g_{YM}^2 N$</dt><dd>The 't Hooft coupling. At large $N$ and large $\lambda$, the bulk is weakly curved classical supergravity — easy to compute. At large $N$ but small $\lambda$, the boundary theory is weakly coupled — a perturbative gauge theory calculation. The duality is most useful when one side is hard and the other is easy.</dd>
+        <dt>$N$</dt><dd>The number of colors in the gauge group $SU(N)$. Related to the gravitational coupling by $G_N \sim \ell_s^8/(R^5) \sim 1/N^2$.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>The key insight.</strong> The boundary theory does not contain gravity. The bulk theory is a theory of quantum gravity (string theory). They are the same theory. This is holography: a gravitational theory in $(d+1)$ dimensions is encoded in a non-gravitational theory in $d$ dimensions. Every aspect of the bulk geometry — including the formation and evaporation of black holes — is described by unitary time evolution in the boundary gauge theory.</p>
+    </div>
+
+    <h3>Bulk–boundary dictionary</h3>
+
+    <p>Every local operator $\mathcal{O}(x)$ in the boundary CFT corresponds to a bulk field $\phi$ with the appropriate quantum numbers. The <span class="term" data-label="AdS radial direction" data-def="The extra dimension in AdS space, often called z or r. It encodes the energy scale of the boundary theory: near the boundary (z→0) corresponds to the UV (high energy); deep in the bulk (z→∞) corresponds to the IR (low energy). Moving radially is equivalent to an RG flow.">AdS radial direction</span> $z$ encodes the renormalization group scale of the boundary theory — physics near the boundary ($z \to 0$) is UV physics; physics deep in the bulk is IR physics. A black hole in AdS at temperature $T_H$ is dual to the boundary CFT in a thermal state at the same temperature. The area of the bulk black hole horizon gives the entropy of the thermal boundary state via the Bekenstein-Hawking formula.</p>
+
+    <h3>Applications: holographic QCD and condensed matter</h3>
+
+    <p>AdS/CFT allows computation of strongly coupled gauge theory observables using classical gravity — turning an intractable field theory calculation into a tractable general relativity problem. Key results:</p>
+
+    <ul>
+      <li><strong>Quark-gluon plasma viscosity.</strong> The ratio of shear viscosity to entropy density for any theory with an Einstein gravity dual is $\eta/s = 1/(4\pi)$ (in units of $\hbar/k_B$). This is a universal <em>lower bound</em> conjectured to hold for all fluids. The <span class="term" data-label="RHIC" data-def="Relativistic Heavy Ion Collider at Brookhaven National Laboratory. It creates quark-gluon plasma — a state of deconfined quarks and gluons — by smashing gold nuclei together at nearly the speed of light. Measurements of η/s from RHIC and LHC are close to the AdS/CFT prediction of 1/4π.">RHIC</span> heavy-ion experiments at Brookhaven measure $\eta/s$ of the quark-gluon plasma and find values close to $1/(4\pi)$, remarkably consistent with the holographic prediction for a strongly coupled fluid.</li>
+      <li><strong>Holographic superconductors.</strong> A charged black hole in AdS develops a scalar hair below a critical temperature, dual to a superconducting phase transition in the boundary theory. Holographic models reproduce the qualitative (and sometimes quantitative) features of strongly coupled superconductors.</li>
+      <li><strong>Entanglement entropy.</strong> The Ryu-Takayanagi formula gives the entanglement entropy of a region $A$ in the CFT in terms of a minimal surface in the bulk.</li>
+    </ul>
+
+    <div class="math-display">$$S(A) = \frac{\text{Area}(\gamma_A)}{4G_N}.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Ryu-Takayanagi formula</p>
+      <dl>
+        <dt>$S(A)$</dt><dd>The von Neumann entanglement entropy of the region $A$ in the boundary CFT state: $S = -\text{tr}(\rho_A \log \rho_A)$, where $\rho_A$ is the reduced density matrix.</dd>
+        <dt>$\gamma_A$</dt><dd>The minimal bulk surface (a codimension-2 surface in the bulk) that is homologous to $A$ — meaning it has the same boundary as $A$ and can be smoothly deformed into $A$ within the bulk.</dd>
+        <dt>$\text{Area}(\gamma_A)$</dt><dd>The area of the minimal surface $\gamma_A$ in the bulk spacetime geometry.</dd>
+        <dt>$G_N$</dt><dd>Newton's gravitational constant in the bulk spacetime. $\sim 1/N^2$ in the AdS/CFT dictionary, so the entropy scales as $N^2$ — the right scaling for a large-$N$ gauge theory.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>What this means.</strong> The entanglement structure of the boundary quantum state determines the geometry of the bulk spacetime. Spacetime geometry is not fundamental: it is encoded in the entanglement pattern of the dual quantum system. This connects AdS/CFT directly to ideas about emergent spacetime and quantum error correction.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="blackholes">8. Strings and black holes</h2>
+
+    <p>String theory has had its most concrete quantitative success in explaining the entropy of black holes — not as a macroscopic thermodynamic approximation but as an exact count of microstates.</p>
+
+    <h3>Bekenstein-Hawking entropy from D-brane counting</h3>
+
+    <p>In 1996, Andrew Strominger and Cumrun Vafa computed the entropy of a specific class of extremal (zero-temperature) charged black holes in 5 dimensions by counting the number of D-brane configurations with the same mass and charges. They found:</p>
+
+    <div class="math-display">$$S_{BH} = \frac{A}{4G_N} = \log N_{\text{micro}},$$</div>
+
+    <p>where $N_{\text{micro}}$ is the number of D-brane bound states — an exact match, not just an order-of-magnitude agreement. This was the first derivation of black hole entropy from a microscopic theory and one of the most celebrated results in string theory. It works because the extremal black hole and the corresponding D-brane system are related by supersymmetry and protected from quantum corrections.</p>
+
+    <h3>The information paradox</h3>
+
+    <p>Stephen Hawking showed in 1974 that black holes emit thermal radiation with a temperature $T_H = \hbar c^3 / (8\pi G_N M k_B)$. As the black hole radiates it loses mass and eventually evaporates. The radiation appears perfectly thermal — with no dependence on what fell in. If true, information is destroyed: you cannot reconstruct the initial quantum state from the final Hawking radiation. This violates <span class="term" data-label="Unitarity" data-def="The property of quantum mechanics that probability is conserved: the total probability of all outcomes is always 1. Unitary evolution preserves the inner product between states, meaning information is never destroyed — it can be scrambled but never truly lost.">unitarity</span>, a cornerstone of quantum mechanics.</p>
+
+    <p>AdS/CFT resolves the paradox in principle: the black hole in AdS is dual to a thermal state of the boundary CFT, and the boundary CFT evolves unitarily. Therefore the evaporation must be unitary — information is preserved. But <em>how</em> exactly information escapes remained unclear for twenty years.</p>
+
+    <h3>The Page curve and the island formula</h3>
+
+    <p>The <span class="term" data-label="Page curve" data-def="The expected behavior of the entropy of Hawking radiation in a unitary theory: entropy rises from zero as the black hole begins radiating, reaches a maximum at the Page time (roughly halfway through evaporation), then falls back to zero as the radiation becomes purified. Deviating from this curve would signal non-unitarity.">Page curve</span> describes how, in a unitary theory, the entanglement entropy of Hawking radiation should first increase, peak at the Page time (when about half the black hole entropy has been radiated), and then decrease to zero as the black hole fully evaporates. Classical Hawking calculations give entropy that increases monotonically — violating unitarity.</p>
+
+    <p>In 2019-2020, a breakthrough emerged from the Ryu-Takayanagi formula and its generalizations. The entropy of the radiation, computed using the quantum extremal surface formula, receives contributions from <strong>island regions</strong> — patches of spacetime inside or near the horizon that contribute to the entropy budget of the radiation. When islands are included, the entropy follows the Page curve exactly. The island formula:</p>
+
+    <div class="math-display">$$S_{\text{rad}} = \min_{\text{islands}}\left[ \frac{\text{Area}(\partial I)}{4G_N} + S_{\text{bulk}}(I \cup R) \right],$$</div>
+
+    <p>where $I$ is an island region and $R$ is the radiation region, reproduces the Page curve and suggests that black hole evaporation is indeed unitary.</p>
+
+    <h3>ER = EPR</h3>
+
+    <p>In 2013, Maldacena and Susskind proposed the <span class="term" data-label="ER=EPR conjecture" data-def="The conjecture that an Einstein-Rosen bridge (wormhole) connecting two black holes is equivalent to the two black holes being maximally quantum-entangled (an EPR pair). Entanglement creates connectivity in spacetime. ER stands for Einstein-Rosen; EPR for Einstein-Podolsky-Rosen.">ER=EPR conjecture</span>: two black holes connected by a <span class="term" data-label="Einstein-Rosen bridge" data-def="A wormhole — a topological handle connecting two separate regions of spacetime. Predicted by Einstein and Rosen in 1935. Classically, not traversable (nothing can pass through). In ER=EPR, it is dual to quantum entanglement between the two ends.">wormhole</span> (Einstein-Rosen bridge) are equivalent to two maximally entangled black holes (an EPR pair). More broadly: any quantum entanglement between two systems corresponds to a geometric connection in spacetime. Entanglement builds geometry. Spacetime connectivity is a consequence of quantum correlations. This is the deepest insight from the AdS/CFT era: geometry and entanglement may be two languages for the same underlying reality.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="status">9. Experimental signatures and the status question</h2>
+
+    <p>What string theory predicts experimentally, and what it does not, is one of the most important questions in theoretical physics — and also one of the most contested.</p>
+
+    <h3>What string theory predicts (and doesn't)</h3>
+
+    <p>String theory as currently formulated does not make unique, falsifiable predictions about the Standard Model parameters, particle masses, or coupling constants. The landscape of $\sim 10^{500}$ vacua means that almost any observed values can be "accommodated" somewhere in the landscape — but this is not the same as predicting them. The main experimental handles that string theory's low-energy limits suggest are:</p>
+
+    <ul>
+      <li><strong>Supersymmetric partners.</strong> All superstring theories require spacetime supersymmetry. If broken at low enough scales, the LHC would produce <span class="term" data-label="Superpartners" data-def="The additional particles predicted by supersymmetry: each Standard Model particle has a partner differing by half a unit of spin (squarks, sleptons, gauginos, higgsinos). None have been found at the LHC as of 2026.">superpartners</span> — squarks, sleptons, gauginos. Despite extensive searches, no superpartners have been found at the LHC up to masses of $\sim 2$ TeV (as of 2026). Naturalness arguments suggested they should appear below $\sim 1$ TeV. This is the primary experimental problem for low-energy string phenomenology.</li>
+      <li><strong>Extra dimensions.</strong> If large extra dimensions exist (ADD or Randall-Sundrum scenarios), they could be detected through missing-energy signatures at colliders, modifications to gravity at sub-millimeter scales, or Kaluza-Klein graviton production. None found.</li>
+      <li><strong>Cosmic strings.</strong> Fundamental strings stretched to cosmological scales could leave imprints on the CMB or produce gravitational wave backgrounds. Constraints are becoming tight.</li>
+    </ul>
+
+    <h3>What string theory HAS given us</h3>
+
+    <p>String theory's practical contributions to physics and mathematics are substantial, even setting aside the question of whether it describes nature:</p>
+
+    <ul>
+      <li><strong>Holographic quark-gluon plasma.</strong> The $\eta/s = 1/(4\pi)$ lower bound from AdS/CFT is consistent with RHIC and LHC heavy-ion measurements of the quark-gluon plasma — a real, experimentally tested number that came from string theory.</li>
+      <li><strong>Scattering amplitude methods.</strong> Twistor string theory (Witten, 2003) inspired the BCFW recursion relations and the discovery of the <span class="term" data-label="Amplituhedron" data-def="A geometric object discovered by Arkani-Hamed and Trnka (2013) whose volume encodes scattering amplitudes in N=4 SYM theory. It reveals that locality and unitarity are emergent from a simpler geometric principle.">amplituhedron</span> (Arkani-Hamed and Trnka, 2013) — a geometric structure encoding scattering amplitudes in $\mathcal{N}=4$ SYM. These methods dramatically speed up collider calculations that are now used at the LHC.</li>
+      <li><strong>Black hole entropy.</strong> The Strominger-Vafa calculation remains the only microscopically precise derivation of black hole entropy from first principles.</li>
+      <li><strong>Mirror symmetry.</strong> The mathematical duality discovered in string theory between pairs of Calabi-Yau manifolds solved open conjectures in algebraic geometry about counting rational curves on Calabi-Yau threefolds.</li>
+      <li><strong>Information paradox resolution.</strong> The island formula and the Page curve calculation are string-theory-derived insights about quantum gravity that go beyond what we knew from classical GR or naive QFT.</li>
+    </ul>
+
+    <h3>Honest assessment</h3>
+
+    <div class="callout">
+      <div class="label">THE STATUS IN 2026</div>
+      <p>String theory is the most mathematically productive research program in theoretical physics. It has yielded discoveries in pure mathematics, in quantum information, in heavy-ion physics, and in our understanding of black holes that would not have come otherwise. Whether it describes nature at the Planck scale is unknown, and may remain unknown for the foreseeable future given that the Planck scale is $10^{15}$ times beyond current accelerator reach. The swampland program is the most promising current approach to extracting falsifiable consequences — it makes predictions about which cosmological and particle physics models are inconsistent with quantum gravity, and some of those predictions are testable with near-future CMB and gravitational wave observations.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2>Interactive: Calabi-Yau cross-section</h2>
+
+    <p>A Calabi-Yau manifold is a 6-real-dimensional (3-complex-dimensional) space. It cannot be visualized directly, but projections of its structure can be. The animated figure below shows a 2D cross-section of a quintic Calabi-Yau — a complex hypersurface defined by a degree-5 polynomial in $\mathbb{CP}^4$. The rippling surface detail represents the non-trivial curvature structure (Ricci-flat Kähler metric) that makes Calabi-Yau manifolds special. At every point of ordinary 4D spacetime, a manifold of this shape is attached — too small to see, but determining the physics.</p>
+
+    <div class="viz-3d">
+      <div class="v3-controls">
+        <span class="v3-label">Complexity:</span>
+        <input id="cyComplexity" type="range" min="1" max="5" value="3" step="1" style="flex:1;max-width:260px;">
+        <span id="cyComplexityLabel" style="min-width:50px;color:#22d3ee;font-family:ui-monospace,monospace;">3</span>
+        <span class="v3-label" style="margin-left:12px;">Animation:</span>
+        <input id="cySpeed" type="range" min="0" max="5" value="2" step="1" style="flex:1;max-width:200px;">
+        <span id="cySpeedLabel" style="min-width:50px;color:#22d3ee;font-family:ui-monospace,monospace;">2</span>
+      </div>
+      <svg id="cySvg" viewBox="0 0 720 420" style="width:100%;height:auto;background:#0a0d12;border-radius:6px;"></svg>
+      <p class="v3-caption" id="cyCaption">2D cross-section of a quintic Calabi-Yau manifold. The 6 extra dimensions of string theory are compactified on a space of this topology at each point of ordinary spacetime. Drag the sliders to vary the complexity and animation speed.</p>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2>Cheat sheet</h2>
+
+    <div class="grid">
+      <div class="card">
+        <h4>Polyakov action</h4>
+        <p>$S_P = -\frac{T}{2}\int d^2\sigma\,\sqrt{-h}\,h^{ab}\partial_a X^\mu \partial_b X_\mu$</p>
+        <p class="meta">2D worldsheet field theory. Quantize each mode as a harmonic oscillator.</p>
+      </div>
+      <div class="card">
+        <h4>Critical dimensions</h4>
+        <p>Bosonic: $D=26$. Superstring: $D=10$.</p>
+        <p class="meta">Required for worldsheet anomaly cancellation — not assumed, derived.</p>
+      </div>
+      <div class="card">
+        <h4>Five superstring theories</h4>
+        <p>Type I, IIA, IIB, Het $SO(32)$, Het $E_8 \times E_8$.</p>
+        <p class="meta">All limits of 11D M-theory under dualities.</p>
+      </div>
+      <div class="card">
+        <h4>D-branes</h4>
+        <p>$N$ coincident Dp-branes carry $U(N)$ gauge theory on their worldvolume.</p>
+        <p class="meta">Tension $\propto 1/g_s$; non-perturbative but required for consistency.</p>
+      </div>
+      <div class="card">
+        <h4>AdS/CFT</h4>
+        <p>$g_s = g_{YM}^2/(4\pi)$, $(R/\ell_s)^4 = \lambda = g_{YM}^2 N$.</p>
+        <p class="meta">Gravity in AdS₅×S⁵ $\equiv$ $\mathcal{N}=4$ SYM on the 4D boundary.</p>
+      </div>
+      <div class="card">
+        <h4>Ryu-Takayanagi</h4>
+        <p>$S(A) = \text{Area}(\gamma_A)/(4G_N)$</p>
+        <p class="meta">Entanglement entropy = minimal bulk area. Geometry from entanglement.</p>
+      </div>
+      <div class="card">
+        <h4>Landscape</h4>
+        <p>$\sim 10^{500}$ metastable flux vacua.</p>
+        <p class="meta">No known dynamical principle selects ours. Swampland conjectures as constraints.</p>
+      </div>
+      <div class="card">
+        <h4>Black hole entropy</h4>
+        <p>$S_{BH} = A/(4G_N) = \log N_{\text{micro}}$</p>
+        <p class="meta">Strominger-Vafa (1996): first exact microscopic derivation from D-brane counting.</p>
+      </div>
+      <div class="card">
+        <h4>ER = EPR</h4>
+        <p>Wormhole $\leftrightarrow$ maximal entanglement.</p>
+        <p class="meta">Spacetime connectivity from quantum correlations.</p>
+      </div>
+    </div>
+
+    <h3>See also</h3>
+    <div class="see-also">
+      <div class="card">
+        <h4><a href="./quantum-field-theory.html">Quantum Field Theory</a></h4>
+        <p>The framework that string theory extends. Renormalization, Feynman diagrams, gauge invariance — all directly generalized in the worldsheet and target-space descriptions.</p>
+      </div>
+      <div class="card">
+        <h4><a href="./general-relativity.html">General Relativity</a></h4>
+        <p>String theory must reproduce GR at low energies. The graviton, black hole entropy, and AdS spacetime are all GR concepts that string theory illuminates.</p>
+      </div>
+      <div class="card">
+        <h4><a href="./particle-physics.html">Particle Physics</a></h4>
+        <p>The Standard Model is what string theory aspires to derive. D-brane models, flux compactifications, and swampland constraints are all attempts to connect string theory to observed particles.</p>
+      </div>
+      <div class="card">
+        <h4><a href="./frontier.html">Frontier Physics</a></h4>
+        <p>Information paradox, ER=EPR, islands, and the Page curve — the live research frontier where AdS/CFT meets quantum information and black hole physics.</p>
+      </div>
+      <div class="card">
+        <h4><a href="./quantum-mechanics.html">Quantum Mechanics</a></h4>
+        <p>Unitarity, Hilbert spaces, entanglement entropy — the quantum foundations that make AdS/CFT and the information paradox precise statements.</p>
+      </div>
+      <div class="card">
+        <h4><a href="../quantum-computing.html">Quantum Computing</a></h4>
+        <p>Quantum error correction has unexpected connections to the AdS/CFT dictionary: bulk operators are like logical qubits encoded across boundary physical qubits.</p>
+      </div>
+    </div>
+
+    <div class="bib">
+      <h4>Further reading</h4>
+      <ul>
+        <li>Barton Zwiebach — <em>A First Course in String Theory</em> (2nd ed., 2009). The most accessible full treatment; starts from scratch, covers bosonic and superstrings, branes, and applications. The go-to first book.</li>
+        <li>Katrin Becker, Melanie Becker, John Schwarz — <em>String Theory and M-Theory: A Modern Introduction</em> (2007). Comprehensive graduate text covering compactifications, flux vacua, and M-theory.</li>
+        <li>Joseph Polchinski — <em>String Theory</em>, Vols. I–II (1998). The definitive reference text. Vol. I covers worldsheet theory; Vol. II covers superstrings, D-branes, and dualities.</li>
+        <li>Juan Maldacena — <a href="https://arxiv.org/abs/hep-th/9711200">"The Large N limit of superconformal field theories and supergravity"</a> (1997). The original AdS/CFT paper; remarkably readable.</li>
+        <li>Nima Arkani-Hamed — <em>The Future of Fundamental Physics</em> (Messenger Lectures, Cornell, 2010). Accessible video lectures on the landscape, swampland, and what it means for physics.</li>
+        <li>Lee Smolin — <em>The Trouble with Physics</em> (2006). A critical perspective, raising important questions about empirical progress and testability.</li>
+        <li>Cumrun Vafa — <a href="https://arxiv.org/abs/hep-th/0509212">"The String Landscape and the Swampland"</a> (2005). Original swampland paper, concise and illuminating.</li>
+        <li>Ahmed Almheiri et al. — <a href="https://arxiv.org/abs/1905.08762">"The entropy of bulk quantum fields and the entanglement wedge"</a> (2019). Key island formula paper showing unitary Page curve.</li>
+      </ul>
+    </div>
+
+    <div class="next-card">
+      <div class="label">NEXT UP</div>
+      <a href="./frontier.html">→ Frontier Physics</a>
+      <p>String theory, loop quantum gravity, the information paradox, and the open questions at the edge of what physics can currently answer.</p>
+    </div>
+
+  </article>
+</div>
+
+<script>
+// =========================================================
+// Tooltip system
+(function() {
+  const tooltip = document.getElementById('tooltip');
+  if (!tooltip) return;
+  document.querySelectorAll('.term').forEach(el => {
+    el.addEventListener('mouseenter', e => {
+      const label = el.getAttribute('data-label');
+      const def   = el.getAttribute('data-def');
+      tooltip.innerHTML = '<strong>' + label + '</strong><br>' + def;
+      tooltip.style.display = 'block';
+    });
+    el.addEventListener('mousemove', e => {
+      tooltip.style.left = (e.pageX + 14) + 'px';
+      tooltip.style.top  = (e.pageY + 14) + 'px';
+    });
+    el.addEventListener('mouseleave', () => {
+      tooltip.style.display = 'none';
+    });
+  });
+})();
+
+// =========================================================
+// Calabi-Yau cross-section visualizer
+(function() {
+  const svg = document.getElementById('cySvg');
+  if (!svg) return;
+  const NS = 'http://www.w3.org/2000/svg';
+
+  const compSlider = document.getElementById('cyComplexity');
+  const compLabel  = document.getElementById('cyComplexityLabel');
+  const speedSlider = document.getElementById('cySpeed');
+  const speedLabel  = document.getElementById('cySpeedLabel');
+  const caption    = document.getElementById('cyCaption');
+
+  let animFrame = null;
+  let t = 0;
+
+  function mk(tag, attrs) {
+    const el = document.createElementNS(NS, tag);
+    for (const k in attrs) el.setAttribute(k, attrs[k]);
+    return el;
+  }
+  function mkText(x, y, txt, color, size, anchor) {
+    const el = mk('text', {x:x, y:y, fill: color||'#b4c4d4', 'font-size': size||11,
+      'font-family':'ui-monospace, monospace', 'text-anchor': anchor||'start'});
+    el.textContent = txt;
+    return el;
+  }
+
+  // Map from (u,v) parameter space to a Calabi-Yau-like 2D projection
+  // Uses a truncated quintic: z1^5 + z2^5 ≈ 1, project onto Re/Im parts
+  // We parameterize a family of paths on the quintic as a visual proxy
+  function cyPoint(u, v, complexity, time) {
+    // u, v in [0, 2*pi)
+    const n = complexity + 2; // degree of complexity → polynomial degree
+    // A stylized projection: think of tracing a slice through the Fermat quintic
+    // z1 = r1 * e^{i*u}, z2 = (1 - r1^n)^{1/n} * e^{i*v} for r1 parameterized by v
+    const r1 = 0.5 + 0.45 * Math.sin(v * 0.5 + time * 0.3);
+    const r2 = Math.pow(Math.max(0, 1 - Math.pow(r1, n)), 1 / n);
+
+    // Project onto 2D: x = Re(z1) + 0.4*Re(z2), y = Im(z1) + 0.4*Im(z2)
+    const x = r1 * Math.cos(u) + 0.4 * r2 * Math.cos(v + time * 0.15);
+    const y = r1 * Math.sin(u) + 0.4 * r2 * Math.sin(v + time * 0.15);
+    return [x, y];
+  }
+
+  function draw() {
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+
+    const complexity = parseInt(compSlider.value, 10);
+    const speed = parseInt(speedSlider.value, 10);
+    compLabel.textContent = complexity;
+    speedLabel.textContent = speed;
+
+    const W = 720, H = 420;
+    const cx = 360, cy = 210, scale = 140;
+
+    // Background
+    svg.appendChild(mk('rect', {x:0,y:0,width:W,height:H,fill:'#0a0d12'}));
+
+    // Radial glow
+    const defs = mk('defs', {});
+    const radGrad = mk('radialGradient', {id:'cyGlow', cx:'50%', cy:'50%', r:'50%'});
+    const s0 = mk('stop', {'offset':'0%', 'stop-color':'#7c5cff', 'stop-opacity':'0.15'});
+    const s1 = mk('stop', {'offset':'100%', 'stop-color':'#0a0d12', 'stop-opacity':'0'});
+    radGrad.appendChild(s0); radGrad.appendChild(s1);
+    defs.appendChild(radGrad);
+    svg.appendChild(defs);
+    svg.appendChild(mk('ellipse', {cx:cx, cy:cy, rx:200, ry:200, fill:'url(#cyGlow)'}));
+
+    // Draw the Calabi-Yau cross section as a set of parametric curves
+    const nU = 48; // lines of longitude
+    const nPts = 80; // points per line
+
+    // Draw longitude curves (fixed u, vary v)
+    for (let i = 0; i < nU; i++) {
+      const u = (i / nU) * 2 * Math.PI;
+      let d = '';
+      for (let j = 0; j <= nPts; j++) {
+        const v = (j / nPts) * 2 * Math.PI;
+        const [px, py] = cyPoint(u, v, complexity, t);
+        const sx = cx + px * scale;
+        const sy = cy + py * scale;
+        d += (j === 0 ? 'M' : 'L') + sx.toFixed(1) + ',' + sy.toFixed(1) + ' ';
+      }
+      // Color: hue varies with u, faint
+      const hue = Math.round((u / (2 * Math.PI)) * 300 + 200) % 360;
+      const alpha = 0.25 + 0.15 * Math.sin(u * 3 + t * 0.5);
+      svg.appendChild(mk('path', {d:d, stroke:`hsla(${hue},70%,65%,${alpha.toFixed(2)})`,
+        'stroke-width':0.8, fill:'none'}));
+    }
+
+    // Draw latitude curves (vary u, fixed v)
+    const nV = 24;
+    for (let j = 0; j < nV; j++) {
+      const v = (j / nV) * 2 * Math.PI;
+      let d = '';
+      for (let i = 0; i <= nU * 2; i++) {
+        const u = (i / (nU * 2)) * 2 * Math.PI;
+        const [px, py] = cyPoint(u, v, complexity, t);
+        const sx = cx + px * scale;
+        const sy = cy + py * scale;
+        d += (i === 0 ? 'M' : 'L') + sx.toFixed(1) + ',' + sy.toFixed(1) + ' ';
+      }
+      const hue = Math.round((v / (2 * Math.PI)) * 60 + 160) % 360;
+      const alpha = 0.18 + 0.1 * Math.cos(v * 2 + t * 0.4);
+      svg.appendChild(mk('path', {d:d, stroke:`hsla(${hue},60%,70%,${alpha.toFixed(2)})`,
+        'stroke-width':0.7, fill:'none'}));
+    }
+
+    // Label
+    svg.appendChild(mkText(30, 30, 'Calabi-Yau cross-section (quintic, degree ' + (complexity+2) + ')', '#b4c4d4', 13));
+    svg.appendChild(mkText(30, 50, 'The 6 extra dimensions compactified here', '#7a8a9a', 11));
+
+    // Dimension indicator dots around the perimeter
+    for (let d = 0; d < 6; d++) {
+      const angle = (d / 6) * 2 * Math.PI - Math.PI / 2;
+      const rx = 190 + 15 * Math.sin(t * 0.7 + d);
+      const ry = 190 + 15 * Math.sin(t * 0.7 + d);
+      const bx = cx + rx * Math.cos(angle);
+      const by = cy + ry * Math.sin(angle);
+      svg.appendChild(mk('circle', {cx:bx.toFixed(1), cy:by.toFixed(1), r:4,
+        fill:'#22d3ee', opacity: (0.5 + 0.5 * Math.sin(t + d)).toFixed(2)}));
+      svg.appendChild(mkText(bx + 8, by + 4, 'dim ' + (d+1), '#22d3ee', 9));
+    }
+
+    // Parameter legend
+    svg.appendChild(mkText(550, 380, 'h^{1,1} + h^{2,1} = ' + (complexity * 12 + 4) + ' moduli', '#7a8a9a', 10));
+  }
+
+  function animate() {
+    draw();
+    const speed = parseInt(speedSlider.value, 10);
+    if (speed > 0) {
+      t += speed * 0.012;
+    }
+    animFrame = requestAnimationFrame(animate);
+  }
+
+  compSlider.addEventListener('input', () => { draw(); });
+  speedSlider.addEventListener('input', () => {});
+
+  animate();
+})();
+</script>
+</body>
+</html>

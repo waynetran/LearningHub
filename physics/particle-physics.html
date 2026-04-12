@@ -34,6 +34,8 @@
       <li><a href="#experiments">10. Experimental landscape</a></li>
       <li><a href="#code">11. A toy calculation</a></li>
       <li><a href="#summary">12. Cheat sheet</a></li>
+      <li><a href="#recent">13. Recent discoveries reshaping particle physics</a></li>
+      <li><a href="#labs">14. Active experiments and labs worldwide</a></li>
     </ul>
   </aside>
 
@@ -448,6 +450,335 @@ E = <span class="num">1.0</span>
       <a href="./cosmology.html">→ Cosmology</a>
       <p>The Standard Model is tested at colliders. The universe is the biggest accelerator ever built, and its history — from the first microsecond to today — is written in the CMB, in nucleosynthesis, and in the large-scale structure. Let us look at the sky as a physics experiment.</p>
     </div>
+
+    <!-- ========================================================== -->
+    <h2 id="recent">13. Recent discoveries reshaping particle physics</h2>
+
+    <p>The decade from 2019 to 2026 has been unusually eventful. Several measurements have challenged the Standard Model, a few anomalies have evaporated under scrutiny, and some cosmological tensions have sharpened to the point where "systematic error" is becoming an implausible explanation. This section surveys the most consequential results in roughly chronological order.</p>
+
+    <!-- 1. Muon g-2 -->
+    <h3>Muon anomalous magnetic moment — the longest-running tension (2021–2023)</h3>
+
+    <p>Every charged particle with spin has a magnetic moment. For the muon, <span class="term" data-label="anomalous magnetic moment" data-def="The deviation of the muon's actual magnetic moment from the Dirac value of exactly 2. Written a_μ = (g−2)/2. Virtual particles in quantum loops correct this value; every known particle contributes a calculable amount.">quantum loop corrections</span> from every particle in existence — including hypothetical BSM particles — shift the magnetic moment away from its Dirac value. The dimensionless deviation $a_\mu = (g-2)/2$ is therefore a precision test of the complete particle content of nature.</p>
+
+    <div class="callout">
+      <div class="label">FERMILAB MUON g-2 — APRIL 2023</div>
+      <p>Combining Run 1–3 data, the Fermilab Muon g-2 collaboration reports $a_\mu^{\text{exp}} = 116\,592\,059(22) \times 10^{-11}$. The <span class="term" data-label="Standard Model prediction for a_μ" data-def="Calculated by summing QED, electroweak, and hadronic contributions. The hadronic vacuum polarization (HVP) piece dominates the uncertainty and is the source of the ongoing controversy.">Standard Model prediction</span> from the Muon g-2 Theory Initiative (2020) gives $a_\mu^{\text{SM}} = 116\,591\,810(43) \times 10^{-11}$, yielding a discrepancy of $\Delta a_\mu = 249(48) \times 10^{-11}$, a <strong>5.1σ tension</strong>. If real, this points to new physics contributing to muon loops — possibly new heavy particles or leptoquarks.</p>
+      <p><strong>The complication:</strong> In 2021 the BMW lattice QCD collaboration published a first-principles calculation of the <span class="term" data-label="hadronic vacuum polarization" data-def="The dominant uncertain piece of the SM prediction for a_μ. Quarks and gluons loop inside the virtual photon that the muon emits and reabsorbs. Two methods exist: disperse relations using e⁺e⁻ data, and direct lattice QCD simulation. They disagree.">hadronic vacuum polarization (HVP)</span> that shifts the SM prediction upward, reducing the tension to ~1.5σ. But the BMW result disagrees with other lattice groups and with HVP estimates from $e^+e^-$ cross-section data. As of 2026 the theoretical situation remains unresolved. The experimental result is solid; the SM prediction is disputed. This is now primarily a theory problem, not an experimental one.</p>
+    </div>
+
+    <!-- 2. RK/RK* -->
+    <h3>LHCb B-anomalies resolved — a lesson in 3σ (2022)</h3>
+
+    <p>Between 2013 and 2021, LHCb accumulated hints of <span class="term" data-label="lepton universality" data-def="The principle that the weak force couples identically to electrons, muons, and tau leptons, differing only by their mass. Any deviation would require new particles that discriminate between lepton generations.">lepton universality</span> violation in rare B-meson decays. The most prominent were the ratios $R_K = \mathcal{B}(B^+ \to K^+ \mu^+\mu^-) / \mathcal{B}(B^+ \to K^+ e^+e^-)$ and $R_{K^*}$, which the SM predicts to be very close to 1 (mass corrections are tiny above the dimuon threshold). LHCb's 2021 values differed from 1 at about 3.1σ combined, fueling hundreds of BSM papers on leptoquarks and $Z'$ bosons.</p>
+
+    <p>In December 2022, LHCb released a reanalysis using the full Run 1+2 dataset with improved background modeling — particularly better separation of misidentified electrons and muons. The anomaly disappeared: $R_K = 0.994^{+0.029}_{-0.027}$ and $R_{K^*} = 1.027^{+0.072}_{-0.068}$, both within 1σ of unity. <strong>Lepton universality holds to current precision.</strong> The episode is a textbook example of why 3σ is not a discovery in particle physics.</p>
+
+    <p>Notably, LHCb continues to see anomalies in the <span class="term" data-label="angular observables in B decays" data-def="Angular distributions of decay products in B→K*ℓ⁺ℓ⁻ transitions, parametrized as P₅′ and related coefficients. These are sensitive to BSM contributions but require careful treatment of hadronic form factors. The so-called P₅′ anomaly persists at ~3σ in some analyses but is disputed.">angular observables</span> $P_5'$ and related quantities in $B \to K^* \ell^+\ell^-$, at about 3σ. The theoretical uncertainties in hadronic form factors make the significance hard to interpret. The field has not converged on whether these are BSM or hadronic effects.</p>
+
+    <!-- 3. W boson mass -->
+    <h3>CDF W-boson mass — probably a systematic, but not closed (April 2022)</h3>
+
+    <p>In April 2022, the CDF collaboration at the now-defunct Tevatron published a measurement of the W boson mass: $M_W = 80433.5 \pm 9.4\,\text{MeV}$. The <span class="term" data-label="electroweak precision observables" data-def="A set of precisely measured quantities — W and Z masses, weak mixing angle, top quark mass, etc. — that over-constrain the electroweak sector. The SM prediction for M_W depends on the top mass and Higgs mass via radiative corrections, and has been calculated to high precision.">SM prediction</span> is $80\,357 \pm 6\,\text{MeV}$. The discrepancy is $76 \pm 11\,\text{MeV}$ — a stunning <strong>7σ deviation</strong>. If real, it would demand new physics beyond the Standard Model that contributes to the W mass via radiative corrections.</p>
+
+    <div class="callout">
+      <div class="label">STATUS AS OF 2026</div>
+      <p>ATLAS published its own measurement in 2023: $M_W = 80\,360 \pm 16\,\text{MeV}$, consistent with the SM and inconsistent with CDF at ~3.5σ. LHCb followed in 2024 with $M_W = 80\,354 \pm 23\,\text{MeV}$, again SM-consistent. The CDF result is likely dominated by a systematic in their modeling of the proton's internal structure (<span class="term" data-label="parton distribution functions" data-def="PDFs describe the probability of finding a quark or gluon carrying a given fraction of the proton's momentum. The W mass extraction at a hadron collider depends sensitively on the PDFs used, and different PDF sets give slightly different results.">parton distribution functions</span>), but this has not been definitively demonstrated. The global average now sits close to the SM value. Most physicists consider the CDF outlier a systematic artifact.</p>
+    </div>
+
+    <!-- 4. NANOGrav -->
+    <h3>Gravitational wave background detected by pulsar timing arrays (2023)</h3>
+
+    <p>In June 2023, four independent <span class="term" data-label="pulsar timing array" data-def="An array of millisecond pulsars used as a galactic-scale gravitational wave detector. Gravitational waves stretch and compress space, causing the arrival times of pulsar signals to vary. Correlations between pulsars in different directions (the Hellings-Downs curve) distinguish a gravitational wave background from other noise sources.">pulsar timing arrays</span> (NANOGrav, EPTA, PPTA, CPTA) simultaneously announced detection of a stochastic gravitational wave background at nanohertz frequencies. The Hellings-Downs angular correlation — the smoking gun for gravitational waves — was confirmed at 3–4σ significance across all four experiments.</p>
+
+    <p>The most mundane explanation is a background of inspiraling <span class="term" data-label="supermassive black hole binaries" data-def="Pairs of black holes with masses 10⁸–10¹⁰ M☉ at the centers of merging galaxies. Their gradual inspiral emits gravitational waves at nanohertz frequencies accessible to PTAs. Current estimates of the merger rate are roughly consistent with the observed signal amplitude.">supermassive black hole binaries</span> throughout the universe. The signal amplitude is roughly consistent with this picture. However, two more exotic particle-physics explanations are also compatible: a first-order <span class="term" data-label="cosmological phase transition" data-def="A phase transition in the early universe (analogous to water freezing) that produces gravitational waves if it is first-order — that is, if it proceeds via bubble nucleation and collision rather than smoothly. The electroweak phase transition in extensions of the SM could produce a PTA-band signal.">phase transition</span> in the early universe (possibly the electroweak transition in BSM models), or a network of <span class="term" data-label="cosmic strings" data-def="Topological defects formed in phase transitions in the early universe. One-dimensional defects that carry tension and can radiate gravitational waves. Predicted by many GUT-scale symmetry-breaking scenarios.">cosmic strings</span>. Current data cannot distinguish these scenarios. Future PTA data over the next decade will sharpen the spectral shape and potentially resolve the source.</p>
+
+    <!-- 5. JWST -->
+    <h3>JWST challenges ΛCDM galaxy formation models (2022–2024)</h3>
+
+    <p>The <span class="term" data-label="James Webb Space Telescope" data-def="NASA/ESA/CSA infrared space telescope launched December 2021. With a 6.5m segmented mirror and near- and mid-infrared instruments, it can observe galaxy formation at z > 10, the epoch when the universe was less than 500 million years old.">James Webb Space Telescope</span> has found massive, structurally mature galaxies at redshifts $z > 10$, corresponding to less than 500 million years after the Big Bang. Several candidates at $z \sim 12$–16 have been proposed, though spectroscopic confirmation is ongoing. The issue: standard <span class="term" data-label="ΛCDM" data-def="Lambda-Cold Dark Matter, the standard cosmological model. Lambda is the cosmological constant (dark energy); CDM is cold dark matter. In ΛCDM, structure grows hierarchically: small objects form first and merge into larger ones. This predicts how many massive galaxies should exist at each epoch.">ΛCDM</span> simulations predict far fewer massive galaxies at these early epochs.</p>
+
+    <p>Three interpretations are under debate. First, early star formation efficiency may simply have been higher than simulations assumed — baryonic physics is poorly constrained at these redshifts. Second, some high-z candidates may have overestimated stellar masses by a factor of several due to dust or emission-line contamination in photometric redshifts. Third, a minority view holds that ΛCDM itself needs modification at early times — for example, via a burst of early dark energy that altered the expansion history. As of 2026, the first two explanations are considered most likely, but the JWST tension with ΛCDM has driven a significant reassessment of early-universe star formation.</p>
+
+    <!-- 6. DESI dark energy -->
+    <h3>DESI dark energy hint — is w ≠ −1? (2024)</h3>
+
+    <p>In April 2024, the <span class="term" data-label="Dark Energy Spectroscopic Instrument" data-def="DESI is a 5000-fiber spectrograph on the Mayall 4m telescope at Kitt Peak. It measures the redshifts of tens of millions of galaxies and quasars to map the large-scale structure of the universe and extract the baryon acoustic oscillation scale, a standard ruler for measuring dark energy.">Dark Energy Spectroscopic Instrument (DESI)</span> released its Year 1 results from a survey of 6 million galaxy and quasar spectra. Their <span class="term" data-label="baryon acoustic oscillation" data-def="A characteristic ~150 Mpc scale imprinted on the distribution of galaxies by sound waves in the early universe, visible as a small bump in the two-point correlation function. Used as a 'standard ruler' to measure the expansion rate at different redshifts.">baryon acoustic oscillation (BAO)</span> measurements, combined with CMB and supernova data, show a <strong>3.9σ preference</strong> for a dark energy equation of state that evolves with redshift — the "$w_0 w_a$ CDM" model — over the cosmological constant ($w = -1$ always).</p>
+
+    <div class="callout">
+      <div class="label">WHAT w ≠ −1 WOULD MEAN</div>
+      <p>In the <span class="term" data-label="dark energy equation of state" data-def="The ratio w = p/ρ of dark energy pressure to energy density. For a cosmological constant Λ, w = −1 exactly. For dynamical dark energy (quintessence), w can vary with time and redshift. The parametrization w(a) = w₀ + wₐ(1−a) is widely used, where a is the scale factor.">$w_0 w_a$ parametrization</span>, DESI finds $w_0 = -0.55^{+0.39}_{-0.21}$ and $w_a = -1.32^{+0.36}_{-1.10}$ (combined fit). If confirmed, this would be the first evidence that dark energy is not Einstein's cosmological constant but a dynamical field (<em>quintessence</em>) evolving over cosmic time — a fundamental change in our understanding of the universe's fate. DESI's 5-year dataset (expected ~2027) will either confirm or rule out this hint at much higher significance.</p>
+    </div>
+
+    <!-- 7. Exotic hadrons -->
+    <h3>Tetraquarks, pentaquarks, and the exotic hadron renaissance (2021–2024)</h3>
+
+    <p>QCD allows any color-singlet combination of quarks — there is no <em>a priori</em> reason to restrict to quark-antiquark mesons ($q\bar{q}$) or three-quark baryons ($qqq$). Experimental searches for <span class="term" data-label="exotic hadrons" data-def="Hadrons with quark content beyond the conventional meson (qq̄) and baryon (qqq) patterns. Includes tetraquarks (qq̄qq̄ or qqq̄q̄), pentaquarks (qqqqq̄), and hadronic molecules (loosely bound meson pairs). Their internal structure is debated.">exotic hadrons</span> have accelerated dramatically since 2015.</p>
+
+    <ul>
+      <li><strong>$T_{cc}^+$ (2021, LHCb):</strong> The first unambiguous <span class="term" data-label="tetraquark" data-def="A hadron containing two quarks and two antiquarks (or four quarks). The T_cc+ state (cc̄ūd̄) discovered by LHCb in 2021 is the first confirmed open-charm tetraquark — it contains two charm quarks, making it doubly exotic and extremely long-lived relative to other exotic candidates.">open-charm tetraquark</span>, containing $cc\bar{u}\bar{d}$. Its exceptionally narrow width (just 48 keV) and location just below the $D^0 D^{*+}$ threshold point to a molecular binding mechanism rather than a compact four-quark state.</li>
+      <li><strong>Doubly charged tetraquark $T^{++}_{cc}$ (2022, LHCb):</strong> A tetraquark with charge +2. Confirms the rich spectroscopy of multi-charm states.</li>
+      <li><strong>$X(3872)$ structure (2024, BESIII):</strong> BESIII demonstrated that the long-known $X(3872)$ charmonium-like state has a two-component structure consistent with a mixture of a $c\bar{c}$ core and a $D^0\bar{D}^{*0}$ hadronic molecule. The debate between compact tetraquark and molecular interpretation is ongoing.</li>
+      <li><strong>Pentaquark states:</strong> LHCb's 2019–2023 programme confirmed three $P_c$ pentaquark candidates with quark content $c\bar{c}uud$, appearing as resonances in $J/\psi$ photoproduction. Their masses and widths are consistent with loosely bound $\Sigma_c^{(*)} \bar{D}^{(*)}$ molecular states.</li>
+    </ul>
+
+    <p>The collective picture confirms that QCD's <span class="term" data-label="color confinement" data-def="The empirical rule that all observable hadrons must be color singlets under SU(3)_c. This allows qq̄ mesons and qqq baryons, but also more complex combinations like tetraquarks and pentaquarks, as long as the total color charge is zero.">color confinement</span> permits a much richer zoo of color-singlet states than the original meson/baryon classification. The LHC Run 3 dataset and forthcoming Belle II results will populate this spectroscopy further.</p>
+
+    <!-- 8. Hubble tension -->
+    <h3>The Hubble tension — 5σ and growing (2019–2026)</h3>
+
+    <p>The <span class="term" data-label="Hubble constant" data-def="H₀ is the present-day expansion rate of the universe, in km/s/Mpc. It sets the age and size of the observable universe. Two classes of measurement exist: the 'early universe' route (CMB + standard cosmological model) and the 'late universe' route (distance ladder calibrated by Cepheids and Type Ia supernovae).">Hubble constant</span> $H_0$ can be measured two independent ways. From the CMB via the Planck satellite: $H_0 = 67.4 \pm 0.5\,\text{km/s/Mpc}$. From the local distance ladder (SH0ES collaboration, Cepheid-calibrated Type Ia supernovae): $H_0 = 73.0 \pm 1.0\,\text{km/s/Mpc}$. The discrepancy is now <strong>~5.0σ</strong> — well above the "look harder for systematics" threshold.</p>
+
+    <p>Multiple independent teams using different calibrators (the Tip of the Red Giant Branch, surface brightness fluctuations, gravitational wave sirens from binary neutron stars) obtain values in the 69–73 range. The CCHP team using the same JWST data but different methods finds $H_0 \approx 69.8$, partially reducing the tension but not eliminating it. The Hubble tension is not a measurement error. The leading explanations require new physics:</p>
+
+    <ul>
+      <li><strong>Early dark energy:</strong> A transient dark energy component before recombination would shrink the sound horizon, raising the Planck-inferred $H_0$. Requires a fine-tuned scalar field.</li>
+      <li><strong>Extra radiation species:</strong> Additional relativistic particles ($\Delta N_{\text{eff}} > 0$) in the early universe reduce the sound horizon similarly.</li>
+      <li><strong>Late-universe modifications:</strong> Evolving dark energy, interacting dark matter, or modifications to gravity at low redshift can adjust $H_0$ from the late side.</li>
+    </ul>
+
+    <p>No proposal yet fits all cosmological datasets simultaneously without introducing other tensions. The Hubble tension may be the first confirmed crack in ΛCDM.</p>
+
+    <!-- 9. KATRIN -->
+    <h3>KATRIN sharpens the neutrino mass upper bound (2022)</h3>
+
+    <p><span class="term" data-label="KATRIN" data-def="Karlsruhe Tritium Neutrino experiment. A 70-meter spectrometer in Karlsruhe, Germany that measures the endpoint of the tritium beta decay spectrum. A nonzero neutrino mass shifts the spectral endpoint by the effective electron neutrino mass m_βe.">KATRIN</span> measures the electron energy spectrum in tritium beta decay ($^3\text{H} \to {^3\text{He}} + e^- + \bar\nu_e$). A nonzero neutrino mass slightly distorts the endpoint of the spectrum. In 2022, KATRIN published its Run 2 result: <strong>$m_\nu < 0.45\,\text{eV}/c^2$ at 90% CL</strong>, halving the previous best laboratory limit.</p>
+
+    <p>This result is approaching the cosmological bound. Planck and large-scale structure surveys constrain the sum of neutrino masses $\sum m_\nu < 0.12\,\text{eV}$ (95% CL), implying individual masses below ~40 meV. KATRIN's current sensitivity is about 10× above this level, but its planned Run 5+ with upgraded detection will push the limit toward 0.2 eV. If the neutrino masses are at the cosmological upper bound (~30–40 meV each), direct kinematic measurement would require a next-generation experiment like Project 8 (using cyclotron radiation emission spectroscopy).</p>
+
+    <!-- 10. EHT Sgr A* -->
+    <h3>Event Horizon Telescope images Sagittarius A* (2022)</h3>
+
+    <p>In May 2022, the <span class="term" data-label="Event Horizon Telescope" data-def="A global very-long-baseline interferometry (VLBI) array of radio telescopes that achieves Earth-diameter baselines at millimeter wavelengths. Angular resolution ~20 microarcseconds, sufficient to resolve the shadow of the supermassive black holes at the centers of M87 and the Milky Way.">Event Horizon Telescope (EHT)</span> released the first image of <span class="term" data-label="Sagittarius A*" data-def="The compact radio source at the center of the Milky Way, coincident with a 4 million solar-mass black hole at a distance of ~26,000 light-years. Identified as a black hole by the orbital motions of nearby S-stars over 30 years of infrared observations (Nobel Prize 2020).">Sagittarius A*</span> (Sgr A*), the 4-million-solar-mass black hole at the center of our galaxy. The image shows a bright emission ring with a dark central shadow, consistent with the <span class="term" data-label="Kerr metric" data-def="The exact solution to Einstein's field equations for a rotating (uncharged) black hole, derived by Roy Kerr in 1963. Characterizes a black hole by mass and spin only. The photon ring and shadow geometry around a Kerr black hole depend on these two parameters in a precise way.">Kerr metric</span> prediction for a black hole of that mass.</p>
+
+    <p>Combined with the 2019 image of the $6.5 \times 10^9\,M_\odot$ black hole in M87, the EHT programme has now confirmed that general relativity's description of strong-field gravity is correct across 3 orders of magnitude in black hole mass. Constraints on <span class="term" data-label="deviation from Kerr" data-def="Parametrized deviations from the Kerr metric, which could arise from quantum gravity modifications, extra dimensions, or exotic compact objects. Current EHT constraints are at the ~10% level on the shadow diameter, consistent with Kerr.">deviations from Kerr</span> are at the ~10% level — a significant but not yet stringent test of quantum gravity theories. The EHT is being upgraded (ngEHT) to include more stations, enabling movies of the accretion flow.</p>
+
+    <div class="problem-set" data-topic="phys-pp-recent"></div>
+
+    <!-- ========================================================== -->
+    <h2 id="labs">14. Active experiments and labs worldwide</h2>
+
+    <p>Particle physics is a global enterprise. The facilities below represent the current experimental frontier as of 2026, spanning colliders, underground detectors, neutrino experiments, cosmic-ray observatories, and gravitational-wave detectors. Each facility is optimized for a different part of the discovery space.</p>
+
+    <table class="rank-table">
+      <thead>
+        <tr>
+          <th>Facility</th>
+          <th>Country</th>
+          <th>Type</th>
+          <th>Energy / Mass Scale</th>
+          <th>Key current search</th>
+          <th>Notable result</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>LHC (ATLAS, CMS, LHCb, ALICE)</td>
+          <td>Switzerland</td>
+          <td>pp / PbPb collider</td>
+          <td>13.6 TeV (Run 3)</td>
+          <td>Higgs couplings, BSM particles, QGP</td>
+          <td>Higgs discovery 2012; T_cc+ tetraquark; QGP viscosity</td>
+        </tr>
+        <tr>
+          <td>Fermilab Muon g-2</td>
+          <td>USA</td>
+          <td>Muon storage ring</td>
+          <td>3.09 GeV muons</td>
+          <td>Anomalous magnetic moment</td>
+          <td>5.1σ discrepancy from SM (2023)</td>
+        </tr>
+        <tr>
+          <td>DUNE / PIP-II</td>
+          <td>USA</td>
+          <td>Long-baseline neutrino</td>
+          <td>1–5 GeV ν beam</td>
+          <td>δ_CP, mass ordering</td>
+          <td>First beam ~2028</td>
+        </tr>
+        <tr>
+          <td>Belle II / SuperKEKB</td>
+          <td>Japan</td>
+          <td>e⁺e⁻ B-factory</td>
+          <td>10.58 GeV (Υ(4S))</td>
+          <td>CP violation, rare B decays</td>
+          <td>~400 fb⁻¹ collected; target 50 ab⁻¹</td>
+        </tr>
+        <tr>
+          <td>T2K / Hyper-Kamiokande</td>
+          <td>Japan</td>
+          <td>Long-baseline neutrino</td>
+          <td>0.6 GeV ν beam</td>
+          <td>δ_CP, ν/ν̄ asymmetry</td>
+          <td>2020 CP hint; Hyper-K starts ~2027</td>
+        </tr>
+        <tr>
+          <td>XENONnT</td>
+          <td>Italy (LNGS)</td>
+          <td>Liquid xenon TPC</td>
+          <td>5.9 t LXe</td>
+          <td>WIMP dark matter</td>
+          <td>σ &lt; 2.4×10⁻⁴⁷ cm² at 28 GeV</td>
+        </tr>
+        <tr>
+          <td>LUX-ZEPLIN (LZ)</td>
+          <td>USA (SURF)</td>
+          <td>Liquid xenon TPC</td>
+          <td>7 t LXe</td>
+          <td>WIMP dark matter</td>
+          <td>World's best WIMP limits (2023)</td>
+        </tr>
+        <tr>
+          <td>IceCube</td>
+          <td>Antarctica</td>
+          <td>Ice Cherenkov neutrino</td>
+          <td>TeV–PeV astrophysical ν</td>
+          <td>Neutrino sources, BSM</td>
+          <td>NGC 1068 as neutrino source (2022)</td>
+        </tr>
+        <tr>
+          <td>KATRIN</td>
+          <td>Germany</td>
+          <td>β-decay spectrometer</td>
+          <td>m_ν endpoint</td>
+          <td>Absolute neutrino mass</td>
+          <td>m_ν &lt; 0.45 eV (2022)</td>
+        </tr>
+        <tr>
+          <td>LEGEND-200</td>
+          <td>Italy (LNGS)</td>
+          <td>Ge-76 semiconductor</td>
+          <td>200 kg ⁷⁶Ge</td>
+          <td>Neutrinoless double beta decay</td>
+          <td>Currently operating; LEGEND-1000 planned</td>
+        </tr>
+        <tr>
+          <td>Pierre Auger Observatory</td>
+          <td>Argentina</td>
+          <td>UHECR surface array + FD</td>
+          <td>up to 10²⁰ eV CR</td>
+          <td>UHECR sources, composition</td>
+          <td>Starburst galaxy anisotropy (2023)</td>
+        </tr>
+        <tr>
+          <td>BESIII / BEPCII</td>
+          <td>China</td>
+          <td>e⁺e⁻ charm factory</td>
+          <td>2–4.6 GeV</td>
+          <td>Charm physics, exotic hadrons</td>
+          <td>X(3872) structure (2024)</td>
+        </tr>
+        <tr>
+          <td>FAIR / CBM / PANDA</td>
+          <td>Germany</td>
+          <td>Heavy ion / antiproton</td>
+          <td>Up to 29 GeV/u ions</td>
+          <td>Dense matter, charmonium</td>
+          <td>Coming online 2024–2025</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- CERN -->
+    <h3>CERN — Geneva, Switzerland</h3>
+
+    <p>CERN operates the world's largest and most complex particle physics infrastructure. The <span class="term" data-label="Large Hadron Collider" data-def="A 27km superconducting proton-proton (and heavy-ion) synchrotron at CERN. Protons are accelerated in two counter-rotating beams, colliding at four interaction points where the major detectors sit. Peak collision energy: 13.6 TeV in Run 3 (2022–2025).">LHC</span> is a 27-km circular ring of superconducting dipole magnets cooled to 1.9 K — colder than outer space. In Run 3 (2022–2025) it collides protons at 13.6 TeV center-of-mass energy with record luminosity.</p>
+
+    <p><strong>ATLAS and CMS</strong> are general-purpose 4π detectors, each the size of a five-story building and weighing ~7,000 tonnes. Their primary Run 3 programme:</p>
+    <ul>
+      <li><span class="term" data-label="Higgs coupling measurements" data-def="The Higgs boson couples to every massive particle with a strength proportional to that particle's mass. Measuring each coupling to sub-percent precision tests whether the Higgs is exactly the SM Higgs or a component of a more complex Higgs sector. Deviations would point to two-Higgs-doublet models, composite Higgs, or SUSY.">Higgs couplings</span> to fermions and gauge bosons at sub-percent precision, searching for deviations that would indicate an extended Higgs sector.</li>
+      <li><span class="term" data-label="di-Higgs production" data-def="The production of two Higgs bosons simultaneously, via gg→HH. Its rate is sensitive to the Higgs self-coupling λ, which determines the shape of the Higgs potential and whether the electroweak phase transition was first-order. The SM predicts a tiny cross-section; BSM enhancements are possible.">Di-Higgs production</span> to probe the Higgs self-coupling — the only handle on the shape of the Higgs potential, which determines whether the electroweak phase transition was first-order (relevant for baryogenesis).</li>
+      <li>Searches for BSM particles: stops, gluinos, electroweakinos, leptoquarks, $Z'$ bosons, and dark matter via <span class="term" data-label="missing transverse energy" data-def="If a collision produces invisible particles (dark matter candidates, neutrinos, lightest SUSY particles), they escape the detector without depositing energy. By measuring all visible particles and using momentum conservation in the transverse plane, physicists infer the invisible momentum. Large MET is a key BSM signal.">missing transverse energy (MET)</span>.</li>
+    </ul>
+
+    <p><strong>LHCb</strong> is a forward spectrometer optimized for beauty and charm physics. Its silicon <span class="term" data-label="VELO detector" data-def="The LHCb VErtex LOcator, a silicon strip detector just millimeters from the beam line. It reconstructs decay vertices of B and D mesons with ~20 μm precision, essential for identifying short-lived heavy-flavor decays.">VELO</span> pixel detector (upgraded in 2022) reconstructs B-meson decay vertices with ~20 μm precision. Current programme: measuring all angles and sides of the CKM unitarity triangle, searching for new sources of <span class="term" data-label="CP violation" data-def="Violation of the combined symmetry of charge conjugation and parity. In the Standard Model, CP violation arises from the complex phase in the CKM matrix (quarks) and potentially the PMNS matrix (leptons). The observed amount of CP violation is far too small to explain the matter-antimatter asymmetry of the universe.">CP violation</span>, and rare FCNC decays. In 2024, LHCb announced the first observation of <span class="term" data-label="time-reversal violation in charm mesons" data-def="T violation (violation of time-reversal symmetry) is equivalent to CP violation via the CPT theorem. Observing T violation directly — watching a process and confirming it is not time-symmetric — requires a different experimental technique than measuring CP asymmetries. LHCb's 2024 result used quantum correlations in D meson pairs.">time-reversal violation in charm mesons</span>, a first in the charm sector.</p>
+
+    <p><strong>ALICE</strong> studies the <span class="term" data-label="quark-gluon plasma" data-def="QGP is a phase of matter in which quarks and gluons are deconfined — not bound inside hadrons — existing above a critical temperature of ~155 MeV (≈ 1.8 trillion K). It filled the universe during the first ~10 μs after the Big Bang. ALICE recreates it by colliding lead nuclei, which briefly heat the collision zone to ~3 trillion K.">quark-gluon plasma (QGP)</span> in Pb-Pb collisions. A landmark 2023 result: ALICE measured the QGP shear viscosity-to-entropy ratio $\eta/s$ and found it consistent with the holographic lower bound $\eta/s = \hbar/4\pi k_B$ predicted by <span class="term" data-label="AdS/CFT correspondence" data-def="A duality relating string theory in Anti-de Sitter space to a conformal field theory on its boundary (the 'holographic' description). For the QGP, AdS/CFT predicts that strongly coupled fluids have a minimum viscosity η/s = 1/4π. The fact that the QGP — a QCD fluid — saturates this bound is one of the most striking connections between string theory and experiment.">AdS/CFT holography</span>. The QGP is the most perfect fluid ever measured.</p>
+
+    <p><strong>NA62</strong> at the CERN SPS beam measures the extremely rare decay $K^+ \to \pi^+ \nu\bar\nu$. The SM branching ratio is $(8.4 \pm 1.0) \times 10^{-11}$ — one in a hundred billion. Any significant excess would be an unambiguous signal of new physics. NA62's latest measurement is consistent with the SM at about 1σ, but statistics are still limited.</p>
+
+    <div class="callout">
+      <div class="label">LOOKING AHEAD: HL-LHC AND FCC</div>
+      <p>The <span class="term" data-label="High-Luminosity LHC" data-def="HL-LHC is the major upgrade of the LHC planned for 2029 onwards. It will increase the instantaneous luminosity by a factor of 5–7 (and integrated luminosity by ×10 over Run 3) using new triplet quadrupole magnets near the interaction points, crab cavities for beam crossing, and upgraded detector electronics. This will dramatically improve Higgs coupling precision and rare decay statistics.">High-Luminosity LHC (HL-LHC)</span>, approved and under construction, will increase the LHC's <span class="term" data-label="luminosity" data-def="Luminosity L measures the rate of particle interactions per unit cross-section. Higher luminosity means more collisions per second. Integrated luminosity (in fb⁻¹ or ab⁻¹) measures the total data collected. The HL-LHC targets 3000 fb⁻¹ per experiment, compared to ~300 fb⁻¹ from Runs 1–3 combined.">luminosity</span> by ×10 from 2029 onwards. The more ambitious Future Circular Collider (FCC) proposal — a 100km tunnel under Geneva at 100 TeV — was endorsed in the 2020 European Strategy for Particle Physics and is in feasibility study. FCC-hh would produce ~10 million Higgs bosons per year and could directly access the multi-TeV BSM frontier. FCC-ee (the lepton pre-stage) could run as a Tera-Z factory and precision Higgs factory first.</p>
+    </div>
+
+    <!-- Fermilab -->
+    <h3>Fermilab — Batavia, Illinois, USA</h3>
+
+    <p>The flagship US national laboratory for particle physics. The Muon g-2 experiment, described in the previous section, uses a 14-meter diameter superconducting storage ring. Muons at 3.09 GeV complete ~10 million orbits in 700 μs, and the precession of their spin relative to their momentum reveals the anomalous magnetic moment. The 2023 result combined all Run 1–4 data. A final combination with Run 5 is expected in 2025.</p>
+
+    <p><span class="term" data-label="NOvA" data-def="NuMI Off-axis νₑ Appearance experiment. Two detectors 810 km apart — the near detector at Fermilab and the far detector (14,000 tons) in Ash River, Minnesota. Uses the NuMI proton beam to produce an off-axis ν beam at ~2 GeV, near the first oscillation maximum. Measures both νμ disappearance (θ₂₃) and νe appearance (δCP).">NOvA</span> is a long-baseline neutrino oscillation experiment, 810 km from Fermilab to Minnesota. Its current constraints on $\theta_{23}$ favor near-maximal mixing ($\theta_{23}$ close to $\pi/4$), and it has placed some constraints on $\delta_{CP}$, though degeneracies make interpretation difficult without the companion DUNE measurement.</p>
+
+    <p><strong>DUNE (Deep Underground Neutrino Experiment)</strong> is the centerpiece of the US neutrino programme. A 1300-km baseline from Fermilab to the <span class="term" data-label="SURF" data-def="Sanford Underground Research Facility, in the former Homestake gold mine in Lead, South Dakota. 1.5 km underground, providing 4300 meters-water-equivalent shielding. Houses DUNE's far detector modules, LZ, and other experiments.">Sanford Underground Research Facility (SURF)</span> in South Dakota provides the optimal lever arm for measuring $\delta_{CP}$ and the mass ordering. The near detector is at Fermilab; the far detector consists of four 17,000-tonne <span class="term" data-label="liquid argon time projection chamber" data-def="A LArTPC drifts ionization electrons through a large volume of liquid argon to sense particle tracks in 3D. Provides bubble-chamber quality imaging with industrial-scale volume. ICARUS demonstrated the technology; DUNE's modules are the next scale step.">liquid argon time projection chambers (LArTPCs)</span> underground at SURF. First beam is expected ~2028. The detector will also serve as a <span class="term" data-label="supernova neutrino burst" data-def="A core-collapse supernova releases ~3×10⁴⁶ J of energy as neutrinos in a ~10 second burst. About 99% of the total energy of the explosion. DUNE, with its 40 kt LArTPC, would detect thousands of neutrinos from a Galactic supernova, probing the core-collapse mechanism.">supernova neutrino detector</span>, capable of detecting thousands of events from a galactic core-collapse supernova.</p>
+
+    <p><strong>PIP-II</strong> (Proton Improvement Plan II) is a new 800 MeV <span class="term" data-label="superconducting linear accelerator" data-def="A linac using superconducting radio-frequency cavities, which allows much higher accelerating gradients and lower power losses than room-temperature copper cavities. PIP-II's SRF linac will be the first SRF accelerator in the Americas operating at this scale.">superconducting linear accelerator</span> at Fermilab, currently under construction. It will deliver the highest-power proton beam in the world to produce the DUNE neutrino flux. Several of PIP-II's cryomodules are being built at partner institutions in the UK and India in the first major international in-kind contribution to a US accelerator.</p>
+
+    <p><strong>Mu2e</strong> searches for <span class="term" data-label="charged lepton flavor violation" data-def="Conversion of a muon to an electron without any neutrinos: μ⁻ + N → e⁻ + N. This process is forbidden in the Standard Model (it would require ΔL = 0 but flavor change without neutrinos — impossible without new physics). Any observed conversion would be unambiguous evidence for BSM physics. The branching ratio sensitivity of Mu2e is 10⁻¹⁷.">muon-to-electron conversion</span> in the field of an aluminum nucleus. If a single conversion is observed in ~$10^{17}$ stopped muons, it is unambiguous new physics. Mu2e is under construction with first data around 2026–2027.</p>
+
+    <!-- KEK / J-PARC -->
+    <h3>KEK and J-PARC — Japan</h3>
+
+    <p><strong>Belle II</strong> at SuperKEKB is an asymmetric $e^+e^-$ collider running at the $\Upsilon(4S)$ resonance, which decays almost exclusively to $B\bar{B}$ pairs. This "B factory" environment allows measurements of <span class="term" data-label="time-dependent CP asymmetry" data-def="In B-factory experiments, quantum entanglement means that measuring one B meson's decay time and flavor tags the other. Comparing the CP asymmetry in time-dependent B→f and B̄→f̄ decays is the gold standard for measuring CKM angles and probing new CP-violating phases.">time-dependent CP asymmetries</span> with high purity. Belle II's dataset as of early 2026 is ~400 fb⁻¹; the target is 50 ab⁻¹ by 2035, ~50× the full Belle dataset. The experiment is particularly powerful for searching for <span class="term" data-label="light dark matter and dark photons" data-def="Low-mass BSM particles that could be produced at B factories: dark photons (kinetically mixed with the SM photon), axion-like particles, and dark-sector states below a few GeV. Belle II's clean e⁺e⁻ environment and high luminosity make it uniquely sensitive to these light-mediator scenarios.">light dark matter mediators and dark photons</span> in the GeV mass range, complementary to the LHC.</p>
+
+    <p><strong>T2K</strong> shoots a muon neutrino beam from <span class="term" data-label="J-PARC" data-def="Japan Proton Accelerator Research Complex in Tokai, Japan. A 30 GeV Main Ring proton synchrotron provides beam to the T2K experiment (neutrino physics), COMET (muon-to-electron conversion), and hadronic spectroscopy experiments. J-PARC's beam power is among the highest for slow-extraction proton beams.">J-PARC</span> (Tokai) to Super-Kamiokande (295 km). The 2020 T2K result using $\nu_\mu \to \nu_e$ vs $\bar\nu_\mu \to \bar\nu_e$ comparison showed a 2.0σ preference for maximal CP violation ($\delta_{CP} \approx -\pi/2$) — the strongest hint to date of leptonic CP violation. T2K is being upgraded and will feed beam to <span class="term" data-label="Hyper-Kamiokande" data-def="A 260,000-tonne water Cherenkov detector under construction in the Mozumi mine near Kamioka, Japan. Eight times the fiducial volume of Super-Kamiokande. Will measure atmospheric neutrinos, T2K beam neutrinos, solar neutrinos, and supernova relic neutrinos. Construction started 2020; operational ~2027.">Hyper-Kamiokande</span> (260 kt water Cherenkov, operational ~2027), which will nail down $\delta_{CP}$ to within ~20° with a decade of data.</p>
+
+    <!-- China -->
+    <h3>IHEP / BEPCII — Beijing, China</h3>
+
+    <p>BEPCII (Beijing Electron-Positron Collider II) runs at center-of-mass energies of 2–4.6 GeV, covering the charmonium and charm threshold regions. The BESIII experiment is the world's leading facility for precision charm physics and has produced a series of results on exotic charmonium-like states.</p>
+
+    <p>The 2024 BESIII observation of the internal structure of the $X(3872)$ state revealed it has both a compact charmonium-like component and a <span class="term" data-label="hadronic molecule" data-def="A loosely bound state of two hadrons, analogous to a deuteron but involving mesons. The X(3872) sits just 0.2 MeV below the D⁰D̄*⁰ threshold, making a molecular interpretation plausible. Distinguishing compact multiquark states from hadronic molecules is one of the central questions in exotic hadron spectroscopy.">hadronic molecule</span> component near the $D^0\bar{D}^{*0}$ threshold. This dual nature has resolved part of a decade-long debate.</p>
+
+    <p>China has approved in principle the <span class="term" data-label="CEPC" data-def="Circular Electron-Positron Collider, a proposed 100km e⁺e⁻ ring near Beijing running at 240 GeV (Higgs factory) and 91.2 GeV (Z pole). Would produce ~800,000 Higgs bosons/year and ~10¹² Z bosons, enabling Higgs coupling measurements at the 0.1% level and precision EW tests far beyond current reach.">CEPC (Circular Electron-Positron Collider)</span>, a 100-km ring that would serve first as a Tera-Z factory (10¹² Z bosons) and then as a Higgs factory at 240 GeV producing ~800,000 Higgs bosons per year. This directly competes with CERN's FCC-ee proposal. Both laboratories are seeking domestic and international support for projects that would run in the 2040s.</p>
+
+    <!-- GSI/FAIR -->
+    <h3>GSI / FAIR — Darmstadt, Germany</h3>
+
+    <p>The Facility for Antiproton and Ion Research (FAIR) is a major new accelerator complex adjacent to the existing GSI facility. FAIR came online in 2024–2025 after more than a decade of construction. Its four main experimental programmes:</p>
+
+    <ul>
+      <li><strong>CBM (Compressed Baryonic Matter):</strong> Studies nuclear matter at densities several times higher than normal, relevant to neutron star interiors. Uses a fixed-target setup with heavy ion beams at up to 11 GeV/u (SIS100 synchrotron). Searching for the <span class="term" data-label="QCD critical point" data-def="The endpoint of the first-order phase transition between hadronic matter and quark-gluon plasma on the QCD phase diagram. Its existence and location are predicted by lattice QCD at finite baryon density, but direct experimental confirmation requires fixed-target experiments at intermediate energies like CBM/FAIR and BES-II at RHIC.">QCD critical point</span> and onset of deconfinement.</li>
+      <li><strong>PANDA (antiProton ANnihilations at DArmstadt):</strong> Uses a stored antiproton beam for precise spectroscopy of charmonium states and searches for exotic hadrons in antiproton-proton annihilation.</li>
+      <li><strong>HADES:</strong> Measures dilepton (electron-positron pair) spectra in heavy-ion collisions to probe strangeness production and chiral symmetry restoration.</li>
+      <li><strong>NuSTAR:</strong> Nuclear structure and astrophysics with exotic radioactive beams relevant to the r-process in neutron star mergers.</li>
+    </ul>
+
+    <!-- Underground labs — Gran Sasso -->
+    <h3>Gran Sasso National Laboratory (LNGS) — Italy</h3>
+
+    <p>The largest underground physics laboratory in the world, located beneath 1,400 meters of rock in the Gran Sasso mountains, providing ~3,800 meters-water-equivalent shielding against cosmic rays. Three active particle physics programmes of particular note:</p>
+
+    <p><strong>XENONnT</strong> is the current flagship liquid xenon dark matter experiment, with a 5.9-tonne active <span class="term" data-label="liquid xenon time projection chamber" data-def="LXe TPCs use xenon's high density (3× water) and ability to produce both ionization and scintillation signals to detect nuclear recoils from WIMP interactions. The ratio of ionization to scintillation (S2/S1) discriminates nuclear recoils (signal) from electron recoils (background) at the 99.7% level.">liquid xenon TPC</span>. Its 2022–2023 result set the world's most stringent <span class="term" data-label="WIMP-nucleon cross section" data-def="The rate at which WIMPs scatter off atomic nuclei, normalized per nucleon. Spin-independent (SI) cross sections add coherently over the nucleus, scaling as A². Spin-dependent (SD) cross sections depend on unpaired nuclear spin. The SI cross section is the most constraining. XENONnT's limit is 2.4×10⁻⁴⁷ cm² at 28 GeV WIMP mass.">spin-independent WIMP-nucleon cross section</span> limit of $\sigma_{\text{SI}} < 2.4 \times 10^{-47}\,\text{cm}^2$ at 28 GeV WIMP mass (90% CL). This is now ~10⁻¹⁰ times smaller than a proton cross-section. The experiment continues to run, and no signal has been found.</p>
+
+    <p><strong>LEGEND-200</strong> searches for <span class="term" data-label="neutrinoless double beta decay" data-def="0νββ: a nuclear decay in which two neutrons simultaneously convert to protons and two electrons, with no neutrinos emitted. This violates lepton number by two units and can only occur if neutrinos are Majorana fermions (their own antiparticles). The observation would determine the Majorana nature of neutrinos and constrain their absolute mass.">neutrinoless double beta decay (0νββ)</span> using 200 kg of germanium-76 detectors. If the Majorana neutrino mass is above ~50 meV, LEGEND-200 should observe a signal. The planned LEGEND-1000 upgrade (1,000 kg) would reach the inverted hierarchy parameter space definitively.</p>
+
+    <p><strong>DarkSide-20k</strong>, a 20-tonne liquid argon TPC, is under construction and will provide a complementary dark matter search to xenon-based experiments. Argon has different sensitivity characteristics and a natural radioactive background from ³⁹Ar that must be reduced using underground-sourced argon depleted in cosmogenic isotopes.</p>
+
+    <!-- SNOLAB and SURF -->
+    <h3>SNOLAB (Canada) and SURF (USA)</h3>
+
+    <p><strong>SNOLAB</strong> in Sudbury, Ontario (2 km underground, 6 km water-equivalent shielding) houses several key experiments. <strong>SNO+</strong> is the successor to the SNO experiment that confirmed neutrino flavor transformation. Currently in a phase loading <span class="term" data-label="tellurium-130" data-def="¹³⁰Te is a naturally occurring isotope with a two-neutrino double beta decay half-life of ~8×10²⁰ years. Loaded into the SNO+ liquid scintillator at 0.5% by mass (initially), it will be used to search for neutrinoless double beta decay with a Q-value of 2.53 MeV.">tellurium-130</span> into its liquid scintillator for a 0νββ search, SNO+ aims to complement LEGEND and KamLAND-Zen. The <strong>DEAP-3600</strong> argon dark matter detector completed its run; its data analysis established competitive limits on WIMP-argon scattering.</p>
+
+    <p><strong>SURF</strong> (Sanford Underground Research Facility, 1.5 km deep in the former Homestake mine) is home to <strong>LUX-ZEPLIN (LZ)</strong>, currently the world's most sensitive dark matter detector with 7 tonnes of active liquid xenon. LZ's 2023 first science run results set the most stringent WIMP limits at WIMP masses above ~9 GeV, with $\sigma_{\text{SI}} < 6.0 \times 10^{-48}\,\text{cm}^2$ at 40 GeV. SURF also hosts the first DUNE far detector module, currently under excavation, and the <strong>MAJORANA DEMONSTRATOR</strong> (enriched Ge-76 0νββ detector, completed and being incorporated into LEGEND).</p>
+
+    <!-- IceCube -->
+    <h3>IceCube — South Pole, Antarctica</h3>
+
+    <p>IceCube is a cubic kilometer of Antarctic ice instrumented with 5,160 <span class="term" data-label="digital optical module" data-def="Each IceCube DOM contains a 25-cm Hamamatsu photomultiplier tube, a data-acquisition board, and pressure housing. They are frozen into boreholes at depths of 1.45 to 2.45 km, where the ice is exceptionally clear and stable. The DOM detects Cherenkov light from neutrino-induced charged particles passing through the ice.">digital optical modules (DOMs)</span> drilled into boreholes at 1.45–2.45 km depth, where the ice is exceptionally clear. High-energy neutrinos (TeV–PeV) interact in or near the detector and produce Cherenkov light from charged secondaries — tracks from muons (pointing back to the source), or cascades from electron and tau neutrinos.</p>
+
+    <div class="callout">
+      <div class="label">ICECUBE 2022: NGC 1068 AS A NEUTRINO SOURCE</div>
+      <p>After a decade of searching, IceCube reported in 2022 a $4.2\sigma$ excess of high-energy neutrinos from the direction of <span class="term" data-label="NGC 1068" data-def="A nearby (14 Mpc) Seyfert II galaxy with a well-studied active galactic nucleus hidden behind a dusty torus. IceCube detected ~79 neutrinos from its direction over 10 years, far more than expected from background. The neutrino emission requires hadronic acceleration in the AGN corona — pp or pγ interactions producing π⁰ (→ γγ) and π± (→ νs).">NGC 1068</span>, a nearby Seyfert galaxy. The neutrino flux is roughly 10× the gamma-ray flux from the same source, suggesting the gamma-ray emission is absorbed — consistent with a compact, optically thick hadronic accelerator in the <span class="term" data-label="AGN corona" data-def="The hot plasma region above the accretion disk of an active galactic nucleus, analogous to the solar corona but far more energetic. Protons accelerated in the corona can produce pions and neutrinos in pp and pγ interactions. Unlike gamma rays, neutrinos escape the corona unimpeded, making IceCube uniquely able to probe this region.">AGN corona</span>. This is the first time a specific source other than the Sun and SN 1987A has been identified for astrophysical neutrinos. IceCube-Gen2 (a planned 10× expansion, ~2033) will establish a full map of the high-energy neutrino sky.</p>
+    </div>
+
+    <!-- Cosmic ray observatories -->
+    <h3>Pierre Auger Observatory (Argentina) and Telescope Array (Utah, USA)</h3>
+
+    <p>These two observatories detect <span class="term" data-label="ultra-high-energy cosmic rays" data-def="Cosmic rays with energies above 10¹⁸ eV (1 EeV). Their origin is unknown; candidates include AGN jets, gamma-ray bursts, starburst galaxies, and magnetars. Above ~5×10¹⁹ eV the GZK cutoff (pion photoproduction off the CMB) limits how far they can travel (~50 Mpc).">ultra-high-energy cosmic rays (UHECRs)</span> by observing the extensive air showers they produce in the atmosphere. The Auger Observatory covers 3,000 km² of Argentine pampas with 1,660 water Cherenkov detectors and 27 fluorescence telescopes. It can measure cosmic ray energies up to $\sim 10^{20}\,\text{eV}$ — 40 million times the LHC's maximum.</p>
+
+    <p>In 2023, Auger published a result showing anisotropy in cosmic ray arrival directions at energies above 40 EeV that correlates with the positions of starburst galaxies (particularly Centaurus A and the Centaurus A region). This supports the hypothesis that at least some of the highest-energy cosmic rays come from starburst-driven outflows, though the deflection by intergalactic magnetic fields makes source identification probabilistic. The Telescope Array (TA) in Utah has reported a "hotspot" in the northern sky, now being investigated with the expanded TA×4.</p>
+
+    <div class="problem-set" data-topic="phys-pp-labs"></div>
 
   </article>
 </div>
