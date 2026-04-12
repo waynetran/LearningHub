@@ -38,10 +38,11 @@
       <li><a href="#diag">14. Diagonalization</a></li>
       <li><a href="#ortho">15. Orthogonal bases, Gram–Schmidt</a></li>
       <li><a href="#svd">16. The Singular Value Decomposition</a></li>
-      <li><a href="#pca">17. PCA in 30 lines</a></li>
-      <li><a href="#ml">18. Applications to ML</a></li>
-      <li><a href="#code">19. NumPy code</a></li>
-      <li><a href="#summary">20. Summary</a></li>
+      <li><a href="#tensors">17. Tensors</a></li>
+      <li><a href="#pca">18. PCA in 30 lines</a></li>
+      <li><a href="#ml">19. Applications to ML</a></li>
+      <li><a href="#code">20. NumPy code</a></li>
+      <li><a href="#summary">21. Summary</a></li>
     </ul>
   </aside>
 
@@ -138,6 +139,170 @@
       <p class="mg-analogy"><strong>Geometry</strong>. Put the tail of $\mathbf{b}$ at the tip of $\mathbf{a}$. The arrow from the origin to the new tip is $\mathbf{a} + \mathbf{b}$. Equivalently: addition is the diagonal of the parallelogram they span. This is called the <em>tip-to-tail</em> rule and it's the geometric content of the component-wise formula above.</p>
     </div>
 
+    <div class="viz-3d" id="vec-add-viz">
+      <svg id="vecAddSvg" width="100%" viewBox="0 0 520 360" style="display:block;"></svg>
+      <p class="caption">Drag the tips of <span style="color:#22d3ee"><b>a</b></span> and <span style="color:#34d399"><b>b</b></span> to see the tip-to-tail construction and the sum <span style="color:#fbbf24"><b>a+b</b></span>. The dashed arrow shows <b>b</b> placed at the tip of <b>a</b>; the parallelogram diagonal (solid yellow) is the sum.</p>
+    </div>
+    <script>
+    (function(){
+      const svg = document.getElementById('vecAddSvg');
+      const NS = 'http://www.w3.org/2000/svg';
+      const W = 520, H = 360;
+      const OX = W/2, OY = H/2; // origin in SVG coords
+      const SCALE = 55; // pixels per unit
+
+      // State: vector tips in math coords (x right, y up)
+      let a = {x: 3, y: 1};
+      let b = {x: 1, y: 2};
+
+      // Convert math → SVG coords
+      function mx(x){ return OX + x * SCALE; }
+      function my(y){ return OY - y * SCALE; }
+      // Convert SVG → math coords
+      function sx(px){ return (px - OX) / SCALE; }
+      function sy(py){ return (OY - py) / SCALE; }
+
+      function mkEl(tag, attrs){
+        const el = document.createElementNS(NS, tag);
+        for(const [k,v] of Object.entries(attrs)) el.setAttribute(k,v);
+        return el;
+      }
+
+      function arrowhead(id, color){
+        const m = mkEl('marker', {id, markerWidth:8, markerHeight:8, refX:6, refY:3, orient:'auto'});
+        const p = mkEl('path', {d:'M0,0 L0,6 L8,3 z', fill:color});
+        m.appendChild(p); return m;
+      }
+
+      // Build defs
+      const defs = mkEl('defs',{});
+      defs.appendChild(arrowhead('ah-a','#22d3ee'));
+      defs.appendChild(arrowhead('ah-b','#34d399'));
+      defs.appendChild(arrowhead('ah-sum','#fbbf24'));
+      defs.appendChild(arrowhead('ah-bshift','rgba(52,211,153,0.5)'));
+      svg.appendChild(defs);
+
+      // Background
+      svg.appendChild(mkEl('rect',{x:0,y:0,width:W,height:H,fill:'#0b0d12'}));
+
+      // Grid lines
+      for(let i=-4;i<=4;i++){
+        const lx = mkEl('line',{x1:mx(i),y1:0,x2:mx(i),y2:H,stroke:'#1a2234','stroke-width':1});
+        const ly = mkEl('line',{x1:0,y1:my(i),x2:W,y2:my(i),stroke:'#1a2234','stroke-width':1});
+        svg.appendChild(lx); svg.appendChild(ly);
+      }
+
+      // Axes
+      svg.appendChild(mkEl('line',{x1:0,y1:my(0),x2:W,y2:my(0),stroke:'#1e2840','stroke-width':1.5}));
+      svg.appendChild(mkEl('line',{x1:mx(0),y1:0,x2:mx(0),y2:H,stroke:'#1e2840','stroke-width':1.5}));
+
+      // Parallelogram fill
+      const para = mkEl('polygon',{fill:'rgba(124,92,255,0.08)',stroke:'#7c5cff','stroke-width':0.5,'stroke-dasharray':'3 3'});
+      svg.appendChild(para);
+
+      // B-shifted arrow (dashed, ghost)
+      const bShiftLine = mkEl('line',{stroke:'rgba(52,211,153,0.45)','stroke-width':2,'stroke-dasharray':'6 4','marker-end':'url(#ah-bshift)'});
+      svg.appendChild(bShiftLine);
+
+      // Sum arrow
+      const sumLine = mkEl('line',{stroke:'#fbbf24','stroke-width':2.5,'marker-end':'url(#ah-sum)'});
+      svg.appendChild(sumLine);
+
+      // Vector a
+      const aLine = mkEl('line',{stroke:'#22d3ee','stroke-width':2.5,'marker-end':'url(#ah-a)'});
+      svg.appendChild(aLine);
+
+      // Vector b
+      const bLine = mkEl('line',{stroke:'#34d399','stroke-width':2.5,'marker-end':'url(#ah-b)'});
+      svg.appendChild(bLine);
+
+      // Labels
+      const aLabel = mkEl('text',{fill:'#22d3ee','font-family':'ui-monospace,monospace','font-size':13,'font-weight':'bold'});
+      const bLabel = mkEl('text',{fill:'#34d399','font-family':'ui-monospace,monospace','font-size':13,'font-weight':'bold'});
+      const sumLabel = mkEl('text',{fill:'#fbbf24','font-family':'ui-monospace,monospace','font-size':13,'font-weight':'bold'});
+      svg.appendChild(aLabel); svg.appendChild(bLabel); svg.appendChild(sumLabel);
+
+      // Readout text
+      const info = mkEl('text',{fill:'#7a8699','font-family':'ui-monospace,monospace','font-size':11,x:10,y:H-10});
+      svg.appendChild(info);
+
+      // Drag handles (circles)
+      const aTip = mkEl('circle',{r:7,fill:'#22d3ee',cursor:'grab',opacity:0.9});
+      const bTip = mkEl('circle',{r:7,fill:'#34d399',cursor:'grab',opacity:0.9});
+      svg.appendChild(aTip); svg.appendChild(bTip);
+
+      function clamp(v,lo,hi){ return Math.max(lo,Math.min(hi,v)); }
+
+      function draw(){
+        const ax=mx(a.x), ay=my(a.y);
+        const bx=mx(b.x), by=my(b.y);
+        const sx2=mx(a.x+b.x), sy2=my(a.y+b.y);
+
+        // parallelogram: O, a, a+b, b
+        para.setAttribute('points',`${OX},${OY} ${ax},${ay} ${sx2},${sy2} ${bx},${by}`);
+
+        // b shifted to tip of a (dashed)
+        bShiftLine.setAttribute('x1',ax); bShiftLine.setAttribute('y1',ay);
+        bShiftLine.setAttribute('x2',sx2); bShiftLine.setAttribute('y2',sy2);
+
+        // sum
+        sumLine.setAttribute('x1',OX); sumLine.setAttribute('y1',OY);
+        sumLine.setAttribute('x2',sx2); sumLine.setAttribute('y2',sy2);
+
+        // a
+        aLine.setAttribute('x1',OX); aLine.setAttribute('y1',OY);
+        aLine.setAttribute('x2',ax); aLine.setAttribute('y2',ay);
+
+        // b
+        bLine.setAttribute('x1',OX); bLine.setAttribute('y1',OY);
+        bLine.setAttribute('x2',bx); bLine.setAttribute('y2',by);
+
+        // labels
+        aLabel.setAttribute('x', ax+8); aLabel.setAttribute('y', ay-6); aLabel.textContent=`a=(${a.x.toFixed(1)},${a.y.toFixed(1)})`;
+        bLabel.setAttribute('x', bx+8); bLabel.setAttribute('y', by-6); bLabel.textContent=`b=(${b.x.toFixed(1)},${b.y.toFixed(1)})`;
+        sumLabel.setAttribute('x', sx2+8); sumLabel.setAttribute('y', sy2-6); sumLabel.textContent=`a+b=(${(a.x+b.x).toFixed(1)},${(a.y+b.y).toFixed(1)})`;
+
+        // handles
+        aTip.setAttribute('cx',ax); aTip.setAttribute('cy',ay);
+        bTip.setAttribute('cx',bx); bTip.setAttribute('cy',by);
+
+        // readout
+        const mag = v => Math.sqrt(v.x*v.x+v.y*v.y);
+        const s = {x:a.x+b.x, y:a.y+b.y};
+        info.textContent = `|a|=${mag(a).toFixed(2)}  |b|=${mag(b).toFixed(2)}  |a+b|=${mag(s).toFixed(2)}`;
+      }
+
+      // Drag logic
+      let dragging = null;
+      function startDrag(vec, circle, e){
+        e.preventDefault();
+        dragging = {vec, circle};
+      }
+      aTip.addEventListener('mousedown', e=>startDrag(a, aTip, e));
+      bTip.addEventListener('mousedown', e=>startDrag(b, bTip, e));
+      aTip.addEventListener('touchstart', e=>startDrag(a, aTip, e.touches[0]), {passive:false});
+      bTip.addEventListener('touchstart', e=>startDrag(b, bTip, e.touches[0]), {passive:false});
+
+      function onMove(clientX, clientY){
+        if(!dragging) return;
+        const rect = svg.getBoundingClientRect();
+        const scaleX = W / rect.width;
+        const scaleY = H / rect.height;
+        const px = (clientX - rect.left) * scaleX;
+        const py = (clientY - rect.top) * scaleY;
+        dragging.vec.x = clamp(sx(px), -4, 4);
+        dragging.vec.y = clamp(sy(py), -3, 3);
+        draw();
+      }
+      window.addEventListener('mousemove', e=>onMove(e.clientX, e.clientY));
+      window.addEventListener('touchmove', e=>{e.preventDefault(); onMove(e.touches[0].clientX, e.touches[0].clientY);}, {passive:false});
+      window.addEventListener('mouseup', ()=>dragging=null);
+      window.addEventListener('touchend', ()=>dragging=null);
+
+      draw();
+    })();
+    </script>
+
     <h3>Scalar multiplication</h3>
 
     <p>Multiplying a vector by a plain number (a <em>scalar</em>) stretches or squashes it:</p>
@@ -153,6 +318,62 @@
       </dl>
       <p class="mg-analogy"><strong>Geometry</strong>. $c > 1$ stretches the arrow; $0 < c < 1$ shrinks it; $c < 0$ flips it through the origin. The direction is preserved (or reversed), the length is multiplied by $|c|$.</p>
     </div>
+
+    <div class="viz-3d" id="scalar-viz">
+      <svg id="scalarSvg" width="100%" viewBox="0 0 420 280" style="display:block;"></svg>
+      <div style="padding:8px 16px 4px;display:flex;align-items:center;gap:12px;">
+        <label style="font-family:ui-monospace,monospace;font-size:12px;color:#7a8699;">scalar <i>c</i> =</label>
+        <input id="scalarSlider" type="range" min="-2.5" max="2.5" step="0.05" value="1.5" style="flex:1;max-width:200px;">
+        <span id="scalarVal" style="font-family:ui-monospace,monospace;font-size:13px;color:#22d3ee;min-width:40px;">1.50</span>
+      </div>
+      <p class="caption">Drag the slider to scale vector <span style="color:#7c5cff"><b>v</b></span>. When <i>c</i> &gt; 0 the scaled vector <span style="color:#22d3ee"><b>cv</b></span> points the same direction; when <i>c</i> &lt; 0 it flips. The original <b>v</b> stays fixed for reference.</p>
+    </div>
+    <script>
+    (function(){
+      const svg = document.getElementById('scalarSvg');
+      const slider = document.getElementById('scalarSlider');
+      const valLabel = document.getElementById('scalarVal');
+      const NS = 'http://www.w3.org/2000/svg';
+      const W=420, H=280, OX=W/2, OY=H/2, SC=60;
+      const v = {x:1.8, y:1.2}; // fixed base vector
+
+      function mx(x){return OX+x*SC;} function my(y){return OY-y*SC;}
+
+      function mk(tag,a){const e=document.createElementNS(NS,tag);for(const[k,vv]of Object.entries(a))e.setAttribute(k,vv);return e;}
+      function ah(id,col){const m=mk('marker',{id,markerWidth:8,markerHeight:8,refX:6,refY:3,orient:'auto'});m.appendChild(mk('path',{d:'M0,0 L0,6 L8,3 z',fill:col}));return m;}
+
+      const defs=mk('defs',{});
+      defs.appendChild(ah('sah-v','#7c5cff'));
+      defs.appendChild(ah('sah-cv','#22d3ee'));
+      svg.appendChild(defs);
+      svg.appendChild(mk('rect',{x:0,y:0,width:W,height:H,fill:'#0b0d12'}));
+
+      for(let i=-3;i<=3;i++){
+        svg.appendChild(mk('line',{x1:mx(i),y1:0,x2:mx(i),y2:H,stroke:'#1a2234','stroke-width':1}));
+        svg.appendChild(mk('line',{x1:0,y1:my(i),x2:W,y2:my(i),stroke:'#1a2234','stroke-width':1}));
+      }
+      svg.appendChild(mk('line',{x1:0,y1:my(0),x2:W,y2:my(0),stroke:'#1e2840','stroke-width':1.5}));
+      svg.appendChild(mk('line',{x1:mx(0),y1:0,x2:mx(0),y2:H,stroke:'#1e2840','stroke-width':1.5}));
+
+      const vLine=mk('line',{stroke:'#7c5cff','stroke-width':2,'stroke-dasharray':'5 3','marker-end':'url(#sah-v)'});
+      const cvLine=mk('line',{stroke:'#22d3ee','stroke-width':2.5,'marker-end':'url(#sah-cv)'});
+      const vLbl=mk('text',{fill:'#7c5cff','font-family':'ui-monospace,monospace','font-size':12,'font-weight':'bold'});
+      const cvLbl=mk('text',{fill:'#22d3ee','font-family':'ui-monospace,monospace','font-size':12,'font-weight':'bold'});
+      svg.appendChild(vLine); svg.appendChild(cvLine); svg.appendChild(vLbl); svg.appendChild(cvLbl);
+
+      function draw(){
+        const c=parseFloat(slider.value);
+        valLabel.textContent=c.toFixed(2);
+        vLine.setAttribute('x1',OX);vLine.setAttribute('y1',OY);vLine.setAttribute('x2',mx(v.x));vLine.setAttribute('y2',my(v.y));
+        vLbl.setAttribute('x',mx(v.x)+6);vLbl.setAttribute('y',my(v.y)-5);vLbl.textContent='v';
+        cvLine.setAttribute('x1',OX);cvLine.setAttribute('y1',OY);cvLine.setAttribute('x2',mx(c*v.x));cvLine.setAttribute('y2',my(c*v.y));
+        const norm=Math.sqrt((c*v.x)**2+(c*v.y)**2);
+        cvLbl.setAttribute('x',mx(c*v.x)+6);cvLbl.setAttribute('y',my(c*v.y)-5);cvLbl.textContent=`cv (|cv|=${norm.toFixed(2)})`;
+      }
+      slider.addEventListener('input',draw);
+      draw();
+    })();
+    </script>
 
     <p>These two operations — addition and scalar multiplication — are the <em>only</em> operations that define what "linear" means. Everything else in this subject is built out of them.</p>
 
@@ -269,6 +490,110 @@
       </dl>
       <p class="mg-analogy"><strong>Picture</strong>. Shine a light straight down onto the $\mathbf{u}$-axis. The shadow of $\mathbf{a}$ is the projection. Everything else — Fourier analysis, least squares, <a href="../topics/self-attention.html">attention</a>, PCA — is projection in fancier clothes.</p>
     </div>
+
+    <div class="viz-3d" id="dot-viz">
+      <svg id="dotSvg" width="100%" viewBox="0 0 480 320" style="display:block;"></svg>
+      <p class="caption">Drag the tips of <span style="color:#22d3ee"><b>a</b></span> and <span style="color:#34d399"><b>b</b></span>. The arc shows the angle θ between them. The <span style="color:#fbbf24">dashed line</span> is the projection of <b>a</b> onto <b>b</b>. The dot product value and cosine similarity update live.</p>
+    </div>
+    <script>
+    (function(){
+      const svg=document.getElementById('dotSvg');
+      const NS='http://www.w3.org/2000/svg';
+      const W=480,H=320,OX=W/2,OY=H/2,SC=60;
+      let a={x:2.5,y:1.5}, b={x:0.5,y:2.5};
+
+      function mx(x){return OX+x*SC;} function my(y){return OY-y*SC;}
+      function sx(p){return (p-OX)/SC;} function sy(p){return (OY-p)/SC;}
+      function dot(u,v){return u.x*v.x+u.y*v.y;}
+      function mag(u){return Math.sqrt(u.x*u.x+u.y*u.y);}
+      function norm(u){const m=mag(u);return{x:u.x/m,y:u.y/m};}
+
+      function mk(t,a){const e=document.createElementNS(NS,t);for(const[k,v]of Object.entries(a))e.setAttribute(k,v);return e;}
+      function ah(id,col){const m=mk('marker',{id,markerWidth:8,markerHeight:8,refX:6,refY:3,orient:'auto'});m.appendChild(mk('path',{d:'M0,0 L0,6 L8,3 z',fill:col}));return m;}
+
+      const defs=mk('defs',{});
+      ['dah-a','#22d3ee','dah-b','#34d399','dah-proj','#fbbf24'].forEach((_,i,arr)=>{if(i%2===0)defs.appendChild(ah(arr[i],arr[i+1]));});
+      svg.appendChild(defs);
+      svg.appendChild(mk('rect',{x:0,y:0,width:W,height:H,fill:'#0b0d12'}));
+      for(let i=-3;i<=3;i++){
+        svg.appendChild(mk('line',{x1:mx(i),y1:0,x2:mx(i),y2:H,stroke:'#1a2234','stroke-width':1}));
+        svg.appendChild(mk('line',{x1:0,y1:my(i),x2:W,y2:my(i),stroke:'#1a2234','stroke-width':1}));
+      }
+      svg.appendChild(mk('line',{x1:0,y1:my(0),x2:W,y2:my(0),stroke:'#1e2840','stroke-width':1.5}));
+      svg.appendChild(mk('line',{x1:mx(0),y1:0,x2:mx(0),y2:H,stroke:'#1e2840','stroke-width':1.5}));
+
+      const arcEl=mk('path',{fill:'rgba(124,92,255,0.15)',stroke:'#7c5cff','stroke-width':1.5});
+      const projLine=mk('line',{stroke:'#fbbf24','stroke-width':2,'stroke-dasharray':'5 3','marker-end':'url(#dah-proj)'});
+      const projFoot=mk('line',{stroke:'rgba(251,191,36,0.4)','stroke-width':1,'stroke-dasharray':'3 3'});
+      const aLine=mk('line',{stroke:'#22d3ee','stroke-width':2.5,'marker-end':'url(#dah-a)'});
+      const bLine=mk('line',{stroke:'#34d399','stroke-width':2.5,'marker-end':'url(#dah-b)'});
+      const aLbl=mk('text',{fill:'#22d3ee','font-family':'ui-monospace,monospace','font-size':12,'font-weight':'bold'});
+      const bLbl=mk('text',{fill:'#34d399','font-family':'ui-monospace,monospace','font-size':12,'font-weight':'bold'});
+      const info=mk('text',{fill:'#a4b0c2','font-family':'ui-monospace,monospace','font-size':11,x:8,y:H-8});
+      [arcEl,projFoot,projLine,aLine,bLine,aLbl,bLbl,info].forEach(e=>svg.appendChild(e));
+
+      const aTip=mk('circle',{r:7,fill:'#22d3ee',cursor:'grab'});
+      const bTip=mk('circle',{r:7,fill:'#34d399',cursor:'grab'});
+      svg.appendChild(aTip); svg.appendChild(bTip);
+
+      function draw(){
+        // vectors
+        aLine.setAttribute('x1',OX);aLine.setAttribute('y1',OY);aLine.setAttribute('x2',mx(a.x));aLine.setAttribute('y2',my(a.y));
+        bLine.setAttribute('x1',OX);bLine.setAttribute('y1',OY);bLine.setAttribute('x2',mx(b.x));bLine.setAttribute('y2',my(b.y));
+        aTip.setAttribute('cx',mx(a.x));aTip.setAttribute('cy',my(a.y));
+        bTip.setAttribute('cx',mx(b.x));bTip.setAttribute('cy',my(b.y));
+        aLbl.setAttribute('x',mx(a.x)+7);aLbl.setAttribute('y',my(a.y)-5);aLbl.textContent='a';
+        bLbl.setAttribute('x',mx(b.x)+7);bLbl.setAttribute('y',my(b.y)-5);bLbl.textContent='b';
+
+        // angle arc
+        const R=36;
+        const angA=Math.atan2(-a.y,a.x); // SVG flips y
+        const angB=Math.atan2(-b.y,b.x);
+        let da=angA, db=angB;
+        // draw arc between the two angles
+        const x1=OX+R*Math.cos(da), y1=OY+R*Math.sin(da);
+        const x2=OX+R*Math.cos(db), y2=OY+R*Math.sin(db);
+        const large=Math.abs(da-db)>Math.PI?1:0;
+        arcEl.setAttribute('d',`M${OX},${OY} L${x1},${y1} A${R},${R},0,${large},0,${x2},${y2} Z`);
+
+        // projection of a onto b
+        const d=dot(a,b), mb=mag(b);
+        const t=d/(mb*mb);
+        const proj={x:t*b.x, y:t*b.y};
+        projLine.setAttribute('x1',OX);projLine.setAttribute('y1',OY);
+        projLine.setAttribute('x2',mx(proj.x));projLine.setAttribute('y2',my(proj.y));
+        // foot line from a to projection
+        projFoot.setAttribute('x1',mx(a.x));projFoot.setAttribute('y1',my(a.y));
+        projFoot.setAttribute('x2',mx(proj.x));projFoot.setAttribute('y2',my(proj.y));
+
+        // info readout
+        const ma=mag(a);
+        const cosT=d/(ma*mb);
+        const theta=Math.acos(Math.max(-1,Math.min(1,cosT)))*180/Math.PI;
+        info.textContent=`a·b = ${d.toFixed(2)}   |a|=${ma.toFixed(2)}  |b|=${mb.toFixed(2)}   cos θ = ${cosT.toFixed(3)}   θ = ${theta.toFixed(1)}°`;
+      }
+
+      let dragging=null;
+      function startDrag(vec,e){e.preventDefault();dragging=vec;}
+      aTip.addEventListener('mousedown',e=>startDrag(a,e));
+      bTip.addEventListener('mousedown',e=>startDrag(b,e));
+      aTip.addEventListener('touchstart',e=>startDrag(a,e.touches[0]),{passive:false});
+      bTip.addEventListener('touchstart',e=>startDrag(b,e.touches[0]),{passive:false});
+      function onMove(cx,cy){
+        if(!dragging)return;
+        const r=svg.getBoundingClientRect();
+        const px=(cx-r.left)*W/r.width, py=(cy-r.top)*H/r.height;
+        dragging.x=Math.max(-3.5,Math.min(3.5,sx(px)));
+        dragging.y=Math.max(-2.5,Math.min(2.5,sy(py)));
+        draw();
+      }
+      window.addEventListener('mousemove',e=>onMove(e.clientX,e.clientY));
+      window.addEventListener('touchmove',e=>{e.preventDefault();onMove(e.touches[0].clientX,e.touches[0].clientY);},{passive:false});
+      window.addEventListener('mouseup',()=>dragging=null);
+      window.addEventListener('touchend',()=>dragging=null);
+      draw();
+    })();
+    </script>
 
     <p>Why does attention appear here? In a transformer, the "score" between a query and a key is literally $\mathbf{q}\cdot\mathbf{k}$. High dot product → "these two tokens are relevant to each other" → high attention weight. That's the whole idea. The softmax is window dressing.</p>
 
@@ -655,6 +980,128 @@
       <p class="mg-analogy"><strong>Picture</strong>. The span of a single non-zero vector is a line through the origin. The span of two non-parallel vectors in the plane is the entire plane. The span of two parallel vectors is a line — the second one adds nothing. Span is "the reachable set."</p>
     </div>
 
+    <div class="viz-3d" id="span-viz">
+      <svg id="spanSvg" width="100%" viewBox="0 0 480 340" style="display:block;"></svg>
+      <div style="padding:8px 16px 4px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;">
+        <label style="font-family:ui-monospace,monospace;font-size:12px;color:#22d3ee;">c₁ = <input id="c1Slider" type="range" min="-3" max="3" step="0.1" value="1.5" style="vertical-align:middle;width:100px;"> <span id="c1Val">1.5</span></label>
+        <label style="font-family:ui-monospace,monospace;font-size:12px;color:#34d399;">c₂ = <input id="c2Slider" type="range" min="-3" max="3" step="0.1" value="1.0" style="vertical-align:middle;width:100px;"> <span id="c2Val">1.0</span></label>
+      </div>
+      <p class="caption">Two vectors <span style="color:#22d3ee"><b>v₁</b></span> and <span style="color:#34d399"><b>v₂</b></span> (drag their tips). Their span is shown as a <span style="color:rgba(124,92,255,0.5)">shaded region</span>. The <span style="color:#fbbf24">yellow arrow</span> is the linear combination c₁v₁ + c₂v₂ — adjust the sliders to reach any point in the span. When v₁ and v₂ are parallel the span collapses to a line.</p>
+    </div>
+    <script>
+    (function(){
+      const svg=document.getElementById('spanSvg');
+      const c1S=document.getElementById('c1Slider'),c2S=document.getElementById('c2Slider');
+      const c1L=document.getElementById('c1Val'),c2L=document.getElementById('c2Val');
+      const NS='http://www.w3.org/2000/svg';
+      const W=480,H=340,OX=W/2,OY=H/2,SC=55;
+      let v1={x:2,y:0.5}, v2={x:0.3,y:2};
+
+      function mx(x){return OX+x*SC;} function my(y){return OY-y*SC;}
+      function sx(p){return (p-OX)/SC;} function sy(p){return (OY-p)/SC;}
+      function cross2d(u,v){return u.x*v.y-u.y*v.x;}
+
+      function mk(t,a){const e=document.createElementNS(NS,t);for(const[k,v]of Object.entries(a))e.setAttribute(k,v);return e;}
+      function ah(id,col){const m=mk('marker',{id,markerWidth:8,markerHeight:8,refX:6,refY:3,orient:'auto'});m.appendChild(mk('path',{d:'M0,0 L0,6 L8,3 z',fill:col}));return m;}
+
+      const defs=mk('defs',{});
+      defs.appendChild(ah('sspan-v1','#22d3ee'));
+      defs.appendChild(ah('sspan-v2','#34d399'));
+      defs.appendChild(ah('sspan-combo','#fbbf24'));
+      svg.appendChild(defs);
+      svg.appendChild(mk('rect',{x:0,y:0,width:W,height:H,fill:'#0b0d12'}));
+      for(let i=-4;i<=4;i++){
+        svg.appendChild(mk('line',{x1:mx(i),y1:0,x2:mx(i),y2:H,stroke:'#1a2234','stroke-width':1}));
+        svg.appendChild(mk('line',{x1:0,y1:my(i),x2:W,y2:my(i),stroke:'#1a2234','stroke-width':1}));
+      }
+      svg.appendChild(mk('line',{x1:0,y1:my(0),x2:W,y2:my(0),stroke:'#1e2840','stroke-width':1.5}));
+      svg.appendChild(mk('line',{x1:mx(0),y1:0,x2:mx(0),y2:H,stroke:'#1e2840','stroke-width':1.5}));
+
+      const spanShade=mk('polygon',{fill:'rgba(124,92,255,0.1)',stroke:'rgba(124,92,255,0.25)','stroke-width':1,'stroke-dasharray':'4 4'});
+      svg.appendChild(spanShade);
+
+      const comboLine=mk('line',{stroke:'#fbbf24','stroke-width':2.5,'marker-end':'url(#sspan-combo)'});
+      const v1Line=mk('line',{stroke:'#22d3ee','stroke-width':2.5,'marker-end':'url(#sspan-v1)'});
+      const v2Line=mk('line',{stroke:'#34d399','stroke-width':2.5,'marker-end':'url(#sspan-v2)'});
+      const v1Lbl=mk('text',{fill:'#22d3ee','font-family':'ui-monospace,monospace','font-size':12,'font-weight':'bold'});
+      const v2Lbl=mk('text',{fill:'#34d399','font-family':'ui-monospace,monospace','font-size':12,'font-weight':'bold'});
+      const comboLbl=mk('text',{fill:'#fbbf24','font-family':'ui-monospace,monospace','font-size':11});
+      const info=mk('text',{fill:'#7a8699','font-family':'ui-monospace,monospace','font-size':11,x:8,y:H-8});
+      [spanShade,comboLine,v1Line,v2Line,v1Lbl,v2Lbl,comboLbl,info].forEach(e=>svg.appendChild(e));
+
+      const v1Tip=mk('circle',{r:7,fill:'#22d3ee',cursor:'grab'});
+      const v2Tip=mk('circle',{r:7,fill:'#34d399',cursor:'grab'});
+      svg.appendChild(v1Tip);svg.appendChild(v2Tip);
+
+      function draw(){
+        const c1=parseFloat(c1S.value),c2=parseFloat(c2S.value);
+        c1L.textContent=c1.toFixed(1); c2L.textContent=c2.toFixed(1);
+
+        // span fill: parallelogram extended by ±3x
+        const cross=cross2d(v1,v2);
+        const isIndep=Math.abs(cross)>0.1;
+        if(isIndep){
+          // big parallelogram covers canvas
+          const K=6;
+          const corners=[
+            {x:-K*v1.x-K*v2.x,y:-K*v1.y-K*v2.y},
+            {x: K*v1.x-K*v2.x,y: K*v1.y-K*v2.y},
+            {x: K*v1.x+K*v2.x,y: K*v1.y+K*v2.y},
+            {x:-K*v1.x+K*v2.x,y:-K*v1.y+K*v2.y}
+          ];
+          spanShade.setAttribute('points',corners.map(p=>`${mx(p.x)},${my(p.y)}`).join(' '));
+        } else {
+          // just a line along v1
+          const K=10;
+          const pts=[{x:-K*v1.x,y:-K*v1.y},{x:K*v1.x,y:K*v1.y}];
+          // thin parallelogram
+          const perp={x:-v1.y*0.05,y:v1.x*0.05};
+          spanShade.setAttribute('points',[
+            `${mx(pts[0].x+perp.x)},${my(pts[0].y+perp.y)}`,
+            `${mx(pts[1].x+perp.x)},${my(pts[1].y+perp.y)}`,
+            `${mx(pts[1].x-perp.x)},${my(pts[1].y-perp.y)}`,
+            `${mx(pts[0].x-perp.x)},${my(pts[0].y-perp.y)}`
+          ].join(' '));
+        }
+
+        v1Line.setAttribute('x1',OX);v1Line.setAttribute('y1',OY);v1Line.setAttribute('x2',mx(v1.x));v1Line.setAttribute('y2',my(v1.y));
+        v2Line.setAttribute('x1',OX);v2Line.setAttribute('y1',OY);v2Line.setAttribute('x2',mx(v2.x));v2Line.setAttribute('y2',my(v2.y));
+        v1Lbl.setAttribute('x',mx(v1.x)+7);v1Lbl.setAttribute('y',my(v1.y)-5);v1Lbl.textContent='v₁';
+        v2Lbl.setAttribute('x',mx(v2.x)+7);v2Lbl.setAttribute('y',my(v2.y)-5);v2Lbl.textContent='v₂';
+
+        const cx=c1*v1.x+c2*v2.x, cy=c1*v1.y+c2*v2.y;
+        comboLine.setAttribute('x1',OX);comboLine.setAttribute('y1',OY);comboLine.setAttribute('x2',mx(cx));comboLine.setAttribute('y2',my(cy));
+        comboLbl.setAttribute('x',mx(cx)+7);comboLbl.setAttribute('y',my(cy)-5);comboLbl.textContent=`c₁v₁+c₂v₂=(${cx.toFixed(1)},${cy.toFixed(1)})`;
+
+        v1Tip.setAttribute('cx',mx(v1.x));v1Tip.setAttribute('cy',my(v1.y));
+        v2Tip.setAttribute('cx',mx(v2.x));v2Tip.setAttribute('cy',my(v2.y));
+
+        info.textContent=isIndep?'Linearly INDEPENDENT — span = entire plane':'Linearly DEPENDENT — span = a line through origin';
+      }
+
+      let dragging=null;
+      function startDrag(vec,e){e.preventDefault();dragging=vec;}
+      v1Tip.addEventListener('mousedown',e=>startDrag(v1,e));
+      v2Tip.addEventListener('mousedown',e=>startDrag(v2,e));
+      v1Tip.addEventListener('touchstart',e=>startDrag(v1,e.touches[0]),{passive:false});
+      v2Tip.addEventListener('touchstart',e=>startDrag(v2,e.touches[0]),{passive:false});
+      function onMove(cx,cy){
+        if(!dragging)return;
+        const r=svg.getBoundingClientRect();
+        const px=(cx-r.left)*W/r.width,py=(cy-r.top)*H/r.height;
+        dragging.x=Math.max(-3.8,Math.min(3.8,sx(px)));
+        dragging.y=Math.max(-2.8,Math.min(2.8,sy(py)));
+        draw();
+      }
+      window.addEventListener('mousemove',e=>onMove(e.clientX,e.clientY));
+      window.addEventListener('touchmove',e=>{e.preventDefault();onMove(e.touches[0].clientX,e.touches[0].clientY);},{passive:false});
+      window.addEventListener('mouseup',()=>dragging=null);
+      window.addEventListener('touchend',()=>dragging=null);
+      c1S.addEventListener('input',draw);c2S.addEventListener('input',draw);
+      draw();
+    })();
+    </script>
+
     <h3>Linear independence</h3>
 
     <p>A set of vectors $\{\mathbf{v}_1, \dots, \mathbf{v}_k\}$ is <strong>linearly independent</strong> if the only way to get the zero vector as a combination is to use all zero coefficients:</p>
@@ -816,6 +1263,128 @@
 
     <p>Once you've done this a few times, you'll never want to do it for anything bigger than 3×3 again. Everything larger gets computed numerically.</p>
 
+    <div class="viz-3d" id="eig-viz">
+      <svg id="eigSvg" width="100%" viewBox="0 0 520 360" style="display:block;"></svg>
+      <div style="padding:8px 16px 4px;display:flex;flex-wrap:wrap;gap:16px;">
+        <label style="font-family:ui-monospace,monospace;font-size:12px;color:#7a8699;">A₁₁ <input id="a11" type="range" min="-3" max="5" step="0.1" value="4" style="width:80px;vertical-align:middle;"> <span id="a11v">4.0</span></label>
+        <label style="font-family:ui-monospace,monospace;font-size:12px;color:#7a8699;">A₁₂ <input id="a12" type="range" min="-3" max="3" step="0.1" value="1" style="width:80px;vertical-align:middle;"> <span id="a12v">1.0</span></label>
+        <label style="font-family:ui-monospace,monospace;font-size:12px;color:#7a8699;">A₂₁ <input id="a21" type="range" min="-3" max="3" step="0.1" value="2" style="width:80px;vertical-align:middle;"> <span id="a21v">2.0</span></label>
+        <label style="font-family:ui-monospace,monospace;font-size:12px;color:#7a8699;">A₂₂ <input id="a22" type="range" min="-3" max="5" step="0.1" value="3" style="width:80px;vertical-align:middle;"> <span id="a22v">3.0</span></label>
+      </div>
+      <p class="caption">A 2×2 matrix transforms the <span style="color:rgba(124,92,255,0.6)">unit circle</span> into an <span style="color:#22d3ee">ellipse</span>. The <span style="color:#fbbf24">yellow arrows</span> are the eigenvectors — the special directions that only get stretched (or flipped), never rotated. Adjust the matrix entries to see how the eigenvectors and eigenvalues change.</p>
+    </div>
+    <script>
+    (function(){
+      const svg=document.getElementById('eigSvg');
+      const NS='http://www.w3.org/2000/svg';
+      const W=520,H=360,OX=W/2,OY=H/2,SC=60;
+      const ids=['a11','a12','a21','a22'];
+
+      function mx(x){return OX+x*SC;} function my(y){return OY-y*SC;}
+      function mk(t,a){const e=document.createElementNS(NS,t);for(const[k,v]of Object.entries(a))e.setAttribute(k,v);return e;}
+      function ah(id,col){const m=mk('marker',{id,markerWidth:8,markerHeight:8,refX:6,refY:3,orient:'auto'});m.appendChild(mk('path',{d:'M0,0 L0,6 L8,3 z',fill:col}));return m;}
+
+      const defs=mk('defs',{});
+      defs.appendChild(ah('eah-e1','#fbbf24'));
+      defs.appendChild(ah('eah-e2','#fb923c'));
+      svg.appendChild(defs);
+      svg.appendChild(mk('rect',{x:0,y:0,width:W,height:H,fill:'#0b0d12'}));
+      for(let i=-4;i<=4;i++){
+        svg.appendChild(mk('line',{x1:mx(i),y1:0,x2:mx(i),y2:H,stroke:'#1a2234','stroke-width':1}));
+        svg.appendChild(mk('line',{x1:0,y1:my(i),x2:W,y2:my(i),stroke:'#1a2234','stroke-width':1}));
+      }
+      svg.appendChild(mk('line',{x1:0,y1:my(0),x2:W,y2:my(0),stroke:'#1e2840','stroke-width':1.5}));
+      svg.appendChild(mk('line',{x1:mx(0),y1:0,x2:mx(0),y2:H,stroke:'#1e2840','stroke-width':1.5}));
+
+      const unitCircle=mk('polyline',{fill:'none',stroke:'rgba(124,92,255,0.4)','stroke-width':1.2,'stroke-dasharray':'3 3'});
+      const ellipseEl=mk('polyline',{fill:'rgba(34,211,238,0.07)',stroke:'#22d3ee','stroke-width':1.8});
+      const e1Line=mk('line',{stroke:'#fbbf24','stroke-width':2.5,'marker-end':'url(#eah-e1)'});
+      const e2Line=mk('line',{stroke:'#fb923c','stroke-width':2.5,'marker-end':'url(#eah-e2)'});
+      const e1Lbl=mk('text',{fill:'#fbbf24','font-family':'ui-monospace,monospace','font-size':12});
+      const e2Lbl=mk('text',{fill:'#fb923c','font-family':'ui-monospace,monospace','font-size':12});
+      const info=mk('text',{fill:'#a4b0c2','font-family':'ui-monospace,monospace','font-size':11,x:8,y:H-8});
+      [unitCircle,ellipseEl,e1Line,e2Line,e1Lbl,e2Lbl,info].forEach(e=>svg.appendChild(e));
+
+      function getMatrix(){
+        return ids.map(id=>parseFloat(document.getElementById(id).value));
+      }
+      ids.forEach(id=>document.getElementById(id).addEventListener('input',()=>{
+        document.getElementById(id+'v').textContent=parseFloat(document.getElementById(id).value).toFixed(1);
+        draw();
+      }));
+
+      function eigenSolve(a,b,c,d){
+        // 2x2 eigenvalues: tr/2 ± sqrt((tr/2)^2 - det)
+        const tr=(a+d)/2, det=a*d-b*c;
+        const disc=tr*tr-det;
+        if(disc<0) return null; // complex eigenvalues
+        const sq=Math.sqrt(disc);
+        const l1=tr+sq, l2=tr-sq;
+        // eigenvector for l1
+        let v1,v2;
+        if(Math.abs(b)>1e-8){
+          v1={x:b, y:l1-a};
+        } else if(Math.abs(c)>1e-8){
+          v1={x:l1-d, y:c};
+        } else {
+          v1={x:1,y:0};
+        }
+        const m1=Math.sqrt(v1.x*v1.x+v1.y*v1.y);
+        v1={x:v1.x/m1, y:v1.y/m1};
+        if(Math.abs(b)>1e-8){
+          v2={x:b, y:l2-a};
+        } else if(Math.abs(c)>1e-8){
+          v2={x:l2-d, y:c};
+        } else {
+          v2={x:0,y:1};
+        }
+        const m2=Math.sqrt(v2.x*v2.x+v2.y*v2.y);
+        v2={x:v2.x/m2, y:v2.y/m2};
+        return {l1,l2,v1,v2};
+      }
+
+      function draw(){
+        const [a,b,c,d]=getMatrix();
+
+        // unit circle
+        const N=80;
+        const circPts=[], ellPts=[];
+        for(let i=0;i<=N;i++){
+          const t=2*Math.PI*i/N;
+          const x=Math.cos(t), y=Math.sin(t);
+          circPts.push(`${mx(x)},${my(y)}`);
+          const tx=a*x+b*y, ty=c*x+d*y;
+          ellPts.push(`${mx(tx)},${my(ty)}`);
+        }
+        unitCircle.setAttribute('points',circPts.join(' '));
+        ellipseEl.setAttribute('points',ellPts.join(' '));
+
+        const eigs=eigenSolve(a,b,c,d);
+        if(eigs){
+          const {l1,l2,v1,v2}=eigs;
+          // scale eigenvectors by eigenvalue magnitude for display
+          const s1=Math.min(Math.abs(l1),3.5)*Math.sign(l1);
+          const s2=Math.min(Math.abs(l2),3.5)*Math.sign(l2);
+          e1Line.setAttribute('x1',OX);e1Line.setAttribute('y1',OY);
+          e1Line.setAttribute('x2',mx(s1*v1.x));e1Line.setAttribute('y2',my(s1*v1.y));
+          e2Line.setAttribute('x1',OX);e2Line.setAttribute('y1',OY);
+          e2Line.setAttribute('x2',mx(s2*v2.x));e2Line.setAttribute('y2',my(s2*v2.y));
+          e1Lbl.setAttribute('x',mx(s1*v1.x)+7);e1Lbl.setAttribute('y',my(s1*v1.y)-5);
+          e1Lbl.textContent=`λ₁=${l1.toFixed(2)}`;
+          e2Lbl.setAttribute('x',mx(s2*v2.x)+7);e2Lbl.setAttribute('y',my(s2*v2.y)-5);
+          e2Lbl.textContent=`λ₂=${l2.toFixed(2)}`;
+          info.textContent=`A=[[${a},${b}],[${c},${d}]]  λ₁=${l1.toFixed(2)} v₁=(${v1.x.toFixed(2)},${v1.y.toFixed(2)})  λ₂=${l2.toFixed(2)} v₂=(${v2.x.toFixed(2)},${v2.y.toFixed(2)})`;
+        } else {
+          e1Line.setAttribute('x1',OX);e1Line.setAttribute('y1',OY);e1Line.setAttribute('x2',OX);e1Line.setAttribute('y2',OY);
+          e2Line.setAttribute('x1',OX);e2Line.setAttribute('y1',OY);e2Line.setAttribute('x2',OX);e2Line.setAttribute('y2',OY);
+          e1Lbl.textContent=''; e2Lbl.textContent='';
+          info.textContent='Complex eigenvalues (rotation-dominant matrix)';
+        }
+      }
+      draw();
+    })();
+    </script>
+
     <div class="problem-set" data-topic="linalg-eigen"></div>
 
     <!-- ========================================================== -->
@@ -887,6 +1456,132 @@
       <p class="mg-analogy"><strong>Result</strong>. An orthonormal basis $\{\mathbf{q}_1,\dots,\mathbf{q}_k\}$ whose span equals the span of the input. Gram–Schmidt is also how you prove that the <strong>QR decomposition</strong> exists: any full-column-rank matrix $A$ can be written as $A = QR$ with $Q$ orthogonal and $R$ upper triangular.</p>
     </div>
 
+    <div class="viz-3d" id="gs-viz">
+      <svg id="gsSvg" width="100%" viewBox="0 0 480 320" style="display:block;"></svg>
+      <p class="caption">Drag <span style="color:#22d3ee"><b>a₁</b></span> and <span style="color:#34d399"><b>a₂</b></span> to see Gram–Schmidt live. <span style="color:#fbbf24"><b>q₁</b></span> = a₁ normalized. The <span style="color:rgba(251,191,36,0.4)">dashed line</span> shows the projection of a₂ onto q₁ that gets subtracted. <span style="color:#fb923c"><b>q₂</b></span> is the residual after subtracting, then normalized — always perpendicular to q₁.</p>
+    </div>
+    <script>
+    (function(){
+      const svg=document.getElementById('gsSvg');
+      const NS='http://www.w3.org/2000/svg';
+      const W=480,H=320,OX=W/2,OY=H/2,SC=70;
+      let a1={x:2,y:0.5}, a2={x:1.2,y:2};
+
+      function mx(x){return OX+x*SC;} function my(y){return OY-y*SC;}
+      function sx(p){return (p-OX)/SC;} function sy(p){return (OY-p)/SC;}
+      function dot(u,v){return u.x*v.x+u.y*v.y;}
+      function mag(u){return Math.sqrt(u.x*u.x+u.y*u.y);}
+      function norm(u){const m=mag(u);return m<1e-9?{x:0,y:0}:{x:u.x/m,y:u.y/m};}
+      function scale(u,c){return{x:c*u.x,y:c*u.y};}
+      function sub(u,v){return{x:u.x-v.x,y:u.y-v.y};}
+
+      function mk(t,a){const e=document.createElementNS(NS,t);for(const[k,v]of Object.entries(a))e.setAttribute(k,v);return e;}
+      function ah(id,col){const m=mk('marker',{id,markerWidth:8,markerHeight:8,refX:6,refY:3,orient:'auto'});m.appendChild(mk('path',{d:'M0,0 L0,6 L8,3 z',fill:col}));return m;}
+
+      const defs=mk('defs',{});
+      ['gsah-a1','#22d3ee','gsah-a2','#34d399','gsah-q1','#fbbf24','gsah-q2','#fb923c'].forEach((_,i,arr)=>{if(i%2===0)defs.appendChild(ah(arr[i],arr[i+1]));});
+      svg.appendChild(defs);
+      svg.appendChild(mk('rect',{x:0,y:0,width:W,height:H,fill:'#0b0d12'}));
+      for(let i=-3;i<=3;i++){
+        svg.appendChild(mk('line',{x1:mx(i),y1:0,x2:mx(i),y2:H,stroke:'#1a2234','stroke-width':1}));
+        svg.appendChild(mk('line',{x1:0,y1:my(i),x2:W,y2:my(i),stroke:'#1a2234','stroke-width':1}));
+      }
+      svg.appendChild(mk('line',{x1:0,y1:my(0),x2:W,y2:my(0),stroke:'#1e2840','stroke-width':1.5}));
+      svg.appendChild(mk('line',{x1:mx(0),y1:0,x2:mx(0),y2:H,stroke:'#1e2840','stroke-width':1.5}));
+
+      const projLine=mk('line',{stroke:'rgba(251,191,36,0.45)','stroke-width':1.5,'stroke-dasharray':'5 3'});
+      const perpLine=mk('line',{stroke:'rgba(251,191,36,0.3)','stroke-width':1,'stroke-dasharray':'3 3'});
+      const a1L=mk('line',{stroke:'#22d3ee','stroke-width':1.8,'stroke-dasharray':'5 3','marker-end':'url(#gsah-a1)'});
+      const a2L=mk('line',{stroke:'#34d399','stroke-width':1.8,'stroke-dasharray':'5 3','marker-end':'url(#gsah-a2)'});
+      const q1L=mk('line',{stroke:'#fbbf24','stroke-width':2.5,'marker-end':'url(#gsah-q1)'});
+      const q2L=mk('line',{stroke:'#fb923c','stroke-width':2.5,'marker-end':'url(#gsah-q2)'});
+      const a1Lbl=mk('text',{fill:'#22d3ee','font-family':'ui-monospace,monospace','font-size':12});
+      const a2Lbl=mk('text',{fill:'#34d399','font-family':'ui-monospace,monospace','font-size':12});
+      const q1Lbl=mk('text',{fill:'#fbbf24','font-family':'ui-monospace,monospace','font-size':13,'font-weight':'bold'});
+      const q2Lbl=mk('text',{fill:'#fb923c','font-family':'ui-monospace,monospace','font-size':13,'font-weight':'bold'});
+      const rightAngle=mk('rect',{fill:'none',stroke:'rgba(251,191,36,0.5)','stroke-width':1,width:10,height:10});
+      const info=mk('text',{fill:'#7a8699','font-family':'ui-monospace,monospace','font-size':11,x:8,y:H-8});
+      [projLine,perpLine,a1L,a2L,q1L,q2L,a1Lbl,a2Lbl,q1Lbl,q2Lbl,rightAngle,info].forEach(e=>svg.appendChild(e));
+
+      const a1Tip=mk('circle',{r:7,fill:'#22d3ee',cursor:'grab'});
+      const a2Tip=mk('circle',{r:7,fill:'#34d399',cursor:'grab'});
+      svg.appendChild(a1Tip);svg.appendChild(a2Tip);
+
+      function draw(){
+        const q1=norm(a1);
+        const proj_coeff=dot(a2,q1);
+        const proj=scale(q1,proj_coeff);
+        const u2=sub(a2,proj);
+        const q2=norm(u2);
+
+        // original vectors (dashed)
+        a1L.setAttribute('x1',OX);a1L.setAttribute('y1',OY);a1L.setAttribute('x2',mx(a1.x));a1L.setAttribute('y2',my(a1.y));
+        a2L.setAttribute('x1',OX);a2L.setAttribute('y1',OY);a2L.setAttribute('x2',mx(a2.x));a2L.setAttribute('y2',my(a2.y));
+
+        // q1 (normalized a1)
+        q1L.setAttribute('x1',OX);q1L.setAttribute('y1',OY);q1L.setAttribute('x2',mx(q1.x));q1L.setAttribute('y2',my(q1.y));
+
+        // q2
+        if(mag(u2)>0.05){
+          q2L.setAttribute('x1',OX);q2L.setAttribute('y1',OY);q2L.setAttribute('x2',mx(q2.x));q2L.setAttribute('y2',my(q2.y));
+          q2L.setAttribute('stroke-opacity','1');
+        } else {
+          q2L.setAttribute('stroke-opacity','0');
+        }
+
+        // projection line: O → proj
+        projLine.setAttribute('x1',OX);projLine.setAttribute('y1',OY);
+        projLine.setAttribute('x2',mx(proj.x));projLine.setAttribute('y2',my(proj.y));
+
+        // perpendicular drop: a2 → proj (shows what's subtracted)
+        perpLine.setAttribute('x1',mx(a2.x));perpLine.setAttribute('y1',my(a2.y));
+        perpLine.setAttribute('x2',mx(proj.x));perpLine.setAttribute('y2',my(proj.y));
+
+        // right-angle indicator at proj
+        if(mag(q2)>0.05){
+          rightAngle.setAttribute('x',mx(proj.x)-5);
+          rightAngle.setAttribute('y',my(proj.y)-5);
+          const angle=Math.atan2(q2.y,-q2.x)*180/Math.PI-45;
+          rightAngle.setAttribute('transform',`rotate(${angle} ${mx(proj.x)} ${my(proj.y)})`);
+        }
+
+        // labels
+        a1Lbl.setAttribute('x',mx(a1.x)+7);a1Lbl.setAttribute('y',my(a1.y)-4);a1Lbl.textContent='a₁';
+        a2Lbl.setAttribute('x',mx(a2.x)+7);a2Lbl.setAttribute('y',my(a2.y)-4);a2Lbl.textContent='a₂';
+        q1Lbl.setAttribute('x',mx(q1.x)+7);q1Lbl.setAttribute('y',my(q1.y)-4);q1Lbl.textContent='q₁';
+        if(mag(u2)>0.05){q2Lbl.setAttribute('x',mx(q2.x)+7);q2Lbl.setAttribute('y',my(q2.y)-4);q2Lbl.textContent='q₂';}
+
+        // handles
+        a1Tip.setAttribute('cx',mx(a1.x));a1Tip.setAttribute('cy',my(a1.y));
+        a2Tip.setAttribute('cx',mx(a2.x));a2Tip.setAttribute('cy',my(a2.y));
+
+        const dotCheck=mag(u2)>0.05?dot(q1,q2).toFixed(4):'n/a';
+        info.textContent=`q₁·q₂ = ${dotCheck}  (should be ≈ 0)   |q₁|=${mag(q1).toFixed(3)}  |q₂|=${mag(u2)>0.05?mag(q2).toFixed(3):'0 (parallel!)'}`;
+      }
+
+      let dragging=null;
+      function startDrag(vec,e){e.preventDefault();dragging=vec;}
+      a1Tip.addEventListener('mousedown',e=>startDrag(a1,e));
+      a2Tip.addEventListener('mousedown',e=>startDrag(a2,e));
+      a1Tip.addEventListener('touchstart',e=>startDrag(a1,e.touches[0]),{passive:false});
+      a2Tip.addEventListener('touchstart',e=>startDrag(a2,e.touches[0]),{passive:false});
+      function onMove(cx,cy){
+        if(!dragging)return;
+        const r=svg.getBoundingClientRect();
+        const px=(cx-r.left)*W/r.width,py=(cy-r.top)*H/r.height;
+        dragging.x=Math.max(-3.2,Math.min(3.2,sx(px)));
+        dragging.y=Math.max(-2.2,Math.min(2.2,sy(py)));
+        if(dragging===a1&&mag(a1)<0.2){a1.x=0.2;a1.y=0;}
+        draw();
+      }
+      window.addEventListener('mousemove',e=>onMove(e.clientX,e.clientY));
+      window.addEventListener('touchmove',e=>{e.preventDefault();onMove(e.touches[0].clientX,e.touches[0].clientY);},{passive:false});
+      window.addEventListener('mouseup',()=>dragging=null);
+      window.addEventListener('touchend',()=>dragging=null);
+      draw();
+    })();
+    </script>
+
     <!-- ========================================================== -->
     <h2 id="svd">16. The Singular Value Decomposition</h2>
 
@@ -914,6 +1609,93 @@
       </ol>
       That's it. Every matrix in the universe is this. Pick any 2×2 matrix, apply it to a unit circle, and you get an ellipse — the ellipse's axes are $\sigma_1 \mathbf{u}_1$ and $\sigma_2 \mathbf{u}_2$. The $\sigma_i$ tell you how much stretching happens in each principal direction, and if some $\sigma_i$ are zero, the matrix is rank-deficient and collapses a dimension.</p>
     </div>
+
+    <div class="viz-3d" id="svd-viz">
+      <svg id="svdSvg" width="100%" viewBox="0 0 560 340" style="display:block;"></svg>
+      <div style="padding:8px 16px 4px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;">
+        <label style="font-family:ui-monospace,monospace;font-size:12px;color:#7a8699;">σ₁ <input id="sig1" type="range" min="0.1" max="3" step="0.05" value="2.2" style="width:80px;vertical-align:middle;"> <span id="sig1v">2.20</span></label>
+        <label style="font-family:ui-monospace,monospace;font-size:12px;color:#7a8699;">σ₂ <input id="sig2" type="range" min="0.1" max="3" step="0.05" value="0.8" style="width:80px;vertical-align:middle;"> <span id="sig2v">0.80</span></label>
+        <label style="font-family:ui-monospace,monospace;font-size:12px;color:#7a8699;">rotation θ <input id="rotSlider" type="range" min="-90" max="90" step="1" value="30" style="width:80px;vertical-align:middle;"> <span id="rotV">30°</span></label>
+      </div>
+      <p class="caption">The SVD says every matrix = rotate (V<sup>T</sup>) → scale by singular values σ₁,σ₂ (Σ) → rotate again (U). The <span style="color:rgba(124,92,255,0.5)">dashed circle</span> is the input unit circle; the <span style="color:#22d3ee">cyan ellipse</span> is its image under the matrix. The <span style="color:#fbbf24">gold axes</span> are the principal directions. σ₁ ≥ σ₂ controls how elongated the ellipse is.</p>
+    </div>
+    <script>
+    (function(){
+      const svg=document.getElementById('svdSvg');
+      const NS='http://www.w3.org/2000/svg';
+      const W=560,H=340,OX=W/2,OY=H/2,SC=65;
+      const sig1El=document.getElementById('sig1'),sig2El=document.getElementById('sig2'),rotEl=document.getElementById('rotSlider');
+
+      function mx(x){return OX+x*SC;} function my(y){return OY-y*SC;}
+      function mk(t,a){const e=document.createElementNS(NS,t);for(const[k,v]of Object.entries(a))e.setAttribute(k,v);return e;}
+      function ah(id,col){const m=mk('marker',{id,markerWidth:8,markerHeight:8,refX:6,refY:3,orient:'auto'});m.appendChild(mk('path',{d:'M0,0 L0,6 L8,3 z',fill:col}));return m;}
+
+      const defs=mk('defs',{});
+      defs.appendChild(ah('svdah1','#fbbf24'));
+      defs.appendChild(ah('svdah2','#fb923c'));
+      svg.appendChild(defs);
+      svg.appendChild(mk('rect',{x:0,y:0,width:W,height:H,fill:'#0b0d12'}));
+      for(let i=-4;i<=4;i++){
+        svg.appendChild(mk('line',{x1:mx(i),y1:0,x2:mx(i),y2:H,stroke:'#1a2234','stroke-width':1}));
+        svg.appendChild(mk('line',{x1:0,y1:my(i),x2:W,y2:my(i),stroke:'#1a2234','stroke-width':1}));
+      }
+      svg.appendChild(mk('line',{x1:0,y1:my(0),x2:W,y2:my(0),stroke:'#1e2840','stroke-width':1.5}));
+      svg.appendChild(mk('line',{x1:mx(0),y1:0,x2:mx(0),y2:H,stroke:'#1e2840','stroke-width':1.5}));
+
+      const circleEl=mk('polyline',{fill:'none',stroke:'rgba(124,92,255,0.4)','stroke-width':1.2,'stroke-dasharray':'3 3'});
+      const ellipseEl=mk('polyline',{fill:'rgba(34,211,238,0.07)',stroke:'#22d3ee','stroke-width':2});
+      const u1Line=mk('line',{stroke:'#fbbf24','stroke-width':2,'marker-end':'url(#svdah1)'});
+      const u2Line=mk('line',{stroke:'#fb923c','stroke-width':2,'marker-end':'url(#svdah2)'});
+      const s1Lbl=mk('text',{fill:'#fbbf24','font-family':'ui-monospace,monospace','font-size':12});
+      const s2Lbl=mk('text',{fill:'#fb923c','font-family':'ui-monospace,monospace','font-size':12});
+      [circleEl,ellipseEl,u1Line,u2Line,s1Lbl,s2Lbl].forEach(e=>svg.appendChild(e));
+
+      function update(){
+        const s1=parseFloat(sig1El.value),s2=parseFloat(sig2El.value);
+        const th=parseFloat(rotEl.value)*Math.PI/180;
+        document.getElementById('sig1v').textContent=s1.toFixed(2);
+        document.getElementById('sig2v').textContent=s2.toFixed(2);
+        document.getElementById('rotV').textContent=Math.round(parseFloat(rotEl.value))+'°';
+
+        const cos=Math.cos(th),sin=Math.sin(th);
+        // U matrix (rotation by th), Sigma = diag(s1,s2), V = identity for simplicity
+        // A = U Sigma V^T = U Sigma (since V=I)
+        // A*x = U*(s1*x1, s2*x2) where x in original coords
+        // With V^T rotation first by -th, then scale, then U rotation by th
+        // For visual interest: V rotation by -th, U rotation by th+some_offset
+        const vth=-th*0.7; // V rotation
+        const cvV=Math.cos(vth),svV=Math.sin(vth);
+
+        const N=120;
+        const circPts=[],ellPts=[];
+        for(let i=0;i<=N;i++){
+          const t=2*Math.PI*i/N;
+          const x=Math.cos(t),y=Math.sin(t);
+          circPts.push(`${mx(x)},${my(y)}`);
+          // Apply V^T: rotate by vth
+          const rx=cvV*x-svV*y, ry=svV*x+cvV*y;
+          // Apply Sigma: scale
+          const sx2=s1*rx, sy2=s2*ry;
+          // Apply U: rotate by th
+          const tx=cos*sx2-sin*sy2, ty=sin*sx2+cos*sy2;
+          ellPts.push(`${mx(tx)},${my(ty)}`);
+        }
+        circleEl.setAttribute('points',circPts.join(' '));
+        ellipseEl.setAttribute('points',ellPts.join(' '));
+
+        // principal directions (columns of U scaled by sigma)
+        u1Line.setAttribute('x1',OX);u1Line.setAttribute('y1',OY);
+        u1Line.setAttribute('x2',mx(s1*cos));u1Line.setAttribute('y2',my(s1*sin));
+        u2Line.setAttribute('x1',OX);u2Line.setAttribute('y1',OY);
+        u2Line.setAttribute('x2',mx(-s2*sin));u2Line.setAttribute('y2',my(s2*cos));
+        s1Lbl.setAttribute('x',mx(s1*cos)+7);s1Lbl.setAttribute('y',my(s1*sin)-5);s1Lbl.textContent=`σ₁=${s1.toFixed(2)}`;
+        s2Lbl.setAttribute('x',mx(-s2*sin)+7);s2Lbl.setAttribute('y',my(s2*cos)-5);s2Lbl.textContent=`σ₂=${s2.toFixed(2)}`;
+      }
+
+      [sig1El,sig2El,rotEl].forEach(e=>e.addEventListener('input',update));
+      update();
+    })();
+    </script>
 
     <h3>Why SVD is the most important factorization in ML</h3>
 
@@ -945,7 +1727,628 @@
     <div class="problem-set" data-topic="linalg-svd"></div>
 
     <!-- ========================================================== -->
-    <h2 id="pca">17. PCA in 30 lines</h2>
+    <h2 id="tensors">17. Tensors</h2>
+
+    <p>You've seen scalars, vectors, and matrices. A tensor is just the natural generalisation: an array of numbers indexed by <em>more than two</em> indices, equipped with rules for how it transforms when you change coordinates. Vectors are rank-1 tensors. Matrices are rank-2 tensors. A 3-D grid of numbers is a rank-3 tensor, and so on.</p>
+
+    <div class="callout">
+      <p><strong>The rank (or order) of a tensor is its number of indices.</strong></p>
+      <ul>
+        <li><strong>Rank 0 — scalar.</strong> A single number. No indices needed. Example: the temperature outside right now.</li>
+        <li><strong>Rank 1 — vector.</strong> $v_i$. One free index $i$. Example: a word embedding of length 512.</li>
+        <li><strong>Rank 2 — matrix.</strong> $A_{ij}$. Two free indices. Example: a weight matrix $W \in \mathbb{R}^{m \times n}$.</li>
+        <li><strong>Rank 3.</strong> $T_{ijk}$. Three indices. Example: a batch of images $(B, H, W)$ — batch index, height, width.</li>
+        <li><strong>Rank 4.</strong> $T_{nchw}$. Example: standard CNN input with shape $(N, C, H, W)$ — batch, channels, height, width.</li>
+      </ul>
+    </div>
+
+    <h3>Einstein summation notation</h3>
+
+    <p>Writing $\sum_j A_{ij} v_j$ for every matrix-vector product gets tedious. Einstein's convention: <strong>if an index appears twice in a term, it is summed over</strong>. You never write the $\Sigma$.</p>
+
+    <table class="rank-table">
+      <thead><tr><th>Operation</th><th>Regular notation</th><th>Einstein notation</th></tr></thead>
+      <tbody>
+        <tr><td>Matrix-vector product</td><td>$\sum_j A_{ij} v_j$</td><td>$A_{ij} v_j$</td></tr>
+        <tr><td>Matrix-matrix product</td><td>$\sum_k A_{ik} B_{kj}$</td><td>$A_{ik} B_{kj}$</td></tr>
+        <tr><td>Dot product</td><td>$\sum_i u_i v_i$</td><td>$u_i v_i$</td></tr>
+        <tr><td>Trace</td><td>$\sum_i A_{ii}$</td><td>$A_{ii}$</td></tr>
+        <tr><td>Outer product</td><td>$(uv^T)_{ij} = u_i v_j$</td><td>$u_i v_j$ (no repeated index — no sum)</td></tr>
+        <tr><td>Batch matmul</td><td>$C_{bij} = \sum_k A_{bik} B_{bkj}$</td><td>$A_{bik} B_{bkj}$</td></tr>
+      </tbody>
+    </table>
+
+    <p>NumPy and PyTorch both implement this with <code>einsum</code>: <code>torch.einsum('bik,bkj->bij', A, B)</code> is a batched matrix multiply. Reading einsum strings is a core skill in ML engineering.</p>
+
+    <h3>Tensor operations</h3>
+
+    <dl class="math-glossary">
+      <dt>Outer product</dt>
+      <dd>$u \otimes v = u_i v_j$ — takes two rank-1 tensors and produces a rank-2 tensor (a matrix). Generalises: $u \otimes v \otimes w = u_i v_j w_k$ gives rank-3. The tensor product of spaces is built from this.</dd>
+
+      <dt>Contraction</dt>
+      <dd>Sum over a pair of matching indices. Matrix-vector product is a contraction. The trace is a contraction of both indices of a matrix. Each contraction reduces the rank by 2.</dd>
+
+      <dt>Transpose / permute</dt>
+      <dd>Reorder the indices: $A_{ij} \to A_{ji}$ is the usual transpose. For higher-rank tensors, a permutation like $(0, 2, 1, 3)$ reorders the four axes. In PyTorch: <code>x.permute(0, 2, 1, 3)</code>.</dd>
+
+      <dt>Reshape / view</dt>
+      <dd>Change the shape without touching the data. A $(B, H \times W, C)$ tensor can be reshaped to $(B, H, W, C)$ — same underlying array, different index interpretation. <em>Reshape does not change values.</em></dd>
+
+      <dt>Frobenius norm</dt>
+      <dd>$\|T\|_F = \sqrt{\sum_{i_1 \cdots i_k} T_{i_1 \cdots i_k}^2}$ — the generalisation of the matrix Frobenius norm to any rank. Compute it in NumPy with <code>np.linalg.norm(T)</code>.</dd>
+    </dl>
+
+    <h3>Tensors in ML practice</h3>
+
+    <p>Modern deep learning frameworks (PyTorch, JAX, TensorFlow) are built around tensors. Here is what each axis typically means:</p>
+
+    <table class="rank-table">
+      <thead><tr><th>Context</th><th>Tensor shape</th><th>Axis meanings</th></tr></thead>
+      <tbody>
+        <tr><td>Image batch</td><td>$(N, C, H, W)$</td><td>batch · channels · height · width</td></tr>
+        <tr><td>Text batch</td><td>$(N, L)$</td><td>batch · sequence length (token ids)</td></tr>
+        <tr><td>Embedded text</td><td>$(N, L, d)$</td><td>batch · tokens · embedding dim</td></tr>
+        <tr><td>Attention QKV</td><td>$(N, H, L, d_k)$</td><td>batch · heads · tokens · head dim</td></tr>
+        <tr><td>Conv2D weights</td><td>$(C_{out}, C_{in}, k_H, k_W)$</td><td>output channels · input channels · kernel height · kernel width</td></tr>
+        <tr><td>Video</td><td>$(N, T, C, H, W)$</td><td>batch · time · channels · height · width</td></tr>
+      </tbody>
+    </table>
+
+    <p>The multi-head attention formula $\text{softmax}\!\left(\frac{QK^T}{\sqrt{d_k}}\right)V$ is really a rank-4 einsum: <code>'bhid,bhjd->bhij'</code> for the dot-product step, followed by <code>'bhij,bhjd->bhid'</code> for the weighted sum — all batched over both the batch dimension $b$ and the heads dimension $h$ simultaneously.</p>
+
+    <h3>The connection to matrices</h3>
+
+    <p>Any rank-$k$ tensor with shape $(n_1, n_2, \ldots, n_k)$ can be <em>unfolded</em> (also called matricised) into a matrix by grouping some indices as rows and the rest as columns. This is the key insight behind tensor decompositions:</p>
+
+    <ul>
+      <li><strong>Tucker decomposition</strong> — generalises SVD to higher rank tensors: $T_{ijk} = \sum_{pqr} G_{pqr} U_{ip} V_{jq} W_{kr}$, where $G$ is a small core tensor and $U, V, W$ are factor matrices.</li>
+      <li><strong>CP decomposition</strong> — expresses a tensor as a sum of outer products (rank-1 tensors): $T \approx \sum_{r=1}^R \lambda_r\, a_r \otimes b_r \otimes c_r$. Analogue of SVD where $k = 1$ for every term.</li>
+      <li><strong>Tensor train / matrix product state</strong> — chain of small matrices, used in physics and to compress huge embedding tables.</li>
+    </ul>
+
+    <!-- Interactive outer product + tensor indexing visualisation -->
+    <div class="viz-3d" id="tensorVizWrap" style="min-height:300px;">
+      <svg id="tensorSvg" width="100%" viewBox="0 0 680 300" style="display:block;"></svg>
+      <div style="display:flex;gap:24px;flex-wrap:wrap;margin-top:10px;font-family:var(--mono);font-size:12px;color:var(--text-dim);">
+        <label style="display:flex;align-items:center;gap:8px;">
+          u = [<input id="tu0" type="number" value="2" step="0.5" style="width:45px;background:var(--bg-3);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:2px 4px;">,
+          <input id="tu1" type="number" value="1" step="0.5" style="width:45px;background:var(--bg-3);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:2px 4px;">,
+          <input id="tu2" type="number" value="-1" step="0.5" style="width:45px;background:var(--bg-3);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:2px 4px;">]
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;">
+          v = [<input id="tv0" type="number" value="1" step="0.5" style="width:45px;background:var(--bg-3);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:2px 4px;">,
+          <input id="tv1" type="number" value="3" step="0.5" style="width:45px;background:var(--bg-3);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:2px 4px;">,
+          <input id="tv2" type="number" value="2" step="0.5" style="width:45px;background:var(--bg-3);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:2px 4px;">]
+        </label>
+      </div>
+      <p style="font-family:var(--mono);font-size:11px;color:var(--text-dim);margin-top:6px;">Outer product <strong>u ⊗ v</strong> — each cell shows $u_i \cdot v_j$. Colour intensity ∝ magnitude; red = negative.</p>
+    </div>
+    <script>
+    (function(){
+      function getVals(){
+        return {
+          u:[+document.getElementById('tu0').value,+document.getElementById('tu1').value,+document.getElementById('tu2').value],
+          v:[+document.getElementById('tv0').value,+document.getElementById('tv1').value,+document.getElementById('tv2').value]
+        };
+      }
+      function draw(){
+        const {u,v}=getVals();
+        const svg=document.getElementById('tensorSvg');
+        const W=680,H=300;
+        // Layout: left panel = u vector (column), top = v vector (row), middle = 3x3 matrix grid
+        // right half = rank interpretation text
+        const CELL=58, PAD=10;
+        const GRID_X=70, GRID_Y=50; // top-left of matrix grid
+
+        // compute outer product
+        const M=[];
+        let maxAbs=0.001;
+        for(let i=0;i<3;i++){M.push([]);for(let j=0;j<3;j++){const val=u[i]*v[j];M[i].push(val);if(Math.abs(val)>maxAbs)maxAbs=Math.abs(val);}}
+
+        let html='';
+
+        // background
+        html+=`<rect width="${W}" height="${H}" fill="#0d0f14" rx="10"/>`;
+
+        // title
+        html+=`<text x="12" y="22" font-family="monospace" font-size="13" fill="#a0a8c0">u ⊗ v  (outer product, rank-2 tensor)</text>`;
+
+        // draw u vector labels (left column)
+        for(let i=0;i<3;i++){
+          const cy=GRID_Y+i*CELL+CELL/2;
+          html+=`<text x="${GRID_X-8}" y="${cy+5}" font-family="monospace" font-size="13" fill="#34d399" text-anchor="end">u[${i}]=${u[i]}</text>`;
+        }
+
+        // draw v vector labels (top row)
+        for(let j=0;j<3;j++){
+          const cx=GRID_X+j*CELL+CELL/2;
+          html+=`<text x="${cx}" y="${GRID_Y-8}" font-family="monospace" font-size="12" fill="#22d3ee" text-anchor="middle">v[${j}]=${v[j]}</text>`;
+        }
+
+        // draw matrix cells
+        for(let i=0;i<3;i++){for(let j=0;j<3;j++){
+          const x=GRID_X+j*CELL, y=GRID_Y+i*CELL;
+          const val=M[i][j];
+          const t=Math.abs(val)/maxAbs;
+          let fill;
+          if(val>=0){const g=Math.round(40+t*160);fill=`rgb(${Math.round(30+t*80)},${g},${Math.round(50+t*60)})`;}
+          else{const r=Math.round(80+t*140);fill=`rgb(${r},${Math.round(30+t*40)},${Math.round(30+t*40)})`;}
+          html+=`<rect x="${x+2}" y="${y+2}" width="${CELL-4}" height="${CELL-4}" rx="5" fill="${fill}" stroke="#2a2d3a" stroke-width="1"/>`;
+          html+=`<text x="${x+CELL/2}" y="${y+CELL/2-4}" font-family="monospace" font-size="11" fill="#e0e4f0" text-anchor="middle">M[${i}][${j}]</text>`;
+          html+=`<text x="${x+CELL/2}" y="${y+CELL/2+12}" font-family="monospace" font-size="13" font-weight="bold" fill="#ffffff" text-anchor="middle">${val.toFixed(1)}</text>`;
+        }}
+
+        // column headers
+        html+=`<text x="${GRID_X+3*CELL/2}" y="${GRID_Y+3*CELL+22}" font-family="monospace" font-size="11" fill="#7c5cff" text-anchor="middle">j →</text>`;
+        html+=`<text x="${GRID_X-44}" y="${GRID_Y+3*CELL/2}" font-family="monospace" font-size="11" fill="#7c5cff" text-anchor="middle" transform="rotate(-90,${GRID_X-44},${GRID_Y+3*CELL/2})">i ↓</text>`;
+
+        // rank-1 decomp hint on right
+        const RX=GRID_X+3*CELL+30;
+        html+=`<text x="${RX}" y="50" font-family="monospace" font-size="12" fill="#a0a8c0">Rank-1: every row of M</text>`;
+        html+=`<text x="${RX}" y="68" font-family="monospace" font-size="12" fill="#a0a8c0">is a scalar × v.</text>`;
+        html+=`<text x="${RX}" y="100" font-family="monospace" font-size="12" fill="#fbbf24">det(M) = 0 always</text>`;
+        html+=`<text x="${RX}" y="118" font-family="monospace" font-size="12" fill="#a0a8c0">(outer products are</text>`;
+        html+=`<text x="${RX}" y="136" font-family="monospace" font-size="12" fill="#a0a8c0">always rank-1 matrices)</text>`;
+
+        // tensor rank annotation
+        html+=`<text x="${RX}" y="175" font-family="monospace" font-size="11" fill="#7c5cff">rank-0: scalar</text>`;
+        html+=`<text x="${RX}" y="193" font-family="monospace" font-size="11" fill="#34d399">rank-1: u, v (vectors)</text>`;
+        html+=`<text x="${RX}" y="211" font-family="monospace" font-size="11" fill="#22d3ee">rank-2: M (this matrix)</text>`;
+        html+=`<text x="${RX}" y="229" font-family="monospace" font-size="11" fill="#f97316">rank-3: e.g. (B,H,W)</text>`;
+        html+=`<text x="${RX}" y="247" font-family="monospace" font-size="11" fill="#ec4899">rank-4: (N,C,H,W)</text>`;
+
+        svg.innerHTML=html;
+      }
+      ['tu0','tu1','tu2','tv0','tv1','tv2'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+      draw();
+    })();
+    </script>
+
+    <details class="algo-code">
+      <summary>Source code — Tensors &amp; einsum (Pseudocode · Python · JavaScript · C · C++ · Java · Go)</summary>
+      <div class="code-tabs" id="ct-tens">
+        <div class="ct-header">
+          <button class="ct-tab active" data-tab="tens-pseudo">Pseudocode</button>
+          <button class="ct-tab" data-tab="tens-py">Python</button>
+          <button class="ct-tab" data-tab="tens-js">JavaScript</button>
+          <button class="ct-tab" data-tab="tens-c">C</button>
+          <button class="ct-tab" data-tab="tens-cpp">C++</button>
+          <button class="ct-tab" data-tab="tens-java">Java</button>
+          <button class="ct-tab" data-tab="tens-go">Go</button>
+        </div>
+        <div class="ct-panel active" data-tab="tens-pseudo"><pre><code>// ── Tensor fundamentals ──────────────────────────────────────
+// Outer product (rank-1 ⊗ rank-1 → rank-2)
+function outer(u[n], v[m]) -> T[n][m]:
+    for i in 0..n:
+        for j in 0..m:
+            T[i][j] = u[i] * v[j]
+    return T
+
+// Einstein summation: matrix multiply
+// 'ik,kj->ij'  means sum over k
+function matmul_einsum(A[m][k], B[k][n]) -> C[m][n]:
+    for i in 0..m:
+        for j in 0..n:
+            C[i][j] = sum(A[i][p] * B[p][j]  for p in 0..k)
+
+// Tensor contraction: contract axis-1 of T3 with axis-0 of M
+// T3[i][j][k], M[j][l]  →  R[i][l][k]  (sum over j)
+function contract(T3[I][J][K], M[J][L]) -> R[I][L][K]:
+    for i,l,k:
+        R[i][l][k] = sum(T3[i][j][k] * M[j][l]  for j in 0..J)
+
+// Reshape: (A*B, C) → (A, B, C)  -- no data copy
+function reshape(T[N][C], A, B):
+    assert A * B == N
+    return view T as T2[A][B][C]
+
+// Frobenius norm over arbitrary shape
+function frobenius(T):
+    return sqrt(sum(x*x for x in flatten(T)))</code></pre></div>
+        <div class="ct-panel" data-tab="tens-py"><pre><code>import numpy as np
+
+# ── Outer product ─────────────────────────────────────────────
+u = np.array([2.0, 1.0, -1.0])
+v = np.array([1.0, 3.0, 2.0])
+
+outer = np.outer(u, v)          # shape (3, 3)
+# Equivalently: np.einsum('i,j->ij', u, v)
+print("u ⊗ v:\n", outer)
+
+# ── Einstein summation ────────────────────────────────────────
+A = np.random.randn(4, 5)
+B = np.random.randn(5, 6)
+
+# Matrix multiply
+C = np.einsum('ik,kj->ij', A, B)            # (4, 6)
+assert np.allclose(C, A @ B)
+
+# Dot product
+a = np.array([1.0, 2.0, 3.0])
+b = np.array([4.0, 5.0, 6.0])
+dot = np.einsum('i,i->', a, b)              # scalar
+print("dot:", dot)
+
+# Trace
+M = np.eye(4) * 3
+tr = np.einsum('ii->', M)                   # 12.0
+
+# Batch matmul (N, I, K) × (N, K, J) → (N, I, J)
+N = 8
+X = np.random.randn(N, 4, 5)
+Y = np.random.randn(N, 5, 6)
+Z = np.einsum('bik,bkj->bij', X, Y)        # (8, 4, 6)
+assert np.allclose(Z, X @ Y)
+
+# ── Rank-3 tensor operations ──────────────────────────────────
+T = np.random.randn(2, 3, 4)   # shape (2,3,4)
+
+# Permute axes
+T_perm = np.transpose(T, (1, 0, 2))   # (3, 2, 4)
+
+# Reshape / view
+T_flat = T.reshape(2, 12)              # (2, 12)
+T_back = T_flat.reshape(2, 3, 4)      # back to (2,3,4)
+
+# Frobenius norm
+fnorm = np.linalg.norm(T)
+
+# ── CNN-style 4-D tensor (N, C, H, W) ────────────────────────
+batch = np.random.randn(16, 3, 32, 32)  # 16 RGB 32×32 images
+print("Batch shape:", batch.shape)
+
+# Sum over spatial dims → (N, C)
+spatial_mean = batch.mean(axis=(2, 3))
+print("Spatial mean shape:", spatial_mean.shape)
+
+# ── Tucker-like low-rank outer product sum ────────────────────
+# Rank-1 approximation: T ≈ a ⊗ b ⊗ c
+a_ = np.array([1.0, -1.0])
+b_ = np.array([0.5, 1.0, -0.5])
+c_ = np.array([2.0, 0.0, -1.0, 1.0])
+rank1 = np.einsum('i,j,k->ijk', a_, b_, c_)   # (2,3,4)</code></pre></div>
+        <div class="ct-panel" data-tab="tens-js"><pre><code>// ── Outer product ─────────────────────────────────────────────
+function outer(u, v) {
+  return u.map(ui => v.map(vj => ui * vj));
+}
+
+// ── Einsum helpers (basic cases) ─────────────────────────────
+// Matrix multiply: 'ik,kj->ij'
+function matmul(A, B) {
+  const [m, k] = [A.length, A[0].length];
+  const n = B[0].length;
+  return Array.from({length: m}, (_, i) =>
+    Array.from({length: n}, (_, j) =>
+      Array.from({length: k}, (_, p) => A[i][p] * B[p][j])
+        .reduce((s, x) => s + x, 0)
+    )
+  );
+}
+
+// Dot product: 'i,i->'
+function dot(a, b) {
+  return a.reduce((s, ai, i) => s + ai * b[i], 0);
+}
+
+// Batch matmul: 'bik,bkj->bij'
+function batchMatmul(A, B) {
+  return A.map((a, b) => matmul(a, B[b]));
+}
+
+// ── Rank-3 tensor indexing ────────────────────────────────────
+// Shape (D0, D1, D2) stored as nested arrays
+function zeros(d0, d1, d2) {
+  return Array.from({length: d0}, () =>
+    Array.from({length: d1}, () => new Float32Array(d2))
+  );
+}
+
+// Outer product of three vectors → rank-3 tensor
+function outer3(a, b, c) {
+  return a.map(ai =>
+    b.map(bi =>
+      c.map(ci => ai * bi * ci)
+    )
+  );
+}
+
+// Frobenius norm
+function frobeniusNorm(T) {
+  let sum = 0;
+  function recurse(x) {
+    if (Array.isArray(x)) x.forEach(recurse);
+    else sum += x * x;
+  }
+  recurse(T);
+  return Math.sqrt(sum);
+}
+
+// ── Demo ──────────────────────────────────────────────────────
+const u = [2, 1, -1], v = [1, 3, 2];
+console.log("u ⊗ v:", outer(u, v));
+
+const A = [[1,2],[3,4]], B = [[5,6],[7,8]];
+console.log("A @ B:", matmul(A, B));
+
+const t3 = outer3([1,-1], [0.5,1,-0.5], [2,0,-1,1]);
+console.log("rank-3 shape:", t3.length, t3[0].length, t3[0][0].length);
+console.log("Frobenius norm:", frobeniusNorm(t3).toFixed(4));</code></pre></div>
+        <div class="ct-panel" data-tab="tens-c"><pre><code>#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;math.h&gt;
+#include &lt;string.h&gt;
+
+/* ── Outer product ────────────────────────────────────────────
+   u[m], v[n]  →  out[m*n]  (row-major) */
+void outer(const double *u, int m,
+           const double *v, int n,
+           double *out) {
+    for (int i = 0; i < m; i++)
+        for (int j = 0; j < n; j++)
+            out[i*n + j] = u[i] * v[j];
+}
+
+/* ── Matrix multiply: C[m][n] = A[m][k] * B[k][n] ─────────── */
+void matmul(const double *A, const double *B, double *C,
+            int m, int k, int n) {
+    memset(C, 0, m * n * sizeof(double));
+    for (int i = 0; i < m; i++)
+        for (int p = 0; p < k; p++)
+            for (int j = 0; j < n; j++)
+                C[i*n + j] += A[i*k + p] * B[p*n + j];
+}
+
+/* ── Rank-3 tensor contraction ────────────────────────────────
+   T[I][J][K], M[J][L]  →  R[I][L][K]  (sum over j) */
+void contract3(const double *T, int I, int J, int K,
+               const double *M, int L,
+               double *R) {
+    memset(R, 0, I * L * K * sizeof(double));
+    for (int i = 0; i < I; i++)
+      for (int j = 0; j < J; j++)
+        for (int k = 0; k < K; k++)
+          for (int l = 0; l < L; l++)
+            R[(i*L + l)*K + k] +=
+              T[(i*J + j)*K + k] * M[j*L + l];
+}
+
+/* ── Frobenius norm ───────────────────────────────────────────*/
+double frob(const double *T, int n) {
+    double s = 0;
+    for (int i = 0; i < n; i++) s += T[i]*T[i];
+    return sqrt(s);
+}
+
+int main(void) {
+    double u[] = {2, 1, -1}, v[] = {1, 3, 2};
+    double M[9];
+    outer(u, 3, v, 3, M);
+    printf("u⊗v[0][1] = %.1f  (expect 6)\n", M[0*3+1]);
+
+    double A[] = {1,2,3,4}, B[] = {5,6,7,8}, C[4];
+    matmul(A, B, C, 2, 2, 2);
+    printf("(A@B)[0][0] = %.0f  (expect 19)\n", C[0]);
+    printf("Frobenius |M| = %.4f\n", frob(M, 9));
+    return 0;
+}</code></pre></div>
+        <div class="ct-panel" data-tab="tens-cpp"><pre><code>#include &lt;iostream&gt;
+#include &lt;vector&gt;
+#include &lt;cmath&gt;
+#include &lt;numeric&gt;
+#include &lt;cassert&gt;
+
+// ── Simple rank-N tensor (flat storage + shape) ───────────────
+struct Tensor {
+    std::vector&lt;int&gt; shape;
+    std::vector&lt;double&gt; data;
+
+    Tensor(std::vector&lt;int&gt; sh) : shape(sh) {
+        int n = 1;
+        for (int d : sh) n *= d;
+        data.assign(n, 0.0);
+    }
+
+    // Linear index from multi-index
+    int idx(std::vector&lt;int&gt; ix) const {
+        int lin = 0, stride = 1;
+        for (int d = shape.size()-1; d >= 0; --d) {
+            lin += ix[d] * stride;
+            stride *= shape[d];
+        }
+        return lin;
+    }
+
+    double&amp; at(std::vector&lt;int&gt; ix) { return data[idx(ix)]; }
+    double  at(std::vector&lt;int&gt; ix) const { return data[idx(ix)]; }
+
+    double frobenius() const {
+        double s = 0;
+        for (double x : data) s += x*x;
+        return std::sqrt(s);
+    }
+};
+
+// ── Outer product: rank-1 ⊗ rank-1 → rank-2 ──────────────────
+Tensor outer(const std::vector&lt;double&gt;&amp; u,
+             const std::vector&lt;double&gt;&amp; v) {
+    int m = u.size(), n = v.size();
+    Tensor T({m, n});
+    for (int i = 0; i < m; i++)
+        for (int j = 0; j < n; j++)
+            T.at({i,j}) = u[i] * v[j];
+    return T;
+}
+
+// ── Matrix multiply via einsum 'ik,kj->ij' ───────────────────
+Tensor matmul(const Tensor&amp; A, const Tensor&amp; B) {
+    int m = A.shape[0], k = A.shape[1], n = B.shape[1];
+    assert(B.shape[0] == k);
+    Tensor C({m, n});
+    for (int i = 0; i < m; i++)
+      for (int p = 0; p < k; p++)
+        for (int j = 0; j < n; j++)
+            C.at({i,j}) += A.at({i,p}) * B.at({p,j});
+    return C;
+}
+
+int main() {
+    std::vector&lt;double&gt; u = {2, 1, -1}, v = {1, 3, 2};
+    auto M = outer(u, v);
+    std::cout &lt;&lt; "M[0][1] = " &lt;&lt; M.at({0,1}) &lt;&lt; "  (expect 6)\n";
+    std::cout &lt;&lt; "Frobenius = " &lt;&lt; M.frobenius() &lt;&lt; "\n";
+
+    Tensor A({2,2}), B({2,2});
+    A.at({0,0})=1; A.at({0,1})=2; A.at({1,0})=3; A.at({1,1})=4;
+    B.at({0,0})=5; B.at({0,1})=6; B.at({1,0})=7; B.at({1,1})=8;
+    auto C = matmul(A, B);
+    std::cout &lt;&lt; "(A@B)[0][0] = " &lt;&lt; C.at({0,0}) &lt;&lt; "  (expect 19)\n";
+    return 0;
+}</code></pre></div>
+        <div class="ct-panel" data-tab="tens-java"><pre><code>import java.util.Arrays;
+
+public class Tensors {
+
+    // ── Outer product u[m] ⊗ v[n] → M[m][n] ─────────────────
+    static double[][] outer(double[] u, double[] v) {
+        double[][] M = new double[u.length][v.length];
+        for (int i = 0; i < u.length; i++)
+            for (int j = 0; j < v.length; j++)
+                M[i][j] = u[i] * v[j];
+        return M;
+    }
+
+    // ── Matrix multiply A[m][k] @ B[k][n] → C[m][n] ─────────
+    static double[][] matmul(double[][] A, double[][] B) {
+        int m = A.length, k = A[0].length, n = B[0].length;
+        double[][] C = new double[m][n];
+        for (int i = 0; i < m; i++)
+          for (int p = 0; p < k; p++)
+            for (int j = 0; j < n; j++)
+                C[i][j] += A[i][p] * B[p][j];
+        return C;
+    }
+
+    // ── Frobenius norm ────────────────────────────────────────
+    static double frobenius(double[][] M) {
+        double s = 0;
+        for (double[] row : M)
+            for (double x : row) s += x * x;
+        return Math.sqrt(s);
+    }
+
+    // ── Rank-3 outer product u⊗v⊗w ───────────────────────────
+    static double[][][] outer3(double[] u, double[] v, double[] w) {
+        double[][][] T = new double[u.length][v.length][w.length];
+        for (int i = 0; i < u.length; i++)
+          for (int j = 0; j < v.length; j++)
+            for (int k = 0; k < w.length; k++)
+                T[i][j][k] = u[i] * v[j] * w[k];
+        return T;
+    }
+
+    public static void main(String[] args) {
+        double[] u = {2, 1, -1}, v = {1, 3, 2};
+        double[][] M = outer(u, v);
+        System.out.printf("M[0][1] = %.1f  (expect 6.0)%n", M[0][1]);
+        System.out.printf("Frobenius = %.4f%n", frobenius(M));
+
+        double[][] A = {{1,2},{3,4}}, B = {{5,6},{7,8}};
+        double[][] C = matmul(A, B);
+        System.out.printf("(A@B)[0][0] = %.0f  (expect 19)%n", C[0][0]);
+
+        double[] w = {0.5, -1, 2};
+        double[][][] T3 = outer3(u, v, w);
+        System.out.printf("T3[0][1][2] = %.1f  (expect %.1f)%n",
+            T3[0][1][2], u[0]*v[1]*w[2]);
+    }
+}</code></pre></div>
+        <div class="ct-panel" data-tab="tens-go"><pre><code>package main
+
+import (
+	"fmt"
+	"math"
+)
+
+// ── Outer product ─────────────────────────────────────────────
+func outer(u, v []float64) [][]float64 {
+	m, n := len(u), len(v)
+	M := make([][]float64, m)
+	for i := range M {
+		M[i] = make([]float64, n)
+		for j := range M[i] {
+			M[i][j] = u[i] * v[j]
+		}
+	}
+	return M
+}
+
+// ── Matrix multiply ───────────────────────────────────────────
+func matmul(A, B [][]float64) [][]float64 {
+	m, k, n := len(A), len(A[0]), len(B[0])
+	C := make([][]float64, m)
+	for i := range C {
+		C[i] = make([]float64, n)
+	}
+	for i := 0; i < m; i++ {
+		for p := 0; p < k; p++ {
+			for j := 0; j < n; j++ {
+				C[i][j] += A[i][p] * B[p][j]
+			}
+		}
+	}
+	return C
+}
+
+// ── Frobenius norm ────────────────────────────────────────────
+func frobenius(M [][]float64) float64 {
+	var s float64
+	for _, row := range M {
+		for _, x := range row {
+			s += x * x
+		}
+	}
+	return math.Sqrt(s)
+}
+
+// ── Rank-3 outer product ──────────────────────────────────────
+func outer3(a, b, c []float64) [][][]float64 {
+	T := make([][][]float64, len(a))
+	for i := range T {
+		T[i] = make([][]float64, len(b))
+		for j := range T[i] {
+			T[i][j] = make([]float64, len(c))
+			for k := range T[i][j] {
+				T[i][j][k] = a[i] * b[j] * c[k]
+			}
+		}
+	}
+	return T
+}
+
+func main() {
+	u := []float64{2, 1, -1}
+	v := []float64{1, 3, 2}
+	M := outer(u, v)
+	fmt.Printf("M[0][1] = %.1f  (expect 6.0)\n", M[0][1])
+	fmt.Printf("Frobenius = %.4f\n", frobenius(M))
+
+	A := [][]float64{{1, 2}, {3, 4}}
+	B := [][]float64{{5, 6}, {7, 8}}
+	C := matmul(A, B)
+	fmt.Printf("(A@B)[0][0] = %.0f  (expect 19)\n", C[0][0])
+
+	w := []float64{0.5, -1, 2}
+	T3 := outer3(u, v, w)
+	fmt.Printf("T3[0][1][2] = %.1f  (expect %.1f)\n",
+		T3[0][1][2], u[0]*v[1]*w[2])
+}
+</code></pre></div>
+      </div><!-- .code-tabs -->
+    </details>
+
+    <!-- ========================================================== -->
+    <h2 id="pca">18. PCA in 30 lines</h2>
 
     <p>Let's walk through PCA (Principal Component Analysis) as a single, concrete application of SVD — no more abstract fanfare.</p>
 
@@ -968,7 +2371,7 @@
     </div>
 
     <!-- ========================================================== -->
-    <h2 id="ml">18. Applications to ML</h2>
+    <h2 id="ml">19. Applications to ML</h2>
 
     <p>Here's the quick survey. Every item on this list reuses the stuff above.</p>
 
@@ -1010,7 +2413,7 @@
     <p>Empirically, the weight matrices of trained transformers are approximately low-rank — their spectrum decays quickly. That's the observation LoRA exploits: instead of fine-tuning the full $W$, add a low-rank update $\Delta W = BA$ where $A \in \mathbb{R}^{r \times d}$ and $B \in \mathbb{R}^{d \times r}$ with $r$ small (8 to 64). You update $r \cdot 2d$ parameters instead of $d^2$. Same SVD intuition, applied to updates instead of weights.</p>
 
     <!-- ========================================================== -->
-    <h2 id="code">19. NumPy code</h2>
+    <h2 id="code">20. NumPy code</h2>
 
     <p>Three tabs: core matrix operations, eigendecomposition, and SVD + PCA. No library beyond NumPy.</p>
 
@@ -1151,7 +2554,7 @@ X_hat = scores @ comps + mu
     </div>
 
     <!-- ========================================================== -->
-    <h2 id="summary">20. Summary</h2>
+    <h2 id="summary">21. Summary</h2>
 
     <ul>
       <li>Vectors are lists of numbers with geometric meaning. You add them component-wise and stretch them with scalars. The three most useful norms are $\ell_1$, $\ell_2$, and $\ell_\infty$.</li>
@@ -1162,6 +2565,7 @@ X_hat = scores @ comps + mu
       <li>The determinant is the signed volume scaling factor. Zero determinant = rank-deficient = non-invertible.</li>
       <li>Eigenvectors are directions a matrix preserves (up to scaling); eigenvalues are the scale factors. A matrix is diagonalizable when it has a full set of independent eigenvectors, and in that basis it acts like a diagonal matrix.</li>
       <li>SVD is the ultimate factorization: every matrix is a rotation, a scaling, and another rotation. It gives you PCA, low-rank approximation, the pseudoinverse, and the condition number.</li>
+      <li>Tensors are generalisations of vectors and matrices to arbitrary rank. Einstein notation (repeated index = sum) is the shorthand used everywhere in ML code. <code>einsum</code> in NumPy/PyTorch implements it directly.</li>
       <li>Every modern ML technique you've heard of — embeddings, attention, weight matrices, PCA, LoRA — is linear algebra with a few layers of glue on top.</li>
     </ul>
 

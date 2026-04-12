@@ -25,6 +25,7 @@
       <li><a href="#why">1. Why classical mechanics</a></li>
       <li><a href="#vocab">2. Vocabulary cheat sheet</a></li>
       <li><a href="#kinematics">3. Kinematics</a></li>
+        <li><a href="#vec-review">3.0 Vector review</a></li>
       <li><a href="#newton">4. Newton's laws</a></li>
       <li><a href="#energy">5. Work and energy</a></li>
       <li><a href="#demo">6. Interactive: projectile motion</a></li>
@@ -108,6 +109,294 @@
         <dt>$t$</dt><dd>Time. A single real number. In classical mechanics, every observer shares the same clock.</dd>
       </dl>
       <p class="mg-analogy"><strong>Why two derivatives.</strong> Velocity tells you where the particle is heading <em>right now</em>. Acceleration tells you how that heading is changing — whether you are speeding up, slowing down, or turning. A car driving in a straight line at 60 mph has velocity but zero acceleration. A car going around a curve at a steady 60 mph still has acceleration, because the <em>direction</em> of $\mathbf{v}$ is changing even though its magnitude is not.</p>
+    </div>
+
+    <h3 id="vec-review">Vector review — the language of kinematics</h3>
+
+    <p>Every quantity in kinematics is either a <strong>scalar</strong> (a plain number with a unit, like mass or temperature) or a <strong>vector</strong> (a number with a unit <em>and</em> a direction, like velocity or force). If you confuse the two you will get the sign of every answer wrong. Here is the minimum you need.</p>
+
+    <p>In 2D and 3D we write vectors as ordered lists of components along the coordinate axes:</p>
+
+    <div class="math-display">$$\mathbf{r} = (r_x,\, r_y,\, r_z), \qquad \mathbf{v} = (v_x,\, v_y,\, v_z).$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Vector components</p>
+      <dl>
+        <dt>$\mathbf{r}$</dt><dd>Position vector — the arrow from the origin to the object's location. Components are coordinates $(r_x, r_y, r_z)$.</dd>
+        <dt>$r_x, r_y, r_z$</dt><dd>Signed real numbers, each measured in the same unit as the vector (metres for position, m/s for velocity, m/s² for acceleration).</dd>
+        <dt>bold vs. italic</dt><dd>Bold $\mathbf{v}$ is a vector; italic $v$ is its magnitude. The direction is gone. Never substitute one for the other in an equation.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Kinematic vectors.</strong> Position $\mathbf{r}$ locates an object. Velocity $\mathbf{v} = d\mathbf{r}/dt$ is how fast and in what direction it moves. Acceleration $\mathbf{a} = d\mathbf{v}/dt$ is how fast and in what direction the velocity is changing. Force $\mathbf{F} = m\mathbf{a}$ has a direction — push left and the object accelerates left. A scalar temperature of 300 K has no direction; it just is. These are fundamentally different objects.</p>
+    </div>
+
+    <h4>Adding vectors: tip-to-tail</h4>
+
+    <p>You add two vectors by placing the tail of the second at the tip of the first; the result is the arrow from the original tail to the final tip. Algebraically, you just add the components:</p>
+
+    <div class="math-display">$$\mathbf{a} + \mathbf{b} = (a_x + b_x,\; a_y + b_y,\; a_z + b_z)$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Vector addition</p>
+      <dl>
+        <dt>tip-to-tail</dt><dd>A geometric construction: slide $\mathbf{b}$ so its tail sits at the tip of $\mathbf{a}$. The sum is the new arrow from start to finish.</dd>
+        <dt>component-wise</dt><dd>The algebraic equivalent: add matching components independently. Both methods give the same answer.</dd>
+        <dt>commutativity</dt><dd>$\mathbf{a} + \mathbf{b} = \mathbf{b} + \mathbf{a}$. The order doesn't matter — it makes the same parallelogram.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Kinematics application.</strong> Two forces act on a box: $\mathbf{F}_1 = (3, 4)$ N and $\mathbf{F}_2 = (-1, 2)$ N. The net force is $\mathbf{F}_1 + \mathbf{F}_2 = (2, 6)$ N with magnitude $\sqrt{4 + 36} = \sqrt{40} \approx 6.3$ N pointing northeast. If you had just added the magnitudes (5 + 2.2 = 7.2 N) you would have been wrong by 14% and in the wrong direction.</p>
+    </div>
+
+    <div class="viz-3d" id="vec-kin-viz">
+      <svg id="vecKinSvg" width="100%" viewBox="0 0 520 320" style="display:block;"></svg>
+      <div style="padding:8px 16px 4px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;">
+        <span style="font-family:ui-monospace,monospace;font-size:12px;color:#7a8699;">Drag the tips of the vectors to explore addition</span>
+      </div>
+      <p class="caption">Vector addition: drag <span style="color:#22d3ee"><b>F₁</b></span> and <span style="color:#34d399"><b>F₂</b></span>. The <span style="color:#fbbf24">dashed arrow</span> shows F₂ placed tip-to-tail on F₁; the <span style="color:#fbbf24">solid yellow arrow</span> is the resultant force F₁+F₂. Notice that the resultant magnitude is almost never the sum of the individual magnitudes — direction matters.</p>
+    </div>
+    <script>
+    (function(){
+      const svg = document.getElementById('vecKinSvg');
+      if (!svg) return;
+      const NS = 'http://www.w3.org/2000/svg';
+      const W = 520, H = 320, OX = 160, OY = H/2, SC = 50;
+
+      let f1 = {x: 3, y: 2}, f2 = {x: -1, y: 2.5};
+
+      function mx(x){ return OX + x * SC; }
+      function my(y){ return OY - y * SC; }
+      function sx(p){ return (p - OX) / SC; }
+      function sy(p){ return (OY - p) / SC; }
+      function mag(v){ return Math.sqrt(v.x*v.x + v.y*v.y); }
+
+      function mk(t, a){
+        const e = document.createElementNS(NS, t);
+        for(const [k,v] of Object.entries(a)) e.setAttribute(k,v);
+        return e;
+      }
+      function ah(id, col){
+        const m = mk('marker',{id, markerWidth:8, markerHeight:8, refX:6, refY:3, orient:'auto'});
+        m.appendChild(mk('path',{d:'M0,0 L0,6 L8,3 z', fill:col}));
+        return m;
+      }
+
+      const defs = mk('defs',{});
+      defs.appendChild(ah('kvah-f1','#22d3ee'));
+      defs.appendChild(ah('kvah-f2','#34d399'));
+      defs.appendChild(ah('kvah-sum','#fbbf24'));
+      defs.appendChild(ah('kvah-f2g','rgba(52,211,153,0.5)'));
+      svg.appendChild(defs);
+      svg.appendChild(mk('rect',{x:0,y:0,width:W,height:H,fill:'#0b0d12'}));
+
+      for(let i=-2;i<=7;i++){
+        svg.appendChild(mk('line',{x1:mx(i),y1:0,x2:mx(i),y2:H,stroke:'#1a2234','stroke-width':1}));
+      }
+      for(let i=-3;i<=3;i++){
+        svg.appendChild(mk('line',{x1:0,y1:my(i),x2:W,y2:my(i),stroke:'#1a2234','stroke-width':1}));
+      }
+      svg.appendChild(mk('line',{x1:0,y1:my(0),x2:W,y2:my(0),stroke:'#1e2840','stroke-width':1.5}));
+      svg.appendChild(mk('line',{x1:mx(0),y1:0,x2:mx(0),y2:H,stroke:'#1e2840','stroke-width':1.5}));
+
+      // axis labels
+      const xLbl = mk('text',{fill:'#7a8699','font-family':'ui-monospace,monospace','font-size':11, x:W-20, y:my(0)-6});
+      xLbl.textContent='x'; svg.appendChild(xLbl);
+      const yLbl = mk('text',{fill:'#7a8699','font-family':'ui-monospace,monospace','font-size':11, x:mx(0)+5, y:14});
+      yLbl.textContent='y'; svg.appendChild(yLbl);
+
+      // parallelogram
+      const para = mk('polygon',{fill:'rgba(124,92,255,0.07)',stroke:'rgba(124,92,255,0.2)','stroke-width':0.8,'stroke-dasharray':'3 3'});
+      svg.appendChild(para);
+
+      // F2 ghost (shifted to tip of F1)
+      const f2ghost = mk('line',{stroke:'rgba(52,211,153,0.5)','stroke-width':2,'stroke-dasharray':'6 4','marker-end':'url(#kvah-f2g)'});
+      svg.appendChild(f2ghost);
+
+      // sum
+      const sumLine = mk('line',{stroke:'#fbbf24','stroke-width':2.5,'marker-end':'url(#kvah-sum)'});
+      svg.appendChild(sumLine);
+
+      // F1, F2
+      const f1Line = mk('line',{stroke:'#22d3ee','stroke-width':2.5,'marker-end':'url(#kvah-f1)'});
+      const f2Line = mk('line',{stroke:'#34d399','stroke-width':2.5,'marker-end':'url(#kvah-f2)'});
+      svg.appendChild(f1Line); svg.appendChild(f2Line);
+
+      // Labels
+      const f1Lbl = mk('text',{fill:'#22d3ee','font-family':'ui-monospace,monospace','font-size':12,'font-weight':'bold'});
+      const f2Lbl = mk('text',{fill:'#34d399','font-family':'ui-monospace,monospace','font-size':12,'font-weight':'bold'});
+      const sumLbl = mk('text',{fill:'#fbbf24','font-family':'ui-monospace,monospace','font-size':12,'font-weight':'bold'});
+      const info = mk('text',{fill:'#a4b0c2','font-family':'ui-monospace,monospace','font-size':11,x:8,y:H-8});
+      [f1Lbl, f2Lbl, sumLbl, info].forEach(e=>svg.appendChild(e));
+
+      const f1Tip = mk('circle',{r:7,fill:'#22d3ee',cursor:'grab'});
+      const f2Tip = mk('circle',{r:7,fill:'#34d399',cursor:'grab'});
+      svg.appendChild(f1Tip); svg.appendChild(f2Tip);
+
+      function draw(){
+        const sx2 = f1.x + f2.x, sy2 = f1.y + f2.y;
+
+        para.setAttribute('points',`${mx(0)},${my(0)} ${mx(f1.x)},${my(f1.y)} ${mx(sx2)},${my(sy2)} ${mx(f2.x)},${my(f2.y)}`);
+
+        f2ghost.setAttribute('x1',mx(f1.x)); f2ghost.setAttribute('y1',my(f1.y));
+        f2ghost.setAttribute('x2',mx(sx2));  f2ghost.setAttribute('y2',my(sy2));
+
+        sumLine.setAttribute('x1',mx(0)); sumLine.setAttribute('y1',my(0));
+        sumLine.setAttribute('x2',mx(sx2)); sumLine.setAttribute('y2',my(sy2));
+
+        f1Line.setAttribute('x1',mx(0)); f1Line.setAttribute('y1',my(0));
+        f1Line.setAttribute('x2',mx(f1.x)); f1Line.setAttribute('y2',my(f1.y));
+
+        f2Line.setAttribute('x1',mx(0)); f2Line.setAttribute('y1',my(0));
+        f2Line.setAttribute('x2',mx(f2.x)); f2Line.setAttribute('y2',my(f2.y));
+
+        f1Lbl.setAttribute('x',mx(f1.x)+8); f1Lbl.setAttribute('y',my(f1.y)-5);
+        f1Lbl.textContent = `F₁=(${f1.x.toFixed(1)},${f1.y.toFixed(1)})`;
+        f2Lbl.setAttribute('x',mx(f2.x)+8); f2Lbl.setAttribute('y',my(f2.y)-5);
+        f2Lbl.textContent = `F₂=(${f2.x.toFixed(1)},${f2.y.toFixed(1)})`;
+        sumLbl.setAttribute('x',mx(sx2)+8); sumLbl.setAttribute('y',my(sy2)-5);
+        sumLbl.textContent = `F₁+F₂=(${sx2.toFixed(1)},${sy2.toFixed(1)})`;
+
+        f1Tip.setAttribute('cx',mx(f1.x)); f1Tip.setAttribute('cy',my(f1.y));
+        f2Tip.setAttribute('cx',mx(f2.x)); f2Tip.setAttribute('cy',my(f2.y));
+
+        const s = {x:sx2,y:sy2};
+        info.textContent = `|F₁|=${mag(f1).toFixed(2)} N   |F₂|=${mag(f2).toFixed(2)} N   |F₁|+|F₂|=${(mag(f1)+mag(f2)).toFixed(2)}   |F₁+F₂|=${mag(s).toFixed(2)} N`;
+      }
+
+      let dragging = null;
+      function startDrag(vec,e){ e.preventDefault(); dragging=vec; }
+      f1Tip.addEventListener('mousedown', e=>startDrag(f1,e));
+      f2Tip.addEventListener('mousedown', e=>startDrag(f2,e));
+      f1Tip.addEventListener('touchstart', e=>startDrag(f1,e.touches[0]),{passive:false});
+      f2Tip.addEventListener('touchstart', e=>startDrag(f2,e.touches[0]),{passive:false});
+      function onMove(cx,cy){
+        if(!dragging)return;
+        const r=svg.getBoundingClientRect();
+        const px=(cx-r.left)*W/r.width, py=(cy-r.top)*H/r.height;
+        dragging.x=Math.max(-2,Math.min(6,sx(px)));
+        dragging.y=Math.max(-2.5,Math.min(2.5,sy(py)));
+        draw();
+      }
+      window.addEventListener('mousemove',e=>onMove(e.clientX,e.clientY));
+      window.addEventListener('touchmove',e=>{e.preventDefault();onMove(e.touches[0].clientX,e.touches[0].clientY);},{passive:false});
+      window.addEventListener('mouseup',()=>dragging=null);
+      window.addEventListener('touchend',()=>dragging=null);
+      draw();
+    })();
+    </script>
+
+    <h4>Vector decomposition</h4>
+
+    <p>The inverse operation is equally important: any vector can be split into its components along chosen axes. For a velocity $\mathbf{v}$ of magnitude $v$ at angle $\theta$ above the horizontal:</p>
+
+    <div class="math-display">$$v_x = v\cos\theta, \qquad v_y = v\sin\theta$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Decomposition into components</p>
+      <dl>
+        <dt>$v$</dt><dd>Speed — the magnitude $|\mathbf{v}|$. A non-negative scalar.</dd>
+        <dt>$\theta$</dt><dd>The angle the velocity makes with the positive $x$-axis (horizontal), measured counter-clockwise.</dd>
+        <dt>$v_x = v\cos\theta$</dt><dd>The horizontal component. Zero when $\theta = 90°$ (straight up); equals $v$ when $\theta = 0°$ (horizontal).</dd>
+        <dt>$v_y = v\sin\theta$</dt><dd>The vertical component. Equals $v$ when $\theta = 90°$; zero when $\theta = 0°$.</dd>
+      </dl>
+      <p class="mg-why"><strong>Why decomposition unlocks kinematics.</strong> Once you split a 2D motion into its $x$ and $y$ components, each component evolves completely independently. Projectile motion becomes two separate 1D problems: $x$ moves with constant velocity $v_x$; $y$ accelerates downward at $g$. Without decomposition, the two are hopelessly tangled.</p>
+    </div>
+
+    <div class="viz-3d" id="decomp-viz">
+      <svg id="decompSvg" width="100%" viewBox="0 0 480 300" style="display:block;"></svg>
+      <div style="padding:8px 16px 4px;display:flex;align-items:center;gap:12px;">
+        <label style="font-family:ui-monospace,monospace;font-size:12px;color:#7a8699;">angle θ: <input id="thetaSlider" type="range" min="0" max="90" step="1" value="35" style="width:140px;vertical-align:middle;"> <span id="thetaVal">35°</span></label>
+        <label style="font-family:ui-monospace,monospace;font-size:12px;color:#7a8699;">speed v: <input id="speedSlider" type="range" min="0.5" max="4" step="0.1" value="3" style="width:100px;vertical-align:middle;"> <span id="speedVal">3.0</span></label>
+      </div>
+      <p class="caption">Decomposing velocity into components. The <span style="color:#7c5cff">violet arrow</span> is the full velocity vector <b>v</b>. The <span style="color:#22d3ee">cyan arrow</span> is v_x = v cos θ (horizontal); the <span style="color:#34d399">green arrow</span> is v_y = v sin θ (vertical). Use these two independent components to solve projectile motion.</p>
+    </div>
+    <script>
+    (function(){
+      const svg = document.getElementById('decompSvg');
+      if(!svg) return;
+      const NS = 'http://www.w3.org/2000/svg';
+      const W=480, H=300, OX=80, OY=H-60, SC=55;
+      const thetaS=document.getElementById('thetaSlider'), speedS=document.getElementById('speedSlider');
+      const thetaL=document.getElementById('thetaVal'), speedL=document.getElementById('speedVal');
+
+      function mx(x){return OX+x*SC;} function my(y){return OY-y*SC;}
+      function mk(t,a){const e=document.createElementNS(NS,t);for(const[k,v]of Object.entries(a))e.setAttribute(k,v);return e;}
+      function ah(id,col){const m=mk('marker',{id,markerWidth:8,markerHeight:8,refX:6,refY:3,orient:'auto'});m.appendChild(mk('path',{d:'M0,0 L0,6 L8,3 z',fill:col}));return m;}
+
+      const defs=mk('defs',{});
+      defs.appendChild(ah('dah-v','#7c5cff'));
+      defs.appendChild(ah('dah-vx','#22d3ee'));
+      defs.appendChild(ah('dah-vy','#34d399'));
+      svg.appendChild(defs);
+      svg.appendChild(mk('rect',{x:0,y:0,width:W,height:H,fill:'#0b0d12'}));
+
+      // ground line
+      svg.appendChild(mk('line',{x1:0,y1:OY,x2:W,y2:OY,stroke:'#1e2840','stroke-width':1.5}));
+      svg.appendChild(mk('line',{x1:mx(0),y1:0,x2:mx(0),y2:H,stroke:'#1e2840','stroke-width':1.5}));
+      // grid
+      for(let i=0;i<=7;i++) svg.appendChild(mk('line',{x1:mx(i),y1:OY-10,x2:mx(i),y2:OY+5,stroke:'#1a2234','stroke-width':1}));
+      for(let i=0;i<=4;i++) svg.appendChild(mk('line',{x1:mx(0)-5,y1:my(i),x2:mk(0)+10,y2:my(i),stroke:'#1a2234','stroke-width':1}));
+
+      const vxLine=mk('line',{stroke:'#22d3ee','stroke-width':2,'stroke-dasharray':'5 3','marker-end':'url(#dah-vx)'});
+      const vyLine=mk('line',{stroke:'#34d399','stroke-width':2,'stroke-dasharray':'5 3','marker-end':'url(#dah-vy)'});
+      const vLine=mk('line',{stroke:'#7c5cff','stroke-width':2.5,'marker-end':'url(#dah-v)'});
+      const arcEl=mk('path',{fill:'rgba(124,92,255,0.12)',stroke:'#7c5cff','stroke-width':1.2});
+      const vxLbl=mk('text',{fill:'#22d3ee','font-family':'ui-monospace,monospace','font-size':12});
+      const vyLbl=mk('text',{fill:'#34d399','font-family':'ui-monospace,monospace','font-size':12});
+      const vLbl=mk('text',{fill:'#7c5cff','font-family':'ui-monospace,monospace','font-size':12,'font-weight':'bold'});
+      const thetaLbl=mk('text',{fill:'#a78bfa','font-family':'ui-monospace,monospace','font-size':12});
+      const info=mk('text',{fill:'#7a8699','font-family':'ui-monospace,monospace','font-size':11,x:8,y:H-8});
+      [arcEl,vxLine,vyLine,vLine,vxLbl,vyLbl,vLbl,thetaLbl,info].forEach(e=>svg.appendChild(e));
+
+      function draw(){
+        const th=parseFloat(thetaS.value)*Math.PI/180;
+        const spd=parseFloat(speedS.value);
+        thetaL.textContent=thetaS.value+'°';
+        speedL.textContent=parseFloat(speedS.value).toFixed(1);
+        const vx=spd*Math.cos(th), vy=spd*Math.sin(th);
+
+        vLine.setAttribute('x1',mx(0));vLine.setAttribute('y1',my(0));vLine.setAttribute('x2',mx(vx));vLine.setAttribute('y2',my(vy));
+        vxLine.setAttribute('x1',mx(0));vxLine.setAttribute('y1',my(0));vxLine.setAttribute('x2',mx(vx));vxLine.setAttribute('y2',my(0));
+        vyLine.setAttribute('x1',mx(vx));vyLine.setAttribute('y1',my(0));vyLine.setAttribute('x2',mx(vx));vyLine.setAttribute('y2',my(vy));
+
+        // arc for angle
+        const R=38;
+        const ax1=mx(0)+R, ay1=my(0);
+        const ax2=mx(0)+R*Math.cos(-th), ay2=my(0)+R*Math.sin(-th);
+        arcEl.setAttribute('d',`M${mx(0)},${my(0)} L${ax1},${ay1} A${R},${R},0,0,1,${ax2},${ay2} Z`);
+
+        vLbl.setAttribute('x',mx(vx/2)-20);vLbl.setAttribute('y',my(vy/2)-8);vLbl.textContent=`v=${spd.toFixed(1)}`;
+        vxLbl.setAttribute('x',mx(vx/2));vxLbl.setAttribute('y',my(0)+18);vxLbl.textContent=`vₓ=${vx.toFixed(2)}`;
+        vyLbl.setAttribute('x',mx(vx)+8);vyLbl.setAttribute('y',my(vy/2));vyLbl.textContent=`v_y=${vy.toFixed(2)}`;
+        thetaLbl.setAttribute('x',mx(0)+R+4);thetaLbl.setAttribute('y',my(0)+12);thetaLbl.textContent=`θ`;
+
+        info.textContent=`v=${spd.toFixed(2)} m/s  θ=${thetaS.value}°  →  vₓ=v·cos θ=${vx.toFixed(3)} m/s   v_y=v·sin θ=${vy.toFixed(3)} m/s`;
+      }
+      thetaS.addEventListener('input',draw); speedS.addEventListener('input',draw);
+      draw();
+    })();
+    </script>
+
+    <h4>Magnitude and unit vectors</h4>
+
+    <p>The magnitude of a vector (its "length", i.e. the scalar part) is found by Pythagoras:</p>
+
+    <div class="math-display">$$|\mathbf{v}| = v = \sqrt{v_x^2 + v_y^2 + v_z^2}$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Magnitude and unit vector</p>
+      <dl>
+        <dt>$|\mathbf{v}|$</dt><dd>The magnitude — a non-negative scalar. Also written as just $v$ when clear from context.</dd>
+        <dt>$\hat{\mathbf{v}}$</dt><dd>The <em>unit vector</em> in the direction of $\mathbf{v}$: $\hat{\mathbf{v}} = \mathbf{v}/|\mathbf{v}|$. Always has magnitude 1. A pure direction, no scale.</dd>
+        <dt>$\mathbf{v} = v\,\hat{\mathbf{v}}$</dt><dd>Every vector splits into "how big" ($v$) times "which way" ($\hat{\mathbf{v}}$). This is the cleanest way to read a velocity: 30 m/s to the northeast.</dd>
+      </dl>
+    </div>
+
+    <div class="callout">
+      <div class="label">VECTOR CHECKLIST FOR KINEMATICS</div>
+      <ul style="margin:6px 0">
+        <li>$\mathbf{r}(t)$ — position vector. Changes with time; its derivative is velocity.</li>
+        <li>$\mathbf{v}(t) = \dot{\mathbf{r}}$ — velocity vector. The direction you're moving <em>and</em> how fast. Its magnitude is your speed.</li>
+        <li>$\mathbf{a}(t) = \dot{\mathbf{v}}$ — acceleration. Changes speed <em>or</em> direction (or both). Turning at constant speed still requires acceleration — it's always centripetal.</li>
+        <li>Decompose into components first, then apply the 1D kinematics equations to each component separately.</li>
+      </ul>
     </div>
 
     <h3>Uniform acceleration in one dimension</h3>
