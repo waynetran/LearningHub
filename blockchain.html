@@ -69,7 +69,7 @@
 <!-- ============================================================ -->
 <div class="hero">
   <div class="hero-inner">
-    <span class="chip">UPDATED Apr 11 2026 19:52</span>
+    <span class="chip">UPDATED Apr 11 2026 19:56</span>
     <h1>Blockchain — Distributed Ledgers, Consensus, and Programmable Money</h1>
     <p class="lede">A pragmatic tour of blockchain technology: what the cryptographic primitives actually are, how distributed consensus works without a trusted centre, what smart contracts can and cannot do, and where DeFi, ZK proofs, and layer-2 scaling fit into the picture. Hover any <span class="term" data-label="Term" data-def="Words with a dotted underline carry hover definitions. Try one throughout the page.">dotted term</span> for a definition. Poke at the interactive figures. Each section is self-contained — skip what you know.</p>
   </div>
@@ -1403,32 +1403,6 @@ function renderTimeline() {
 }
 renderTimeline();
 
-// ── Timeline collapse ──────────────────────────────────────────────────────
-(function () {
-  var header = document.querySelector(".timeline-header");
-  if (!header) return;
-  // Pin sticky top below the topbar
-  var topbar = document.querySelector(".topbar");
-  function setTop() {
-    header.style.top = (topbar ? topbar.offsetHeight : 0) + "px";
-  }
-  setTop();
-  window.addEventListener("resize", setTop, { passive: true });
-  // Auto-collapse once the hero scrolls out of view
-  var hero = document.querySelector(".hero");
-  if (hero && "IntersectionObserver" in window) {
-    new IntersectionObserver(function (entries) {
-      entries.forEach(function (e) {
-        header.classList.toggle("tl-collapsed", !e.isIntersecting);
-      });
-    }, { threshold: 0.05 }).observe(hero);
-  }
-  // Click h3 to manually expand / collapse
-  var h3 = header.querySelector("h3");
-  if (h3) h3.addEventListener("click", function () {
-    header.classList.toggle("tl-collapsed");
-  });
-})();
 </script>
 
 </body>
