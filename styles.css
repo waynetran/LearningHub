@@ -275,6 +275,26 @@ a.plain { border-bottom: none; }
 .tag.hot { color: var(--accent-3); border-color: var(--accent-3); }
 .tag.old { color: var(--text-dim); }
 
+/* Vertical history list used on track landing pages (not the AI/ML horizontal timeline) */
+.history-list {
+  list-style: none;
+  padding: 0;
+  margin: 16px 0 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.history-list li {
+  padding: 10px 14px;
+  background: var(--bg-2);
+  border-left: 3px solid var(--border);
+  border-radius: 0 6px 6px 0;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--text);
+}
+.history-list li strong { color: var(--accent-2); font-family: var(--mono); }
+
 /* =========================================================================
    Timeline Header (full width, top of page)
    ========================================================================= */
