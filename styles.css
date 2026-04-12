@@ -947,6 +947,24 @@ main {
   border-color: rgba(168,85,247,0.35);
   color: #a855f7;
 }
+/* Astronomy track — cyan #22d3ee */
+.hero-nav-btn.tb-astro {
+  background: rgba(34,211,238,0.12);
+  border-color: rgba(34,211,238,0.35);
+  color: #22d3ee;
+}
+.track-banner.tb-astro {
+  border-color: rgba(34,211,238,0.45);
+}
+.track-banner.tb-astro::before {
+  background: linear-gradient(135deg, rgba(34,211,238,0.20), rgba(34,211,238,0.04) 55%, transparent 90%);
+}
+.track-banner.tb-astro:hover { border-color: #22d3ee; }
+.track-banner.tb-astro .tb-label {
+  color: #22d3ee;
+  border-color: rgba(34,211,238,0.5);
+}
+.track-banner.tb-astro .tb-arrow { color: #22d3ee; }
 
 @media (max-width: 700px) {
   .track-banner {
@@ -1271,7 +1289,7 @@ ul.checked li::before {
   padding: 14px 30px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 12px;
   position: sticky;
   top: 0;
   z-index: 50;
@@ -1283,6 +1301,7 @@ ul.checked li::before {
   font-size: 12px;
   text-decoration: none;
   border-bottom: none;
+  white-space: nowrap;
   transition: color 0.15s ease;
 }
 .topic-nav .back:hover { color: var(--accent-2); }
@@ -1290,6 +1309,8 @@ ul.checked li::before {
   font-family: var(--mono);
   font-size: 11px;
   color: var(--text-dim);
+  flex: 1;
+  text-align: center;
 }
 .topic-nav .crumb .topic-name {
   color: var(--accent-2);
@@ -2600,6 +2621,25 @@ details.algo-code .code-tabs {
 /* .topbar-tracks already has margin-left:auto — remove it when trigger is present */
 .topbar:has(.search-trigger) .topbar-tracks {
   margin-left: 0;
+}
+
+/* --- topic-nav-embedded trigger (deep-dive pages) ----------------------- */
+.topic-nav .search-trigger {
+  position: static;
+  right: auto;
+  top: auto;
+  z-index: auto;
+  flex-shrink: 0;
+  padding: 4px 10px 4px 8px;
+  font-size: 11px;
+  height: 28px;
+  background: rgba(124,92,255,.12);
+  border-color: rgba(124,92,255,.3);
+}
+.topic-nav .search-trigger:hover {
+  transform: none;
+  background: rgba(124,92,255,.22);
+  border-color: var(--accent);
 }
 
 /* --- modal scaffold ------------------------------------------------------ */

@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Astronomy &amp; Space Exploration — From Ancient Skywatchers to the JWST</title>
+<link rel="stylesheet" href="../styles.css">
+<style>
+  /* Cyan-dominant accent for astronomy */
+  .timeline .event .dot { background: #22d3ee; box-shadow: 0 0 0 2px rgba(34,211,238,0.25); }
+  .timeline .event:hover .dot { background: #67e8f9; box-shadow: 0 0 0 3px rgba(34,211,238,0.35), 0 0 14px #22d3ee; }
+
+  /* Agency color pills */
+  .agency-nasa   { background: rgba(30,144,255,0.15); border-color: #1e90ff; color: #6ab4ff; }
+  .agency-esa    { background: rgba(0,168,255,0.15);  border-color: #00a8ff; color: #70d0ff; }
+  .agency-roscosmos { background: rgba(255,80,80,0.15); border-color: #ff5050; color: #ff9090; }
+  .agency-isro   { background: rgba(255,165,0,0.15);  border-color: #ffa500; color: #ffd070; }
+  .agency-cnsa   { background: rgba(220,20,60,0.15);  border-color: #dc143c; color: #ff7090; }
+  .agency-spacex { background: rgba(124,92,255,0.15); border-color: #7c5cff; color: #a890ff; }
+  .agency-jaxa   { background: rgba(255,220,50,0.15); border-color: #ffdc32; color: #ffe060; }
+  .agency-other  { background: rgba(100,200,100,0.15); border-color: #64c864; color: #90e090; }
+
+  /* Image gallery */
+  .space-gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 12px;
+    margin: 20px 0;
+  }
+  .space-img-card {
+    position: relative;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #0a0d14;
+    border: 1px solid var(--border);
+    aspect-ratio: 4/3;
+    cursor: pointer;
+  }
+  .space-img-card img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.4s ease;
+  }
+  .space-img-card:hover img { transform: scale(1.04); }
+  .space-img-caption {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(transparent, rgba(0,0,0,0.85));
+    padding: 28px 12px 10px;
+    font-size: 11px;
+    color: #cbd5e1;
+    line-height: 1.4;
+  }
+  .space-img-caption strong { color: #e2e8f0; display: block; font-size: 12px; }
+  .space-img-caption .credit { font-size: 9px; color: #64748b; margin-top: 2px; }
+
+  /* Lightbox */
+  .lightbox {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.92);
+    z-index: 9999;
+    cursor: pointer;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+  }
+  .lightbox.open { display: flex; }
+  .lightbox img { max-width: 90vw; max-height: 80vh; object-fit: contain; border-radius: 6px; }
+  .lightbox-caption { color: #cbd5e1; font-size: 13px; margin-top: 12px; text-align: center; max-width: 600px; }
+
+  /* Agency grid */
+  .agency-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 10px;
+    margin: 16px 0;
+  }
+  .agency-card {
+    padding: 14px 16px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+  }
+  .agency-card h5 { margin: 0 0 4px; font-size: 13px; }
+  .agency-card p  { margin: 0; font-size: 12px; color: var(--text-dim); line-height: 1.5; }
+  .agency-pill {
+    display: inline-block;
+    font-size: 9px;
+    font-family: var(--mono);
+    padding: 1px 7px;
+    border-radius: 20px;
+    border: 1px solid;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+</style>
+</head>
+<body>
+<div id="tooltip"></div>
+
+<!-- ============================================================ -->
+<!-- Top bar -->
+<!-- ============================================================ -->
+<div class="topbar">
+  <a class="topbar-back" href="../index.html">← Learning Hub</a>
+  <span class="topbar-crumb">Astronomy &amp; Space Exploration</span>
+  <span class="topbar-tracks">
+    <a href="../physics/index.html">Physics</a>
+    <a href="../math/index.html">Math</a>
+    <a href="../cs/index.html">CS</a>
+  </span>
+</div>
+
+<!-- ============================================================ -->
+<!-- Hero -->
+<!-- ============================================================ -->
+<div class="hero">
+  <div class="hero-inner">
+    <span class="chip">UPDATED Apr 11 2026 22:15</span>
+    <h1>Astronomy &amp; Space Exploration</h1>
+    <p class="lede">From Galileo's first telescope to JWST peering 13.6 billion years into the past — a tour of how humanity has explored the cosmos. Covers observational astronomy, space missions, the search for life, black holes, dark energy, cosmology, and every major agency from NASA to ISRO, CNSA, and SpaceX.</p>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- Timeline -->
+<!-- ============================================================ -->
+<header class="timeline-header">
+  <div class="timeline-inner">
+    <h3>&gt; <span class="highlight">TIMELINE · 240 BCE – 2040</span> &nbsp;&nbsp;DISCOVERIES, MISSIONS AND MILESTONES</h3>
+    <p class="sub">Scroll horizontally · click any marker to jump to its section</p>
+    <div class="timeline-scroll">
+      <div class="timeline" id="timeline">
+        <div class="axis"></div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="container">
+
+    <!-- ============================================================ -->
+    <section id="overview">
+      <h2>What astronomy studies, and why it matters now <span class="era">// big picture</span></h2>
+      <p>Astronomy is the science of everything beyond Earth's atmosphere — from the Moon to the edge of the observable universe 93 billion light-years across. It draws on every branch of physics: classical mechanics for orbital dynamics, electromagnetism for light and radio waves, nuclear physics for stellar fusion, general relativity for black holes, and quantum mechanics for stellar spectra. What distinguishes astronomy is that it is fundamentally observational: we cannot run controlled experiments on stars or galaxies; we can only collect the light and particles they send our way.</p>
+      <p>Modern astronomy is also a space exploration discipline. Since 1957 we have sent spacecraft to every planet, landed rovers on Mars, dropped a probe into Saturn's atmosphere, flown past Pluto, sampled comets and asteroids, and operated a continuously crewed station in orbit. The next generation — Artemis returning humans to the Moon, Europa Clipper at Jupiter's ocean moon, and possible Mars landings in the 2030s — will be driven partly by agencies (NASA, ESA, ISRO, CNSA) and partly by private launch companies (SpaceX, Blue Origin).</p>
+
+      <div class="callout">
+        <div class="label">The 60-second summary</div>
+        <p style="margin:6px 0">
+          <strong>Observational astronomy</strong> — telescopes across the EM spectrum plus gravitational waves and neutrinos.<br>
+          <strong>Cosmology</strong> — the Big Bang, inflation, CMB, dark matter/energy, large-scale structure.<br>
+          <strong>Stellar astrophysics</strong> — how stars form, live, and die (white dwarfs, neutron stars, black holes).<br>
+          <strong>Exoplanets</strong> — the search for other Earths; TRAPPIST-1, K2-18b, biosignatures.<br>
+          <strong>Space exploration</strong> — robotic missions and crewed spaceflight from Apollo to Artemis.<br>
+          <strong>Black holes</strong> — Schwarzschild/Kerr metrics, M87*, Sgr A*, Hawking radiation.<br>
+          <strong>Dark energy</strong> — the cosmological constant problem, vacuum energy, fate of the universe.
+        </p>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section id="topics">
+      <h2>Deep-dive topics <span class="era">// pick your entry point</span></h2>
+      <div class="grid">
+        <a class="card card-link" href="./cosmology.html">
+          <h4>Cosmology</h4>
+          <p class="meta">the universe at scale</p>
+          <p>Big Bang, CMB, nucleosynthesis, dark matter, dark energy, Friedmann equations, large-scale structure and the fate of the cosmos.</p>
+          <span class="tag">core</span>
+        </a>
+        <a class="card card-link" href="./astrophysics.html">
+          <h4>Astrophysics &amp; Observatories</h4>
+          <p class="meta">JWST · Hubble · LIGO · EHT</p>
+          <p>Every major telescope and observatory. The search for Earth-like exoplanets. Nearest stars, named galaxies, HR diagram, cosmic anomalies, and the fate of the universe.</p>
+          <span class="tag hot">new</span>
+        </a>
+        <a class="card card-link" href="./black-holes.html">
+          <h4>Black Holes</h4>
+          <p class="meta">deep dive · GR + QM frontier</p>
+          <p>Anatomy, types, Schwarzschild and Kerr metrics, Hawking radiation, the information paradox, gravitational waves, EHT imaging of M87* and Sgr A*.</p>
+          <span class="tag">advanced</span>
+        </a>
+        <a class="card card-link" href="./dark-energy-vacuum.html">
+          <h4>Dark Energy &amp; Quantum Vacuum</h4>
+          <p class="meta">the 10¹²⁰ problem</p>
+          <p>Zero-point energy, the Casimir effect, cosmic inflation seeding structure from quantum fluctuations, dark energy models, and the fate of the universe.</p>
+          <span class="tag">advanced</span>
+        </a>
+        <a class="card card-link" href="./space-missions.html">
+          <h4>Space Missions</h4>
+          <p class="meta">NASA · ESA · SpaceX · ISRO · CNSA</p>
+          <p>Every major mission from Sputnik to JWST, Perseverance to Artemis. Past, current, and planned missions from all major agencies and commercial operators.</p>
+          <span class="tag hot">new</span>
+        </a>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section id="agencies">
+      <h2>Space agencies &amp; operators <span class="era">// who's exploring</span></h2>
+      <p>The second space age is distinguished from the first by the number of players. NASA and Roscosmos no longer have a duopoly — the European Space Agency, JAXA, ISRO, CNSA, and private companies are all running significant missions.</p>
+
+      <div class="agency-grid">
+        <div class="agency-card">
+          <div><span class="agency-pill agency-nasa">NASA</span></div>
+          <h5>NASA — USA</h5>
+          <p>National Aeronautics and Space Administration. Founded 1958. Apollo, Voyager, Hubble, Chandra, Curiosity, Perseverance, JWST, Artemis. Budget ~$25B/yr.</p>
+        </div>
+        <div class="agency-card">
+          <div><span class="agency-pill agency-esa">ESA</span></div>
+          <h5>ESA — Europe</h5>
+          <p>22 member states. Ariane rockets, Rosetta/Philae comet mission, Mars Express, BepiColombo (Mercury), Gaia star catalogue, Euclid dark energy survey.</p>
+        </div>
+        <div class="agency-card">
+          <div><span class="agency-pill agency-roscosmos">Roscosmos</span></div>
+          <h5>Roscosmos — Russia</h5>
+          <p>Successor to the Soviet program that launched Sputnik and Gagarin. Long the sole crew transport to ISS via Soyuz. Luna-25 attempted (crashed 2023). Increasingly isolated post-2022.</p>
+        </div>
+        <div class="agency-card">
+          <div><span class="agency-pill agency-cnsa">CNSA</span></div>
+          <h5>CNSA — China</h5>
+          <p>China National Space Administration. Chang'e lunar program, Tianwen-1 to Mars, Tiangong space station, Chang'e-6 first far-side sample return (2024). Aims for crewed Moon by 2030.</p>
+        </div>
+        <div class="agency-card">
+          <div><span class="agency-pill agency-isro">ISRO</span></div>
+          <h5>ISRO — India</h5>
+          <p>Indian Space Research Organisation. Chandrayaan-1 (water on Moon), MOM (Mars Orbiter Mission), Chandrayaan-3 (first lunar south pole landing, 2023), Aditya-L1 solar mission.</p>
+        </div>
+        <div class="agency-card">
+          <div><span class="agency-pill agency-jaxa">JAXA</span></div>
+          <h5>JAXA — Japan</h5>
+          <p>Hayabusa-1 and -2 asteroid sample return, SLIM precision lunar lander (2024), MMX to Phobos (2026 planned). Partners with NASA on Artemis Gateway.</p>
+        </div>
+        <div class="agency-card">
+          <div><span class="agency-pill agency-spacex">SpaceX</span></div>
+          <h5>SpaceX — USA (private)</h5>
+          <p>Falcon 9 reusable booster (2015), Crew Dragon (first commercial crewed ISS, 2020), Starlink constellation, Starship (largest rocket ever flown). Contracted for Artemis crewed lunar lander.</p>
+        </div>
+        <div class="agency-card">
+          <div><span class="agency-pill agency-other">Others</span></div>
+          <h5>UAE, Israel, S. Korea…</h5>
+          <p>UAE Hope Orbiter at Mars (2021). Israel's Beresheet attempted Moon landing (2019, crashed). South Korea KSLV-II launch vehicle (2022). Private landers: Intuitive Machines IM-1 (2024, first US lunar landing since 1972).</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section id="missions-highlight">
+      <h2>Mission highlights by era <span class="era">// from Sputnik to Artemis</span></h2>
+
+      <h3>The Space Age begins: 1957–1969</h3>
+      <div class="grid">
+        <div class="card">
+          <h4>Sputnik 1 (1957)</h4>
+          <p class="meta">USSR · first satellite</p>
+          <p>The first artificial satellite, launched Oct 4, 1957. Transmitted radio beeps for 21 days. Initiated the Space Race.</p>
+          <span class="tag agency-roscosmos" style="padding:2px 7px;border-radius:20px;border:1px solid;font-size:10px">Roscosmos</span>
+        </div>
+        <div class="card">
+          <h4>Yuri Gagarin (1961)</h4>
+          <p class="meta">USSR · first human in space</p>
+          <p>Vostok 1, April 12, 1961. One orbit in 108 minutes. "Let's go!" (Поехали!). Age 27.</p>
+          <span class="tag agency-roscosmos" style="padding:2px 7px;border-radius:20px;border:1px solid;font-size:10px">Roscosmos</span>
+        </div>
+        <div class="card">
+          <h4>Apollo 11 (1969)</h4>
+          <p class="meta">NASA · first Moon landing</p>
+          <p>Neil Armstrong and Buzz Aldrin landed at Tranquility Base, July 20, 1969. Michael Collins orbited above. ~0.4 billion TV viewers. 21.5 kg lunar samples returned.</p>
+          <span class="tag agency-nasa" style="padding:2px 7px;border-radius:20px;border:1px solid;font-size:10px">NASA</span>
+        </div>
+        <div class="card">
+          <h4>Luna 3 (1959)</h4>
+          <p class="meta">USSR · first far-side images</p>
+          <p>First images of the Moon's far side, showing it has almost no maria (dark plains) — unlike the near side. Fundamental discovery: the Moon is geologically asymmetric.</p>
+          <span class="tag agency-roscosmos" style="padding:2px 7px;border-radius:20px;border:1px solid;font-size:10px">Roscosmos</span>
+        </div>
+      </div>
+
+      <h3>Robotic solar system exploration: 1970–2000</h3>
+      <div class="grid">
+        <div class="card">
+          <h4>Voyager 1 &amp; 2 (1977)</h4>
+          <p class="meta">NASA · the grand tour</p>
+          <p>Launched 1977, both still transmitting. Voyager 1 entered interstellar space in 2012 (~23 billion km away). Discovered active volcanoes on Io, revealed Jupiter's ring, and mapped Saturn, Uranus, Neptune close-up for the first time.</p>
+          <span class="tag agency-nasa" style="padding:2px 7px;border-radius:20px;border:1px solid;font-size:10px">NASA</span>
+        </div>
+        <div class="card">
+          <h4>Viking 1 &amp; 2 (1975–76)</h4>
+          <p class="meta">NASA · first Mars landers</p>
+          <p>First successful Mars landers. Searched for life with biological experiments — results ambiguous, no definitive detection. Returned thousands of surface photos and weather data.</p>
+          <span class="tag agency-nasa" style="padding:2px 7px;border-radius:20px;border:1px solid;font-size:10px">NASA</span>
+        </div>
+        <div class="card">
+          <h4>Hubble Space Telescope (1990)</h4>
+          <p class="meta">NASA/ESA · revolution in seeing</p>
+          <p>Launched with a flawed mirror; repaired 1993. Revealed the age of the universe (13.8 Gyr), discovered dark energy's acceleration via Type Ia supernovae (Nobel 2011), showed most galaxies host massive black holes. &gt;1.5 million observations.</p>
+          <span class="tag agency-nasa" style="padding:2px 7px;border-radius:20px;border:1px solid;font-size:10px">NASA/ESA</span>
+        </div>
+        <div class="card">
+          <h4>Pathfinder/Sojourner (1997)</h4>
+          <p class="meta">NASA · Mars rover era begins</p>
+          <p>The first Mars rover mission, landing in Ares Vallis. Sojourner was the size of a microwave oven. Proved the airbag landing concept and inspired Opportunity/Spirit/Curiosity/Perseverance.</p>
+          <span class="tag agency-nasa" style="padding:2px 7px;border-radius:20px;border:1px solid;font-size:10px">NASA</span>
+        </div>
+      </div>
+
+      <h3>The golden age of discovery: 2000–2020</h3>
+      <div class="grid">
+        <div class="card">
+          <h4>LIGO (2015/2016)</h4>
+          <p class="meta">NSF/Caltech/MIT · gravitational waves</p>
+          <p>First direct detection of gravitational waves (GW150914), Sep 14, 2015. Two merging black holes 1.4 billion ly away. Confirmed Einstein's 1916 prediction. Nobel Prize 2017. Opened gravitational-wave astronomy.</p>
+          <span class="tag agency-nasa" style="padding:2px 7px;border-radius:20px;border:1px solid;font-size:10px">NSF/NASA</span>
+        </div>
+        <div class="card">
+          <h4>Kepler / K2 (2009–2018)</h4>
+          <p class="meta">NASA · exoplanet revolution</p>
+          <p>Found 2,662 confirmed exoplanets. Showed roughly 1 in 5 Sun-like stars hosts an Earth-sized planet in the habitable zone — implying billions of potentially habitable planets in the Milky Way alone.</p>
+          <span class="tag agency-nasa" style="padding:2px 7px;border-radius:20px;border:1px solid;font-size:10px">NASA</span>
+        </div>
+        <div class="card">
+          <h4>Cassini-Huygens (2004–2017)</h4>
+          <p class="meta">NASA/ESA · Saturn system</p>
+          <p>13 years at Saturn. Discovered Enceladus's geysers (potential subsurface ocean with organics), revealed Titan's methane lakes, imaged the full ring system. Grand Finale: purposeful plunge into Saturn's atmosphere Sept 15, 2017.</p>
+          <span class="tag agency-esa" style="padding:2px 7px;border-radius:20px;border:1px solid;font-size:10px">NASA/ESA</span>
+        </div>
+        <div class="card">
+          <h4>EHT M87* (2019)</h4>
+          <p class="meta">Event Horizon Telescope · first BH image</p>
+          <p>First image of a black hole's shadow: M87*, a 6.5-billion-solar-mass supermassive black hole 55 million ly away. 8 radio observatories spanning Earth. Nobel Prize 2020 to Genzel &amp; Ghez for supermassive black hole evidence.</p>
+          <span class="tag">multi-agency</span>
+        </div>
+        <div class="card">
+          <h4>Rosetta/Philae (2014–16)</h4>
+          <p class="meta">ESA · comet landing</p>
+          <p>First spacecraft to orbit a comet (67P/Churyumov-Gerasimenko) and land a probe on it. Found organic molecules, glycine (amino acid), complex chemistry. Informed theories on life's building blocks arriving on early Earth via comets.</p>
+          <span class="tag agency-esa" style="padding:2px 7px;border-radius:20px;border:1px solid;font-size:10px">ESA</span>
+        </div>
+        <div class="card">
+          <h4>New Horizons Pluto (2015)</h4>
+          <p class="meta">NASA · last new world</p>
+          <p>Flew past Pluto July 14, 2015 — 9.5 years after launch. Revealed a geologically active world with nitrogen ice plains (Tombaugh Regio), mountain ranges, possible subsurface ocean. Continued to Arrokoth in the Kuiper Belt (2019).</p>
+          <span class="tag agency-nasa" style="padding:2px 7px;border-radius:20px;border:1px solid;font-size:10px">NASA</span>
+        </div>
+      </div>
+
+      <h3>The current era: 2020–2026</h3>
+      <div class="grid">
+        <div class="card">
+          <h4>JWST (2021–present)</h4>
+          <p class="meta">NASA/ESA/CSA · deepest view</p>
+          <p>James Webb Space Telescope launched Dec 25, 2021. L2 point, 1.5M km from Earth. Infrared: sees through dust clouds, peers to z&gt;13 galaxies (light from 300M years after Big Bang), characterises exoplanet atmospheres. Science data since July 2022.</p>
+          <span class="tag hot">operating</span>
+        </div>
+        <div class="card">
+          <h4>Perseverance + Ingenuity (2021)</h4>
+          <p class="meta">NASA · Mars 2020</p>
+          <p>Perseverance collecting rock cores for eventual Mars Sample Return. Ingenuity helicopter: first powered flight on another world (April 19, 2021). MOXIE experiment produced oxygen from CO₂. Analyzed organic compounds.</p>
+          <span class="tag hot">operating</span>
+        </div>
+        <div class="card">
+          <h4>Chandrayaan-3 (2023)</h4>
+          <p class="meta">ISRO · first lunar south pole</p>
+          <p>India became the first nation to land near the Moon's south pole, August 23, 2023. Vikram lander and Pragyan rover. Detected sulfur, oxygen, iron on the surface — first in-situ measurements at high southern latitudes where ice may be trapped.</p>
+          <span class="tag agency-isro" style="padding:2px 7px;border-radius:20px;border:1px solid;font-size:10px">ISRO</span>
+        </div>
+        <div class="card">
+          <h4>Chang'e-6 (2024)</h4>
+          <p class="meta">CNSA · far-side sample return</p>
+          <p>First-ever sample return from the Moon's far side. Landed in South Pole–Aitken Basin, June 2024. Returned 1.9 kg of ancient far-side basalt — potentially revealing why the near and far sides are so geologically different.</p>
+          <span class="tag agency-cnsa" style="padding:2px 7px;border-radius:20px;border:1px solid;font-size:10px">CNSA</span>
+        </div>
+        <div class="card">
+          <h4>Artemis Program (2022–)</h4>
+          <p class="meta">NASA · return to the Moon</p>
+          <p>Artemis I (uncrewed SLS/Orion, Nov 2022). Artemis II (crewed lunar flyby, 2025). Artemis III (first crewed landing since 1972, 2026+) uses SpaceX Starship as lander. First woman and first person of colour on the Moon.</p>
+          <span class="tag hot">in progress</span>
+        </div>
+        <div class="card">
+          <h4>Europa Clipper (2024)</h4>
+          <p class="meta">NASA · Jupiter's ocean moon</p>
+          <p>Launched Oct 2024 on Falcon Heavy; arrives at Jupiter 2030. Will perform 49 close flybys of Europa to study its subsurface ocean (~2× Earth's liquid water). Ice shell, magnetic environment, plume detection.</p>
+          <span class="tag">en route</span>
+        </div>
+      </div>
+
+      <h3>Planned missions: 2026–2040</h3>
+      <div class="grid">
+        <div class="card">
+          <h4>Nancy Grace Roman Telescope (2027)</h4>
+          <p class="meta">NASA · dark energy survey</p>
+          <p>Wide-field infrared survey telescope; field of view 100× Hubble. Will survey 2 billion galaxies for dark energy signatures, find ~2,500 exoplanets via microlensing, and enable coronagraphic direct imaging of exoplanets.</p>
+          <span class="tag">planned</span>
+        </div>
+        <div class="card">
+          <h4>Dragonfly (2028+)</h4>
+          <p class="meta">NASA · Titan rotorcraft</p>
+          <p>A rotorcraft lander for Saturn's moon Titan — the only moon with a thick atmosphere. Will hop between sites studying prebiotic chemistry in nitrogen-rich skies and methane lakes. Titan is considered a prime candidate for simple life.</p>
+          <span class="tag">planned</span>
+        </div>
+        <div class="card">
+          <h4>Mars Sample Return (~2030s)</h4>
+          <p class="meta">NASA/ESA</p>
+          <p>Multi-mission campaign to retrieve cores cached by Perseverance. An Earth Return Orbiter (ESA) and Sample Retrieval Lander (NASA) will bring samples to Earth — first Martian material ever analyzed in terrestrial labs.</p>
+          <span class="tag">planned</span>
+        </div>
+        <div class="card">
+          <h4>LISA (~2035)</h4>
+          <p class="meta">ESA · gravitational waves from space</p>
+          <p>Laser Interferometer Space Antenna — three spacecraft in triangular formation, 2.5M km apart. Will detect gravitational waves from supermassive black hole mergers, thousands of compact binaries, and possibly the Big Bang itself.</p>
+          <span class="tag">planned</span>
+        </div>
+        <div class="card">
+          <h4>SpaceX Starship: Moon &amp; Mars</h4>
+          <p class="meta">SpaceX · largest rocket ever</p>
+          <p>Super Heavy booster + Starship upper stage: 121 m tall, ~8 million lbf thrust, fully reusable. NASA Artemis lander contract. Elon Musk's stated goal: crewed Mars landing by 2030. Integrated flight tests through 2024–25.</p>
+          <span class="tag agency-spacex" style="padding:2px 7px;border-radius:20px;border:1px solid;font-size:10px">SpaceX</span>
+        </div>
+        <div class="card">
+          <h4>China Crewed Moon (2030)</h4>
+          <p class="meta">CNSA · International Lunar Research Station</p>
+          <p>China aims to land taikonauts on the Moon by 2030, with a permanent International Lunar Research Station at the south pole (with Russia, and potentially others) by 2035–2040.</p>
+          <span class="tag agency-cnsa" style="padding:2px 7px;border-radius:20px;border:1px solid;font-size:10px">CNSA</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section id="gallery">
+      <h2>Real images from space <span class="era">// Hubble · JWST · ESA · NASA</span></h2>
+      <p>Every image below is a genuine photograph or data-composite from a space telescope or mission — not an illustration. Click to enlarge.</p>
+
+      <div class="space-gallery" id="space-gallery">
+        <!-- Populated by JS below -->
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section id="crosslinks">
+      <h2>Where astronomy meets the rest of the site</h2>
+      <div class="grid">
+        <a class="card card-link" href="../physics/general-relativity.html">
+          <h4>Physics: General Relativity</h4>
+          <p class="meta">the math behind black holes</p>
+          <p>The Einstein field equations, Schwarzschild solution, and geodesics — the framework that explains orbital mechanics, gravitational lensing, and the event horizon.</p>
+        </a>
+        <a class="card card-link" href="../physics/quantum-mechanics.html">
+          <h4>Physics: Quantum Mechanics</h4>
+          <p class="meta">atomic spectra and stellar physics</p>
+          <p>Quantum transitions explain stellar spectra; the Pauli exclusion principle governs white dwarf and neutron star stability; Hawking radiation is quantum field theory near the event horizon.</p>
+        </a>
+        <a class="card card-link" href="../physics/particle-physics.html">
+          <h4>Physics: Particle Physics</h4>
+          <p class="meta">the first three minutes</p>
+          <p>Big Bang nucleosynthesis produced all the hydrogen and helium in the universe in the first three minutes — explained entirely by the Standard Model of particle physics.</p>
+        </a>
+        <a class="card card-link" href="../math/calculus.html">
+          <h4>Math: Calculus</h4>
+          <p class="meta">orbital mechanics prereq</p>
+          <p>Newton invented calculus to solve the two-body problem. Every orbit, trajectory, and launch window is a differential equation.</p>
+        </a>
+      </div>
+    </section>
+
+  </div>
+</main>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <img id="lb-img" src="" alt="">
+  <div class="lightbox-caption" id="lb-caption"></div>
+</div>
+
+<script>
+// ============================================================
+// GALLERY DATA
+// ============================================================
+const galleryImages = [
+  {
+    src: "images/jwst-deep-field.jpg",
+    fallback: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3f/Webb%27s_First_Deep_Field.jpg/600px-Webb%27s_First_Deep_Field.jpg",
+    title: "JWST First Deep Field",
+    caption: "Thousands of galaxies, some from just 600 million years after the Big Bang, imaged in a single field smaller than a grain of sand held at arm's length.",
+    credit: "NASA/ESA/CSA/STScI, 2022"
+  },
+  {
+    src: "images/pillars-jwst.jpg",
+    fallback: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9a/Webb_Pillars_of_Creation.jpg/600px-Webb_Pillars_of_Creation.jpg",
+    title: "Pillars of Creation — JWST (2022)",
+    caption: "Star-forming columns of gas and dust in the Eagle Nebula, 6,500 light-years away. JWST's NIRCam reveals protostars embedded in the pillars.",
+    credit: "NASA/ESA/CSA/STScI, 2022"
+  },
+  {
+    src: "images/m87-blackhole.jpg",
+    fallback: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4f/Black_hole_-_Messier_87_crop_max_res.jpg/600px-Black_hole_-_Messier_87_crop_max_res.jpg",
+    title: "M87* — First Black Hole Image (2019)",
+    caption: "The shadow of the 6.5-billion-solar-mass black hole at the centre of galaxy M87, 55 million light-years away. Imaged by the Event Horizon Telescope.",
+    credit: "EHT Collaboration, 2019"
+  },
+  {
+    src: "images/andromeda.jpg",
+    fallback: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/98/Andromeda_Galaxy_%28with_h-alpha%29.jpg/600px-Andromeda_Galaxy_%28with_h-alpha%29.jpg",
+    title: "Andromeda Galaxy (M31)",
+    caption: "Our nearest large galactic neighbour, 2.5 million light-years away. Contains ~1 trillion stars. Will merge with the Milky Way in ~4.5 billion years.",
+    credit: "Adam Evans / Wikimedia Commons, CC BY 2.0"
+  },
+  {
+    src: "images/hubble-deep-field.jpg",
+    fallback: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2f/Hubble_ultra_deep_field.jpg/600px-Hubble_ultra_deep_field.jpg",
+    title: "Hubble Ultra Deep Field (2004)",
+    caption: "~10,000 galaxies in a patch of sky smaller than 1/10 the diameter of the full moon. The most distant galaxies shown are over 13 billion light-years away.",
+    credit: "NASA, ESA, S. Beckwith (STScI) and the HUDF Team"
+  },
+  {
+    src: "images/crab-nebula.jpg",
+    fallback: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/00/Crab_Nebula.jpg/600px-Crab_Nebula.jpg",
+    title: "Crab Nebula — SN 1054",
+    caption: "The remnant of a supernova observed by Chinese and Arab astronomers in 1054 CE. A pulsar (neutron star spinning 30 times per second) at its core powers the nebula's X-ray and optical glow.",
+    credit: "NASA/ESA/Hubble, 2005"
+  },
+  {
+    src: "images/saturn-cassini.jpg",
+    fallback: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c7/Saturn_during_Equinox.jpg/600px-Saturn_during_Equinox.jpg",
+    title: "Saturn in Natural Colour — Cassini (2009)",
+    caption: "Saturn during equinox, when the rings cast razor-thin shadows on the planet. The rings are mostly water ice particles ranging from dust grains to boulders up to 10 metres across.",
+    credit: "NASA/JPL/Space Science Institute — Cassini, 2009"
+  },
+  {
+    src: "images/planck-cmb.jpg",
+    fallback: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3c/Planck_CMB.jpg/600px-Planck_CMB.jpg",
+    title: "Cosmic Microwave Background — Planck (2013)",
+    caption: "The afterglow of the Big Bang: light from 380,000 years after the universe formed, now stretched to microwave frequencies. Temperature fluctuations of 1 part in 100,000 seeded all cosmic structure.",
+    credit: "ESA/Planck Collaboration, 2013"
+  }
+];
+
+const gallery = document.getElementById('space-gallery');
+
+galleryImages.forEach((img, i) => {
+  const card = document.createElement('div');
+  card.className = 'space-img-card';
+  card.innerHTML = `
+    <img src="${img.src}" alt="${img.title}"
+         onerror="this.src='${img.fallback}'"
+         loading="lazy">
+    <div class="space-img-caption">
+      <strong>${img.title}</strong>
+      ${img.caption}
+      <div class="credit">${img.credit}</div>
+    </div>
+  `;
+  card.addEventListener('click', () => openLightbox(i));
+  gallery.appendChild(card);
+});
+
+function openLightbox(i) {
+  const img = galleryImages[i];
+  const el = document.getElementById('lb-img');
+  el.src = gallery.children[i].querySelector('img').src;
+  el.alt = img.title;
+  document.getElementById('lb-caption').innerHTML = `<strong>${img.title}</strong><br>${img.caption}<br><span style="font-size:10px;color:#64748b">${img.credit}</span>`;
+  document.getElementById('lightbox').classList.add('open');
+}
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('open');
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
+
+// ============================================================
+// TIMELINE
+// ============================================================
+const timelineEvents = [
+  { year: -240, name: "Aristarchus heliocentric", org: "Greece", section: "overview" },
+  { year: 150,  name: "Ptolemy's Almagest", org: "Egypt/Rome", section: "overview" },
+  { year: 1543, name: "Copernicus heliocentric", org: "Poland", section: "overview" },
+  { year: 1572, name: "Tycho's supernova", org: "Brahe/Denmark", section: "overview" },
+  { year: 1609, name: "Galileo's telescope", org: "Italy", section: "overview" },
+  { year: 1687, name: "Newton's gravity", org: "England", section: "overview" },
+  { year: 1781, name: "Uranus discovered", org: "Herschel/UK", section: "overview" },
+  { year: 1846, name: "Neptune discovered", org: "Adams/Le Verrier", section: "overview" },
+  { year: 1915, name: "General Relativity", org: "Einstein/Germany", section: "overview" },
+  { year: 1929, name: "Hubble expansion", org: "Hubble/USA", section: "topics" },
+  { year: 1937, name: "First radio telescope", org: "Reber/USA", section: "topics" },
+  { year: 1948, name: "Big Bang named", org: "Gamow/Hoyle", section: "topics" },
+  { year: 1957, name: "Sputnik 1", org: "USSR", section: "missions-highlight" },
+  { year: 1961, name: "Gagarin — first human space", org: "USSR", section: "missions-highlight" },
+  { year: 1962, name: "Mariner 2 to Venus", org: "NASA", section: "missions-highlight" },
+  { year: 1965, name: "CMB discovered", org: "Penzias/Wilson", section: "topics" },
+  { year: 1969, name: "Apollo 11 Moon landing", org: "NASA", section: "missions-highlight" },
+  { year: 1971, name: "Mariner 9 Mars orbit", org: "NASA", section: "missions-highlight" },
+  { year: 1972, name: "Pioneer 10 launch", org: "NASA", section: "missions-highlight" },
+  { year: 1976, name: "Viking Mars landers", org: "NASA", section: "missions-highlight" },
+  { year: 1977, name: "Voyager 1 &amp; 2", org: "NASA", section: "missions-highlight" },
+  { year: 1981, name: "Space Shuttle STS-1", org: "NASA", section: "missions-highlight" },
+  { year: 1990, name: "Hubble Space Telescope", org: "NASA/ESA", section: "missions-highlight" },
+  { year: 1995, name: "First exoplanet (51 Peg b)", org: "Mayor/Queloz", section: "topics" },
+  { year: 1997, name: "Mars Pathfinder/Sojourner", org: "NASA", section: "missions-highlight" },
+  { year: 1998, name: "Dark energy discovered", org: "High-Z Team/SCP", section: "topics" },
+  { year: 2003, name: "Spirit &amp; Opportunity rovers", org: "NASA", section: "missions-highlight" },
+  { year: 2004, name: "Cassini at Saturn", org: "NASA/ESA", section: "missions-highlight" },
+  { year: 2006, name: "New Horizons launch", org: "NASA", section: "missions-highlight" },
+  { year: 2008, name: "Chandrayaan-1 (water on Moon)", org: "ISRO", section: "agencies" },
+  { year: 2009, name: "Kepler launch", org: "NASA", section: "missions-highlight" },
+  { year: 2012, name: "Curiosity rover lands", org: "NASA", section: "missions-highlight" },
+  { year: 2014, name: "Rosetta/Philae comet landing", org: "ESA", section: "missions-highlight" },
+  { year: 2015, name: "LIGO detects gravity waves", org: "NSF/Caltech/MIT", section: "missions-highlight" },
+  { year: 2015, name: "New Horizons Pluto flyby", org: "NASA", section: "missions-highlight" },
+  { year: 2017, name: "SpaceX Falcon 9 reuse", org: "SpaceX", section: "agencies" },
+  { year: 2019, name: "EHT M87* black hole image", org: "EHT", section: "missions-highlight" },
+  { year: 2020, name: "SpaceX crewed ISS (Crew Dragon)", org: "SpaceX/NASA", section: "agencies" },
+  { year: 2021, name: "Perseverance + Ingenuity", org: "NASA", section: "missions-highlight" },
+  { year: 2021, name: "JWST launch (Dec 25)", org: "NASA/ESA/CSA", section: "missions-highlight" },
+  { year: 2022, name: "DART asteroid impact test", org: "NASA", section: "missions-highlight" },
+  { year: 2022, name: "EHT Sgr A* image", org: "EHT", section: "missions-highlight" },
+  { year: 2022, name: "JWST first science", org: "NASA/ESA/CSA", section: "gallery" },
+  { year: 2023, name: "Chandrayaan-3 south pole", org: "ISRO", section: "missions-highlight" },
+  { year: 2024, name: "Chang'e-6 far-side sample", org: "CNSA", section: "missions-highlight" },
+  { year: 2024, name: "Europa Clipper launch", org: "NASA", section: "missions-highlight" },
+  { year: 2026, name: "Artemis III (crewed Moon)", org: "NASA/SpaceX", section: "missions-highlight" },
+  { year: 2027, name: "Roman Space Telescope", org: "NASA", section: "missions-highlight" },
+  { year: 2030, name: "Europa Clipper arrival", org: "NASA", section: "missions-highlight" },
+  { year: 2030, name: "China crewed Moon target", org: "CNSA", section: "agencies" },
+  { year: 2035, name: "LISA gravitational waves", org: "ESA", section: "missions-highlight" }
+];
+
+function renderTimeline() {
+  const timeline = document.getElementById('timeline');
+  const minYear = -300, maxYear = 2040;
+  const totalWidth = 4200;
+
+  const yearMarks = document.createElement('div');
+  yearMarks.className = 'year-marks';
+  for (let y = -200; y <= 2040; y += 200) {
+    const span = document.createElement('span');
+    span.style.left = (((y - minYear) / (maxYear - minYear)) * 100) + '%';
+    span.textContent = y < 0 ? Math.abs(y) + ' BCE' : y;
+    yearMarks.appendChild(span);
+  }
+  timeline.appendChild(yearMarks);
+
+  const enriched = timelineEvents.map(e => {
+    const pct = ((e.year - minYear) / (maxYear - minYear)) * 100;
+    return { ...e, xPct: pct, xPx: (pct / 100) * totalWidth };
+  }).sort((a, b) => a.xPx - b.xPx);
+
+  const estimateLabelWidth = (ev) => Math.max(100, 40 + ev.name.length * 6.5);
+  const slotOrder = [-1, 1, -2, 2, -3, 3];
+  const placed = [];
+
+  enriched.forEach((ev) => {
+    const halfW = estimateLabelWidth(ev) / 2;
+    let chosen = null;
+    for (const slot of slotOrder) {
+      const conflict = placed.some(p => {
+        if (p.slot !== slot) return false;
+        const minDist = halfW + estimateLabelWidth(p) / 2 + 4;
+        return Math.abs(p.xPx - ev.xPx) < minDist;
+      });
+      if (!conflict) { chosen = slot; break; }
+    }
+    if (chosen === null) {
+      let best = slotOrder[0], bestDist = -Infinity;
+      for (const slot of slotOrder) {
+        const nearest = placed.filter(p => p.slot === slot)
+          .reduce((m, p) => Math.min(m, Math.abs(p.xPx - ev.xPx)), Infinity);
+        if (nearest > bestDist) { bestDist = nearest; best = slot; }
+      }
+      chosen = best;
+    }
+    placed.push({ ...ev, slot: chosen });
+
+    const el = document.createElement('div');
+    el.className = 'event';
+    el.style.left = ev.xPct + '%';
+    el.setAttribute('data-slot', chosen);
+    el.setAttribute('title', `${ev.year < 0 ? Math.abs(ev.year) + ' BCE' : ev.year} · ${ev.name} — ${ev.org}`);
+    const dispYear = ev.year < 0 ? Math.abs(ev.year) + ' BCE' : ev.year;
+    el.innerHTML = `<div class="dot"></div><div class="label"><span class="year">${dispYear}</span><span class="name">${ev.name}</span></div>`;
+    el.addEventListener('click', () => {
+      document.getElementById(ev.section)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+    timeline.appendChild(el);
+  });
+}
+renderTimeline();
+</script>
+
+<script defer src="../search-index.js"></script>
+<script defer src="../search.js"></script>
+</body>
+</html>

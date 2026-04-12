@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cosmology — Deep Dive</title>
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError: false});"></script>
+</head>
+<body>
+<div id="tooltip"></div>
+
+<nav class="topic-nav">
+  <a class="back" href="./index.html">← Astronomy</a>
+  <div class="crumb">Astronomy / <span class="topic-name">Cosmology</span></div>
+</nav>
+
+<div class="topic-layout">
+  <aside class="topic-toc">
+    <h4>ON THIS PAGE</h4>
+    <ul>
+      <li><a href="#why">1. Why cosmology became a precision science</a></li>
+      <li><a href="#vocab">2. Vocabulary cheat sheet</a></li>
+      <li><a href="#friedmann">3. The Friedmann equations</a></li>
+      <li><a href="#hotbigbang">4. The hot big bang and BBN</a></li>
+      <li><a href="#cmb">5. The cosmic microwave background</a></li>
+      <li><a href="#demo">6. Interactive: expansion-history explorer</a></li>
+      <li><a href="#inflation">7. Inflation</a></li>
+      <li><a href="#dark">8. Dark matter and dark energy</a></li>
+      <li><a href="#lss">9. Large-scale structure</a></li>
+      <li><a href="#code">10. A toy Friedmann integrator</a></li>
+      <li><a href="#summary">11. Cheat sheet</a></li>
+    </ul>
+  </aside>
+
+  <article class="topic-content">
+    <h1>Cosmology</h1>
+    <span class="chip">UPDATED Apr 11 2026 21:00</span>
+    <p class="subtitle">The universe has a history, and we can read it. Over the last thirty years, cosmology stopped being the business of order-of-magnitude arguments and became a precision science, with six numbers — the Lambda-CDM parameters — that fit essentially every observation of the sky. This page is about where those numbers come from, what they mean physically, and where the current cracks in the model are.</p>
+    <div class="meta-tags">
+      <span>Prereq: <a href="./general-relativity.html">general relativity</a>, <a href="./thermodynamics.html">thermodynamics</a>, <a href="../math/calculus.html">calculus</a></span>
+      <span>Read time: ~38 min</span>
+      <span>Interactive figures: 1</span>
+      <span>Code: NumPy</span>
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="why">1. Why cosmology became a precision science</h2>
+
+    <p>In 1964, two Bell Labs engineers — Arno Penzias and Robert Wilson — were trying to eliminate a persistent hiss in a horn antenna they wanted to use for satellite communications. They cleaned the instrument, evicted pigeons, scrubbed the "white dielectric material" the pigeons left behind, and the hiss stayed. It turned out to be blackbody radiation at about 3 Kelvin, coming from every direction in the sky with startling uniformity. Theoretical physicists at Princeton had just predicted such radiation as the leftover glow of a hot early universe. Penzias and Wilson had accidentally detected the afterglow of the big bang, and cosmology changed overnight from philosophy to data.</p>
+
+    <p>In the half century since, three generations of satellites (COBE, WMAP, Planck), ground-based CMB telescopes (BICEP, ACT, SPT), galaxy surveys (SDSS, BOSS, DES, DESI), type Ia supernova campaigns, and gravitational-wave detectors have turned cosmology into a percent-level enterprise. We now know the age of the universe (13.8 billion years) to about 0.2%, the curvature (essentially flat) to better than 1%, and the fractions of matter and dark energy to a couple of percent each. Most cosmologists today spend their careers arguing about the third decimal place of numbers that were order-of-magnitude guesses thirty years ago.</p>
+
+    <div class="callout">
+      <div class="label">THE PUNCHLINE</div>
+      <p>The universe is 13.8 billion years old, almost perfectly spatially flat, currently accelerating, and composed of roughly 5% ordinary matter, 27% dark matter, and 68% dark energy. Its temperature history is set by thermodynamic equilibrium in an expanding background. Most of the "missing" 95% is mysterious in the sense that we do not know what it is made of, but we know how it behaves gravitationally to extraordinary precision.</p>
+    </div>
+
+    <p>Why should anyone outside the field care? Three reasons. First, cosmology is the world's largest and oldest particle-physics experiment. The big bang probes energy scales the LHC cannot reach, and its leftovers — baryon asymmetry, light-element abundances, dark matter density — constrain physics far beyond the Standard Model. Second, the same general-relativity equations that govern black holes and gravitational waves govern the universe as a whole; cosmology is where you see GR at work on the biggest possible scale. Third, the "six numbers" model (Lambda-CDM) is one of the cleanest examples of a simple theory winning over complicated alternatives. It is a useful model for thinking about what a mature physical theory looks like.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="vocab">2. Vocabulary cheat sheet</h2>
+
+    <p>A small number of symbols show up on every cosmology page. Skim them now and return when the notation looks opaque.</p>
+
+    <table class="rank-table">
+      <thead><tr><th>Symbol</th><th>Read as</th><th>Means</th></tr></thead>
+      <tbody>
+        <tr><td>$a(t)$</td><td>"scale factor"</td><td>Dimensionless factor multiplying all cosmic distances. $a(\text{today}) = 1$, $a = 0$ at the big bang.</td></tr>
+        <tr><td>$H$</td><td>"Hubble parameter"</td><td>$H \equiv \dot a / a$. The current value $H_0 \approx 67\text{--}73$ km/s/Mpc depending on how you measure it.</td></tr>
+        <tr><td>$z$</td><td>"redshift"</td><td>$1 + z = a_0 / a$. Larger $z$ means earlier in time. The CMB is at $z \approx 1100$.</td></tr>
+        <tr><td>$\rho, p$</td><td>"rho, p"</td><td>Energy density and pressure of the cosmic fluid. Different components (matter, radiation, $\Lambda$) have different $p/\rho$.</td></tr>
+        <tr><td>$\Omega_i$</td><td>"omega sub i"</td><td>Fraction of the critical density contributed by component $i$. $\Omega_m$ for matter, $\Omega_\Lambda$ for dark energy, $\Omega_r$ for radiation.</td></tr>
+        <tr><td>$\Lambda$</td><td>"Lambda"</td><td>The cosmological constant. Behaves like a fluid with $p = -\rho$. Currently about 68% of the total.</td></tr>
+        <tr><td>$k$</td><td>"curvature"</td><td>Sign of spatial curvature: $+1$ closed, $0$ flat, $-1$ open. Observationally $k \approx 0$.</td></tr>
+        <tr><td>$T_\gamma$</td><td>"photon temperature"</td><td>CMB temperature today, $2.7255$ K. Scales as $T \propto 1/a$.</td></tr>
+        <tr><td>$N_{\text{eff}}$</td><td>"N effective"</td><td>Effective number of relativistic neutrino species. Standard Model predicts $3.044$; measured $\approx 2.99 \pm 0.17$.</td></tr>
+        <tr><td>$\sigma_8$</td><td>"sigma eight"</td><td>Amplitude of matter-density fluctuations on 8 Mpc/$h$ scales. A handy scalar summary of how lumpy the universe is.</td></tr>
+      </tbody>
+    </table>
+
+    <p>A unit warning: cosmologists measure distances in megaparsecs (1 Mpc $\approx 3.26$ million light-years), densities in "critical density" units, and time in gigayears. Little-$h$ denotes the Hubble parameter in units of 100 km/s/Mpc: $h \approx 0.7$. Many published quantities carry implicit factors of $h$.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="friedmann">3. The Friedmann equations — general relativity meets a uniform universe</h2>
+
+    <p>The cosmological principle says the universe, on the largest scales, is <em>homogeneous</em> (the same everywhere) and <em>isotropic</em> (the same in every direction). If you put either of those into Einstein's field equations of general relativity, the result is the Friedmann-Lemaître-Robertson-Walker (FLRW) metric and its two dynamical equations — the Friedmann equations.</p>
+
+    <div class="math-display">$$H^2 \equiv \left(\frac{\dot a}{a}\right)^2 = \frac{8\pi G}{3}\rho - \frac{k c^2}{a^2} + \frac{\Lambda c^2}{3}.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">First Friedmann equation</p>
+      <dl>
+        <dt>$a(t)$</dt><dd>The scale factor, a pure number that multiplies all cosmic distances. If galaxies are $a(t) \cdot d$ apart today, they were $a(t')/a(t) \cdot d$ apart at earlier time $t'$.</dd>
+        <dt>$\dot a$</dt><dd>Time derivative of the scale factor. Its ratio to $a$ is the Hubble parameter $H$.</dd>
+        <dt>$G$</dt><dd>Newton's gravitational constant, $6.674 \times 10^{-11}\,\text{m}^3\,\text{kg}^{-1}\,\text{s}^{-2}$.</dd>
+        <dt>$\rho$</dt><dd>Total energy density of everything in the universe at that moment — ordinary matter, dark matter, radiation, neutrinos, whatever else.</dd>
+        <dt>$k$</dt><dd>Spatial curvature constant: $+1$ for a closed (positively curved) universe, $0$ for flat, $-1$ for open (negatively curved).</dd>
+        <dt>$\Lambda$</dt><dd>The cosmological constant — a constant energy density of the vacuum itself. Einstein put it in, called it his "greatest blunder" for 70 years, and then in 1998 it turned out to be real.</dd>
+        <dt>$c$</dt><dd>Speed of light. Usually set to 1 in theoretical work, restored here for clarity.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>What it says.</strong> The expansion rate squared equals the gravitational "pull" of all the stuff in the universe, minus a curvature term, plus the push of the cosmological constant. Matter decelerates expansion, curvature contributes with its own sign, and $\Lambda$ accelerates it. You can read the fate of the universe off which term wins at late times.</p>
+    </div>
+
+    <p>The second Friedmann equation comes from taking the time derivative and using energy conservation. It tells you the rate of change of $H$:</p>
+
+    <div class="math-display">$$\frac{\ddot a}{a} = -\frac{4\pi G}{3}\left(\rho + \frac{3 p}{c^2}\right) + \frac{\Lambda c^2}{3}.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Acceleration (second Friedmann) equation</p>
+      <dl>
+        <dt>$\ddot a$</dt><dd>Second time derivative of the scale factor. Positive means the expansion is accelerating; negative means decelerating.</dd>
+        <dt>$p$</dt><dd>Pressure of the cosmic fluid at that moment. Radiation has $p = \rho c^2 / 3$; cold matter has $p \approx 0$; $\Lambda$ has $p = -\rho c^2$.</dd>
+        <dt>$\rho + 3p/c^2$</dt><dd>The "active gravitational mass" in GR. In relativity, pressure gravitates. Positive pressure decelerates the expansion along with energy density.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why $\Lambda$ accelerates.</strong> A cosmological constant has $p = -\rho c^2$, so $\rho + 3p/c^2 = -2\rho$, which flips the sign of the gravitational term. Negative pressure of this kind literally pushes space apart. That is what the 1998 supernova teams found.</p>
+    </div>
+
+    <p>The third equation you need is the continuity equation — it is the first law of thermodynamics applied to an expanding volume:</p>
+
+    <div class="math-display">$$\dot\rho + 3 H\left(\rho + \frac{p}{c^2}\right) = 0.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Cosmic continuity (energy conservation)</p>
+      <dl>
+        <dt>$\dot\rho$</dt><dd>Time rate of change of the energy density. Usually negative: the universe dilutes as it expands.</dd>
+        <dt>$3H$</dt><dd>$\dot V / V$ for an expanding comoving volume — the fractional rate of volume growth.</dd>
+        <dt>$\rho + p/c^2$</dt><dd>Enthalpy density. In the fluid analogy, it is "what flows" as the volume changes.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why it matters.</strong> Plug in the equation of state $p = w \rho c^2$. Solve: $\rho \propto a^{-3(1+w)}$. For matter ($w=0$), $\rho \propto a^{-3}$ — volume dilution. For radiation ($w=1/3$), $\rho \propto a^{-4}$ — an extra factor from redshift of each photon. For $\Lambda$ ($w=-1$), $\rho$ is constant — vacuum energy does not dilute. Three equations of state, three completely different cosmic histories.</p>
+    </div>
+
+    <div class="problem-set" data-topic="phys-cosmo-friedmann"></div>
+
+    <!-- ========================================================== -->
+    <h2 id="hotbigbang">4. The hot big bang and big-bang nucleosynthesis</h2>
+
+    <p>Run the Friedmann equations backward and the universe gets hotter, denser, and younger. Many things happen on the way. The main checkpoints:</p>
+
+    <ul>
+      <li><strong>Planck time</strong> ($t \sim 10^{-43}$ s, $T \sim 10^{32}$ K). We do not know what happened here; quantum gravity is required, and we do not have a working theory of it. See <a href="./frontier.html">frontier physics</a>.</li>
+      <li><strong>Inflation</strong> (somewhere around $t \sim 10^{-36}$ to $10^{-34}$ s). The universe expands by a factor of $\sim e^{60}$ in much less than a microsecond. Makes the universe flat, large, and smooth.</li>
+      <li><strong>Electroweak phase transition</strong> ($t \sim 10^{-12}$ s, $T \sim 100$ GeV). The Higgs picks a vacuum value and the weak bosons acquire mass.</li>
+      <li><strong>Quark-gluon plasma condensing into hadrons</strong> ($t \sim 10^{-5}$ s, $T \sim 200$ MeV). Quarks get trapped inside protons and neutrons.</li>
+      <li><strong>Big-bang nucleosynthesis (BBN)</strong> ($t \sim 1$–$200$ s, $T \sim 1$ MeV to 0.1 MeV). Protons and neutrons fuse into deuterium, helium-3, helium-4, and a trace of lithium-7. The predicted abundances (about 75% hydrogen, 25% helium-4 by mass, with tiny D and Li fractions) match observation to within a few percent. BBN is one of the most precise tests of the hot big bang picture.</li>
+      <li><strong>Recombination</strong> ($t \sim 380{,}000$ years, $T \sim 3000$ K, $z \approx 1100$). Electrons combine with nuclei into neutral atoms. Photons stop scattering. The CMB is the snapshot at this moment.</li>
+      <li><strong>Reionization</strong> ($z \sim 6$–$10$). First stars and galaxies light up and re-ionize the intergalactic medium.</li>
+      <li><strong>Matter-$\Lambda$ equality</strong> ($z \approx 0.3$). $\Lambda$ takes over from matter as the dominant term. Cosmic acceleration kicks in.</li>
+    </ul>
+
+    <div class="defn">
+      <strong>Big-bang nucleosynthesis in one paragraph.</strong> Between roughly 1 second and 3 minutes, the universe cools from $T \sim 1$ MeV to $T \sim 100$ keV. Weak interactions freeze out first, locking in a neutron-to-proton ratio of about 1:7. Deuterium forms once the temperature drops below its binding energy, and almost all of the free neutrons end up in helium-4 by a chain of fusion reactions. The predicted primordial helium mass fraction is $Y_p \approx 0.247$, matching observations of metal-poor stars and high-redshift clouds. The deuterium abundance, $D/H \approx 2.5 \times 10^{-5}$, is even more sensitive to the baryon-to-photon ratio and gives one of the most precise independent measurements of $\Omega_b$.
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="cmb">5. The cosmic microwave background</h2>
+
+    <p>At $z \approx 1100$, the universe became cool enough (about 3000 K) for electrons to bind to protons and form neutral hydrogen. Before that, free electrons scattered photons efficiently; after, photons were free to travel. The photons we see today as the CMB are the ones that last scattered at that moment. They have been redshifting ever since, and today they appear as a nearly uniform 2.7255 K blackbody.</p>
+
+    <p>Two things about the CMB are spectacular. First, its blackbody spectrum — as measured by COBE/FIRAS in 1990 — is the most perfect blackbody ever found in nature, agreeing with the Planck curve to better than 50 parts per million over the microwave band. That alone rules out any model in which photons are substantially re-processed since recombination; the universe is transparent, and the primordial spectrum survives. Second, the tiny temperature anisotropies — at the $10^{-5}$ level — carry astonishingly rich information, because their power spectrum has a series of acoustic peaks whose positions and heights depend sensitively on every one of the cosmological parameters.</p>
+
+    <div class="math-display">$$\frac{\Delta T(\hat n)}{T_0} = \sum_{\ell, m} a_{\ell m}\, Y_{\ell m}(\hat n), \qquad C_\ell = \langle |a_{\ell m}|^2 \rangle.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">CMB anisotropy and its power spectrum</p>
+      <dl>
+        <dt>$\Delta T(\hat n)$</dt><dd>The deviation of the CMB temperature from its average value $T_0$, in the direction $\hat n$ on the sky.</dd>
+        <dt>$Y_{\ell m}(\hat n)$</dt><dd>Spherical harmonics — a basis for functions on the sphere, indexed by multipole number $\ell$ and order $m$.</dd>
+        <dt>$a_{\ell m}$</dt><dd>The expansion coefficients of the temperature map in that basis. For a Gaussian random field they are complex, zero-mean, and independent.</dd>
+        <dt>$C_\ell$</dt><dd>The angular power spectrum — the variance of $a_{\ell m}$ at each multipole. This is the single function that most of modern cosmology measures.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>What you see.</strong> Plot $\ell(\ell+1) C_\ell / (2\pi)$ versus $\ell$ and you get a series of peaks and troughs. The first peak ($\ell \approx 200$, about 1 degree on the sky) fixes the angular size of the sound horizon at recombination, which is how we know the universe is flat. The relative heights of the first, second, and third peaks fix the ratio of baryons to dark matter. The damping tail at high $\ell$ pins down the baryon density and the reionization epoch. Six parameters, one spectrum, stunning fit.</p>
+    </div>
+
+    <p>The acoustic peaks are the frozen imprint of sound waves in the pre-recombination plasma. Before recombination, photons and baryons were tightly coupled into a single fluid. Overdensities oscillated: the photon pressure pushed them apart, gravity pulled them back together, and the oscillation period depended on the sound speed in the plasma (about $c/\sqrt 3$). At recombination, photons decoupled and the oscillations froze, leaving a preferred scale — the sound horizon — imprinted on the CMB. That scale is about 150 Mpc today, and you can measure it both in the CMB and (independently) in the clustering of galaxies, where it shows up as <strong>baryon acoustic oscillations</strong> (BAO).</p>
+
+    <p>Planck (2013, 2015, 2018) mapped the CMB with 5 arcminute resolution across the full sky, measured its power spectrum down to the noise floor at several thousand multipoles, and reduced the six Lambda-CDM parameters to uncertainties of a percent or better. WMAP did it first at lower resolution starting in 2003; COBE discovered the anisotropies at the $10^{-5}$ level in 1992, winning George Smoot and John Mather the 2006 Nobel Prize.</p>
+
+    <div class="problem-set" data-topic="phys-cosmo-cmb"></div>
+
+    <!-- ========================================================== -->
+    <h2 id="demo">6. Interactive: expansion-history explorer</h2>
+
+    <p>Drag the sliders to change the matter, radiation, and dark-energy density fractions. The chart on the right plots the scale factor $a(t)$ you get by integrating the Friedmann equation with those inputs. You will see how different mixes give radically different cosmic histories.</p>
+
+    <div class="viz-3d">
+      <div class="v3-controls">
+        <span class="v3-label">$\Omega_m$:</span>
+        <input id="cosmOm" type="range" min="0" max="1" value="0.31" step="0.01" style="flex:1;max-width:220px;">
+        <span id="cosmOmLabel" style="min-width:50px;color:#22d3ee;font-family:ui-monospace,monospace;">0.31</span>
+        <span class="v3-label" style="margin-left:10px;">$\Omega_\Lambda$:</span>
+        <input id="cosmOl" type="range" min="0" max="1" value="0.69" step="0.01" style="flex:1;max-width:220px;">
+        <span id="cosmOlLabel" style="min-width:50px;color:#22d3ee;font-family:ui-monospace,monospace;">0.69</span>
+      </div>
+      <svg id="cosmSvg" viewBox="0 0 720 380" style="width:100%;height:auto;background:#0a0d12;border-radius:6px;"></svg>
+      <p class="v3-caption" id="cosmCaption">Scale factor $a(t)$ integrated from a tiny seed today backward, with the selected density fractions. The radiation fraction is fixed at the measured $\Omega_r = 9.2 \times 10^{-5}$.</p>
+    </div>
+
+    <p>Things to try:</p>
+
+    <ul>
+      <li>Set $\Omega_m = 1$, $\Omega_\Lambda = 0$ (the "Einstein-de Sitter" matter-dominated universe). The curve is a cube-root power law in $t$. That is what most cosmologists believed until 1998.</li>
+      <li>Set $\Omega_m = 0.3$, $\Omega_\Lambda = 0.7$. Matter dominates early and $\Lambda$ takes over at late times. The curve bends upward — that is cosmic acceleration, and the shape was the surprise of the century.</li>
+      <li>Set $\Omega_\Lambda > 1$ with matter small. The universe eventually goes into pure de Sitter expansion: exponential growth, $a(t) \propto e^{Ht}$. That is also roughly what inflation looks like.</li>
+    </ul>
+
+    <!-- ========================================================== -->
+    <h2 id="inflation">7. Inflation — solving problems the hot big bang cannot</h2>
+
+    <p>The hot big bang model, as described so far, has two embarrassments. First, the <strong>horizon problem</strong>: different patches of the CMB sky that you see today were never in causal contact with each other in the standard expansion history. Yet they have the same temperature to one part in $10^5$. Why?</p>
+
+    <p>Second, the <strong>flatness problem</strong>: in the Friedmann equation, the curvature term scales as $1/a^2$, while the matter and radiation terms scale as $1/a^3$ and $1/a^4$. So the curvature grows in relative importance as the universe expands. For the universe to be approximately flat today, it had to be almost unimaginably flat early on — fine-tuned to something like $10^{-60}$ at the Planck time. Why?</p>
+
+    <p>Alan Guth's 1980 insight, building on earlier ideas by Starobinsky, was that both problems disappear if the very early universe went through a brief period of <em>exponential</em> expansion. During that phase, a single small causally-connected patch gets stretched to encompass the whole observable universe today (solving the horizon problem), and any initial curvature is diluted away (solving the flatness problem). The mechanism is a scalar field — the "inflaton" — whose potential energy is roughly constant during slow-roll, giving an effective $\Lambda$ many orders of magnitude larger than the present one.</p>
+
+    <div class="math-display">$$\ddot\phi + 3 H \dot\phi + V'(\phi) = 0, \qquad H^2 \approx \frac{8\pi G}{3}\,V(\phi).$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Slow-roll inflation equations</p>
+      <dl>
+        <dt>$\phi$</dt><dd>The inflaton field — a scalar field whose value at each spacetime point controls the inflationary potential energy.</dd>
+        <dt>$V(\phi)$</dt><dd>The potential of the inflaton. During slow-roll the field slowly descends this potential; when it reaches the bottom, inflation ends and the universe reheats.</dd>
+        <dt>$3H\dot\phi$</dt><dd>A friction-like term sourced by the cosmic expansion. It is what makes the field roll slowly rather than oscillating wildly.</dd>
+        <dt>$V'(\phi)$</dt><dd>The slope of the potential. Small slope means slow rolling means many e-folds of inflation.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Slow-roll in one image.</strong> Imagine a marble on a nearly flat plateau. It rolls very slowly thanks to friction from a thick pool of syrup. While it is on the plateau, the energy is roughly constant, and the universe inflates as if $\Lambda$ were huge. Eventually the marble reaches the cliff at the end of the plateau, falls off, oscillates, and its energy converts to a hot bath of Standard Model particles. That moment is the "big bang" in the usual sense.</p>
+    </div>
+
+    <p>Inflation also explains, as a bonus, the primordial density fluctuations that later seeded galaxies and the CMB anisotropies. Quantum fluctuations of the inflaton get stretched outside the Hubble horizon during inflation and become classical, scale-invariant density perturbations. The CMB power spectrum has a nearly but not exactly scale-invariant tilt — the measured scalar spectral index is $n_s \approx 0.965$, close to but not exactly 1, as slow-roll predicts. That percent-level deviation from scale invariance is one of the cleanest experimental fingerprints of inflation.</p>
+
+    <p>What inflation has not yet done is produce a detected signal of primordial gravitational waves. Inflation predicts a tensor power spectrum from quantum fluctuations of the metric itself, characterized by a tensor-to-scalar ratio $r$. Upper limits on $r$ are around $0.03$ as of 2025 (BICEP/Keck + Planck). A detection would directly measure the energy scale of inflation and would be strong confirmation. A non-detection keeps ruling out models.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="dark">8. Dark matter and dark energy — the 95%</h2>
+
+    <h3>Dark matter</h3>
+
+    <p>The evidence for dark matter is <em>independent</em> across half a dozen unrelated observations, and that independence is what makes the case so airtight.</p>
+
+    <ul>
+      <li><strong>Galaxy rotation curves.</strong> Vera Rubin's 1970s measurements of spiral galaxies showed that stars in the outskirts orbit at almost the same speed as stars deep inside. Newtonian gravity with only the visible mass would predict a Keplerian falloff. Something extra — five or ten times the visible mass, distributed in a roughly spherical halo — has to be there.</li>
+      <li><strong>Galaxy clusters.</strong> Fritz Zwicky noticed as early as 1933 that galaxies in the Coma cluster move faster than the cluster's visible mass can gravitationally bind. The required "missing mass" is about the same ratio Rubin found in individual galaxies.</li>
+      <li><strong>Gravitational lensing.</strong> Background galaxies are distorted into arcs and multiple images by the gravity of foreground clusters. The mass required to reproduce the images is several times the visible mass. The Bullet Cluster (2006) spectacularly showed the lensing mass and the X-ray hot-gas mass in different places — a smoking gun that the gravitating stuff is not just hidden ordinary matter.</li>
+      <li><strong>CMB acoustic peaks.</strong> The ratio of heights of the first three CMB peaks depends on how much non-interacting "dust" (cold dark matter) versus photon-pressure-sensitive baryons there is. The peak pattern fixes $\Omega_b \approx 0.049$ and $\Omega_{\text{cdm}} \approx 0.265$ cleanly.</li>
+      <li><strong>Large-scale structure.</strong> The growth of cosmic structure from the tiny CMB fluctuations to today's galaxies and filaments requires non-relativistic matter to clump, and there is not nearly enough baryonic matter to do it on time.</li>
+    </ul>
+
+    <p>What dark matter is made of, nobody knows. The leading candidates are weakly interacting massive particles (WIMPs), axions, sterile neutrinos, and primordial black holes. Direct-detection experiments like LUX-ZEPLIN, XENONnT, and PandaX have pushed WIMP cross-sections below $10^{-47}\,\text{cm}^2$ at the 100 GeV scale. Axion haloscopes (ADMX) have covered a small slice of parameter space and continue to expand. So far nobody has found a dark-matter particle, but the observational case for <em>something</em> being there is overwhelming.</p>
+
+    <h3>Dark energy and the cosmological constant</h3>
+
+    <p>In 1998, two independent teams (Saul Perlmutter's Supernova Cosmology Project and Brian Schmidt / Adam Riess's High-Z Supernova Team) measured distances to several dozen type Ia supernovae and found that the distant ones were fainter than expected in a matter-dominated universe. The simplest interpretation: the expansion of the universe is <em>accelerating</em>. Both teams shared the 2011 Nobel Prize. The fitted fraction of dark energy came out to $\Omega_\Lambda \approx 0.7$, and subsequent CMB, BAO, and weak-lensing measurements have independently converged on the same number.</p>
+
+    <div class="math-display">$$p_\Lambda = -\rho_\Lambda c^2 \quad\Longrightarrow\quad \rho_\Lambda(a) = \text{constant}.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Equation of state of $\Lambda$</p>
+      <dl>
+        <dt>$p_\Lambda$</dt><dd>Pressure of the cosmological constant fluid.</dd>
+        <dt>$\rho_\Lambda$</dt><dd>Energy density of the cosmological constant fluid.</dd>
+        <dt>$w \equiv p/(\rho c^2) = -1$</dt><dd>The equation-of-state parameter $w$ is exactly $-1$ for a pure cosmological constant. Observations constrain $w = -1 \pm 0.03$ for real dark energy.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Why this is weird.</strong> The measured value of $\Lambda$ corresponds to a vacuum energy density of about $10^{-29}\,\text{g/cm}^3$ — stupendously small. Naive quantum field theory predicts a vacuum energy something like $10^{120}$ times larger. This is the cosmological constant problem, the worst fine-tuning problem in physics. We have no accepted explanation for why the answer is what it is.</p>
+    </div>
+
+    <p>It is technically possible dark energy is not a cosmological constant but a slowly rolling scalar field (quintessence), in which case $w$ would drift slightly from $-1$. DESI's 2024–2025 BAO data hinted at a possible time-varying $w$, though the significance is still modest. This remains one of the most active observational questions.</p>
+
+    <div class="problem-set" data-topic="phys-cosmo-dark"></div>
+
+    <!-- ========================================================== -->
+    <h2 id="lss">9. Large-scale structure and the cosmic web</h2>
+
+    <p>Zoom out from the Milky Way and galaxies are not randomly distributed. They string together along filaments, concentrate at nodes where filaments meet, and leave vast empty voids in between. The pattern — the <strong>cosmic web</strong> — was predicted by cold-dark-matter N-body simulations in the 1980s (the Millennium Simulation is the famous visualization) and has since been mapped by galaxy redshift surveys (2dF, SDSS, BOSS, DESI).</p>
+
+    <p>The growth of this structure is a linear-theory calculation for small overdensities and a simulation problem for large ones. In linear theory, a density contrast $\delta \equiv (\rho - \bar\rho)/\bar\rho$ evolves under gravity and Hubble friction:</p>
+
+    <div class="math-display">$$\ddot\delta + 2 H \dot\delta = 4\pi G \bar\rho_m\, \delta.$$</div>
+
+    <div class="math-glossary">
+      <p class="mg-title">Linear density perturbation growth</p>
+      <dl>
+        <dt>$\delta$</dt><dd>Fractional overdensity at a point. $\delta = 0$ is the background, $\delta > 0$ is a slight excess, $\delta \to \infty$ is collapse.</dd>
+        <dt>$2H\dot\delta$</dt><dd>Hubble friction. The expansion of the universe slows the collapse of overdensities.</dd>
+        <dt>$4\pi G \bar\rho_m \delta$</dt><dd>Gravitational self-attraction of the overdensity. This is why gravity amplifies small seeds into galaxies.</dd>
+      </dl>
+      <p class="mg-analogy"><strong>Linear growth timeline.</strong> In a matter-dominated universe, $\delta$ grows like $a(t)$. Starting from the $10^{-5}$ fluctuations at recombination, this gives amplification by a factor of about 1100 to reach $\delta \sim 0.01$ today on large scales. Smaller scales go nonlinear earlier and must be handled by simulation, where overdensities collapse into halos, stars form inside them, and feedback physics gets complicated fast.</p>
+    </div>
+
+    <p>The cosmological principle — homogeneous and isotropic on the largest scales — is an averaging statement. Locally, the universe is extremely lumpy; galaxies are concentrated matter, voids are nearly empty. But when you average over scales of a few hundred megaparsecs and up, the differences wash out. The observed two-point correlation function of galaxies, and the BAO bump at 150 Mpc, confirm the same scale-invariant small-fluctuation picture that inflation predicts.</p>
+
+    <!-- ========================================================== -->
+    <h2 id="code">10. A toy Friedmann integrator</h2>
+
+    <p>Here is a short script that integrates the Friedmann equation numerically for a Lambda-CDM universe. You can change the density parameters and see how the scale factor evolves.</p>
+
+    <div class="code-tabs" id="ct-cosmo">
+      <div class="ct-header">
+        <button class="ct-tab active" data-tab="np">NumPy</button>
+        <button class="ct-tab" data-tab="py">Plain Python</button>
+        <span class="ct-label">Lambda-CDM scale factor</span>
+      </div>
+
+      <div class="ct-panel active" data-tab="np"><pre><code><span class="kw">import</span> numpy <span class="kw">as</span> np
+
+<span class="cmt"># Lambda-CDM parameters (Planck 2018, approximate)</span>
+H0   = <span class="num">67.4</span>                 <span class="cmt"># km/s/Mpc</span>
+Om   = <span class="num">0.315</span>
+Or   = <span class="num">9.2e-5</span>               <span class="cmt"># radiation (photons + neutrinos)</span>
+Ol   = <span class="num">1.0</span> - Om - Or         <span class="cmt"># flat universe</span>
+
+<span class="kw">def</span> <span class="fn">H_over_H0</span>(a):
+    <span class="cmt"># E(a) = sqrt(Om/a^3 + Or/a^4 + Ol) for flat LambdaCDM</span>
+    <span class="kw">return</span> np.sqrt(Om / a**<span class="num">3</span> + Or / a**<span class="num">4</span> + Ol)
+
+<span class="cmt"># Integrate dt = da / (a H) from a_start -&gt; a_end to get age(a)</span>
+<span class="kw">def</span> <span class="fn">age_of_universe</span>(a_target=<span class="num">1.0</span>, N=<span class="num">10000</span>):
+    a = np.linspace(<span class="num">1e-8</span>, a_target, N)
+    integrand = <span class="num">1.0</span> / (a * <span class="fn">H_over_H0</span>(a))
+    <span class="cmt"># Trapezoidal rule, in units of 1/H0</span>
+    t = np.trapz(integrand, a)
+    <span class="cmt"># Convert from 1/H0 to Gyr: 1/H0 = (1/67.4) * (Mpc / km s^-1) ~ 14.5 Gyr</span>
+    Gyr_per_inv_H0 = <span class="num">977.8</span> / H0
+    <span class="kw">return</span> t * Gyr_per_inv_H0
+
+<span class="fn">print</span>(<span class="str">f"Age today:               {age_of_universe(1.0):.2f} Gyr"</span>)
+<span class="fn">print</span>(<span class="str">f"Age at recombination:    {age_of_universe(1/1100):.2e} Gyr"</span>)
+<span class="fn">print</span>(<span class="str">f"Matter-Lambda equality:  a = {(Om/Ol)**(1/3):.3f}"</span>)
+<span class="fn">print</span>(<span class="str">f"Matter-radiation equal:  a = {Or/Om:.2e}"</span>)
+</code></pre></div>
+
+      <div class="ct-panel" data-tab="py"><pre><code><span class="kw">import</span> math
+
+H0, Om, Or = <span class="num">67.4</span>, <span class="num">0.315</span>, <span class="num">9.2e-5</span>
+Ol = <span class="num">1.0</span> - Om - Or
+
+<span class="kw">def</span> <span class="fn">E</span>(a):
+    <span class="kw">return</span> math.sqrt(Om / a**<span class="num">3</span> + Or / a**<span class="num">4</span> + Ol)
+
+<span class="cmt"># Simple midpoint integration</span>
+<span class="kw">def</span> <span class="fn">age</span>(a_target, N=<span class="num">20000</span>):
+    da = (a_target - <span class="num">1e-8</span>) / N
+    t = <span class="num">0.0</span>
+    <span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(N):
+        a = <span class="num">1e-8</span> + (i + <span class="num">0.5</span>) * da
+        t += da / (a * <span class="fn">E</span>(a))
+    <span class="kw">return</span> t * <span class="num">977.8</span> / H0
+
+<span class="fn">print</span>(<span class="str">f"age today = {age(1.0):.2f} Gyr"</span>)
+</code></pre></div>
+    </div>
+
+    <p>Things the output makes concrete:</p>
+
+    <ul>
+      <li><strong>Matter-radiation equality</strong> sits at $a \approx 3 \times 10^{-4}$ ($z \approx 3400$). Before that, radiation dominated; after, matter did.</li>
+      <li><strong>Matter-$\Lambda$ equality</strong> sits at $a \approx 0.77$ ($z \approx 0.3$). That is when the expansion flipped from decelerating to accelerating.</li>
+      <li><strong>The age of the universe</strong> comes out at $13.8$ Gyr — the number you see on every Wikipedia sidebar.</li>
+    </ul>
+
+    <!-- ========================================================== -->
+    <h2 id="summary">11. Cheat sheet</h2>
+
+    <div class="grid">
+      <div class="card">
+        <h4>Friedmann I</h4>
+        <p>$H^2 = \tfrac{8\pi G}{3}\rho - kc^2/a^2 + \Lambda c^2/3$</p>
+        <p class="meta">Expansion rate from matter + curvature + $\Lambda$.</p>
+      </div>
+      <div class="card">
+        <h4>Scaling laws</h4>
+        <p>$\rho_m \propto a^{-3}$, $\rho_r \propto a^{-4}$, $\rho_\Lambda = \text{const}$</p>
+        <p class="meta">Three equations of state, three histories.</p>
+      </div>
+      <div class="card">
+        <h4>Lambda-CDM numbers</h4>
+        <p>$\Omega_b \approx 0.049$, $\Omega_{\text{cdm}} \approx 0.265$, $\Omega_\Lambda \approx 0.685$.</p>
+        <p class="meta">Baryons, dark matter, dark energy.</p>
+      </div>
+      <div class="card">
+        <h4>Age</h4>
+        <p>$t_0 \approx 13.8$ Gyr</p>
+        <p class="meta">Integral of $1/(aH)$ to $a = 1$.</p>
+      </div>
+      <div class="card">
+        <h4>CMB</h4>
+        <p>$T_0 = 2.7255$ K, $z_{\text{rec}} \approx 1100$</p>
+        <p class="meta">Blackbody to $10^{-4}$, anisotropies at $10^{-5}$.</p>
+      </div>
+      <div class="card">
+        <h4>BBN</h4>
+        <p>$Y_p \approx 0.247$, $D/H \approx 2.5 \times 10^{-5}$</p>
+        <p class="meta">Predicted and measured to percent agreement.</p>
+      </div>
+      <div class="card">
+        <h4>Inflation</h4>
+        <p>$n_s \approx 0.965$, $r &lt; 0.03$</p>
+        <p class="meta">Near-scale-invariant scalar tilt, no tensor signal yet.</p>
+      </div>
+      <div class="card">
+        <h4>Hubble tension</h4>
+        <p>$H_0 = 67$ vs $73$ km/s/Mpc</p>
+        <p class="meta">CMB vs local distance ladder disagree by ~5$\sigma$.</p>
+      </div>
+      <div class="card">
+        <h4>Sound horizon</h4>
+        <p>$r_s \approx 147$ Mpc</p>
+        <p class="meta">Standard ruler in CMB and BAO.</p>
+      </div>
+    </div>
+
+    <h3>See also</h3>
+    <div class="see-also">
+      <div class="card">
+        <h4><a href="./general-relativity.html">General relativity</a></h4>
+        <p>The Friedmann equations are what Einstein's field equations become for a homogeneous, isotropic universe. Read GR first if the FLRW metric and curvature language feels opaque.</p>
+      </div>
+      <div class="card">
+        <h4><a href="./particle-physics.html">Particle physics</a></h4>
+        <p>The early universe was a thermal bath of Standard Model particles. BBN is a precision particle-physics experiment done by the universe itself. Dark matter is most plausibly a BSM particle.</p>
+      </div>
+      <div class="card">
+        <h4><a href="./quantum-field-theory.html">Quantum field theory</a></h4>
+        <p>Inflation is QFT in curved spacetime. Primordial fluctuations are quantum fluctuations of the inflaton field stretched to classical scales. Hawking radiation uses the same tools.</p>
+      </div>
+      <div class="card">
+        <h4><a href="./thermodynamics.html">Thermodynamics</a></h4>
+        <p>Recombination, BBN, and the matter-radiation transition are all equilibrium (and then out-of-equilibrium) thermodynamics. Entropy arguments set the baryon-to-photon ratio.</p>
+      </div>
+      <div class="card">
+        <h4><a href="./frontier.html">Frontier physics</a></h4>
+        <p>Quantum gravity, the cosmological constant problem, the fate of the universe, and the multiverse all live on the frontier. Cosmology is the primary arena for testing ideas from those fields.</p>
+      </div>
+      <div class="card">
+        <h4><a href="../math/calculus.html">Calculus</a></h4>
+        <p>ODE integration, Fourier analysis of the CMB sky, and linear perturbation theory all rest on calculus. Every numerical cosmology tool is a glorified integrator.</p>
+      </div>
+    </div>
+
+    <div class="bib">
+      <h4>Further reading</h4>
+      <ul>
+        <li>Scott Dodelson &amp; Fabian Schmidt — <em>Modern Cosmology</em> (2nd ed., 2020). The standard graduate text. Covers FLRW, perturbations, and CMB physics in working detail.</li>
+        <li>Edward W. Kolb &amp; Michael S. Turner — <em>The Early Universe</em> (1990). Older but still the best pedagogical treatment of BBN, phase transitions, and early-universe thermodynamics.</li>
+        <li>Steven Weinberg — <em>Cosmology</em> (2008). Opinionated, authoritative, and full of footnotes on what most textbooks get wrong.</li>
+        <li>Planck Collaboration — "Planck 2018 results. VI. Cosmological parameters," <em>A&amp;A</em> 641, A6 (2020). The authoritative Lambda-CDM parameter paper.</li>
+        <li>Adam Riess et al. and Saul Perlmutter et al. — the 1998 supernova papers that discovered cosmic acceleration. Readable on arXiv (astro-ph/9805201 and astro-ph/9812133).</li>
+        <li>Viatcheslav Mukhanov — <em>Physical Foundations of Cosmology</em> (2005). Very careful on perturbation theory and inflation.</li>
+        <li>Wikipedia, <a href="https://en.wikipedia.org/wiki/Lambda-CDM_model">Lambda-CDM model</a>. Surprisingly well-maintained; good for fast parameter lookups.</li>
+      </ul>
+    </div>
+
+    <div class="next-card">
+      <div class="label">NEXT UP</div>
+      <a href="./frontier.html">→ Frontier Physics</a>
+      <p>You now understand the Lambda-CDM model. The open questions — quantum gravity, the cosmological constant problem, the information paradox, and what might replace or extend the Standard Model — live on the frontier. Let us take a tour of the ideas physicists argue about over lunch.</p>
+    </div>
+
+  </article>
+</div>
+
+<script>
+// =========================================================
+// Code tabs
+document.querySelectorAll('.code-tabs').forEach(root => {
+  const tabs = root.querySelectorAll('.ct-tab');
+  const panels = root.querySelectorAll('.ct-panel');
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const target = tab.getAttribute('data-tab');
+      tabs.forEach(t => t.classList.toggle('active', t === tab));
+      panels.forEach(p => p.classList.toggle('active', p.getAttribute('data-tab') === target));
+    });
+  });
+});
+
+// =========================================================
+// Cosmology expansion history visualizer
+(function(){
+  const svg = document.getElementById('cosmSvg');
+  if (!svg) return;
+  const NS = 'http://www.w3.org/2000/svg';
+  const omSlider = document.getElementById('cosmOm');
+  const olSlider = document.getElementById('cosmOl');
+  const omLabel  = document.getElementById('cosmOmLabel');
+  const olLabel  = document.getElementById('cosmOlLabel');
+  const caption  = document.getElementById('cosmCaption');
+
+  function mk(tag, attrs){
+    const el = document.createElementNS(NS, tag);
+    for (const k in attrs) el.setAttribute(k, attrs[k]);
+    return el;
+  }
+  function mkText(x, y, txt, color, size, anchor){
+    const t = mk('text', {x:x, y:y, fill: color||'#b4c4d4', 'font-size': size||11, 'font-family':'ui-monospace, monospace'});
+    if (anchor) t.setAttribute('text-anchor', anchor);
+    t.textContent = txt;
+    return t;
+  }
+
+  // Radiation density fixed (small)
+  const Or = 9.2e-5;
+
+  function E(a, Om, Ol){
+    return Math.sqrt(Math.max(1e-20, Om / (a*a*a) + Or / (a*a*a*a) + Ol));
+  }
+
+  // Integrate backward from a=1 (today) to very small a
+  // dt/da = 1 / (a * H(a)), integrate da from a to 1 in units of 1/H0
+  function integrateAtoT(aMin, aMax, Om, Ol, N){
+    // trapezoid over log-spaced a
+    const lnAmin = Math.log(aMin), lnAmax = Math.log(aMax);
+    const dlna = (lnAmax - lnAmin) / N;
+    let tArr = [0];
+    let aArr = [aMin];
+    let t = 0;
+    for (let i = 1; i <= N; i++){
+      const lnA = lnAmin + i*dlna;
+      const a  = Math.exp(lnA);
+      const aPrev = aArr[i-1];
+      const mid = 0.5*(a + aPrev);
+      const dt  = (a - aPrev) / (mid * E(mid, Om, Ol));
+      t += dt;
+      tArr.push(t);
+      aArr.push(a);
+    }
+    return {t: tArr, a: aArr};
+  }
+
+  function draw(){
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+
+    const Om = parseFloat(omSlider.value);
+    const Ol = parseFloat(olSlider.value);
+    omLabel.textContent = Om.toFixed(2);
+    olLabel.textContent = Ol.toFixed(2);
+
+    // Left panel: a(t) curve
+    svg.appendChild(mk('rect', {x:20,y:20,width:680,height:340,fill:'#0f131a',stroke:'#2a3446'}));
+    svg.appendChild(mkText(34, 40, 'Scale factor a(t) [log-log]', '#b4c4d4', 12));
+    svg.appendChild(mkText(34, 56, 'Om=' + Om.toFixed(2) + '  Ol=' + Ol.toFixed(2) + '  Or=9.2e-5', '#7a8a9a', 11));
+
+    // Integrate
+    const N = 400;
+    const path = integrateAtoT(1e-6, 1.0, Om, Ol, N);
+    // Normalize times so t(today) = 1
+    const tMax = path.t[path.t.length - 1];
+    if (tMax <= 0) return;
+
+    // Plot area
+    const X0 = 80, X1 = 680;
+    const Y0 = 320, Y1 = 80;
+
+    // log scale axis
+    function xOf(t){
+      if (t <= 1e-10) t = 1e-10;
+      const lt = Math.log10(t);
+      return X0 + (lt - (-10)) / (0 - (-10)) * (X1 - X0);
+    }
+    function yOf(a){
+      if (a <= 1e-10) a = 1e-10;
+      const la = Math.log10(a);
+      return Y0 + (la - 0) / (-10 - 0) * (Y1 - Y0);
+    }
+
+    // grid lines
+    for (let g = -10; g <= 0; g++){
+      const x = xOf(Math.pow(10, g));
+      svg.appendChild(mk('line',{x1:x,y1:Y1,x2:x,y2:Y0,stroke:'#1a2030','stroke-width':1}));
+      svg.appendChild(mkText(x, Y0+14, '1e'+g, '#7a8a9a', 9, 'middle'));
+    }
+    for (let g = -10; g <= 0; g++){
+      const y = yOf(Math.pow(10, g));
+      svg.appendChild(mk('line',{x1:X0,y1:y,x2:X1,y2:y,stroke:'#1a2030','stroke-width':1}));
+      svg.appendChild(mkText(X0-5, y+3, '1e'+g, '#7a8a9a', 9, 'end'));
+    }
+    // axes
+    svg.appendChild(mk('line',{x1:X0,y1:Y1,x2:X0,y2:Y0,stroke:'#384050','stroke-width':1.5}));
+    svg.appendChild(mk('line',{x1:X0,y1:Y0,x2:X1,y2:Y0,stroke:'#384050','stroke-width':1.5}));
+
+    // Plot curve: (t/tMax, a)
+    let d = '';
+    for (let i = 0; i < path.a.length; i++){
+      const tNorm = path.t[i] / tMax;
+      const x = xOf(tNorm);
+      const y = yOf(path.a[i]);
+      d += (i === 0 ? 'M' : 'L') + x.toFixed(1) + ',' + y.toFixed(1) + ' ';
+    }
+    svg.appendChild(mk('path',{d:d,stroke:'#22d3ee','stroke-width':2.5,fill:'none'}));
+
+    // Labels
+    svg.appendChild(mkText((X0+X1)/2, Y0 + 30, 't / t_now (log)', '#7a8a9a', 11, 'middle'));
+    svg.appendChild(mkText(X0 - 40, (Y0+Y1)/2, 'a (log)', '#7a8a9a', 11, 'middle'));
+
+    const kind = (Om > 0.99 && Ol < 0.01) ? 'matter-dominated (EdS)' :
+                 (Ol > 0.99 && Om < 0.01) ? 'pure de Sitter (exponential)' :
+                 (Om + Ol < 0.99) ? 'open / curvature-dominated' :
+                 (Om + Ol > 1.01) ? 'closed' :
+                 'Lambda-CDM like';
+    caption.textContent = 'Om = ' + Om.toFixed(2) + ', Ol = ' + Ol.toFixed(2) +
+      '. Character: ' + kind + '. Curve is a(t) on log-log axes from early times to today.';
+  }
+
+  omSlider.addEventListener('input', draw);
+  olSlider.addEventListener('input', draw);
+  draw();
+})();
+</script>
+<script defer src="../problem-set.js"></script>
+<script defer src="../physics/cosmology-problems.js"></script>
+</body>
+</html>

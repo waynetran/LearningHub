@@ -112,10 +112,10 @@
       '<kbd class="st-kbd">⌘K</kbd>';
     btn.addEventListener("click", open);
 
-    // If the page has a topbar, embed the trigger in it (before .topbar-tracks
-    // so it sits between the crumb and the track links). Otherwise fall back to
-    // the classic floating fixed button.
+    // Embed the trigger in the nearest nav bar, or fall back to a floating button.
+    // Priority: .topbar (index/track pages) → .topic-nav (deep-dive pages) → body
     var topbar = document.querySelector(".topbar");
+    var topicNav = document.querySelector(".topic-nav");
     if (topbar) {
       var tracks = topbar.querySelector(".topbar-tracks");
       if (tracks) {
@@ -123,6 +123,8 @@
       } else {
         topbar.appendChild(btn);
       }
+    } else if (topicNav) {
+      topicNav.appendChild(btn);
     } else {
       document.body.appendChild(btn);
     }
