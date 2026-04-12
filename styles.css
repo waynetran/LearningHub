@@ -672,6 +672,60 @@ main {
   border-bottom: 1px solid var(--border);
 }
 .hero-inner { max-width: 920px; margin: 0 auto; }
+.hero-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 28px;
+}
+.hero-nav-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 18px;
+  border-radius: 6px;
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-decoration: none;
+  border: 1px solid transparent;
+  transition: filter 0.15s, transform 0.1s;
+}
+.hero-nav-btn:hover {
+  filter: brightness(1.15);
+  transform: translateY(-1px);
+}
+/* colour variants reuse the track-banner accent colours */
+.hero-nav-btn.tb-math {
+  background: rgba(52,211,153,0.12);
+  border-color: rgba(52,211,153,0.35);
+  color: #34d399;
+}
+.hero-nav-btn.tb-phys {
+  background: rgba(52,211,153,0.12);
+  border-color: rgba(52,211,153,0.35);
+  color: #34d399;
+}
+.hero-nav-btn.tb-chem {
+  background: rgba(251,191,36,0.12);
+  border-color: rgba(251,191,36,0.35);
+  color: #fbbf24;
+}
+.hero-nav-btn.tb-cs {
+  background: rgba(124,92,255,0.12);
+  border-color: rgba(124,92,255,0.35);
+  color: #a78bfa;
+}
+.hero-nav-btn.tb-ai {
+  background: rgba(34,211,238,0.12);
+  border-color: rgba(34,211,238,0.35);
+  color: #22d3ee;
+}
+@media (max-width: 600px) {
+  .hero-nav { gap: 6px; margin-top: 20px; }
+  .hero-nav-btn { font-size: 11px; padding: 7px 14px; }
+}
 .hero .chip {
   display: inline-block;
   padding: 4px 12px;
