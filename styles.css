@@ -304,9 +304,11 @@ a.plain { border-bottom: none; }
   border-bottom: 1px solid var(--border);
   padding: 12px 0 6px;
   position: sticky;
-  top: 0;
-  z-index: 100;
+  top: 42px; /* sits just below the topbar; overridden by JS when topbar height is known */
+  z-index: 110; /* below topbar (120) but above page content */
   backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: padding 0.22s ease;
 }
 .timeline-header .timeline-inner {
   padding: 0 20px;
@@ -318,6 +320,22 @@ a.plain { border-bottom: none; }
   font-family: var(--mono);
   letter-spacing: 0.08em;
   text-transform: uppercase;
+  cursor: pointer;
+  user-select: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.timeline-header h3::after {
+  content: '▾';
+  font-size: 9px;
+  color: var(--text-dim);
+  display: inline-block;
+  transition: transform 0.22s ease;
+  line-height: 1;
+}
+.timeline-header.tl-collapsed h3::after {
+  transform: rotate(-90deg);
 }
 .timeline-header h3 .highlight {
   background: linear-gradient(90deg, var(--accent), var(--accent-2));
@@ -330,12 +348,33 @@ a.plain { border-bottom: none; }
   color: var(--text-dim);
   margin: 0 0 6px;
   font-family: var(--mono);
+  transition: opacity 0.18s ease, max-height 0.22s ease;
+  max-height: 20px;
+  overflow: hidden;
+  opacity: 1;
+}
+.timeline-header.tl-collapsed .sub {
+  max-height: 0;
+  opacity: 0;
+  margin: 0;
+}
+.timeline-header.tl-collapsed {
+  padding-bottom: 8px;
 }
 .timeline-scroll {
   overflow-x: auto;
   overflow-y: hidden;
   padding-bottom: 4px;
   scrollbar-width: thin;
+  max-height: 110px;
+  transition: max-height 0.28s ease, opacity 0.22s ease;
+  opacity: 1;
+}
+.timeline-header.tl-collapsed .timeline-scroll {
+  max-height: 0;
+  opacity: 0;
+  pointer-events: none;
+  padding-bottom: 0;
 }
 .timeline-scroll::-webkit-scrollbar { height: 5px; }
 .timeline-scroll::-webkit-scrollbar-track { background: var(--bg-3); border-radius: 4px; }

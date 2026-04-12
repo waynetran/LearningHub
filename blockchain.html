@@ -69,7 +69,7 @@
 <!-- ============================================================ -->
 <div class="hero">
   <div class="hero-inner">
-    <span class="chip">UPDATED Apr 11 2026 19:46</span>
+    <span class="chip">UPDATED Apr 11 2026 19:48</span>
     <h1>Blockchain — Distributed Ledgers, Consensus, and Programmable Money</h1>
     <p class="lede">A pragmatic tour of blockchain technology: what the cryptographic primitives actually are, how distributed consensus works without a trusted centre, what smart contracts can and cannot do, and where DeFi, ZK proofs, and layer-2 scaling fit into the picture. Hover any <span class="term" data-label="Term" data-def="Words with a dotted underline carry hover definitions. Try one throughout the page.">dotted term</span> for a definition. Poke at the interactive figures. Each section is self-contained — skip what you know.</p>
   </div>
@@ -936,6 +936,8 @@ function withdraw(uint256 amount) external {
           <p style="margin:6px 0">Solana's ~1,900 validators (vs ~17,000 Bitcoin full nodes or ~900,000 Ethereum validators) reflects its hardware requirements. The Nakamoto coefficient (minimum validators needed for a supermajority) is ~31 — higher than Ethereum's ~3 by stake-weighted terms, but the absolute validator count is lower. This remains a live debate in the community.</p>
         </div>
 
+        <p><a href="topics/blockchain-solana.html" class="deep-dive">→ Deep dive: Solana — Proof of History, Sealevel, and High-Throughput Blockchains</a></p>
+
         <!-- ─── BNB Chain ─────────────────────────────────────────────── -->
         <h3 id="chain-bnb">BNB Chain <span class="era">// BNB · #4 by market cap</span></h3>
 
@@ -1009,6 +1011,8 @@ function withdraw(uint256 amount) external {
 
         <p><strong>What makes it unique:</strong> Cardano's eUTXO model gives it properties that account-based chains cannot match: deterministic transaction costs (you know the exact fee before submitting), local transaction validation (valid locally = valid globally), and natural parallelism. The trade-off is that stateful DeFi protocols (like AMMs needing a shared pool state) require concurrency patterns that are more complex than in Ethereum's account model. The research-first approach means Cardano is often slower to ship features but the formal verification gives higher assurance of correctness.</p>
 
+        <p><a href="topics/blockchain-cardano.html" class="deep-dive">→ Deep dive: Cardano — Formal Methods, eUTXO, and Research-First Blockchain</a></p>
+
         <!-- ─── Polkadot ──────────────────────────────────────────────── -->
         <h3 id="chain-polkadot">Polkadot <span class="era">// DOT · #12–15 by market cap</span></h3>
 
@@ -1046,6 +1050,8 @@ function withdraw(uint256 amount) external {
         <p><strong>Main application:</strong> Sovereign app-chains — blockchains optimised for a single application domain. Osmosis (IBC-native DEX, largest by IBC volume), dYdX v4 (on-chain perpetuals order book), Celestia (modular data availability layer), Injective (financial derivatives), and Akash (decentralised cloud compute) are all Cosmos SDK chains. The Cosmos thesis is that application-specific chains outperform general-purpose chains for their specific use case.</p>
 
         <p><strong>What makes it unique:</strong> IBC is the only cross-chain communication standard that achieves trustless interoperability through light client verification — not trusted relayers, not multisig bridges. This is a fundamental architectural difference from Ethereum bridges (which were the source of the ~$2.4B in bridge hacks through 2022). The app-chain thesis also means Cosmos chains have sovereignty: they choose their own validators, governance, and token economics, which is impossible on Ethereum rollups that inherit Ethereum's governance.</p>
+
+        <p><a href="topics/blockchain-cosmos.html" class="deep-dive">→ Deep dive: Cosmos — The Internet of Blockchains, IBC, and Sovereign App-Chains</a></p>
 
         <!-- ─── NEAR ──────────────────────────────────────────────────── -->
         <h3 id="chain-near">NEAR Protocol <span class="era">// NEAR · sharding + UX focus</span></h3>
@@ -1392,6 +1398,33 @@ function renderTimeline() {
   });
 }
 renderTimeline();
+
+// ── Timeline collapse ──────────────────────────────────────────────────────
+(function () {
+  var header = document.querySelector(".timeline-header");
+  if (!header) return;
+  // Pin sticky top below the topbar
+  var topbar = document.querySelector(".topbar");
+  function setTop() {
+    header.style.top = (topbar ? topbar.offsetHeight : 0) + "px";
+  }
+  setTop();
+  window.addEventListener("resize", setTop, { passive: true });
+  // Auto-collapse once the hero scrolls out of view
+  var hero = document.querySelector(".hero");
+  if (hero && "IntersectionObserver" in window) {
+    new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        header.classList.toggle("tl-collapsed", !e.isIntersecting);
+      });
+    }, { threshold: 0.05 }).observe(hero);
+  }
+  // Click h3 to manually expand / collapse
+  var h3 = header.querySelector("h3");
+  if (h3) h3.addEventListener("click", function () {
+    header.classList.toggle("tl-collapsed");
+  });
+})();
 </script>
 
 </body>

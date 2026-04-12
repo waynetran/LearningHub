@@ -1196,6 +1196,33 @@ function renderTimeline() {
 }
 renderTimeline();
 
+// ── Timeline collapse ──────────────────────────────────────────────────────
+(function () {
+  var header = document.querySelector(".timeline-header");
+  if (!header) return;
+  // Pin sticky top below the topbar
+  var topbar = document.querySelector(".topbar");
+  function setTop() {
+    header.style.top = (topbar ? topbar.offsetHeight : 0) + "px";
+  }
+  setTop();
+  window.addEventListener("resize", setTop, { passive: true });
+  // Auto-collapse once the hero scrolls out of view
+  var hero = document.querySelector(".hero");
+  if (hero && "IntersectionObserver" in window) {
+    new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        header.classList.toggle("tl-collapsed", !e.isIntersecting);
+      });
+    }, { threshold: 0.05 }).observe(hero);
+  }
+  // Click h3 to manually expand / collapse
+  var h3 = header.querySelector("h3");
+  if (h3) h3.addEventListener("click", function () {
+    header.classList.toggle("tl-collapsed");
+  });
+})();
+
 // ============================================================
 // TOOLTIPS
 // ============================================================
