@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Blockchain — Distributed Ledgers, Consensus, and Programmable Money</title>
-<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="../assets/css/styles.css">
 <style>
   /* tb-chain orange accent overrides */
   .hero { border-bottom-color: #f97316; }
@@ -56,11 +56,11 @@
 <!-- Top bar -->
 <!-- ============================================================ -->
 <div class="topbar">
-  <a class="topbar-back" href="index.html">← Learning Hub</a>
+  <a class="topbar-back" href="../index.html">← Learning Hub</a>
   <span class="topbar-crumb">Blockchain Track</span>
   <span class="topbar-tracks">
-    <a href="ai-ml.html">AI / ML</a>
-    <a href="cs/index.html">CS</a>
+    <a href="../ai-ml/">AI / ML</a>
+    <a href="../cs/index.html">CS</a>
   </span>
 </div>
 
@@ -886,7 +886,7 @@ function withdraw(uint256 amount) external {
           <p style="margin:6px 0">Bitcoin invented the field. Every blockchain, DeFi protocol, and NFT platform exists because Satoshi showed that a network with no trusted centre could reach agreement on a shared financial ledger. The specific insight — combining hash-linked blocks with Nakamoto consensus and economic incentives — was the key. Prior to 2009, the Byzantine Generals Problem was considered unsolvable in open, permissionless networks.</p>
         </div>
 
-        <p><a href="topics/blockchain-bitcoin.html" class="deep-dive">→ Deep dive: Bitcoin — Digital Gold, Censorship-Resistant Money, and the Lightning Network</a></p>
+        <p><a href="../topics/blockchain-bitcoin.html" class="deep-dive">→ Deep dive: Bitcoin — Digital Gold, Censorship-Resistant Money, and the Lightning Network</a></p>
 
         <!-- ─── Ethereum ──────────────────────────────────────────────── -->
         <h3 id="chain-ethereum">Ethereum <span class="era">// ETH · #2 by market cap</span></h3>
@@ -914,7 +914,7 @@ function withdraw(uint256 amount) external {
           <p style="margin:6px 0">Ethereum proved that "programmable money" was not a niche idea. DeFi protocols now handle hundreds of billions of dollars of economic activity with no bank in the loop. The EVM became the industry's de facto standard execution environment — even competing chains largely implement EVM compatibility to access Ethereum's tooling and developer mindshare.</p>
         </div>
 
-        <p><a href="topics/blockchain-ethereum.html" class="deep-dive">→ Deep dive: Ethereum — Smart Contracts, DeFi, and the Rollup-Centric World</a></p>
+        <p><a href="../topics/blockchain-ethereum.html" class="deep-dive">→ Deep dive: Ethereum — Smart Contracts, DeFi, and the Rollup-Centric World</a></p>
 
         <!-- ─── Solana ────────────────────────────────────────────────── -->
         <h3 id="chain-solana">Solana <span class="era">// SOL · #5–6 by market cap</span></h3>
@@ -940,7 +940,7 @@ function withdraw(uint256 amount) external {
           <p style="margin:6px 0">Solana's ~1,900 validators (vs ~17,000 Bitcoin full nodes or ~900,000 Ethereum validators) reflects its hardware requirements. The Nakamoto coefficient (minimum validators needed for a supermajority) is ~31 — higher than Ethereum's ~3 by stake-weighted terms, but the absolute validator count is lower. This remains a live debate in the community.</p>
         </div>
 
-        <p><a href="topics/blockchain-solana.html" class="deep-dive">→ Deep dive: Solana — Proof of History, Sealevel, and High-Throughput Blockchains</a></p>
+        <p><a href="../topics/blockchain-solana.html" class="deep-dive">→ Deep dive: Solana — Proof of History, Sealevel, and High-Throughput Blockchains</a></p>
 
         <!-- ─── BNB Chain ─────────────────────────────────────────────── -->
         <h3 id="chain-bnb">BNB Chain <span class="era">// BNB · #4 by market cap</span></h3>
@@ -1015,7 +1015,7 @@ function withdraw(uint256 amount) external {
 
         <p><strong>What makes it unique:</strong> Cardano's eUTXO model gives it properties that account-based chains cannot match: deterministic transaction costs (you know the exact fee before submitting), local transaction validation (valid locally = valid globally), and natural parallelism. The trade-off is that stateful DeFi protocols (like AMMs needing a shared pool state) require concurrency patterns that are more complex than in Ethereum's account model. The research-first approach means Cardano is often slower to ship features but the formal verification gives higher assurance of correctness.</p>
 
-        <p><a href="topics/blockchain-cardano.html" class="deep-dive">→ Deep dive: Cardano — Formal Methods, eUTXO, and Research-First Blockchain</a></p>
+        <p><a href="../topics/blockchain-cardano.html" class="deep-dive">→ Deep dive: Cardano — Formal Methods, eUTXO, and Research-First Blockchain</a></p>
 
         <!-- ─── Polkadot ──────────────────────────────────────────────── -->
         <h3 id="chain-polkadot">Polkadot <span class="era">// DOT · #12–15 by market cap</span></h3>
@@ -1055,7 +1055,7 @@ function withdraw(uint256 amount) external {
 
         <p><strong>What makes it unique:</strong> IBC is the only cross-chain communication standard that achieves trustless interoperability through light client verification — not trusted relayers, not multisig bridges. This is a fundamental architectural difference from Ethereum bridges (which were the source of the ~$2.4B in bridge hacks through 2022). The app-chain thesis also means Cosmos chains have sovereignty: they choose their own validators, governance, and token economics, which is impossible on Ethereum rollups that inherit Ethereum's governance.</p>
 
-        <p><a href="topics/blockchain-cosmos.html" class="deep-dive">→ Deep dive: Cosmos — The Internet of Blockchains, IBC, and Sovereign App-Chains</a></p>
+        <p><a href="../topics/blockchain-cosmos.html" class="deep-dive">→ Deep dive: Cosmos — The Internet of Blockchains, IBC, and Sovereign App-Chains</a></p>
 
         <!-- ─── NEAR ──────────────────────────────────────────────────── -->
         <h3 id="chain-near">NEAR Protocol <span class="era">// NEAR · sharding + UX focus</span></h3>
