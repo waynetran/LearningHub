@@ -157,9 +157,9 @@
       const svg = document.getElementById('vecKinSvg');
       if (!svg) return;
       const NS = 'http://www.w3.org/2000/svg';
-      const W = 520, H = 320, OX = 160, OY = H/2, SC = 50;
+      const W = 520, H = 320, OX = W/2, OY = H/2, SC = 50;
 
-      let f1 = {x: 3, y: 2}, f2 = {x: -1, y: 2.5};
+      let f1 = {x: 2, y: 1.5}, f2 = {x: -1.5, y: 1};
 
       function mx(x){ return OX + x * SC; }
       function my(y){ return OY - y * SC; }
@@ -186,7 +186,7 @@
       svg.appendChild(defs);
       svg.appendChild(mk('rect',{x:0,y:0,width:W,height:H,fill:'#0b0d12'}));
 
-      for(let i=-2;i<=7;i++){
+      for(let i=-5;i<=5;i++){
         svg.appendChild(mk('line',{x1:mx(i),y1:0,x2:mx(i),y2:H,stroke:'#1a2234','stroke-width':1}));
       }
       for(let i=-3;i<=3;i++){
@@ -270,7 +270,7 @@
         if(!dragging)return;
         const r=svg.getBoundingClientRect();
         const px=(cx-r.left)*W/r.width, py=(cy-r.top)*H/r.height;
-        dragging.x=Math.max(-2,Math.min(6,sx(px)));
+        dragging.x=Math.max(-4,Math.min(4,sx(px)));
         dragging.y=Math.max(-2.5,Math.min(2.5,sy(py)));
         draw();
       }
@@ -312,7 +312,7 @@
       const svg = document.getElementById('decompSvg');
       if(!svg) return;
       const NS = 'http://www.w3.org/2000/svg';
-      const W=480, H=300, OX=80, OY=H-60, SC=55;
+      const W=480, H=300, OX=W/2, OY=H/2, SC=50;
       const thetaS=document.getElementById('thetaSlider'), speedS=document.getElementById('speedSlider');
       const thetaL=document.getElementById('thetaVal'), speedL=document.getElementById('speedVal');
 
@@ -327,12 +327,12 @@
       svg.appendChild(defs);
       svg.appendChild(mk('rect',{x:0,y:0,width:W,height:H,fill:'#0b0d12'}));
 
-      // ground line
+      // axes
       svg.appendChild(mk('line',{x1:0,y1:OY,x2:W,y2:OY,stroke:'#1e2840','stroke-width':1.5}));
       svg.appendChild(mk('line',{x1:mx(0),y1:0,x2:mx(0),y2:H,stroke:'#1e2840','stroke-width':1.5}));
       // grid
-      for(let i=0;i<=7;i++) svg.appendChild(mk('line',{x1:mx(i),y1:OY-10,x2:mx(i),y2:OY+5,stroke:'#1a2234','stroke-width':1}));
-      for(let i=0;i<=4;i++) svg.appendChild(mk('line',{x1:mx(0)-5,y1:my(i),x2:mk(0)+10,y2:my(i),stroke:'#1a2234','stroke-width':1}));
+      for(let i=-4;i<=4;i++) svg.appendChild(mk('line',{x1:mx(i),y1:0,x2:mx(i),y2:H,stroke:'#1a2234','stroke-width':1}));
+      for(let i=-2;i<=2;i++) svg.appendChild(mk('line',{x1:0,y1:my(i),x2:W,y2:my(i),stroke:'#1a2234','stroke-width':1}));
 
       const vxLine=mk('line',{stroke:'#22d3ee','stroke-width':2,'stroke-dasharray':'5 3','marker-end':'url(#dah-vx)'});
       const vyLine=mk('line',{stroke:'#34d399','stroke-width':2,'stroke-dasharray':'5 3','marker-end':'url(#dah-vy)'});
@@ -360,7 +360,7 @@
         const R=38;
         const ax1=mx(0)+R, ay1=my(0);
         const ax2=mx(0)+R*Math.cos(-th), ay2=my(0)+R*Math.sin(-th);
-        arcEl.setAttribute('d',`M${mx(0)},${my(0)} L${ax1},${ay1} A${R},${R},0,0,1,${ax2},${ay2} Z`);
+        arcEl.setAttribute('d',`M${mx(0)},${my(0)} L${ax1},${ay1} A${R},${R},0,0,0,${ax2},${ay2} Z`);
 
         vLbl.setAttribute('x',mx(vx/2)-20);vLbl.setAttribute('y',my(vy/2)-8);vLbl.textContent=`v=${spd.toFixed(1)}`;
         vxLbl.setAttribute('x',mx(vx/2));vxLbl.setAttribute('y',my(0)+18);vxLbl.textContent=`vₓ=${vx.toFixed(2)}`;
